@@ -9,9 +9,9 @@ if [[ ! -f "$SNAPSHOT_PATH" ]]; then
   exit 1
 fi
 
-# Snapshot fields are top-level; retain wrapped historical read compatibility.
-CHAIN_ID=$(jq -r '.ssot.chainId // .chainId // empty' "$SNAPSHOT_PATH")
-VRF_WRAPPER_FROM_SNAPSHOT=$(jq -r '.ssot.vrfWrapper // .vrfWrapper // empty' "$SNAPSHOT_PATH")
+# Current deployment snapshot fields are top-level.
+CHAIN_ID=$(jq -r '.chainId // empty' "$SNAPSHOT_PATH")
+VRF_WRAPPER_FROM_SNAPSHOT=$(jq -r '.vrfWrapper // empty' "$SNAPSHOT_PATH")
 
 if [[ -z "$CHAIN_ID" || "$CHAIN_ID" == "null" ]]; then
   echo "failed to parse chainId from $SNAPSHOT_PATH"

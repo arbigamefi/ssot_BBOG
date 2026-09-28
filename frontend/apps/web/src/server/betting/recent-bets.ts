@@ -3,15 +3,16 @@ import {
   decodeEventLog,
   getAddress,
   http,
-  parseAbi,
   type AbiEvent,
   type Address,
   type Hex,
   type PublicClient
 } from "viem";
+import { getContractAbis } from "@ssot/ssot/abis";
 import { getCasinoFinancials } from "@ssot/bet-index/financials";
 import { readSettledBetRefund } from "@ssot/bet-index/terminal-refund";
 import { decodeHouseEdgeLog } from "@ssot/bet-index/house-edge";
+import { extractPlayerPaymentProof, type PlayerPaymentProof } from "@ssot/bet-index/player-payment";
 import { createPostgresBetIndexStore, type BetIndexStore } from "@ssot/bet-index";
 import { applyGameHubEventToBet, type BetRow, type GameHubEventName } from "@ssot/ssot/indexer";
 import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
@@ -32,16 +33,7 @@ const GAME_HUB_EVENTS: GameHubEventName[] = [
   "BetRefunded"
 ];
 
-const GAME_HUB_EVENT_ABI = parseAbi([
-  "event BetPlaced(uint256 indexed positionId, bytes32 indexed gameId, address indexed player, uint64 poolId, address asset, address bank, uint256 stake, uint256 reserved, uint256 amountPerRoll, uint32 betCount, uint256 stopGain, uint256 stopLoss, uint256 vrfFeePaid, uint256 vrfFeeCharged, uint32 vrfCallbackGasLimit, uint256 requestId, bytes32 snapshotHash, bytes32 paramsHash, address pricingAffiliate, uint16 baseHouseEdgeBps, uint16 effectiveHouseEdgeBps, uint16 maxHouseEdgeBps, uint32 referralConfigId, bytes32 deltaSkylineHash)",
-  "event BetRandomReady(uint256 indexed positionId, uint256 indexed requestId, bytes32 randomHash)",
-  "event BetFinalized(uint256 indexed positionId, uint256 payoutGross, uint256 payoutNet, uint256 feeOnPayout, uint256 protocolFeeAccrual)",
-  "event BetRefunded(uint256 indexed positionId, uint256 refundAmount)"
-]);
-
-const GAME_HUB_GET_BET_ABI = parseAbi([
-  "function getBet(uint256 betId) view returns ((uint256 betId, bytes32 gameId, address player, address asset, address bank, uint256 stake, uint256 reserved, uint256 amountPerRoll, uint32 betCount, uint256 stopGain, uint256 stopLoss, address pricingAffiliate, uint16 baseHouseEdgeBps, uint16 effectiveHouseEdgeBps, uint16 maxHouseEdgeBps, uint32 referralConfigId, bytes32 deltaSkylineHash, bytes32 snapshotHash, bytes32 paramsHash, uint256 vrfFeePaid, uint256 vrfFeeCharged, uint32 vrfCallbackGasLimit, uint256 requestId, bytes32 randomHash, uint64 placedAt, uint64 vrfRequestedAt, uint64 resolvedAt, uint8 state))"
-]);
+const { GameHubAbi } = getContractAbis();
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -145,7 +137,7 @@ async function tryGetBetFromDurableStore(
 }
 
 function getEventAbi(eventName: GameHubEventName) {
-  const event = GAME_HUB_EVENT_ABI.find((item) => item.type === "event" && item.name === eventName);
+  const event = GameHubAbi.find((item) => item.type === "event" && item.name === eventName);
   if (!event) throw new Error(`GameHub event ABI missing ${eventName}`);
   return event as AbiEvent;
 }
@@ -598,9 +590,9 @@ export async function queryBetReceipt({
     gameHub: receiptGameHub
   });
   let enriched = false;
+  let payment: PlayerPaymentProof | undefined;
   if (
-    row?.state === "finalized" &&
-    !getCasinoFinancials(row) &&
+    (row?.state === "finalized" || row?.state === "refunded") &&
     onActiveGameHub &&
     shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)
   ) {
@@ -618,6 +610,7 @@ export async function queryBetReceipt({
     ).catch(() => null);
     if (proven) {
       row = { ...row, ...proven.row };
+      payment = proven.payment;
       enriched = true;
     }
   }
@@ -629,16 +622,38 @@ export async function queryBetReceipt({
       chainId,
       generatedAt: now(),
       row,
+      payment,
       source: enriched ? "rpc-window" : "postgres"
     };
   }
 
   if (onActiveGameHub && shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)) {
-    const fallbackRow = await queryBetReceiptRpcFallback({
+    let fallbackRow = await queryBetReceiptRpcFallback({
       betId: normalizedBetId,
       chainId,
       client
     });
+    if (fallbackRow?.state === "finalized" || fallbackRow?.state === "refunded") {
+      const proof = await withTimeout(
+        queryBetReceiptTerminalTxFallback({
+          betId: normalizedBetId,
+          chainId,
+          client,
+          now,
+          timestampMode: "block",
+          terminalTxHash:
+            fallbackRow.terminalTxHash ??
+            fallbackRow.finalizedTxHash ??
+            fallbackRow.refundedTxHash ??
+            fallbackRow.lastTxHash
+        }),
+        numberEnv("BET_RECEIPT_RPC_TIMEOUT_MS", DEFAULT_RECEIPT_RPC_TIMEOUT_MS)
+      ).catch(() => null);
+      if (proof) {
+        fallbackRow = { ...fallbackRow, ...proof.row };
+        payment = proof.payment;
+      }
+    }
     return {
       schemaVersion: 1,
       betId: normalizedBetId,
@@ -646,6 +661,7 @@ export async function queryBetReceipt({
       chainId,
       generatedAt: now(),
       row: fallbackRow,
+      payment,
       source: "rpc-window"
     };
   }
@@ -715,7 +731,7 @@ export async function materializeBetReceipt({
     };
   }
 
-  const { houseEdgeEvent, row } = proof;
+  const { houseEdgeEvent, row, payment } = proof;
   if (!store) {
     return {
       schemaVersion: 1,
@@ -724,6 +740,7 @@ export async function materializeBetReceipt({
       chainId,
       generatedAt: now(),
       row,
+      payment,
       source: "rpc-window"
     };
   }
@@ -740,6 +757,7 @@ export async function materializeBetReceipt({
       chainId,
       generatedAt: now(),
       row,
+      payment,
       source: "rpc-window"
     };
   }
@@ -750,6 +768,7 @@ export async function materializeBetReceipt({
     cached: false,
     chainId,
     generatedAt: now(),
+    payment,
     row:
       (await tryGetBetFromDurableStore(store, {
         betId: normalizedBetId,
@@ -781,7 +800,7 @@ async function queryBetReceiptTerminalTxFallback({
     const [bet, txReceipt] = await Promise.all([
       loaded.client.readContract({
         address: loaded.gameHub,
-        abi: GAME_HUB_GET_BET_ABI,
+        abi: GameHubAbi,
         functionName: "getBet",
         args: [receiptBetId]
       }) as Promise<any>,
@@ -818,7 +837,7 @@ async function queryBetReceiptTerminalTxFallback({
       chainId,
       gameHub: loaded.gameHub,
       gameId: bet.gameId as Hex,
-      id: `${chainId}:${betId}`,
+      id: `${chainId}:${loaded.gameHub.toLowerCase()}:${betId}`,
       lastEventName: terminal.eventName,
       lastTxHash: terminalTxHash,
       placedAt: numberSecondsToMs(bet.placedAt),
@@ -851,7 +870,21 @@ async function queryBetReceiptTerminalTxFallback({
     }
     const houseEdge = houseEdgeEvent ? houseEdgeFromEvent(houseEdgeEvent.args) : undefined;
     if (houseEdge) row.houseEdge = houseEdge;
-    return { houseEdgeEvent, row };
+    const amount = getCasinoFinancials(row)?.returned;
+    const payment =
+      amount == null
+        ? undefined
+        : bet.bank
+          ? extractPlayerPaymentProof({
+              logs: txReceipt.logs,
+              bank: getAddress(bet.bank),
+              asset: getAddress(bet.asset),
+              player: getAddress(bet.player),
+              betId: receiptBetId,
+              amount
+            })
+          : { status: "unknown" as const, amount: amount.toString() };
+    return { houseEdgeEvent, row, payment };
   } catch {
     return null;
   }
@@ -886,12 +919,13 @@ function decodeTerminalReceiptLog({
     for (const eventName of ["BetFinalized", "BetRefunded"] as const) {
       try {
         const decoded = decodeEventLog({
-          abi: GAME_HUB_EVENT_ABI,
+          abi: GameHubAbi,
           data: log.data,
           eventName,
           topics: log.topics as [`0x${string}`, ...`0x${string}`[]]
         });
-        const args = decoded.args as Record<string, unknown>;
+        if (decoded.eventName !== eventName) continue;
+        const args = decoded.args as unknown as Record<string, unknown>;
         if (BigInt(String(args.positionId ?? args.betId ?? 0)) !== betId) continue;
         return { args, eventName };
       } catch {

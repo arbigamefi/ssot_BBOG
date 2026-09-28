@@ -1,4 +1,5 @@
 import type { BetRow } from "@ssot/ssot/indexer";
+import type { PlayerPaymentProof } from "@ssot/bet-index/player-payment";
 
 export type RecentBetRow = BetRow;
 
@@ -33,6 +34,8 @@ export type AffiliateBetsResponse = RecentBetsResponse & {
 export type BetReceiptResponse = Omit<RecentBetsResponse, "fromBlock" | "rows" | "toBlock"> & {
   betId: string;
   row: RecentBetRow | null;
+  /** Historical terminal-transaction payment evidence, not the player's current aggregate claim balance. */
+  payment?: PlayerPaymentProof;
 };
 
 export type RecentBetsQuery = {

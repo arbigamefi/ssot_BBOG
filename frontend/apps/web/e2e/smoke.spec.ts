@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { embeddedChainIds } from "@ssot/ssot/release";
 
 /**
  * Browser smoke tests for the current clean-room route surface.
@@ -100,8 +101,20 @@ test.describe("current route smoke", () => {
     }
   });
 
-  test("casino directory filters and navigates to a room", async ({ page }) => {
+  test("casino directory requires a release before exposing rooms", async ({ page }) => {
     await gotoReady(page, "/casino");
+
+    if (embeddedChainIds.length === 0) {
+      await expect(
+        page.getByRole("heading", { name: "Read-only mode", exact: true })
+      ).toBeVisible();
+      const main = page.getByRole("main");
+      await expect(main.getByRole("heading", { name: "Games", exact: true })).toBeVisible();
+      await expect(main.getByText(/^No embedded release for chainId=\d+$/)).toBeVisible();
+      await expect(page.getByTestId("room-entry-card")).toHaveCount(0);
+      await expect(main.locator("input")).toHaveCount(0);
+      return;
+    }
 
     await expect(page.locator("h1").first()).toBeVisible();
     await expect(page.getByTestId("room-entry-card")).toHaveCount(8);

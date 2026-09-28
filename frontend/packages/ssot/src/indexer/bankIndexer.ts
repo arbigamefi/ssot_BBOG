@@ -1,7 +1,7 @@
 import type { PublicClient, Address, Abi, AbiEvent, Hex } from "viem";
 import { getAddress } from "viem";
 import type { SSOTRelease } from "../release/schema";
-import { getReleaseAbis } from "../abis/release/resolver";
+import { getContractAbis } from "../abis/index.mjs";
 import type { SSOTDb, BankXPEventName } from "./store";
 
 export interface BankIndexerConfig {
@@ -40,7 +40,23 @@ const BANK_EVENTS = [
   "XPAwarded",
   "XPLockedUnlocked",
   "XPHoldbackReleased",
-  "XPAccruedClaimed"
+  "XPAccruedClaimed",
+  "Deposit",
+  "Withdraw",
+  "RedeemRequest",
+  "RedeemRequestCancelled",
+  "RedeemBatchOpened",
+  "RedeemBatchRetired",
+  "RedeemBatchPriced",
+  "RedeemBatchActivated",
+  "RecoveryUpdated",
+  "RecoverySynced",
+  "RecoveryClaimed",
+  "ProtocolCapitalAccrued",
+  "RedeemClaimable",
+  "RedeemRemainderReleased",
+  "PlayerPayableCreated",
+  "PlayerPayablePaid"
 ] as const;
 
 type BankEventName = (typeof BANK_EVENTS)[number];
@@ -74,12 +90,25 @@ export function createBankIndexer(params: {
   const banks = Array.from(new Set(release.pools.map((pool) => getAddress(pool.bank) as Address)));
 
   const status: BankIndexerStatus = { chainId: release.chainId, banks };
-  let timer: any | undefined;
+  let timer: ReturnType<typeof setInterval> | undefined;
+  let inFlight: Promise<void> | undefined;
+  const bankSet = new Set(banks.map((bank) => bank.toLowerCase()));
+  if (!Number.isSafeInteger(config.batchSize) || config.batchSize <= 0)
+    throw new Error("Bank indexer batchSize must be positive");
 
-  // Cursor id uses first bank address as key (all banks share one cursor)
-  const cursorId = `${release.chainId}:bank`;
+  // Scope the checkpoint to the deployment and its event source.
+  const releaseStartBlock = Number(release.meta?.blockNumber ?? 0);
+  const cursorId = `${release.chainId}:bank-events:${releaseStartBlock}:${[...bankSet].sort().join(",")}`;
 
-  async function syncOnce(): Promise<void> {
+  function syncOnce(): Promise<void> {
+    if (!inFlight)
+      inFlight = runSync().finally(() => {
+        inFlight = undefined;
+      });
+    return inFlight;
+  }
+
+  async function runSync(): Promise<void> {
     try {
       status.lastRunAt = Date.now();
       status.lastError = undefined;
@@ -91,7 +120,6 @@ export function createBankIndexer(params: {
       const targetBlock = Math.max(0, latestBlock - config.confirmations);
 
       const cursor = await db.cursors.get(cursorId);
-      const releaseStartBlock = Number(release.meta?.blockNumber ?? 0);
 
       let fromBlock = cursor ? cursor.lastProcessedBlock + 1 : releaseStartBlock;
       if (cursor && config.rewindBlocks > 0) {
@@ -112,54 +140,50 @@ export function createBankIndexer(params: {
         await syncRange(start, end);
         status.lastSyncedBlock = end;
       }
-
-      // Cursor update INSIDE transaction (fixes atomicity bug from gameHubIndexer)
-      // Actually we update cursor after all batches complete. For atomicity,
-      // we use a separate transaction for the cursor.
-      await db.transaction("rw", db.cursors, async () => {
-        await db.cursors.put({
-          id: cursorId,
-          chainId: release.chainId,
-          source: banks[0]!,
-          lastProcessedBlock: targetBlock,
-          updatedAt: Date.now()
-        });
-      });
     } catch (e: any) {
       status.lastError = e?.message ? String(e.message) : String(e);
     }
   }
 
   async function syncRange(fromBlock: number, toBlock: number): Promise<void> {
-    const { BankAbi } = getReleaseAbis(release.chainId);
+    const { BankAbi } = getContractAbis();
     const bankAbi = BankAbi as Abi;
-
-    const logsAll: BankEventNormalized[] = [];
-
-    // Fetch logs for all bank addresses × all event types
-    for (const bankAddr of banks) {
-      for (const eventName of BANK_EVENTS) {
-        const eventAbi = getEventAbi(bankAbi, eventName);
-        const logs = await publicClient.getLogs({
-          address: bankAddr,
-          event: eventAbi,
-          fromBlock: BigInt(fromBlock),
-          toBlock: BigInt(toBlock)
-        });
-
-        for (const log of logs as any[]) {
-          const logIndex = Number(log.logIndex ?? 0);
-          logsAll.push({
-            chainId: release.chainId,
-            bank: bankAddr,
-            blockNumber: Number(log.blockNumber),
-            logIndex,
-            txHash: log.transactionHash,
-            eventName,
-            args: log.args ?? {}
+    const events = BANK_EVENTS.map((name) => getEventAbi(bankAbi, name));
+    const logs =
+      banks.length === 0
+        ? []
+        : await publicClient.getLogs({
+            address: banks,
+            events,
+            strict: true,
+            fromBlock: BigInt(fromBlock),
+            toBlock: BigInt(toBlock)
           });
-        }
-      }
+    const logsAll: BankEventNormalized[] = [];
+    for (const log of logs as Array<{
+      address: Address;
+      eventName: string;
+      blockNumber: bigint | null;
+      logIndex: number | null;
+      transactionHash: Hex | null;
+      args?: Record<string, unknown>;
+    }>) {
+      if (
+        !bankSet.has(log.address.toLowerCase()) ||
+        !BANK_EVENTS.includes(log.eventName as BankEventName)
+      )
+        continue;
+      if (log.blockNumber == null || log.logIndex == null || log.transactionHash == null)
+        throw new Error("Bank log is missing its mined identity");
+      logsAll.push({
+        chainId: release.chainId,
+        bank: getAddress(log.address),
+        blockNumber: Number(log.blockNumber),
+        logIndex: log.logIndex,
+        txHash: log.transactionHash,
+        eventName: log.eventName as BankEventName,
+        args: log.args ?? {}
+      });
     }
 
     // deterministic order
@@ -171,9 +195,21 @@ export function createBankIndexer(params: {
       return a.txHash > b.txHash ? 1 : a.txHash < b.txHash ? -1 : 0;
     });
 
-    if (logsAll.length === 0) return;
-
-    await db.transaction("rw", db.bankEvents, db.xpSnapshots, async () => {
+    await db.transaction("rw", db.bankEvents, db.xpSnapshots, db.cursors, async () => {
+      // Replacing the fetched range also removes orphaned events when a reorg returns no replacement logs.
+      const bankRows = await db.bankEvents
+        .where("blockNumber")
+        .between(fromBlock, toBlock, true, true)
+        .filter((row) => row.chainId === release.chainId && bankSet.has(row.bank.toLowerCase()))
+        .toArray();
+      const bankKeys = bankRows.map((row) => row.id);
+      const xpKeys = await db.xpSnapshots
+        .where("blockNumber")
+        .between(fromBlock, toBlock, true, true)
+        .filter((row) => row.chainId === release.chainId && bankSet.has(row.bank.toLowerCase()))
+        .primaryKeys();
+      await db.bankEvents.bulkDelete(bankKeys);
+      await db.xpSnapshots.bulkDelete(xpKeys);
       for (const ev of logsAll) {
         const rowId = `${ev.chainId}:${ev.bank}:${ev.txHash}:${ev.logIndex}`;
         const argsJson = safeJson(ev.args);
@@ -200,6 +236,7 @@ export function createBankIndexer(params: {
           await db.xpSnapshots.put({
             id: snapId,
             chainId: ev.chainId,
+            bank: ev.bank,
             payee,
             eventType: ev.eventName as BankXPEventName,
             blockNumber: ev.blockNumber,
@@ -211,6 +248,13 @@ export function createBankIndexer(params: {
           });
         }
       }
+      await db.cursors.put({
+        id: cursorId,
+        chainId: release.chainId,
+        source: banks[0]!,
+        lastProcessedBlock: toBlock,
+        updatedAt: Date.now()
+      });
     });
   }
 
@@ -246,20 +290,11 @@ function safeJson(obj: unknown): string {
   return JSON.stringify(obj, (_k, v) => (typeof v === "bigint" ? v.toString() : v));
 }
 
-function toBigintString(v: unknown): string {
-  if (typeof v === "bigint") return v.toString();
-  if (typeof v === "number") return BigInt(v).toString();
-  if (typeof v === "string") {
-    if (v.startsWith("0x")) {
-      try {
-        return BigInt(v).toString();
-      } catch {
-        /* fallthrough */
-      }
-    }
-    if (/^\d+$/.test(v)) return v;
+function toBigintString(value: unknown): string {
+  if (typeof value !== "bigint" && typeof value !== "number" && typeof value !== "string") {
+    throw new Error("Expected an integer event value");
   }
-  return String(v ?? "0");
+  return BigInt(value).toString();
 }
 
 /**
@@ -273,7 +308,7 @@ function toBigintString(v: unknown): string {
 function extractPrimaryAmount(eventType: BankXPEventName, args: Record<string, unknown>): unknown {
   switch (eventType) {
     case "XPAwarded":
-      return args.accrued ?? args.amount ?? 0n;
+      return args.accrued;
     case "XPLockedUnlocked":
     case "XPHoldbackReleased":
     case "XPAccruedClaimed":

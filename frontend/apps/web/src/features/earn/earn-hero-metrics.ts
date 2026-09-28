@@ -46,7 +46,7 @@ export function buildEarnHeroMetrics({
         symbol,
         4
       ),
-      detail: t("earn.metrics.sharePrice.detail")
+      detail: t("earn.async.sharePriceDetail")
     },
     {
       label: t("earn.metrics.totalShares.label"),

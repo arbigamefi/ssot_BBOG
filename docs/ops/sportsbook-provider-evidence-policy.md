@@ -1,160 +1,36 @@
-> Historical reference: this document includes pre-v1.5 deployment observations or commands. Those tools/artifacts were retired from the working tree. Use the [current deployment workflow](../deploy/v15-release.md) for operations; retrieve historical files from Git at `a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273`.
+# Sports result evidence
 
-# Sportsbook Provider and Evidence Policy
+SportsHub stores hashes, not source payloads. Preserve the exact bytes and interpretation that
+produce each hash before submitting a market or result. This operating policy does not itself admit
+Sports pools or authorize public traffic; see [Sports operations](runbooks/sportsbook-ops.md).
 
-Status: draft production-control policy. This file defines the evidence shape required before a
-SportsHub market can be considered production-ready. It does not approve a provider, jurisdiction,
-or public launch by itself.
+| On-chain field | Material to retain |
+| --- | --- |
+| `rulebookHash` | Event/market identity, outcome mapping, lock/finality rules, cancellation/postponement/correction and void policy |
+| `resultSourceHash` | Provider identity, event ID, observed result/status, source timestamp and exact source bundle |
+| `evidenceHash` | Archived payload references/hashes, reporter observations and the evidence preimage |
+| `challengeReasonHash` | Disputed facts, relevant rulebook provision and supporting evidence |
+| `arbitrationDecisionHash` | Decision type, reasoning, evidence references and responsible arbitrator |
 
-## Scope
+Choose a deterministic encoding for every bundle and retain its exact preimage plus the tool/version
+used to hash it. If JSON is used, specify key ordering, whitespace and numeric representation; the
+contract does not canonicalize documents for the operator. A preimage cannot contain its own final
+hash. Store derived hashes and transaction references separately.
 
-This policy applies only to the v1.3 SportsHub MVP scope:
-
-- pre-match fixed-odds singles;
-- one Sports pool and one asset during the first canary;
-- no live betting, parlays, player props, futures, or shared casino/sports bankroll.
-
-## Hash Surfaces
-
-SportsHub stores hashes, not provider payloads. Operators must preserve the payloads that produced
-each hash.
-
-| Field | On-chain use | Required source material |
-|---|---|---|
-| `rulebookHash` | Stored on market creation and included in signed odds/result payloads. | Canonical market rulebook JSON plus a human-readable rulebook copy. |
-| `resultSourceHash` | Included in `proposeResult` and `hashResultPayload(...)`. | Canonical source bundle with provider identity, raw event identity, observed score/status, and provider timestamps. |
-| `evidenceHash` | Included in `proposeResult` and `hashResultPayload(...)`. | Canonical evidence bundle with raw provider payload hashes, source URLs, screenshots or archived copies, reporter observations, and operator attestation. |
-| `challengeReasonHash` | Included in `challengeResult`. | Incident note explaining why the proposed result is disputed. |
-| `arbitrationDecisionHash` | Included in `resolveResultChallenge`. | Signed arbitration decision bundle, including decision type and evidence references. |
-
-The stored result payload digest must be reproducible with:
+Before a proposal, check the outcome against the published rulebook, source timestamp, market and
+reporter set. Recompute the signed digest using:
 
 ```text
 SportsHub.hashResultPayload(marketId, winningOutcomeId, resultSourceHash, evidenceHash, observedAt)
 ```
 
-## Canonicalization
+Preserve the reporter signatures and quorum used for that digest. Provider disagreement, corrections,
+missing results and outage handling must have a stated owner and policy. An odds quote is not result
+evidence; the current [The Odds API integration](sportsbook-provider-the-odds-api.md) only supplies
+odds to the application and does not generate a result proposal.
 
-For Phase 2, every JSON bundle must be hashed from a canonical single-line JSON representation with
-lexicographically sorted keys and no insignificant whitespace.
-
-Reference command:
-
-```bash
-canonical_json="$(jq -cS . docs/ops/templates/sportsbook-result-evidence.example.json)"
-hash="$(cast keccak "$canonical_json")"
-printf '%s\n' "$hash"
-```
-
-If a different canonicalization tool is adopted, the tool name, version, command, input file path, and
-output hash must be recorded in the incident or market evidence record.
-
-`evidenceHash` must be computed from an evidence preimage that does not contain its own final
-`evidenceHash`. Store self-referential values such as `evidenceHash` and `resultPayloadHash` in a
-separate sidecar or proposal summary after the evidence preimage is hashed.
-
-The first concrete provider ingestion path is documented in
-`docs/ops/sportsbook-provider-the-odds-api.md` and implemented by
-`script/ops/sports_provider_odds.py` plus `script/ops/sports_provider_evidence.py`. It maps The Odds
-API `h2h` odds into per-outcome SportsHub odds snapshots, and maps completed score responses into
-canonical `resultSourceHash` and `evidenceHash` values for the existing SportsHub reporter path.
-
-## Approval Memo
-
-The provider/evidence approval record must use schema `sportsbook.provider-evidence-approval.v1`.
-Start from `docs/ops/templates/sportsbook-provider-evidence-approval.example.json` and validate it
-with:
-
-```bash
-make sports-provider-policy-check-v13
-```
-
-For production approval, rerun with:
-
-```bash
-REQUIRE_APPROVED=1 make sports-provider-policy-check-v13 PROVIDER_POLICY_FILE=<approved-provider-policy.json>
-```
-
-The approved memo must confirm provider commercial-use approval, fallback providers, provider outage
-and disagreement rules, evidence storage, retention, operator review records, and cancellation,
-postponement, abandonment, stat-correction, and void policies for the supported market types.
-
-## Market Rulebook Requirements
-
-Before `createMarket(...)`, operators must publish or archive a rulebook bundle that includes:
-
-- `schemaVersion`;
-- sport, league, event identity, market type, and supported outcomes;
-- market lock, result finality, and challenge window policy;
-- cancellation, postponement, abandonment, stat correction, and provider disagreement handling;
-- void/refund policy and non-zero void reason hash procedure;
-- expected provider sources and fallback hierarchy;
-- operator and approver identities.
-
-The resulting `rulebookHash` must be:
-
-- non-zero;
-- included in the market;
-- included in every signed odds ticket for that market;
-- referenced by result evidence and dispute records.
-
-## Result Evidence Requirements
-
-Before `proposeResult(...)`, reporters must preserve:
-
-- provider name and account/feed identifier;
-- provider event identifier and internal `eventId`/`marketId`;
-- raw provider payloads or immutable archive links;
-- canonical `resultSourceHash`;
-- canonical `evidenceHash`;
-- `observedAt` source timestamp;
-- winning outcome mapping from provider fields to SportsHub outcome IDs;
-- reporter set hash and reporter signatures used for the proposal.
-
-For The Odds API football 1X2 ingestion, `script/ops/sports_provider_evidence.py` must be run before
-result submission. The generated `result-proposal.env` can be sourced by the football canary so
-`FOOTBALL_RESULT_OBSERVED_AT`, `FOOTBALL_RESULT_SOURCE_HASH`, and `FOOTBALL_EVIDENCE_HASH` all come
-from the same provider payload.
-
-## Odds Evidence Requirements
-
-Before signing odds snapshots, operators must preserve:
-
-- provider name and account/feed identifier;
-- provider event identifier and internal `eventId`/`marketId`;
-- bookmaker key and provider market key;
-- raw provider payload or immutable archive link;
-- canonical `oddsSourceHash`;
-- generated `FOOTBALL_HOME_ODDS_WAD`, `FOOTBALL_DRAW_ODDS_WAD`, and `FOOTBALL_AWAY_ODDS_WAD`;
-- `FOOTBALL_ODDS_EXPIRES_AT` and the intended short-lived quote window;
-- the signer-set hash and signer identity used for accepted tickets.
-
-For The Odds API football 1X2 ingestion, `script/ops/sports_provider_odds.py` must be run before odds
-signing. The generated `odds-snapshot.env` can be sourced by the football canary so every ticket uses
-the provider-derived odds for its selected outcome.
-
-No result should be proposed if the winning outcome cannot be reproduced from the published rulebook
-and preserved source material.
-
-## Challenge And Arbitration Requirements
-
-If a proposed result is disputed:
-
-- `challengeReasonHash` must map to an incident note before `challengeResult(...)` is sent;
-- the challenged market must not be directly voided through `voidMarket(...)`;
-- `arbitrationDecisionHash` must be non-zero and map to a signed decision bundle before
-  `resolveResultChallenge(...)`;
-- decision `VoidMarket` is required when no trustworthy corrected result can be produced;
-- all final `settleTickets`, `refundTickets`, or `voidTickets` debt-out transactions must be linked
-  from the incident record.
-
-## No-Go Conditions
-
-Do not open public SportsHub risk-in when any of the following is true:
-
-- no provider decision or fallback hierarchy exists for the market type;
-- a market lacks a reproducible rulebook hash;
-- a result source or evidence bundle cannot be reconstructed from archived material;
-- a provider correction policy is undefined for the market type;
-- an arbitration decision is not signed or cannot be hashed back to `arbitrationDecisionHash`;
-- frontend users can place tickets before the rulebook and source policy are published.
+For a challenge, preserve the reason preimage before sending. An arbitrator's uphold/reopen/void
+action must link to its decision evidence. Governance's challenged-market void route is available
+only after the current challenge timeout and needs a nonzero reason hash. Retain the final market and
+ticket receipts, including player transfer or payable evidence. Do not describe repeated reopening
+or missing reporting as having a guaranteed total deadline.

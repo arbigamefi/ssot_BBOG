@@ -10,14 +10,12 @@ def check(image, revision):
     info = json.loads(subprocess.check_output(["docker", "image", "inspect", image]))[0]
     if info["Config"].get("Labels", {}).get("org.opencontainers.image.revision") != revision:
         raise ValueError("application image revision mismatch")
-    # Each chain runs one release line; mainnet can stay on v1.5 while a testnet runs v1.6.
     probe = r"""
 const fs=require('node:fs');
 const rows=[];
-const lines=['SSOT_RELEASE_DIGEST_V15','SSOT_RELEASE_DIGEST_V16'];
 for(const chainId of [8453,84532]) {
  const r=JSON.parse(fs.readFileSync('/app/release-manifests/chain-'+chainId+'.json','utf8'));
- if(r.chainId!==chainId||r.isPlaceholder||!lines.includes(r.meta?.releaseLock?.schema))process.exit(1);
+ if(r.chainId!==chainId||r.isPlaceholder||r.meta?.releaseLock?.schema!=='SSOT_RELEASE_DIGEST_V16')process.exit(1);
  if(r.meta.releaseLock.chainId!==chainId||!/^0x[0-9a-fA-F]{64}$/.test(r.releaseDigest)||r.releaseDigest!==r.meta.releaseLock.digest)process.exit(1);
  rows.push({chainId,digest:r.releaseDigest,gameHub:r.contracts.gameHub,banks:r.assets.map(a=>a.bank)});
 }

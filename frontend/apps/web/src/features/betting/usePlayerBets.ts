@@ -26,7 +26,7 @@ export function usePlayerBets({
 
   const serverQuery = useQuery({
     enabled: Boolean(enabled && player),
-    queryKey: ["ssot", "bets", "player", "server", { chainId, limit, player }],
+    queryKey: ["ssot", "bets", "player", "server", { chainId, gameHub, limit, player }],
     queryFn: async () => {
       if (!player) return [];
       const params = new URLSearchParams({
@@ -48,7 +48,13 @@ export function usePlayerBets({
 
   const localQuery = useQuery({
     enabled: Boolean(enabled && db && normalizedPlayer),
-    queryKey: ["ssot", "bets", "player", "local", { chainId, limit, player: normalizedPlayer }],
+    queryKey: [
+      "ssot",
+      "bets",
+      "player",
+      "local",
+      { chainId, gameHub, limit, player: normalizedPlayer }
+    ],
     queryFn: async () => {
       if (!db || !normalizedPlayer) return [];
       const rows = await db.bets.where("chainId").equals(chainId).toArray();
@@ -62,7 +68,7 @@ export function usePlayerBets({
   });
 
   const data = React.useMemo(
-    () => mergeBetRows(serverQuery.data ?? [], localQuery.data ?? [], limit, gameHub),
+    () => mergeBetRows(serverQuery.data ?? [], localQuery.data ?? [], limit),
     [gameHub, limit, localQuery.data, serverQuery.data]
   );
 
@@ -82,17 +88,14 @@ export function usePlayerBets({
 
 /**
  * Merges index rows with the browser's cached rows. Bet ids restart in every GameHub deployment,
- * so rows are matched by chain, hub and bet id; a cached row without a hub belongs to the release
- * of its release-scoped cache, whose hub is `gameHub`.
+ * so rows are matched by their explicit chain, hub and bet id.
  */
 export function mergeBetRows(
   serverRows: readonly BetRow[],
   localRows: readonly BetRow[],
-  limit: number,
-  gameHub?: string
+  limit: number
 ) {
-  const key = (row: BetRow) =>
-    `${row.chainId}:${(row.gameHub ?? gameHub ?? "").toLowerCase()}:${row.betId}`;
+  const key = (row: BetRow) => `${row.chainId}:${row.gameHub.toLowerCase()}:${row.betId}`;
   const merged = new Map<string, BetRow>();
   for (const row of serverRows) merged.set(key(row), row);
   for (const row of localRows) {

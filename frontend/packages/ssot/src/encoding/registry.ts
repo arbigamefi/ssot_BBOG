@@ -21,7 +21,7 @@ export interface GameEncoder {
   decode: (encoded: Hex) => Record<string, unknown>;
   /** Default params for form initialization. */
   defaultParams: Record<string, unknown>;
-  /** ABI parameter description (e.g. "uint8" for dice cap). */
+  /** ABI parameter description (e.g. "bool isOver, uint8 target" for dice). */
   paramsDescription: string;
 }
 
@@ -40,8 +40,7 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
     {
       slug: "dice",
       label: "Dice",
-      encode: (p: { cap?: number; target?: number; direction?: "under" | "over" }) =>
-        encodeDiceParams({ direction: p.direction ?? "over", target: p.target ?? p.cap ?? 50 }),
+      encode: (p: { target: number; direction: "under" | "over" }) => encodeDiceParams(p),
       decode: (hex: Hex) => decodeDiceParams(hex),
       defaultParams: { direction: "under", target: 50 },
       paramsDescription: "bool isOver, uint8 target"

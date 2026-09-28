@@ -30,11 +30,9 @@ Capital providers should understand which pool they underwrite, how they are
 compensated, what can reduce their share value and when they can withdraw.
 Partners should understand the source and conditions of referral compensation.
 
-The next casino economic design gives LPs an explicit allocation from actual
-payout deductions and limits protocol/referral obligations to the remaining
-budget. Accurate pool accounting, financial history and participation terms
-must accompany it. This is a new-version design; current pools continue to use
-their released rules until a verified transition occurs.
+The current casino model reserves a fixed 50% of the turnover edge for LPs. The operator half funds
+referrals and protocol fees. Deposits are immediate; redemptions use a request, isolation of old risk and
+batch claim. Launch requires audit and network acceptance of these rules and the remaining recovery policy.
 
 ## 3. Bounded service and responsible growth
 
@@ -73,4 +71,4 @@ business line or a white-label platform.
 - [Project brief](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md): a short introduction and role-specific reading paths.
 - [Business whitepaper](WHITEPAPER.product.zh-CN.md): the market, product and cooperation case.
 - [Technical whitepaper](WHITEPAPER.zh-CN.md): mechanisms, design rationale and trust assumptions.
-- [Release facts](release/STATUS-v1.5.zh-CN.md): dated implementation, deployment and availability evidence.
+- [Current release](release/README.md): implementation scope and launch gates.

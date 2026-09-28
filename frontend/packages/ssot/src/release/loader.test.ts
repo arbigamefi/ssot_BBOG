@@ -1,232 +1,56 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import fixture from "../fixtures/release-v16.fixture.json";
+import { embeddedChainIds, embeddedReleases } from "./embedded";
 import { loadEmbeddedRelease } from "./loader";
 import { ReleaseSchema } from "./schema";
 
-const ADDRESS_1 = "0x1111111111111111111111111111111111111111";
-const ADDRESS_2 = "0x2222222222222222222222222222222222222222";
-const ADDRESS_3 = "0x3333333333333333333333333333333333333333";
-const ADDRESS_4 = "0x4444444444444444444444444444444444444444";
-const ADDRESS_5 = "0x5555555555555555555555555555555555555555";
-const ADDRESS_6 = "0x6666666666666666666666666666666666666666";
-const ADDRESS_7 = "0x7777777777777777777777777777777777777777";
-const ADDRESS_8 = "0x8888888888888888888888888888888888888888";
-const ADDRESS_9 = "0x9999999999999999999999999999999999999999";
-const ADDRESS_A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const ADDRESS_B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+afterEach(() => {
+  delete embeddedReleases[31337];
+});
 
-const GAME_ID = "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914a8b";
-const HASH_A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const HASH_B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const HASH_C = "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
-const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
-const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
-const BASE_SEPOLIA_USDC = "0x036cbd53842c5426634e7929541ec2318f3dcf7e";
-const BASE_SEPOLIA_WETH = "0x4200000000000000000000000000000000000006";
-
-function v13ReleaseFixture() {
-  return {
-    chainId: 84532,
-    name: "Base Sepolia",
-    releaseDigest: "0xdeadbeefcafefeed",
-    refundTimeoutSeconds: 3600,
-    defaultHouseEdgeBps: 200,
-    contracts: {
-      gameHub: ADDRESS_1,
-      settlementRouter: ADDRESS_2,
-      poolRegistry: ADDRESS_3,
-      sportsHub: ADDRESS_4,
-      sportsRiskEngine: ADDRESS_5,
-      vrfHub: ADDRESS_6,
-      refRegistry: ADDRESS_7,
-      refEngine: ADDRESS_8,
-      adapter: ADDRESS_9
-    },
-    assets: [
-      {
-        symbol: "USDC",
-        decimals: 6,
-        address: ADDRESS_A,
-        bank: ADDRESS_B
-      }
-    ],
-    games: {
-      [GAME_ID]: ADDRESS_8
-    },
-    gamesMeta: [
-      {
-        gameId: GAME_ID,
-        slug: "dice",
-        label: "Dice",
-        module: ADDRESS_8,
-        paramsEncoding: "abi.encode(uint8 cap)"
-      }
-    ],
-    sports: {
-      enabled: true,
-      riskEngine: ADDRESS_5,
-      sportsHub: ADDRESS_4,
-      oddsSignerSetHash: HASH_A,
-      resultReporterSetHash: HASH_B,
-      resultReporterThreshold: "1",
-      resultChallengeTimeoutSeconds: "604800",
-      resultChallenger: ADDRESS_9,
-      resultArbitrator: ADDRESS_A,
-      maxStake: "1000000",
-      maxPayout: "2000000",
-      maxMarketReserved: "3000000",
-      maxOutcomeReserved: "4000000",
-      maxEventReserved: "5000000"
-    },
-    pools: [
-      {
-        poolId: 1,
-        domainId: 1,
-        domain: "Casino",
-        active: true,
-        asset: ADDRESS_A,
-        bank: ADDRESS_B,
-        symbol: "USDC",
-        decimals: 6,
-        sportsRisk: null
-      },
-      {
-        poolId: 2,
-        domainId: 2,
-        domain: "Sports",
-        active: true,
-        asset: ADDRESS_A,
-        bank: ADDRESS_7,
-        symbol: "USDC",
-        decimals: 6,
-        sportsRisk: {
-          maxStake: "1000000",
-          maxPayout: "2000000",
-          maxMarketReserved: "3000000",
-          maxOutcomeReserved: "4000000",
-          maxEventReserved: "5000000",
-          riskHash: HASH_C
-        }
-      }
-    ],
-    meta: {
-      blockNumber: 41462034,
-      schemaVersion: 2,
-      generatedAt: 1
-    }
-  };
-}
-
-describe("loadEmbeddedRelease", () => {
-  it("returns ok:true for the embedded v1.3 chain-84532 release", () => {
-    const result = loadEmbeddedRelease(84532);
-    expect(result.ok).toBe(true);
-    if (!result.ok) throw new Error("Expected ok");
-
-    expect(result.release.chainId).toBe(84532);
-    expect(result.release.meta?.schemaVersion).toBe(2);
-    expect(result.release.contracts.gameHub).toMatch(/^0x[a-f0-9]{40}$/);
-    expect(result.release.contracts.poolRegistry).toMatch(/^0x[a-f0-9]{40}$/);
-    expect(result.release.contracts.sportsHub).toMatch(/^0x[a-f0-9]{40}$/);
-    expect(result.release.refundTimeoutSeconds).toBe(3600);
-    expect(result.release.defaultHouseEdgeBps).toBe(200);
-    expect(result.release.assets.length).toBeGreaterThan(0);
-    expect(result.release.gamesMeta.length).toBeGreaterThan(0);
-    expect(result.release.pools.length).toBeGreaterThan(0);
-  });
-
-  it("returns error for unknown chainId", () => {
-    const result = loadEmbeddedRelease(99999);
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error("Expected error");
-    expect(result.error).toContain("No embedded release for chainId=99999");
-  });
-
-  it("normalizes addresses to lowercase", () => {
-    const result = loadEmbeddedRelease(84532);
-    if (!result.ok) throw new Error("Expected ok");
-
-    expect(result.release.contracts.gameHub).toBe(result.release.contracts.gameHub.toLowerCase());
-    expect(result.release.contracts.poolRegistry).toBe(
-      result.release.contracts.poolRegistry.toLowerCase()
-    );
-    for (const asset of result.release.assets) {
-      expect(asset.address).toBe(asset.address.toLowerCase());
-      expect(asset.bank).toBe(asset.bank.toLowerCase());
-    }
-  });
-
-  it("does not warn about a usable real release", () => {
-    const result = loadEmbeddedRelease(84532);
-    if (!result.ok) throw new Error("Expected ok");
-    expect(result.release.isPlaceholder).toBe(false);
-    expect(result.warnings).toEqual([]);
-  });
-
-  it("anchors the Base Sepolia embedded release to V14 casino USDC/WETH pools", () => {
-    const result = loadEmbeddedRelease(84532);
-    if (!result.ok) throw new Error("Expected ok");
-    expect(result.release.defaultHouseEdgeBps).toBe(200);
-
-    expect(result.release.assets).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          address: BASE_SEPOLIA_USDC,
-          decimals: 6,
-          symbol: "USDC"
-        }),
-        expect.objectContaining({
-          address: BASE_SEPOLIA_WETH,
-          decimals: 18,
-          symbol: "WETH"
-        })
-      ])
-    );
-
-    expect(result.release.pools).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          asset: BASE_SEPOLIA_USDC,
-          decimals: 6,
-          domain: "Casino",
-          poolId: 1,
-          symbol: "USDC"
-        }),
-        expect.objectContaining({
-          asset: BASE_SEPOLIA_WETH,
-          decimals: 18,
-          domain: "Casino",
-          poolId: 3,
-          symbol: "WETH"
-        })
-      ])
-    );
-  });
-
-  it("accepts only the v1.3 pool-aware release shape", () => {
-    const parsed = ReleaseSchema.safeParse(v13ReleaseFixture());
-
-    expect(parsed.success).toBe(true);
-    if (!parsed.success) throw new Error(parsed.error.message);
-    expect(parsed.data.defaultHouseEdgeBps).toBe(200);
-    expect(parsed.data.sports.enabled).toBe(true);
-    expect(parsed.data.contracts.sportsHub).toBe(ADDRESS_4);
-    expect(parsed.data.pools[1]?.sportsRisk?.riskHash).toBe(HASH_C);
-  });
-
-  it("rejects the old hub-centric release shape", () => {
-    const parsed = ReleaseSchema.safeParse({
-      ...v13ReleaseFixture(),
-      contracts: {
-        [LEGACY_GAME_AGGREGATOR_KEY]: ADDRESS_1,
-        vrfHub: ADDRESS_6,
-        [LEGACY_BANK_DIRECTORY_KEY]: ADDRESS_3
-      },
-      gamesMeta: undefined,
-      sports: undefined,
-      pools: undefined,
-      meta: { schemaVersion: 1 }
+describe("current release loading", () => {
+  it("does not register local test metadata as an embedded deployment", () => {
+    expect(embeddedChainIds).not.toContain(31337);
+    expect(loadEmbeddedRelease(31337)).toEqual({
+      ok: false,
+      error: "No embedded release for chainId=31337"
     });
+  });
 
-    expect(parsed.success).toBe(false);
+  it("loads explicitly supplied test metadata with a placeholder warning", () => {
+    embeddedReleases[31337] = fixture;
+    const result = loadEmbeddedRelease(31337);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.release.meta?.releaseLock?.schema).toBe("SSOT_RELEASE_DIGEST_V16");
+    expect(result.release.gamesMeta).toHaveLength(8);
+    expect(result.warnings).toContain("Release snapshot is marked as placeholder");
+  });
+
+  it("normalizes addresses and rejects invalid pool metadata", () => {
+    const mixedCase = "0xABCDEFabcdefABCDEFabcdefABCDEFabcdefABCD";
+    const parsed = ReleaseSchema.parse({
+      ...fixture,
+      contracts: { ...fixture.contracts, gameHub: mixedCase }
+    });
+    expect(parsed.contracts.gameHub).toBe(mixedCase.toLowerCase());
+    expect(
+      ReleaseSchema.safeParse({ ...fixture, pools: [{ ...fixture.pools[0], decimals: 37 }] })
+        .success
+    ).toBe(false);
+  });
+
+  it("rejects a noncurrent lock and missing release identity", () => {
+    expect(
+      ReleaseSchema.safeParse({
+        ...fixture,
+        meta: { ...fixture.meta, releaseLock: { schema: "unsupported" } }
+      }).success
+    ).toBe(false);
+    embeddedReleases[31337] = { ...fixture, meta: { schemaVersion: 2 } };
+    expect(loadEmbeddedRelease(31337)).toEqual({
+      ok: false,
+      error: "Expected current v1.6 release metadata"
+    });
   });
 });

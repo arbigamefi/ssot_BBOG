@@ -60,7 +60,7 @@ const config: KeeperConfig = {
   sportsTerminalizerMarketIds: [],
   sportsTerminalizerScanChunkBlocks: 10n,
   sportsTerminalizerMaxTicketsPerMarket: 2,
-  sportsTicketEnumerationMax: 500,
+
   sportsTicketScanChunkBlocks: 10n,
   sportsTicketScanMaxBlocks: 50_000n,
   sportsTicketScanStartBlock: 100n

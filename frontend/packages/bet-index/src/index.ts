@@ -1,3 +1,5 @@
+import type { BankProviderLedgerAction } from "./bank-cash-ledger.js";
+export { decodeBankProviderCashEvent, type BankProviderLedgerAction } from "./bank-cash-ledger.js";
 import postgres, { type Sql } from "postgres";
 import { getCasinoFinancials } from "./financials.js";
 import type { Address, Hex } from "viem";
@@ -81,8 +83,8 @@ export type BetRow = {
   lastEventName: string;
   updatedAt: number;
   /**
-   * Read from the indexed HouseEdgeAllocated event; writeBetRows does not store it. Absent for v1.5
-   * hubs, refunds and bets not yet settled.
+   * Read from the indexed HouseEdgeAllocated event; writeBetRows does not store it.
+   * Absent for refunds, unsettled bets, or an incomplete receipt index.
    */
   houseEdge?: BetHouseEdgeAllocation;
 };
@@ -137,8 +139,6 @@ export type SportsTicketIndexEvent = {
   args: Record<string, unknown>;
 };
 
-export type BankProviderLedgerAction = "deposit" | "withdraw";
-
 export type BankProviderLedgerRow = {
   id: string;
   chainId: number;
@@ -154,8 +154,34 @@ export type BankProviderLedgerRow = {
   assets?: string;
   shares: string;
   sharePrice?: string;
+  receiver?: Address;
+  caller?: Address;
+  epochId?: string;
   updatedAt: number;
 };
+
+export type BankProviderLedgerRange = {
+  chainId: number;
+  bank: Address;
+  fromBlock: bigint;
+  toBlock: bigint;
+  rows: readonly BankProviderLedgerRow[];
+};
+
+function validateLedgerRange(range: BankProviderLedgerRange) {
+  if (range.fromBlock < 0n || range.toBlock < range.fromBlock)
+    throw new Error("Invalid cash ledger range.");
+  for (const row of range.rows) {
+    normalizeBankProviderLedgerAction(row.action);
+    if (
+      row.chainId !== range.chainId ||
+      row.bank.toLowerCase() !== range.bank.toLowerCase() ||
+      BigInt(row.blockNumber) < range.fromBlock ||
+      BigInt(row.blockNumber) > range.toBlock
+    )
+      throw new Error("Cash ledger row is outside replacement range.");
+  }
+}
 
 export type BetIndexQuery = {
   chainId: number;
@@ -184,9 +210,11 @@ export type BankProviderLedgerQuery = {
   chainId: number;
   limit: number;
   owner: Address;
-  poolId: number | string;
+  /** Contract identity scopes provider cash flow, independently of pool display IDs. */
+  bank: Address;
   beforeBlock?: number;
   beforeLogIndex?: number;
+  endBlock?: number;
 };
 
 export type BetIndexAffiliateStats = {
@@ -281,12 +309,22 @@ export type BetIndexStore = {
     afterBetId: bigint;
     limit: number;
   }) => Promise<bigint[]>;
-  migrate: () => Promise<void>;
+  /** All placed or random-ready bets without a recorded terminal event, for timeout recovery. */
+  getUnresolvedBetIds: (query: {
+    chainId: number;
+    gameHub: Address;
+    afterBetId: bigint;
+    limit: number;
+  }) => Promise<bigint[]>;
+  initializeSchema: () => Promise<void>;
   writeGameHubEvents: (events: readonly BetIndexEvent[]) => Promise<BetRow[]>;
   writeBetRows: (rows: readonly BetRow[]) => Promise<BetRow[]>;
   writeSportsHubEvents: (events: readonly SportsTicketIndexEvent[]) => Promise<SportsTicketRow[]>;
   writeBankProviderLedgerRows: (
     rows: readonly BankProviderLedgerRow[]
+  ) => Promise<BankProviderLedgerRow[]>;
+  replaceBankProviderLedgerRange: (
+    range: BankProviderLedgerRange
   ) => Promise<BankProviderLedgerRow[]>;
   getRecentBets: (query: BetIndexQuery) => Promise<BetRow[]>;
   getBet: (query: BetIndexReceiptQuery) => Promise<BetRow | null>;
@@ -425,50 +463,6 @@ create table if not exists bets (
   primary key (chain_id, game_hub, bet_id)
 );
 
-alter table bets add column if not exists stake text;
-alter table bets add column if not exists pricing_affiliate text;
-alter table bets add column if not exists payout text;
-alter table bets add column if not exists payout_gross text;
-alter table bets add column if not exists refund_amount text;
-alter table bets add column if not exists request_id text;
-alter table bets add column if not exists random_hash text;
-alter table bets add column if not exists terminal_tx_hash text;
-alter table bets add column if not exists finalized_tx_hash text;
-alter table bets add column if not exists refunded_tx_hash text;
-alter table bets add column if not exists placed_at timestamptz;
-alter table gamehub_events add column if not exists block_timestamp timestamptz;
-
--- Bet ids restart at 1 in every GameHub deployment, so a bet is identified by its hub too. Tables created
--- before this carried (chain_id, bet_id); each of their rows came from events of exactly one hub.
-alter table bets add column if not exists game_hub text;
-update bets b set game_hub = (
-  select e.game_hub from gamehub_events e
-  where e.chain_id = b.chain_id
-    and coalesce(e.args_json->>'positionId', e.args_json->>'betId', e.args_json->>'id', '0') = b.bet_id
-  order by e.block_number, e.log_index
-  limit 1
-)
-where b.game_hub is null;
-do $$
-declare
-  orphans integer;
-begin
-  if exists (
-    select 1 from pg_index i
-    join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey)
-    where i.indrelid = 'bets'::regclass and i.indisprimary and a.attname = 'game_hub'
-  ) then
-    return;
-  end if;
-  select count(*) into orphans from bets where game_hub is null;
-  if orphans > 0 then
-    raise exception 'bets has % rows whose GameHub no indexed event names; backfill them before migrating', orphans;
-  end if;
-  alter table bets alter column game_hub set not null;
-  alter table bets drop constraint if exists bets_pkey;
-  alter table bets add constraint bets_pkey primary key (chain_id, game_hub, bet_id);
-end $$;
-
 create index if not exists bets_recent_idx
   on bets (chain_id, updated_block desc, bet_id desc);
 
@@ -492,7 +486,7 @@ create index if not exists bets_state_idx
 
 create index if not exists gamehub_events_recovery_idx
   on gamehub_events (chain_id, game_hub, event_name,
-    (coalesce(args_json->>'positionId', args_json->>'betId', args_json->>'id', '0')::numeric));
+    (coalesce(args_json->>'positionId', args_json->>'betId', '0')::numeric));
 
 create table if not exists sport_tickets (
   chain_id integer not null,
@@ -522,23 +516,6 @@ create table if not exists sport_tickets (
   primary key (chain_id, ticket_id)
 );
 
-alter table sport_tickets add column if not exists position_id text;
-alter table sport_tickets add column if not exists market_id text;
-alter table sport_tickets add column if not exists event_id text;
-alter table sport_tickets add column if not exists pool_id text;
-alter table sport_tickets add column if not exists outcome_id integer;
-alter table sport_tickets add column if not exists player text;
-alter table sport_tickets add column if not exists stake text;
-alter table sport_tickets add column if not exists payout text;
-alter table sport_tickets add column if not exists reserved text;
-alter table sport_tickets add column if not exists refund_amount text;
-alter table sport_tickets add column if not exists odds_snapshot_hash text;
-alter table sport_tickets add column if not exists rulebook_hash text;
-alter table sport_tickets add column if not exists terminal_tx_hash text;
-alter table sport_tickets add column if not exists settled_tx_hash text;
-alter table sport_tickets add column if not exists refunded_tx_hash text;
-alter table sport_tickets add column if not exists voided_tx_hash text;
-
 create index if not exists sport_tickets_recent_idx
   on sport_tickets (chain_id, updated_block desc, ticket_id desc);
 
@@ -565,27 +542,15 @@ create table if not exists bank_provider_ledger (
   asset_amount text,
   share_amount text not null,
   share_price text,
+  receiver text,
+  caller text,
+  epoch_id text,
   updated_at timestamptz not null default now(),
   primary key (chain_id, tx_hash, log_index)
 );
 
-alter table bank_provider_ledger add column if not exists pool_id text;
-alter table bank_provider_ledger add column if not exists owner text;
-alter table bank_provider_ledger add column if not exists bank text;
-alter table bank_provider_ledger add column if not exists asset text;
-alter table bank_provider_ledger add column if not exists action text;
-alter table bank_provider_ledger add column if not exists block_number bigint;
-alter table bank_provider_ledger add column if not exists timestamp timestamptz;
-alter table bank_provider_ledger add column if not exists asset_amount text;
-alter table bank_provider_ledger add column if not exists share_amount text;
-alter table bank_provider_ledger add column if not exists share_price text;
-alter table bank_provider_ledger add column if not exists updated_at timestamptz;
-
 create index if not exists bank_provider_ledger_owner_idx
-  on bank_provider_ledger (chain_id, pool_id, owner, block_number desc, log_index desc);
-
-create index if not exists bank_provider_ledger_bank_idx
-  on bank_provider_ledger (chain_id, bank, block_number desc, log_index desc);
+  on bank_provider_ledger (chain_id, bank, owner, block_number desc, log_index desc);
 
 create table if not exists indexer_cursors (
   chain_id integer not null,
@@ -639,7 +604,7 @@ export function createMemoryBetIndexStore(): BetIndexStore {
     const changed = new Map<string, SportsTicketRow>();
     const sorted = [...input].sort(compareEvents);
     for (const event of sorted) {
-      const ticketId = String(event.args.ticketId ?? event.args.id ?? "0");
+      const ticketId = String(event.args.ticketId ?? "0");
       const key = `${event.chainId}:${ticketId}`;
       const existing = sportsTickets.get(key);
       const next = applyEventToSportsTicket(existing, event);
@@ -651,6 +616,7 @@ export function createMemoryBetIndexStore(): BetIndexStore {
     return [...changed.values()];
   };
   const writeBankProviderLedgerRows = async (input: readonly BankProviderLedgerRow[]) => {
+    for (const row of input) normalizeBankProviderLedgerAction(row.action);
     for (const row of input) {
       bankProviderLedger.set(bankProviderLedgerId(row.chainId, row.txHash, row.logIndex), {
         ...row,
@@ -664,27 +630,38 @@ export function createMemoryBetIndexStore(): BetIndexStore {
     return [...input];
   };
 
+  const getRecoverableBetIds = async (
+    {
+      chainId,
+      gameHub,
+      afterBetId,
+      limit
+    }: { chainId: number; gameHub: Address; afterBetId: bigint; limit: number },
+    includePending: boolean
+  ): Promise<bigint[]> => {
+    const ready = new Set<bigint>();
+    const terminal = new Set<bigint>();
+    for (const event of gameHubEvents.values()) {
+      if (event.chainId !== chainId || event.gameHub.toLowerCase() !== gameHub.toLowerCase())
+        continue;
+      const id = BigInt(String(event.args.positionId ?? event.args.betId ?? "0"));
+      if (
+        event.eventName === "BetRandomReady" ||
+        (includePending && event.eventName === "BetPlaced")
+      )
+        ready.add(id);
+      if (event.eventName === "BetFinalized" || event.eventName === "BetRefunded") terminal.add(id);
+    }
+    return [...ready]
+      .filter((id) => id > afterBetId && !terminal.has(id))
+      .sort((a, b) => (a < b ? -1 : 1))
+      .slice(0, limit);
+  };
   return {
-    migrate: async () => undefined,
+    initializeSchema: async () => undefined,
     sportsRecovery: createMemorySportsRecoveryStore(),
-    getRandomReadyBetIds: async ({ chainId, gameHub, afterBetId, limit }) => {
-      const ready = new Set<bigint>();
-      const terminal = new Set<bigint>();
-      for (const event of gameHubEvents.values()) {
-        if (event.chainId !== chainId || event.gameHub.toLowerCase() !== gameHub.toLowerCase())
-          continue;
-        const id = BigInt(
-          String(event.args.positionId ?? event.args.betId ?? event.args.id ?? "0")
-        );
-        if (event.eventName === "BetRandomReady") ready.add(id);
-        if (event.eventName === "BetFinalized" || event.eventName === "BetRefunded")
-          terminal.add(id);
-      }
-      return [...ready]
-        .filter((id) => id > afterBetId && !terminal.has(id))
-        .sort((a, b) => (a < b ? -1 : 1))
-        .slice(0, limit);
-    },
+    getRandomReadyBetIds: (query) => getRecoverableBetIds(query, false),
+    getUnresolvedBetIds: (query) => getRecoverableBetIds(query, true),
     writeGameHubEvents,
     writeBetRows: async (input) => {
       for (const row of input) {
@@ -695,6 +672,19 @@ export function createMemoryBetIndexStore(): BetIndexStore {
     },
     writeSportsHubEvents,
     writeBankProviderLedgerRows,
+    replaceBankProviderLedgerRange: async (range) => {
+      validateLedgerRange(range);
+      for (const [id, row] of bankProviderLedger) {
+        if (
+          row.chainId === range.chainId &&
+          row.bank.toLowerCase() === range.bank.toLowerCase() &&
+          BigInt(row.blockNumber) >= range.fromBlock &&
+          BigInt(row.blockNumber) <= range.toBlock
+        )
+          bankProviderLedger.delete(id);
+      }
+      return writeBankProviderLedgerRows(range.rows);
+    },
     getRecentBets: async ({ chainId, gameHub, gameId, limit }) =>
       [...bets.values()]
         .filter((row) => row.chainId === chainId && sameHub(row, gameHub))
@@ -719,11 +709,20 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .filter((row) => row.player?.toLowerCase() === player.toLowerCase())
         .sort(compareSportsTicketRows)
         .slice(0, limit),
-    getBankProviderLedger: async ({ beforeBlock, beforeLogIndex, chainId, limit, owner, poolId }) =>
+    getBankProviderLedger: async ({
+      beforeBlock,
+      beforeLogIndex,
+      chainId,
+      limit,
+      owner,
+      bank,
+      endBlock
+    }) =>
       [...bankProviderLedger.values()]
         .filter((row) => row.chainId === chainId)
-        .filter((row) => row.poolId === String(poolId))
+        .filter((row) => row.bank.toLowerCase() === bank.toLowerCase())
         .filter((row) => row.owner.toLowerCase() === owner.toLowerCase())
+        .filter((row) => endBlock == null || row.blockNumber <= endBlock)
         .filter((row) => isBankProviderLedgerBeforeCursor(row, beforeBlock, beforeLogIndex))
         .sort(compareBankProviderLedgerRows)
         .slice(0, limit),
@@ -854,6 +853,48 @@ export function createPostgresBetIndexStore(config: PostgresBetIndexConfig): Bet
 
 type SqlTag = (strings: TemplateStringsArray, ...parameters: unknown[]) => unknown;
 
+async function upsertBankProviderLedgerRow(sql: SqlTag, row: BankProviderLedgerRow) {
+  await sql`
+            insert into bank_provider_ledger (
+              chain_id, pool_id, owner, bank, asset, action, tx_hash, block_number, log_index,
+              timestamp, asset_amount, share_amount, share_price, receiver, caller, epoch_id, updated_at
+            ) values (
+              ${row.chainId},
+              ${String(row.poolId)},
+              ${row.owner.toLowerCase()},
+              ${row.bank.toLowerCase()},
+              ${row.asset.toLowerCase()},
+              ${row.action},
+              ${row.txHash.toLowerCase()},
+              ${row.blockNumber},
+              ${row.logIndex},
+              ${row.timestamp == null ? null : new Date(row.timestamp)},
+              ${row.assets ?? null},
+              ${row.shares},
+              ${row.sharePrice ?? null},
+              ${row.receiver?.toLowerCase() ?? null},
+              ${row.caller?.toLowerCase() ?? null},
+              ${row.epochId ?? null},
+              ${new Date(row.updatedAt)}
+            )
+            on conflict (chain_id, tx_hash, log_index) do update set
+              pool_id = excluded.pool_id,
+              owner = excluded.owner,
+              bank = excluded.bank,
+              asset = excluded.asset,
+              action = excluded.action,
+              block_number = excluded.block_number,
+              timestamp = excluded.timestamp,
+              asset_amount = excluded.asset_amount,
+              share_amount = excluded.share_amount,
+              share_price = excluded.share_price,
+              receiver = excluded.receiver,
+              caller = excluded.caller,
+              epoch_id = excluded.epoch_id,
+              updated_at = excluded.updated_at
+          `;
+}
+
 async function upsertBetRow(sql: SqlTag, row: BetRow) {
   const normalized = normalizeBetRow(row);
   await sql`
@@ -945,7 +986,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       select e.args_json from gamehub_events e
       where e.chain_id = bets.chain_id and e.game_hub = bets.game_hub
         and e.event_name = 'HouseEdgeAllocated'
-        and coalesce(e.args_json->>'positionId', e.args_json->>'betId', e.args_json->>'id', '0')::numeric
+        and coalesce(e.args_json->>'positionId', e.args_json->>'betId', '0')::numeric
           = bets.bet_id::numeric
       order by e.block_number, e.log_index
       limit 1
@@ -965,29 +1006,39 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
     `;
     if (missing.length) throw new Error("Casino financials are not ready");
   }
-  return {
-    sportsRecovery: createPostgresSportsRecoveryStore(sql),
-    getRandomReadyBetIds: async ({ chainId, gameHub, afterBetId, limit }) => {
-      const rows = await sql`
-        select distinct coalesce(e.args_json->>'positionId', e.args_json->>'betId', e.args_json->>'id', '0')::numeric as bet_id
+  const getRecoverableBetIds = async (
+    {
+      chainId,
+      gameHub,
+      afterBetId,
+      limit
+    }: { chainId: number; gameHub: Address; afterBetId: bigint; limit: number },
+    includePending: boolean
+  ): Promise<bigint[]> => {
+    const rows = await sql`
+        select distinct coalesce(e.args_json->>'positionId', e.args_json->>'betId', '0')::numeric as bet_id
         from gamehub_events e
         where e.chain_id = ${chainId} and e.game_hub = ${gameHub.toLowerCase()}
-          and e.event_name = 'BetRandomReady'
-          and coalesce(e.args_json->>'positionId', e.args_json->>'betId', e.args_json->>'id', '0')::numeric > ${String(afterBetId)}
+          and (e.event_name = 'BetRandomReady' or (${includePending} and e.event_name = 'BetPlaced'))
+          and coalesce(e.args_json->>'positionId', e.args_json->>'betId', '0')::numeric > ${String(afterBetId)}
           and not exists (
             select 1 from gamehub_events terminal
             where terminal.chain_id = e.chain_id and terminal.game_hub = e.game_hub
               and terminal.event_name in ('BetFinalized', 'BetRefunded')
-              and coalesce(terminal.args_json->>'positionId', terminal.args_json->>'betId', terminal.args_json->>'id', '0')::numeric
-                = coalesce(e.args_json->>'positionId', e.args_json->>'betId', e.args_json->>'id', '0')::numeric
+              and coalesce(terminal.args_json->>'positionId', terminal.args_json->>'betId', '0')::numeric
+                = coalesce(e.args_json->>'positionId', e.args_json->>'betId', '0')::numeric
           )
         order by bet_id limit ${limit}
       `;
-      return rows.map((row) => BigInt(row.betId));
-    },
-    migrate: async () => {
+    return rows.map((row) => BigInt(row.betId));
+  };
+  return {
+    sportsRecovery: createPostgresSportsRecoveryStore(sql),
+    getRandomReadyBetIds: (query) => getRecoverableBetIds(query, false),
+    getUnresolvedBetIds: (query) => getRecoverableBetIds(query, true),
+    initializeSchema: async () => {
       // Primary/backup and web workers can start together. Serialize DDL in a
-      // transaction so their CREATE/ALTER/index locks cannot invert each other.
+      // transaction so their CREATE/index locks cannot invert each other.
       await sql.begin(async (tx) => {
         await tx`select pg_advisory_xact_lock(1936945012, 1)`;
         await tx.unsafe(BET_INDEX_SCHEMA_SQL);
@@ -1117,46 +1168,28 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       });
       return rows;
     },
-    writeBankProviderLedgerRows: async (rows: readonly BankProviderLedgerRow[]) => {
-      if (rows.length === 0) return [];
+    writeBankProviderLedgerRows: async (rows) => {
+      for (const row of rows) normalizeBankProviderLedgerAction(row.action);
       await sql.begin(async (tx) => {
-        for (const row of rows) {
-          await tx`
-            insert into bank_provider_ledger (
-              chain_id, pool_id, owner, bank, asset, action, tx_hash, block_number, log_index,
-              timestamp, asset_amount, share_amount, share_price, updated_at
-            ) values (
-              ${row.chainId},
-              ${String(row.poolId)},
-              ${row.owner.toLowerCase()},
-              ${row.bank.toLowerCase()},
-              ${row.asset.toLowerCase()},
-              ${row.action},
-              ${row.txHash.toLowerCase()},
-              ${row.blockNumber},
-              ${row.logIndex},
-              ${row.timestamp == null ? null : new Date(row.timestamp)},
-              ${row.assets ?? null},
-              ${row.shares},
-              ${row.sharePrice ?? null},
-              ${new Date(row.updatedAt)}
-            )
-            on conflict (chain_id, tx_hash, log_index) do update set
-              pool_id = excluded.pool_id,
-              owner = excluded.owner,
-              bank = excluded.bank,
-              asset = excluded.asset,
-              action = excluded.action,
-              block_number = excluded.block_number,
-              timestamp = excluded.timestamp,
-              asset_amount = excluded.asset_amount,
-              share_amount = excluded.share_amount,
-              share_price = excluded.share_price,
-              updated_at = excluded.updated_at
-          `;
-        }
+        const identities = [
+          ...new Set(rows.map((row) => `${row.chainId}:${row.bank.toLowerCase()}`))
+        ].sort();
+        for (const identity of identities)
+          await tx`select pg_advisory_xact_lock(hashtextextended(${identity}, 0))`;
+        for (const row of rows) await upsertBankProviderLedgerRow(tx as unknown as SqlTag, row);
       });
       return [...rows];
+    },
+    replaceBankProviderLedgerRange: async (range) => {
+      validateLedgerRange(range);
+      await sql.begin(async (tx) => {
+        const identity = `${range.chainId}:${range.bank.toLowerCase()}`;
+        await tx`select pg_advisory_xact_lock(hashtextextended(${identity}, 0))`;
+        await tx`delete from bank_provider_ledger where chain_id = ${range.chainId} and bank = ${range.bank.toLowerCase()} and block_number >= ${range.fromBlock.toString()} and block_number <= ${range.toBlock.toString()}`;
+        for (const row of range.rows)
+          await upsertBankProviderLedgerRow(tx as unknown as SqlTag, row);
+      });
+      return [...range.rows];
     },
     getRecentBets: async ({ chainId, gameHub, gameId, limit }) => {
       const gameFilter = gameId ? sql`and game_id = ${gameId.toLowerCase()}` : sql``;
@@ -1200,7 +1233,8 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       chainId,
       limit,
       owner,
-      poolId
+      bank,
+      endBlock
     }) => {
       const cursorFilter =
         beforeBlock != null && beforeLogIndex != null
@@ -1214,9 +1248,10 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       const rows = await sql`
         select * from bank_provider_ledger
         where chain_id = ${chainId}
-          and pool_id = ${String(poolId)}
+          and bank = ${bank.toLowerCase()}
           and owner = ${owner.toLowerCase()}
           ${cursorFilter}
+          ${endBlock == null ? sql`` : sql`and block_number <= ${endBlock}`}
         order by block_number desc, log_index desc
         limit ${limit}
       `;
@@ -1547,7 +1582,7 @@ function houseEdgeFromArgs(args: unknown): BetHouseEdgeAllocation | undefined {
 }
 
 function betIdOf(event: BetIndexEvent) {
-  return String(event.args.positionId ?? event.args.betId ?? event.args.id ?? "0");
+  return String(event.args.positionId ?? event.args.betId ?? "0");
 }
 
 function betKey(chainId: number, gameHub: string, betId: string | number | bigint) {
@@ -1635,7 +1670,7 @@ export function foldSportsTicketIndexEvents(events: readonly SportsTicketIndexEv
   const sorted = [...events].sort(compareEvents);
 
   for (const event of sorted) {
-    const ticketId = String(event.args.ticketId ?? event.args.id ?? "0");
+    const ticketId = String(event.args.ticketId ?? "0");
     const key = `${event.chainId}:${ticketId}`;
     rows.set(key, applyEventToSportsTicket(rows.get(key), event));
   }
@@ -1982,7 +2017,7 @@ function applyEventToSportsTicket(
   prev: SportsTicketRow | undefined,
   event: SportsTicketIndexEvent
 ): SportsTicketRow {
-  const ticketId = String(event.args.ticketId ?? event.args.id ?? "0");
+  const ticketId = String(event.args.ticketId ?? "0");
   const next: SportsTicketRow = prev
     ? { ...prev }
     : {
@@ -2148,6 +2183,9 @@ function bankProviderLedgerRowFromDatabase(row: Record<string, unknown>): BankPr
     owner: String(row.owner).toLowerCase() as Address,
     poolId: String(row.poolId),
     sharePrice: optionalString(row.sharePrice),
+    receiver: optionalAddress(row.receiver),
+    caller: optionalAddress(row.caller),
+    epochId: optionalString(row.epochId),
     shares: String(row.shareAmount ?? "0"),
     timestamp: optionalDateMs(row.timestamp),
     txHash,
@@ -2191,7 +2229,9 @@ function normalizeSportsTicketState(value: unknown): SportsTicketLifecycleState 
 }
 
 function normalizeBankProviderLedgerAction(value: unknown): BankProviderLedgerAction {
-  return value === "withdraw" ? "withdraw" : "deposit";
+  if (value === "deposit" || value === "withdraw" || value === "recovery" || value === "donation")
+    return value;
+  throw new Error("Invalid cash ledger action.");
 }
 
 function toBigintString(v: unknown): string {

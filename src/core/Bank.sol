@@ -8,19 +8,21 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Checkpoints} from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Governable} from "../access/Governable.sol";
 import {Errors} from "../libs/Errors.sol";
 
 /// @notice Single-asset vault + SSOT accounting + bet funds interface. Deposits are synchronous (ERC-4626);
-///         redemptions are asynchronous Requests (ERC-7540) priced in batches once every open position has
-///         ended, so no LP can exit at a price that still counts an unsettled bet (ADR-0034).
-///         - totalAssets() == NAV == B - PF - XP - exitPayable - playerPayableTotal
+///         redemptions are asynchronous Requests (ERC-7540). Activation pays the liquid portion and preserves
+///         all snapshot LPs' recovery rights in a reserve pocket. Old holds never gate later exits (ADR-0035).
+///         - totalAssets() is active NAV, excluding payables and historical recovery backing.
 ///         - hold/settle/refund callable ONLY by immutable SettlementRouter.
 ///         - riskInPaused freezes Risk-In + Optional Outflow, but never blocks settle/refund or player payables.
 contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using Checkpoints for Checkpoints.Trace256;
 
     address public override settlementRouter;
     address public immutable override asset;
@@ -104,10 +106,11 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 reserved;
         bytes32 snapshotHash;
         bool open;
+        uint256 epoch;
     }
     mapping(uint256 => Hold) public holds;
 
-    // -------- asynchronous redemptions (ADR-0034) --------
+    // -------- asynchronous redemptions and historical recovery (ADR-0035) --------
 
     uint256 public constant override MIN_BATCH_PERIOD = 1 hours;
     uint256 public constant override MAX_BATCH_PERIOD = 7 days;
@@ -117,18 +120,22 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     ///      entitlements of controllers not yet synchronized; after that, only what they have not claimed.
     uint256 public override exitPayable;
 
-    /// @dev Batch IDs start at 1, so a zero ID marks an empty controller slot. The unpriced batches are exactly
-    ///      [firstUnpricedBatch, nextBatchId): the one draining and the next, never more. Only the newest batch can
-    ///      be empty (every request cancelled before its cutoff); it is then retired and its ID reused.
+    /// @dev Batch IDs equal risk epochs. Cancellation can empty the current queue without advancing its epoch.
     mapping(uint256 => RedeemBatch) internal _batches;
-    uint256 public override firstUnpricedBatch;
-    uint256 public override nextBatchId;
+    uint256 public override currentEpoch = 1;
+    uint256 public override currentOpenHolds;
+    uint256 public override activeReserved;
+    uint256 public override recoveryBacking;
+    mapping(uint256 => RecoveryEpoch) internal _recoveryEpochs;
+    mapping(address => Checkpoints.Trace256) internal _walletHistory;
+    // Mutable only in the current epoch; preserved forever after activation, including after liquid claims.
+    mapping(uint256 => mapping(address => uint256)) internal _requestShares;
+    mapping(uint256 => mapping(address => uint256)) internal _recoveryClaimed;
+    mapping(uint256 => mapping(address => bool)) internal _recoverySynced;
 
-    /// @dev Pending shares live in slot `batchId & 1`: the two unpriced batches have consecutive IDs, so they never
-    ///      share a slot. Claimable totals only ever grow at synchronization and shrink at claims.
+    /// @dev A controller synchronizes its previous priced batch before joining a new queue. No history scan.
     struct RedeemAccount {
-        uint256[2] batchIds;
-        uint256[2] shares;
+        uint256 batchId;
         uint256 claimableShares;
         uint256 claimableAssets;
     }
@@ -136,7 +143,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     mapping(address => RedeemAccount) internal _redeemAccounts;
     mapping(address => mapping(address => bool)) public override isOperator;
 
-    // -------- player payables (ADR-0034) --------
+    // -------- player payables (ADR-0035) --------
 
     uint256 public override playerPayableTotal;
     mapping(address => uint256) public override playerPayable;
@@ -148,7 +155,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     constructor(
         address asset_,
         address gov_,
-        uint256 minLiquidityBps_,
+        uint256 initialBufferBps_,
         string memory name_,
         string memory symbol_,
         uint8 decimals_
@@ -156,11 +163,11 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (asset_ == address(0)) revert Errors.ZeroAddress();
         if (decimals_ > 77) revert Errors.InvalidConfig();
         if (decimals_ != IERC20Metadata(asset_).decimals()) revert Errors.InvalidConfig();
-        if (minLiquidityBps_ > 10_000) revert Errors.InvalidBps(minLiquidityBps_);
+        if (initialBufferBps_ > 10_000) revert Errors.InvalidBps(initialBufferBps_);
         asset = asset_;
         _assetToken = IERC20(asset_);
-        riskReserveBps = minLiquidityBps_;
-        withdrawalBufferBps = minLiquidityBps_;
+        riskReserveBps = initialBufferBps_;
+        withdrawalBufferBps = initialBufferBps_;
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
@@ -171,8 +178,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         minPlayerTurnoverForUnlock = 0;
 
         batchPeriod = 1 days;
-        firstUnpricedBatch = 1;
-        nextBatchId = 1;
     }
 
     // -------- governance controls --------
@@ -181,9 +186,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     /// @dev Asymmetric by design: governance or the guardian may pause, only
     ///      governance may unpause. Pausing declines new risk and is safe to
     ///      make fast; unpausing re-admits risk and must stay behind the full
-    ///      governance quorum. The previous `settlementRouter` allowance is
-    ///      gone -- the deployed router never had a call path for it, so it was
-    ///      an authority granted and never exercised (audit AGF-08).
+    ///      governance quorum.
     function setRiskInPaused(bool paused_) external {
         // One branch per direction, so the authority check and the state change
         // for that direction cannot drift apart.
@@ -204,13 +207,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         settlementRouter = router_;
     }
 
-    /// @notice Legacy setter alias for the new-risk reserve buffer.
-    /// @dev Deprecated alias for setRiskReserveBps. It does not update withdrawalBufferBps after the
-    ///      V14 risk-reserve / withdrawal-buffer split.
-    function setMinLiquidityBps(uint256 bps) external onlyGov {
-        _setRiskReserveBps(bps);
-    }
-
     function setRiskReserveBps(uint256 bps) external onlyGov {
         _setRiskReserveBps(bps);
     }
@@ -219,10 +215,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (bps > 10_000) revert Errors.InvalidBps(bps);
         withdrawalBufferBps = bps;
         emit WithdrawalBufferBpsSet(bps);
-    }
-
-    function minLiquidityBps() external view override returns (uint256) {
-        return riskReserveBps;
     }
 
     function _setRiskReserveBps(uint256 bps) internal {
@@ -332,45 +324,40 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         return _nav(_assetToken.balanceOf(address(this)), protocolFeesPayable, externalPayablesTotal());
     }
 
-    /// @dev The one NAV formula: cash minus PF, XP and both ADR-0034 payables. The share price, getSSOT, the
+    /// @dev The active NAV formula excludes all payables and historical reserve pockets. The share price, getSSOT, the
     ///      risk-in check, the optional-outflow check and batch pricing all use it.
     function _nav(uint256 B, uint256 PF, uint256 XP) internal view returns (uint256) {
-        return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal);
+        return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal + recoveryBacking);
     }
 
-    /// @notice SSOT snapshot. NAV also excludes `exitPayable` and `playerPayableTotal`, so it is not B - PF - XP.
+    /// @notice Active capital snapshot. R includes only current-epoch positions.
     function getSSOT() external view override returns (SSOTTypes.SSOT memory s) {
         uint256 B = _assetToken.balanceOf(address(this));
         uint256 PF = protocolFeesPayable;
         uint256 XP = externalPayablesTotal();
         uint256 NAV = _nav(B, PF, XP);
-        uint256 R = totalReserved;
-        uint256 rr = AccountingLib.minLiq(NAV, riskReserveBps);
+        uint256 R = activeReserved;
+        uint256 rr = AccountingLib.buffer(NAV, riskReserveBps);
         uint256 rf = (NAV >= R + rr) ? (NAV - R - rr) : 0;
-        uint256 wb = AccountingLib.minLiq(NAV, withdrawalBufferBps);
+        uint256 wb = AccountingLib.buffer(NAV, withdrawalBufferBps);
         uint256 wo = (NAV >= R + wb) ? (NAV - R - wb) : 0;
-        s = SSOTTypes.SSOT({
-            B: B,
-            PF: PF,
-            XP: XP,
-            NAV: NAV,
-            R: R,
-            minLiquidityBps: riskReserveBps,
-            minLiq: rr,
-            free: rf,
-            riskReserveBps: riskReserveBps,
-            riskReserve: rr,
-            riskFree: rf,
-            withdrawalBufferBps: withdrawalBufferBps,
-            withdrawalBuffer: wb,
-            withdrawable: wo,
-            riskInPaused: paused(),
-            xpAccruedTotal: xpAccruedTotal,
-            xpLockedTotal: xpLockedTotal,
-            xpHoldbackTotal: xpHoldbackTotal,
-            holdbackVestingSeconds: holdbackVestingSeconds,
-            minPlayerTurnoverForUnlock: minPlayerTurnoverForUnlock
-        });
+        s.B = B;
+        s.PF = PF;
+        s.XP = XP;
+        s.NAV = NAV;
+        s.R = R;
+        s.riskReserveBps = riskReserveBps;
+        s.riskReserve = rr;
+        s.riskFree = rf;
+        s.withdrawalBufferBps = withdrawalBufferBps;
+        s.withdrawalBuffer = wb;
+        s.withdrawable = wo;
+        s.riskInPaused = paused();
+        s.xpAccruedTotal = xpAccruedTotal;
+        s.xpLockedTotal = xpLockedTotal;
+        s.xpHoldbackTotal = xpHoldbackTotal;
+        s.holdbackVestingSeconds = holdbackVestingSeconds;
+        s.minPlayerTurnoverForUnlock = minPlayerTurnoverForUnlock;
     }
 
     function getPerformance()
@@ -411,11 +398,13 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     }
 
     function transfer(address to, uint256 amount) external returns (bool) {
+        _checkShareReceiver(to);
         _transfer(msg.sender, to, amount);
         return true;
     }
 
     function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        _checkShareReceiver(to);
         uint256 allowed = allowance[from][msg.sender];
         if (allowed != type(uint256).max) {
             if (allowed < amount) revert Errors.InsufficientAllowance();
@@ -431,13 +420,16 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (bal < amount) revert Errors.InsufficientBalance();
         balanceOf[from] = bal - amount;
         balanceOf[to] += amount;
+        _checkpoint(from);
+        _checkpoint(to);
         emit Transfer(from, to, amount);
     }
 
     function _mint(address to, uint256 amount) internal {
-        if (to == address(0)) revert Errors.ZeroAddress();
+        _checkShareReceiver(to);
         totalSupply += amount;
         balanceOf[to] += amount;
+        _checkpoint(to);
         emit Transfer(address(0), to, amount);
     }
 
@@ -446,7 +438,19 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (bal < amount) revert Errors.InsufficientBalance();
         balanceOf[from] = bal - amount;
         totalSupply -= amount;
+        _checkpoint(from);
         emit Transfer(from, address(0), amount);
+    }
+
+    function _checkShareReceiver(address to) internal view {
+        if (to == address(0)) revert Errors.ZeroAddress();
+        if (to == address(this)) revert Errors.InvalidConfig();
+    }
+
+    /// @dev Writes coalesce within an internally numbered epoch. Advance the epoch before burning at seal, so
+    ///      same-block later transfers cannot alter frozen wallet rights. Escrow is owned by request controllers.
+    function _checkpoint(address account) internal {
+        if (account != address(this)) _walletHistory[account].push(currentEpoch, balanceOf[account]);
     }
 
     // -------- ERC4626-like --------
@@ -467,12 +471,12 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         return Math.mulDiv(shares_, totalAssets() + _virtualOffset, totalSupply + _virtualOffset, rounding);
     }
 
-    function maxDeposit(address) external view override returns (uint256) {
-        return paused() ? 0 : type(uint256).max;
+    function maxDeposit(address receiver) external view override returns (uint256) {
+        return paused() || receiver == address(0) || receiver == address(this) ? 0 : type(uint256).max;
     }
 
-    function maxMint(address) external view override returns (uint256) {
-        return paused() ? 0 : type(uint256).max;
+    function maxMint(address receiver) external view override returns (uint256) {
+        return paused() || receiver == address(0) || receiver == address(this) ? 0 : type(uint256).max;
     }
 
     function previewDeposit(uint256 assets_) external view override returns (uint256) {
@@ -502,7 +506,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         emit Deposit(msg.sender, receiver, assets_, shares_);
     }
 
-    // -------- asynchronous redemptions: ERC-7540 redeem side (ADR-0034) --------
+    // -------- asynchronous redemptions: ERC-7540 redeem side (ADR-0035) --------
 
     function previewWithdraw(uint256) external pure override returns (uint256) {
         revert AsyncRedemption();
@@ -553,13 +557,106 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         return _batches[batchId];
     }
 
+    function pendingRedeemBatch(address controller) external view override returns (uint256 batchId, uint256 shares_) {
+        shares_ = _requestShares[currentEpoch][controller];
+        if (shares_ != 0) batchId = currentEpoch;
+    }
+
     function openHolds() public view override returns (uint256) {
         return totalBetsHeld - totalBetsSettled - totalBetsRefunded;
     }
 
-    function redemptionDraining() public view override returns (bool) {
-        uint256 id = firstUnpricedBatch;
-        return id < nextBatchId && _batches[id].cutoff <= block.timestamp;
+    function recoveryEpoch(uint256 epochId) external view override returns (RecoveryEpoch memory) {
+        return _recoveryEpochs[epochId];
+    }
+
+    /// @dev Whole real-supply entitlement. The real-equity ceiling also covers loss states below virtual price.
+    function _realEquity(uint256 supply, uint256 nav_) internal view returns (uint256) {
+        return Math.min(Math.mulDiv(supply, nav_ + _virtualOffset, supply + _virtualOffset), nav_);
+    }
+
+    function quoteQueuedRedeem(address controller)
+        external
+        view
+        override
+        returns (uint256 liquidAssets, uint256 recoveryAssets)
+    {
+        uint256 q = _requestShares[currentEpoch][controller];
+        if (q == 0) return (0, 0);
+        uint256 supply = totalSupply;
+        uint256 nav_ = totalAssets();
+        uint256 base = _realEquity(supply, nav_ - activeReserved);
+        uint256 queued = _batches[currentEpoch].shares;
+        liquidAssets = Math.mulDiv(q, Math.mulDiv(queued, base, supply), queued);
+        recoveryAssets = Math.mulDiv(q, _realEquity(supply, nav_) - base, supply);
+    }
+
+    function getRecovery(uint256 epochId, address controller)
+        public
+        view
+        override
+        returns (RecoveryPosition memory position)
+    {
+        RecoveryEpoch storage e = _recoveryEpochs[epochId];
+        if (e.snapshotSupply == 0 || controller == address(0) || controller == address(this)) return position;
+        position.shares = _walletHistory[controller].upperLookup(epochId) + _requestShares[epochId][controller];
+        position.claimedAssets = _recoveryClaimed[epochId][controller];
+        uint256 entitlement = Math.mulDiv(position.shares, e.recoveredAssets, e.snapshotSupply);
+        position.claimableAssets = entitlement - position.claimedAssets;
+        uint256 maximum = _realEquity(e.snapshotSupply, e.snapshotNav - e.settledCost)
+            - _realEquity(e.snapshotSupply, e.snapshotNav - e.initialReserve);
+        position.pendingAssets = Math.mulDiv(position.shares, maximum, e.snapshotSupply) - entitlement;
+        position.finalSynced = _recoverySynced[epochId][controller];
+    }
+
+    function syncRecovery(uint256 epochId, address controller) external override nonReentrant {
+        _syncRecovery(epochId, controller, getRecovery(epochId, controller));
+    }
+
+    function claimRecovery(uint256 epochId, address receiver, address controller)
+        external
+        override
+        nonReentrant
+        returns (uint256 assets_)
+    {
+        if (paused()) revert RiskInPaused();
+        if (receiver == address(0)) revert Errors.ZeroAddress();
+        _checkController(controller);
+        RecoveryPosition memory position = getRecovery(epochId, controller);
+        _syncRecovery(epochId, controller, position);
+        assets_ = position.claimableAssets;
+        if (assets_ == 0) return 0;
+        _recoveryClaimed[epochId][controller] = position.claimedAssets + assets_;
+        _recoveryEpochs[epochId].backingAssets -= assets_;
+        recoveryBacking -= assets_;
+        _assetToken.safeTransfer(receiver, assets_);
+        emit RecoveryClaimed(epochId, controller, receiver, msg.sender, assets_);
+    }
+
+    /// @dev Final assignment progress is independent of claims. Unclaimed assigned amounts stay in the pocket;
+    ///      only the exact sum-of-floors remainder can be released after all S snapshot units are accounted for.
+    function _syncRecovery(uint256 epochId, address controller, RecoveryPosition memory position) internal {
+        RecoveryEpoch storage e = _recoveryEpochs[epochId];
+        if (e.remainingHolds != 0 || position.shares == 0 || position.finalSynced) return;
+        _recoverySynced[epochId][controller] = true;
+        uint256 entitlement = position.claimableAssets + position.claimedAssets;
+        e.finalizedShares += position.shares;
+        e.finalizedAssets += entitlement;
+        emit RecoverySynced(epochId, controller, position.shares, entitlement);
+        if (e.finalizedShares == e.snapshotSupply) {
+            e.dustReleased = true;
+            uint256 dust = e.recoveredAssets - e.finalizedAssets;
+            e.backingAssets -= dust;
+            recoveryBacking -= dust;
+            e.protocolAssets += dust;
+            _accrueProtocolCapital(epochId, dust, 2);
+        }
+    }
+
+    function _accrueProtocolCapital(uint256 epochId, uint256 assets_, uint8 reason) internal {
+        if (assets_ == 0) return;
+        protocolFeesPayable += assets_;
+        emit ProtocolCapitalAccrued(epochId, assets_, reason);
     }
 
     function setOperator(address operator, bool approved) external override returns (bool) {
@@ -569,7 +666,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     }
 
     /// @notice Escrow `shares_` of `owner` in the open batch, under `controller`. Allowed while paused: it moves
-    ///         only shares. The shares keep bearing the pool's results until their batch is priced.
+    ///         only shares. The shares keep bearing active results until their batch is activated.
     function requestRedeem(uint256 shares_, address controller, address owner)
         external
         override
@@ -577,7 +674,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         returns (uint256 requestId)
     {
         if (shares_ == 0) revert Errors.InsufficientBalance();
-        if (controller == address(0)) revert Errors.ZeroAddress();
+        _checkShareReceiver(controller);
         // ERC-6909 semantics, as ERC-7540 requires: operators spend no allowance, and an infinite one is kept.
         if (msg.sender != owner && !isOperator[owner][msg.sender]) {
             uint256 allowed = allowance[owner][msg.sender];
@@ -590,34 +687,26 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
         uint256 id = _batchForRequest();
         _syncRedeem(controller);
-        RedeemAccount storage a = _redeemAccounts[controller];
-        uint256 slot = id & 1;
-        a.batchIds[slot] = id;
-        a.shares[slot] += shares_;
+        _redeemAccounts[controller].batchId = id;
+        _requestShares[id][controller] += shares_;
         _batches[id].shares += shares_;
 
         emit RedeemRequest(controller, owner, 0, msg.sender, shares_);
         return 0;
     }
 
-    /// @notice Return every share `controller` has in the batch whose cutoff has not passed, to `controller`.
+    /// @notice Return all queued shares to their controller. Eligibility does not end cancellation rights.
     function cancelRedeemRequest(address controller) external override nonReentrant returns (uint256 shares_) {
         _checkController(controller);
-        uint256 id = nextBatchId - 1;
-        if (id < firstUnpricedBatch || block.timestamp >= _batches[id].cutoff) revert NothingToCancel();
         _syncRedeem(controller);
-        RedeemAccount storage a = _redeemAccounts[controller];
-        uint256 slot = id & 1;
-        if (a.batchIds[slot] != id) revert NothingToCancel();
-
-        shares_ = a.shares[slot];
-        a.batchIds[slot] = 0;
-        a.shares[slot] = 0;
+        uint256 id = currentEpoch;
+        shares_ = _requestShares[id][controller];
+        if (shares_ == 0) revert NothingToCancel();
+        delete _requestShares[id][controller];
+        _redeemAccounts[controller].batchId = 0;
         uint256 remaining = _batches[id].shares - shares_;
         if (remaining == 0) {
-            // Nothing is left to price, so the batch stops existing and neither blocks betting nor waits.
             delete _batches[id];
-            nextBatchId = id;
             emit RedeemBatchRetired(id);
         } else {
             _batches[id].shares = remaining;
@@ -630,35 +719,38 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         _syncRedeem(controller);
     }
 
-    /// @notice Price the due batches in order: their cutoff has passed and every position has ended. Each is
-    ///         priced at the virtual-offset quote capped by its proportional real equity, `min(q * (N + V) /
-    ///         (S + V), q * N / S)`, then its shares are burned and the assets move to `exitPayable`.
-    function settleBatch() external override nonReentrant returns (uint256 priced) {
+    function activateBatch() external override nonReentrant returns (uint256 batchId) {
         if (paused()) revert RiskInPaused();
-        uint256 open = openHolds();
-        if (open != 0) revert OpenHolds(open);
-
-        uint256 first = firstUnpricedBatch;
-        uint256 id = first;
-        uint256 next = nextBatchId;
-        // No position opened after the first cutoff, so a second batch past its cutoff is priced at once.
-        while (id < next && _batches[id].cutoff <= block.timestamp) {
-            RedeemBatch storage b = _batches[id];
-            uint256 q = b.shares;
-            uint256 n = totalAssets();
-            uint256 supply = totalSupply;
-            uint256 assets_ =
-                Math.min(Math.mulDiv(q, n + _virtualOffset, supply + _virtualOffset), Math.mulDiv(q, n, supply));
-            b.assets = assets_;
-            b.priced = true;
-            _burn(address(this), q);
-            exitPayable += assets_;
-            emit RedeemBatchPriced(id, q, assets_);
-            ++id;
-        }
-        priced = id - first;
-        if (priced == 0) revert NoBatchDue();
-        firstUnpricedBatch = id;
+        batchId = currentEpoch;
+        RedeemBatch storage b = _batches[batchId];
+        if (b.shares == 0 || b.cutoff > block.timestamp) revert NoBatchDue();
+        uint256 nav_ = totalAssets();
+        uint256 reserve = activeReserved;
+        if (nav_ < reserve) revert SolvencyViolation();
+        uint256 supply = totalSupply;
+        uint256 base = _realEquity(supply, nav_ - reserve);
+        uint256 assets_ = Math.mulDiv(b.shares, base, supply);
+        RecoveryEpoch storage e = _recoveryEpochs[batchId];
+        e.snapshotNav = nav_;
+        e.snapshotSupply = supply;
+        e.initialReserve = reserve;
+        e.remainingReserve = reserve;
+        e.remainingHolds = currentOpenHolds;
+        e.backingAssets = reserve;
+        recoveryBacking += reserve;
+        b.activatedAt = uint64(block.timestamp);
+        b.priced = true;
+        b.assets = assets_;
+        b.fullExit = b.shares == supply;
+        exitPayable += assets_;
+        emit RedeemBatchActivated(batchId, b.shares, nav_, supply, reserve, currentOpenHolds);
+        // The new key is installed before any post-seal balance change. Old wallet checkpoints are immutable.
+        currentEpoch = batchId + 1;
+        activeReserved = 0;
+        currentOpenHolds = 0;
+        _burn(address(this), b.shares);
+        if (b.fullExit) _accrueProtocolCapital(batchId, nav_ - reserve - base, 0);
+        emit RedeemBatchPriced(batchId, b.shares, assets_);
     }
 
     /// @notice Claim exactly `assets_` of `controller`'s priced redemptions for `receiver`.
@@ -712,47 +804,39 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
             || interfaceId == 0xf815c03d; // ERC-7575 share: vault(address)
     }
 
-    /// @dev The batch a request made now joins: the open batch, or a new one whose cutoff is the first multiple of
-    ///      `batchPeriod` strictly after now. A request needing a third unpriced batch reverts; no cutoff moves.
+    /// @dev Requests always join the current epoch. An empty/cancelled queue opens at the next Unix boundary.
     function _batchForRequest() internal returns (uint256 id) {
-        uint256 first = firstUnpricedBatch;
-        id = nextBatchId;
-        if (id > first && block.timestamp < _batches[id - 1].cutoff) return id - 1;
-        if (id - first >= 2) revert RedeemBatchesFull();
+        id = currentEpoch;
+        if (_batches[id].shares != 0) return id;
         uint256 period = batchPeriod;
         uint64 cutoff = uint64((block.timestamp / period + 1) * period);
         _batches[id].cutoff = cutoff;
-        nextBatchId = id + 1;
         emit RedeemBatchOpened(id, cutoff);
     }
 
-    /// @dev Moves `controller`'s priced slots into its claimable totals, each exactly once. Once every share of a
-    ///      batch is assigned, the batch's rounding remainder leaves `exitPayable` and returns to NAV.
+    /// @dev Assign a controller's one unsynchronized priced batch. Its historical recovery weight is preserved.
     function _syncRedeem(address controller) internal {
         RedeemAccount storage a = _redeemAccounts[controller];
-        for (uint256 slot; slot < 2; ++slot) {
-            uint256 id = a.batchIds[slot];
-            if (id == 0 || !_batches[id].priced) continue;
-            RedeemBatch storage b = _batches[id];
-            uint256 s = a.shares[slot];
-            uint256 e = Math.mulDiv(s, b.assets, b.shares);
-            a.batchIds[slot] = 0;
-            a.shares[slot] = 0;
-            a.claimableShares += s;
-            a.claimableAssets += e;
-            uint256 assignedShares = b.assignedShares + s;
-            uint256 assignedAssets = b.assignedAssets + e;
-            b.assignedShares = assignedShares;
-            b.assignedAssets = assignedAssets;
-            emit RedeemClaimable(controller, id, s, e);
-            if (assignedShares == b.shares && b.assets > assignedAssets) {
-                exitPayable -= b.assets - assignedAssets;
-                emit RedeemRemainderReleased(id, b.assets - assignedAssets);
-            }
+        uint256 id = a.batchId;
+        if (id == 0 || id == currentEpoch) return;
+        RedeemBatch storage b = _batches[id];
+        uint256 s = _requestShares[id][controller];
+        uint256 assets_ = Math.mulDiv(s, b.assets, b.shares);
+        a.batchId = 0;
+        a.claimableShares += s;
+        a.claimableAssets += assets_;
+        b.assignedShares += s;
+        b.assignedAssets += assets_;
+        emit RedeemClaimable(controller, id, s, assets_);
+        if (b.assignedShares == b.shares) {
+            uint256 dust = b.assets - b.assignedAssets;
+            exitPayable -= dust;
+            if (b.fullExit) _accrueProtocolCapital(id, dust, 3);
+            if (dust != 0) emit RedeemRemainderReleased(id, dust, b.fullExit);
         }
     }
 
-    /// @dev Effective state as if `_syncRedeem(controller)` had just run, without writing it.
+    /// @dev At most one priced batch plus aggregate cash claims; never traverses historical pockets.
     function _redeemView(address controller)
         internal
         view
@@ -761,17 +845,15 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         RedeemAccount storage a = _redeemAccounts[controller];
         claimableShares = a.claimableShares;
         claimableAssets = a.claimableAssets;
-        for (uint256 slot; slot < 2; ++slot) {
-            uint256 id = a.batchIds[slot];
-            if (id == 0) continue;
+        uint256 id = a.batchId;
+        if (id == 0) return (0, claimableShares, claimableAssets);
+        uint256 s = _requestShares[id][controller];
+        if (id == currentEpoch) {
+            pending = s;
+        } else {
             RedeemBatch storage b = _batches[id];
-            uint256 s = a.shares[slot];
-            if (b.priced) {
-                claimableShares += s;
-                claimableAssets += Math.mulDiv(s, b.assets, b.shares);
-            } else {
-                pending += s;
-            }
+            claimableShares += s;
+            claimableAssets += Math.mulDiv(s, b.assets, b.shares);
         }
     }
 
@@ -902,13 +984,13 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (pfDecrease > PF || xpDecrease > XP) revert OptionalOutflowDomainViolation();
 
         uint256 NAVBefore = _nav(B, PF, XP);
-        uint256 buffer = AccountingLib.minLiq(NAVBefore, withdrawalBufferBps);
+        uint256 buffer = AccountingLib.buffer(NAVBefore, withdrawalBufferBps);
         uint256 Bafter = B - assetsOut;
         uint256 PFafter = PF - pfDecrease;
         uint256 XPafter = XP - xpDecrease;
 
         uint256 NAV = _nav(Bafter, PFafter, XPafter);
-        uint256 R = totalReserved;
+        uint256 R = activeReserved;
         if (NAV < R || NAV - R < buffer) revert OptionalOutflowDomainViolation();
     }
 
@@ -926,23 +1008,31 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         nonReentrant
     {
         if (paused()) revert RiskInPaused();
-        // The cutoff takes effect by time: no position opened at or after it may count toward its batch.
-        if (redemptionDraining()) revert RedemptionDraining();
         if (player == address(0) || stake == 0 || reserved == 0) revert Errors.InsufficientBalance();
+        if (reserved < stake) revert ReservedTooSmall(betId, reserved, stake);
         Hold storage h = holds[betId];
         if (h.open || h.player != address(0)) revert BetAlreadyExists(betId);
 
         _assetToken.safeTransferFrom(player, address(this), stake);
 
         uint256 NAV = totalAssets();
-        uint256 Rafter = totalReserved + reserved;
-        uint256 ml = AccountingLib.minLiq(NAV, riskReserveBps);
+        uint256 Rafter = activeReserved + reserved;
+        uint256 ml = AccountingLib.buffer(NAV, riskReserveBps);
         if (NAV < Rafter || NAV - Rafter < ml) revert SolvencyViolation();
 
-        totalReserved = Rafter;
+        totalReserved += reserved;
+        activeReserved += reserved;
+        currentOpenHolds += 1;
         totalBetsHeld += 1;
 
-        holds[betId] = Hold({player: player, stake: stake, reserved: reserved, snapshotHash: snapshotHash, open: true});
+        holds[betId] = Hold({
+            player: player,
+            stake: stake,
+            reserved: reserved,
+            snapshotHash: snapshotHash,
+            open: true,
+            epoch: currentEpoch
+        });
 
         emit BetHeld(betId, player, stake, reserved, snapshotHash);
     }
@@ -966,6 +1056,16 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
             revert ReservedTooSmall(betId, reserved, payoutGross + refundAmount);
         }
         if (refundAmount > stake) revert RefundTooLarge(betId, refundAmount, stake);
+
+        uint256 cost = payoutNet + refundAmount + protocolFeeAccrual;
+        uint256 n = xpAwards.length;
+        if (n > 32) revert XPTooManyAwards(n);
+        for (uint256 i; i < n; ++i) {
+            SSOTTypes.XPAward calldata a = xpAwards[i];
+            cost += a.accrued + a.locked + a.holdback;
+        }
+        if (cost > reserved) revert ReservedTooSmall(betId, reserved, cost);
+        _chargeEpochHold(h, cost);
 
         // Release reserve first (B3 + avoid transient insolvency window)
         h.open = false;
@@ -994,9 +1094,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 totalAccrued;
         uint256 totalLocked;
         uint256 totalHoldback;
-
-        uint256 n = xpAwards.length;
-        if (n > 32) revert XPTooManyAwards(n);
 
         for (uint256 i = 0; i < n; i++) {
             SSOTTypes.XPAward calldata a = xpAwards[i];
@@ -1062,6 +1159,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 stake = h.stake;
 
         if (refundAmount > stake) revert RefundTooLarge(betId, refundAmount, stake);
+        if (refundAmount > reserved) revert ReservedTooSmall(betId, reserved, refundAmount);
+        _chargeEpochHold(h, refundAmount);
 
         h.open = false;
         totalReserved -= reserved;
@@ -1075,6 +1174,30 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         emit BetRefunded(betId, h.player, refundAmount);
     }
 
+    /// @dev A terminal cost is charged once, including player/PF/XP payables. Old holds update only their pocket;
+    ///      later cash claims reduce the payable and cash equally and never charge this cost again.
+    function _chargeEpochHold(Hold storage h, uint256 cost) internal {
+        if (h.epoch == currentEpoch) {
+            activeReserved -= h.reserved;
+            currentOpenHolds -= 1;
+            return;
+        }
+        RecoveryEpoch storage e = _recoveryEpochs[h.epoch];
+        e.settledCost += cost;
+        e.remainingReserve -= h.reserved;
+        e.remainingHolds -= 1;
+        uint256 released = e.initialReserve - e.settledCost - e.remainingReserve;
+        uint256 liquid = e.snapshotNav - e.initialReserve;
+        uint256 recovered = _realEquity(e.snapshotSupply, liquid + released) - _realEquity(e.snapshotSupply, liquid);
+        uint256 protocolDelta = released - recovered - e.protocolAssets;
+        e.recoveredAssets = recovered;
+        e.protocolAssets += protocolDelta;
+        e.backingAssets -= cost + protocolDelta;
+        recoveryBacking -= cost + protocolDelta;
+        _accrueProtocolCapital(h.epoch, protocolDelta, 1);
+        emit RecoveryUpdated(h.epoch, e.remainingReserve, e.remainingHolds, e.settledCost, recovered, e.backingAssets);
+    }
+
     /// @notice Pay `player` its payable. Anyone may call it, also while paused and regardless of any buffer, and it
     ///         always pays the player's own address; a failed transfer reverts and keeps the debt.
     function claimPlayerPayable(address player) external override nonReentrant returns (uint256 amount) {
@@ -1086,14 +1209,12 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         emit PlayerPayablePaid(player, msg.sender, amount);
     }
 
-    /// @dev Pays a player at settlement. If the asset refuses the transfer, for example to a blacklisted winner,
-    ///      the amount becomes a player payable and the position still ends, so it cannot block a batch. Running
-    ///      out of gas is not a refusal: a call forwards at most 63/64 of its gas (EIP-150), so a transfer that
-    ///      failed with less than 1/63 left reverts the settlement instead of letting a caller force a payable.
+    /// @dev A failed transfer, including an internal token OOG, preserves the full amount as a player payable.
+    ///      Remaining gas cannot reliably identify the failure cause across token proxies. If this transaction
+    ///      cannot finish recording the debt and terminal state, it reverts atomically and can be retried.
+    ///      Admitted tokens must leave balances unchanged when trySafeTransfer returns false.
     function _payPlayer(uint256 betId, address player, uint256 amount) internal {
-        uint256 gasBefore = gasleft();
         if (_assetToken.trySafeTransfer(player, amount)) return;
-        if (gasleft() < gasBefore / 63) revert PayoutOutOfGas();
         playerPayable[player] += amount;
         playerPayableTotal += amount;
         emit PlayerPayableCreated(betId, player, amount);

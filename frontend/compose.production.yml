@@ -1,4 +1,4 @@
-name: arbigamefi-v15
+name: arbigamefi
 
 services:
   postgres:

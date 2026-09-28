@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@ssot/ui";
-import { useConnectModal } from "../app-shell/WalletButton";
+import { useConnectModal } from "../app-shell/wallet-entry-context";
 
 /**
  * Friendly prompt shown when a page requires a connected wallet.

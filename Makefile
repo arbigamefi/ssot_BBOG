@@ -40,7 +40,7 @@ frontend-test:
 	pnpm -C $(FRONTEND_DIR) test
 
 frontend-test-strict:
-	pnpm -C $(FRONTEND_DIR) test:strict
+	pnpm -C $(FRONTEND_DIR) test
 
 frontend-storybook:
 	pnpm -C $(FRONTEND_DIR) storybook
@@ -54,7 +54,7 @@ frontend-release-check:
 frontend-check:
 	pnpm -C $(FRONTEND_DIR) lint
 	pnpm -C $(FRONTEND_DIR) typecheck
-	pnpm -C $(FRONTEND_DIR) test:strict
+	pnpm -C $(FRONTEND_DIR) test
 	pnpm -C $(FRONTEND_DIR) build
 
 # Default test entrypoint. Uses FOUNDRY_PROFILE (default: pr).
@@ -62,10 +62,17 @@ frontend-check:
 
 test:
 	@$(MAKE) check-deps
+	python3 test/model/recovery_pocket_model.py
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --threads 1 -vvv
+
+.PHONY: test-casino-admission
+test-casino-admission:
+	@$(MAKE) check-deps
+	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --isolate --match-path test/unit/GameHubE2E.t.sol --match-test admission -vv
 
 pr:
 	@$(MAKE) check-deps
+	python3 test/model/recovery_pocket_model.py
 	FOUNDRY_PROFILE=pr forge test --threads 1 --match-path "test/unit/*" -vvv
 	FOUNDRY_PROFILE=pr forge test --match-path "test/diff/*" -vvv
 	FOUNDRY_PROFILE=pr forge test --match-path "test/invariants/*" -vvv
@@ -166,7 +173,7 @@ release-golden-vectors:
 
 release-abis:
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build src
-	$(PYTHON) script/release/export_frontend_abis.py --manifest deployments/frontend-manifest-latest-v16.json --dest deployments/abis-v16 --tag-suffix=-v16
+	$(PYTHON) script/release/export_frontend_abis.py --manifest deployments/frontend-manifest-latest-v16.json --dest deployments/abis-v16
 
 release-package:
 	PYTHON="$(PYTHON)" bash script/release/package_release.sh

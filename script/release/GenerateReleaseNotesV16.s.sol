@@ -9,8 +9,6 @@ contract GenerateReleaseNotesV16 is Script {
     using stdJson for string;
 
     function run() external {
-        vm.createDir("deployments/release", true);
-
         string memory releasePath = vm.envOr("RELEASE_PATH", string("deployments/release-latest-v16.json"));
         string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v16.json"));
         string memory tagName = vm.envOr("TAG_NAME", string(""));
@@ -46,11 +44,7 @@ contract GenerateReleaseNotesV16 is Script {
         );
 
         string memory outLatest = "deployments/release-notes-latest-v16.md";
-        string memory out = string.concat(
-            "deployments/release/release-notes-", vm.toString(chainId), "-", vm.toString(blockNumber), "-v16.md"
-        );
         vm.writeFile(outLatest, md);
-        vm.writeFile(out, md);
     }
 
     function _header(string memory tagName, uint256 chainId, uint256 blockNumber, string memory snap)

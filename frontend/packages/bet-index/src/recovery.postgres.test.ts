@@ -36,8 +36,13 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
     sql2 = connect();
     first = createPostgresBetIndexStoreFromSql(sql1);
     second = createPostgresBetIndexStoreFromSql(sql2);
-    // Fresh concurrent migrations must not deadlock or race CREATE/ALTER.
-    await Promise.all([first.migrate(), second.migrate(), first.migrate(), second.migrate()]);
+    // Fresh concurrent initialization must not deadlock or race CREATE.
+    await Promise.all([
+      first.initializeSchema(),
+      second.initializeSchema(),
+      first.initializeSchema(),
+      second.initializeSchema()
+    ]);
   });
   afterAll(async () => {
     await Promise.allSettled([sql1?.end(), sql2?.end()]);
@@ -45,14 +50,14 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
     await admin?.end();
   });
 
-  it("migrates concurrently and is idempotent after data exists", async () => {
+  it("initializes concurrently and is idempotent after data exists", async () => {
     await first.sportsRecovery.enqueue({
       ...scope,
       marketId: 1n,
       requiredBlock: 150n,
       availableAt: 0
     });
-    await Promise.all([first.migrate(), second.migrate()]);
+    await Promise.all([first.initializeSchema(), second.initializeSchema()]);
     expect((await second.sportsRecovery.due(scope, 0, 10))[0]?.requiredBlock).toBe(150n);
   });
 
@@ -215,5 +220,141 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
       99n
     ]);
     expect(await second.getRandomReadyBetIds({ ...query, chainId: 84532 })).toEqual([]);
+  });
+
+  it("recovers pending VRF across connections without duplicating ready bets or resurrecting terminal bets", async () => {
+    const event = (
+      id: bigint,
+      eventName: BetIndexEvent["eventName"],
+      index: number
+    ): BetIndexEvent => ({
+      chainId: 31337,
+      gameHub: scope.sportsHub,
+      blockNumber: 100n,
+      txHash: `0x${index.toString(16).padStart(64, "0")}`,
+      logIndex: index,
+      eventName,
+      args: { betId: id }
+    });
+    const events = [
+      event(2n, "BetPlaced", 1),
+      event(10n, "BetPlaced", 2),
+      event(10n, "BetRandomReady", 3),
+      event(2n ** 255n, "BetPlaced", 4),
+      event(3n, "BetPlaced", 5),
+      event(3n, "BetRefunded", 6),
+      event(4n, "BetPlaced", 7),
+      event(4n, "BetFinalized", 8),
+      { ...event(1n, "BetPlaced", 9), gameHub: other.sportsHub },
+      { ...event(1n, "BetPlaced", 10), chainId: 31338 }
+    ];
+    await first.writeGameHubEvents(events);
+    await second.writeGameHubEvents(events);
+    const query = { chainId: 31337, gameHub: scope.sportsHub, afterBetId: 0n, limit: 2 };
+    expect(await second.getUnresolvedBetIds(query)).toEqual([2n, 10n]);
+    expect(await second.getUnresolvedBetIds({ ...query, afterBetId: 10n })).toEqual([2n ** 255n]);
+    expect(await first.getRandomReadyBetIds(query)).toEqual([10n]);
+    await first.writeGameHubEvents([event(2n, "BetRefunded", 11)]);
+    expect(await second.getUnresolvedBetIds(query)).toEqual([10n, 2n ** 255n]);
+  });
+
+  it("binds provider cash flow to Bank identity across reused pool IDs and aliases", async () => {
+    const row = {
+      chainId: 31337,
+      poolId: "1",
+      owner: scope.sportsHub,
+      bank: scope.sportsHub,
+      asset: other.sportsHub,
+      id: "unused",
+      action: "withdraw" as const,
+      assets: "10",
+      shares: "10",
+      txHash: "0xaa" as const,
+      blockNumber: 20,
+      logIndex: 1,
+      updatedAt: 0
+    };
+    await first.writeBankProviderLedgerRows([
+      row,
+      { ...row, txHash: "0xbb", bank: other.sportsHub, blockNumber: 21, assets: "999" },
+      { ...row, txHash: "0xcc", poolId: "9", blockNumber: 22, assets: "20" },
+      { ...row, txHash: "0xdd", chainId: 31338, blockNumber: 23 }
+    ]);
+    const query = {
+      chainId: 31337,
+      owner: scope.sportsHub,
+      bank: scope.sportsHub,
+      limit: 10
+    };
+    expect((await second.getBankProviderLedger(query)).map((item) => item.assets)).toEqual([
+      "20",
+      "10"
+    ]);
+    expect(
+      (await first.getBankProviderLedger({ ...query, beforeBlock: 22, beforeLogIndex: 1 })).map(
+        (item) => item.assets
+      )
+    ).toEqual(["10"]);
+  });
+  it("replaces cash ranges atomically including empty reorg pages and retains attribution", async () => {
+    const row = {
+      chainId: 777,
+      poolId: "1",
+      owner: scope.sportsHub,
+      bank: scope.sportsHub,
+      asset: other.sportsHub,
+      id: "ignored",
+      action: "recovery" as const,
+      assets: "8",
+      shares: "0",
+      txHash: "0x777a" as const,
+      blockNumber: 20,
+      logIndex: 1,
+      updatedAt: 0,
+      receiver: other.sportsHub,
+      caller: scope.sportsHub,
+      epochId: "7"
+    };
+    await first.writeBankProviderLedgerRows([
+      row,
+      { ...row, txHash: "0x777b", bank: other.sportsHub },
+      { ...row, txHash: "0x777c", chainId: 778 }
+    ]);
+    const query = { chainId: 777, bank: scope.sportsHub, owner: scope.sportsHub, limit: 10 };
+    await expect(
+      first.replaceBankProviderLedgerRange({
+        chainId: 777,
+        bank: scope.sportsHub,
+        fromBlock: 20n,
+        toBlock: 20n,
+        rows: [{ ...row, blockNumber: 21 }]
+      })
+    ).rejects.toThrow("outside replacement");
+    expect(await second.getBankProviderLedger(query)).toMatchObject([
+      { action: "recovery", receiver: other.sportsHub, caller: scope.sportsHub, epochId: "7" }
+    ]);
+    expect(await second.getBankProviderLedger({ ...query, endBlock: 19 })).toEqual([]);
+    await first.replaceBankProviderLedgerRange({
+      chainId: 777,
+      bank: scope.sportsHub,
+      fromBlock: 20n,
+      toBlock: 20n,
+      rows: []
+    });
+    expect(await second.getBankProviderLedger(query)).toEqual([]);
+    expect(await second.getBankProviderLedger({ ...query, bank: other.sportsHub })).toHaveLength(1);
+    expect(await second.getBankProviderLedger({ ...query, chainId: 778 })).toHaveLength(1);
+    const range = {
+      chainId: 777,
+      bank: scope.sportsHub,
+      fromBlock: 20n,
+      toBlock: 20n,
+      rows: [{ ...row, action: "donation" as const, receiver: scope.sportsHub }]
+    };
+    await first.replaceBankProviderLedgerRange(range);
+    await second.replaceBankProviderLedgerRange(range);
+    expect(await first.getBankProviderLedger(query)).toMatchObject([
+      { action: "donation", epochId: "7", assets: "8" }
+    ]);
   });
 });

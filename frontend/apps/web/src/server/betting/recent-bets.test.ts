@@ -23,6 +23,19 @@ import {
 import { getAddress } from "viem";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
+vi.mock("@ssot/ssot/release", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@ssot/ssot/release")>();
+  const { default: fixture } =
+    await import("../../../../../packages/ssot/src/fixtures/release-v16.fixture.json");
+  return {
+    ...actual,
+    loadEmbeddedRelease: (chainId: number) => ({
+      ok: true,
+      release: { ...fixture, chainId }
+    })
+  };
+});
+
 const GAME_ID = `0x${"11".repeat(32)}` as const;
 const PLAYER = "0x2222222222222222222222222222222222222222" as const;
 const AFFILIATE = "0x5555555555555555555555555555555555555555" as const;

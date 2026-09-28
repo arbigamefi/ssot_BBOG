@@ -97,9 +97,9 @@ export function useGameWalletBalance({
 export type PoolSnapshot = {
   totalAssets: bigint;
   totalReserved: bigint;
-  riskInPaused?: boolean;
+  activeReserved: bigint;
+  riskInPaused: boolean;
   riskReserveBps?: number;
-  minLiquidityBps?: number;
 };
 
 type SnapshotSdk = {
@@ -147,12 +147,7 @@ export function usePoolSnapshot({
             poolId,
             revision,
             snapshot,
-            status:
-              typeof snapshot.riskInPaused !== "boolean"
-                ? "unavailable"
-                : snapshot.riskInPaused
-                  ? "paused"
-                  : "ready"
+            status: snapshot.riskInPaused ? "paused" : "ready"
           });
       } catch {
         if (!cancelled)

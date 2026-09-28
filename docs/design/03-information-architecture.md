@@ -3,7 +3,7 @@
 | Owner | Product + Frontend |
 | Status | Active |
 | Last Updated | 2026-05-18 |
-| Depends on | `../strategy/fullstack-product-architecture.md`, `frontend-implementation-roadmap.md` |
+| Depends on | `../strategy/fullstack-product-architecture.md`, `../architecture/overview.md` |
 | Supersedes | Draft v1 IA matrix |
 
 The IA supports a B2C casino/sportsbook product on a protocol-grade settlement

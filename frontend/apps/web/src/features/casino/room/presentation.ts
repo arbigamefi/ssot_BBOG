@@ -59,15 +59,14 @@ export function formatGameMaxPayout({
 /** Minimal bank-snapshot shape needed to derive spendable liquidity. */
 export type BankLiquidityLike = {
   totalAssets: bigint;
-  totalReserved: bigint;
+  activeReserved: bigint;
   riskReserveBps?: number;
-  minLiquidityBps?: number;
 };
 
 const LIMIT_SCALE = 1_000_000n;
 
 function normalizeRiskReserveBps(snapshot: BankLiquidityLike) {
-  return BigInt(Math.max(0, Math.round(snapshot.riskReserveBps ?? snapshot.minLiquidityBps ?? 0)));
+  return BigInt(Math.max(0, Math.round(snapshot.riskReserveBps ?? 0)));
 }
 
 function scaledReserveMultiplier(reserveMultiplier: number) {
@@ -84,7 +83,7 @@ function reserveForStake(stake: bigint, scaledMultiplier: bigint) {
 }
 
 /**
- * Free liquidity = totalAssets − reserved − minimum-liquidity reserve, clamped
+ * Free liquidity = active totalAssets − activeReserved − risk reserve, clamped
  * to ≥ 0. Mirrors the bank's on-chain solvency math; this is the pool capacity
  * a single bet can draw against.
  */
@@ -92,7 +91,7 @@ export function computePoolFreeLiquidity(snapshot: BankLiquidityLike | null | un
   if (!snapshot) return undefined;
   const bps = normalizeRiskReserveBps(snapshot);
   const riskReserve = (snapshot.totalAssets * bps) / 10000n;
-  const free = snapshot.totalAssets - snapshot.totalReserved - riskReserve;
+  const free = snapshot.totalAssets - snapshot.activeReserved - riskReserve;
   return free > 0n ? free : 0n;
 }
 
@@ -107,7 +106,7 @@ export function canPoolHoldBet({
 }) {
   const bps = normalizeRiskReserveBps(snapshot);
   const navAfterStake = snapshot.totalAssets + stake;
-  const reservedAfterStake = snapshot.totalReserved + requiredReserve;
+  const reservedAfterStake = snapshot.activeReserved + requiredReserve;
   if (navAfterStake < reservedAfterStake) return false;
   const riskReserveAfterStake = (navAfterStake * bps) / 10000n;
   return navAfterStake - reservedAfterStake >= riskReserveAfterStake;

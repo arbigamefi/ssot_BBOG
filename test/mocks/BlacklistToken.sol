@@ -2,7 +2,8 @@
 pragma solidity ^0.8.20;
 
 /// @dev A USDC-like asset. Transfers from or to a blocked address revert, like an issuer blacklist. A transfer to
-///      `gasSink` burns all the gas it is given.
+///      `gasSink` simulates a transfer with configurable, bounded gas work. This is a failure model, not a
+///      claim about the gas cost of production USDC.
 contract BlacklistToken {
     string public constant name = "USD Coin";
     string public constant symbol = "USDC";
@@ -13,6 +14,7 @@ contract BlacklistToken {
     mapping(address => mapping(address => uint256)) public allowance;
     mapping(address => bool) public blocked;
     address public gasSink;
+    uint256 public transferGasCost;
 
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
@@ -25,8 +27,9 @@ contract BlacklistToken {
         blocked[who] = isBlocked;
     }
 
-    function setGasSink(address who) external {
+    function setGasSink(address who, uint256 gasCost) external {
         gasSink = who;
+        transferGasCost = gasCost;
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
@@ -49,8 +52,8 @@ contract BlacklistToken {
     function _transfer(address from, address to, uint256 amount) internal {
         require(!blocked[from] && !blocked[to], "blocked");
         if (to == gasSink) {
-            uint256 i;
-            while (gasleft() > 0) ++i;
+            uint256 startGas = gasleft();
+            while (startGas - gasleft() < transferGasCost) {}
         }
         balanceOf[from] -= amount;
         balanceOf[to] += amount;

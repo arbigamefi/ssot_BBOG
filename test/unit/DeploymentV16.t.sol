@@ -156,30 +156,19 @@ contract DeploymentV16Test is Test {
     function testGeneratedGoldenVectorsAreAcceptedByAllEightModules() public isolatedEnv {
         (string memory snap,) = _deploy();
         string memory input = "deployments/test-golden-v16-snapshot.json";
-        string memory latest = "deployments/golden-vectors-latest-v16.json";
-        string memory tagged = string.concat(
-            "deployments/release/golden-vectors-",
-            vm.toString(block.chainid),
-            "-",
-            vm.toString(block.number),
-            "-v16.json"
-        );
-        bool hadLatest = vm.exists(latest);
-        bool hadTagged = vm.exists(tagged);
-        string memory oldLatest = hadLatest ? vm.readFile(latest) : "";
-        string memory oldTagged = hadTagged ? vm.readFile(tagged) : "";
-        string memory oldInput = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v16.json"));
-        vm.createDir("deployments/release", true);
+        string memory output = "deployments/test-golden-v16-output.json";
+        string memory previousInput = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v16.json"));
+        string memory previousOutput =
+            vm.envOr("VECTORS_OUTPUT_PATH", string("deployments/golden-vectors-latest-v16.json"));
+        vm.createDir("deployments", true);
         vm.writeFile(input, snap);
         vm.setEnv("SNAPSHOT_PATH", input);
+        vm.setEnv("VECTORS_OUTPUT_PATH", output);
         new GenerateGoldenVectorsV16().run();
-        string memory vectors = vm.readFile(latest);
-        // Restore local release evidence before semantic checks can fail.
-        vm.setEnv("SNAPSHOT_PATH", oldInput);
-        if (hadLatest) vm.writeFile(latest, oldLatest);
-        else vm.removeFile(latest);
-        if (hadTagged) vm.writeFile(tagged, oldTagged);
-        else vm.removeFile(tagged);
+        string memory vectors = vm.readFile(output);
+        vm.setEnv("SNAPSHOT_PATH", previousInput);
+        vm.setEnv("VECTORS_OUTPUT_PATH", previousOutput);
+        vm.removeFile(output);
         vm.removeFile(input);
 
         GameHub hub = GameHub(snap.readAddress(".gameHub"));

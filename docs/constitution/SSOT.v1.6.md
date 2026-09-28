@@ -1,35 +1,81 @@
-# Protocol Constitution (SSOT) v1.6 — House-edge allocation
+# Protocol Constitution — Current implementation
 
-> **Status: implemented in source; not audited or deployed.** It governs the next casino release unit
-> only. Deployed v1.5 contracts are immutable and keep their current allocation.
-> Decision record: [ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md). Executable
-> invariants and the tests that check them: [ExecutableSSOT v1.6](ExecutableSSOT.v1.6.md).
-> [ADR-0034](../adr/0034-async-lp-redemption-drained-batches.md) changes how LPs exit the v1.6 Banks: exits
-> become Requests priced in batches once every position has ended. Its two new liabilities, `exitPayable` and
-> `playerPayableTotal`, are subtracted wherever this document writes NAV.
+**Development status:** the project is not launched. This is the only supported contract model.
+The current release identifier is v1.6. The rules below and
+[ADR-0034](../adr/0034-async-lp-redemption-continuous-betting.md) and
+[ADR-0035](../adr/0035-recovery-rights-without-exit-blocking.md) define deposits, redemptions and recovery rights.
+Keywords MUST, MUST NOT, SHOULD and MAY have their RFC 2119 meanings.
 
-This document is **normative**. Keywords **MUST / MUST NOT / SHOULD / MAY** are used as defined in RFC 2119.
+## Core accounting and authority
 
-v1.6 replaces the turnover-budget rule of SSOT v1.0 section 3.3.2, as carried through v1.3, with an
-allocation in which LPs keep a fixed share of the house edge and referrals are funded from the operator's
-share. Everything else in v1.3, and the deployed v1.4/v1.5 behavior, remains in force unless this document
-changes it. The v1.4 and v1.5 deltas (guardian pause, bounded unlock threshold, single release line) have
-not yet been written up as constitution documents; that gap is tracked separately and is not closed here.
+- Each PoolRegistry pool binds to one immutable asset, Bank and domain. Multiple pools may use the
+  same asset; reserves, shares, fees and liabilities MUST stay isolated by Bank.
+- Only SettlementRouter may open, settle or refund Bank positions. The Router records the owner Hub,
+  pool, Bank, player, stake, reserve and snapshot hash; only the owner Hub may terminate a position.
+- GameHub owns casino lifecycles, SportsHub owns sports lifecycles, and game modules are pure functions.
+  The registry and router MUST NOT custody pool assets. Contracts have no proxy upgrade path.
+- Let B be the Bank token balance, PF protocol fees, XP referral liabilities, EP priced LP exits,
+  PP player payables and P historical recovery backing. `NAV = B - PF - XP - EP - PP - P = totalAssets()`
+  denotes active capital. `getSSOT().R = activeReserved()`; `totalReserved()` reports all held reserves.
+  Cash MUST cover fixed liabilities and all held reserves; active NAV MUST cover active reserves.
+- New risk requires `NAV - activeReserved_after >= floor(NAV * riskReserveBps / 10000)`.
+  Optional PF/XP outflows use active capital's withdrawal buffer. Historical recovery backing and fixed
+  liabilities MUST NOT back new bets or active shares.
+- Governance or guardian may pause; only governance may unpause. Pause blocks deposits, LP claims,
+  batch activation and optional outflows. It MUST NOT block valid settlement, refunds,
+  player-payable claims or request/cancellation operations specified by ADR-0034.
 
-## 0. Additive axioms (v1.6)
+## Deposits, redemptions and player debt
 
-9. **Fixed LP share.** For every settled casino position, LPs MUST retain exactly
-   `E − floor(E × (10000 − LP_SHARE_BPS) / 10000)` of the turnover edge `E`, where `LP_SHARE_BPS = 5000` is a
-   constant of the release unit. Governance MUST NOT be able to change it.
+- Deposit/mint use active NAV/supply, virtual-offset conversion and directional rounding. New
+  depositors share current-epoch risk but MUST NOT acquire previously frozen recovery rights.
+- A queued request transfers current rights to its controller, remains cancellable until actual
+  activation and joins the same queue after eligibility. Requests and cancellations cannot change
+  earlier epochs' ownership. Bank/zero controllers and external share transfers/mints to Bank are invalid.
+- LP operations MUST NOT independently stop adequately funded betting. Old unresolved epochs MUST NOT
+  gate later activation or cash claims. There is one waiting queue and no global cap on open epochs.
+- Activation freezes N, S and the current epoch's whole R0, segregates R0, prices liquid cash, burns
+  queued Q once and advances the epoch. Every old hold belongs to exactly one epoch. Settlement MUST
+  NOT loop over epochs or holders; share history uses the pinned OpenZeppelin checkpoints.
+- Let `L=N-R0` and `G(x)=min(floor(S*(x+V)/(S+V)),x)`. Liquid batch assets are `floor(Q*G(L)/S)`.
+  Old terminal cost C and remaining reserve R give `D=R0-C-R`, `H=G(L+D)-G(L)`, `U=D-H`.
+  Every snapshot holder owns cumulative `floor(holderUnits*H/S)` recovery, minus prior claims.
+  Completed positions can release recovery even while another position in that epoch remains open.
+- Full reserve isolation, cumulative allocation, explicit virtual residuals and final dust follow
+  ADR-0035. Protocol capital residuals MUST be separate from gameplay fee accrual; new LP NAV MUST NOT
+  receive historical recovery or a full-exit residual. All-real-share exit cannot extinguish old rights.
+- Bank MUST check combined terminal cost <= position reserve and hold reserve >= stake. Cost includes
+  payoutNet, refund, PF and every XP bucket, whether paid or recorded as player debt. Later claims
+  MUST NOT charge the epoch again. Historical backing and fixed liabilities cannot fund new risk.
+- Ordinary liquid claims retain ERC-7540 controller/operator authorization and rounding rules;
+  recovery claims are a separate per-epoch extension. Views and bookkeeping agree, sync is permissionless
+  and idempotent, and failed payments preserve entitlements. Claims never repeat the activation burn.
+- A failed player transfer books debt without invalidating the terminal position. Anyone may trigger
+  its claim, including during pause, but assets go only to the player. Valid winners are not voided
+  to enable an LP exit. The application MUST NOT ask for keeper operator approval.
 
-10. **Operator-funded referrals.** Referral rewards and player rakeback MUST be paid from the operator share.
-    Any operator share that is not paid to an existing referral payee MUST accrue as protocol fees.
+## Casino lifecycle and randomness
 
-11. **Settlement-boundary enforcement.** The SettlementRouter MUST enforce the LP share from its own record
-    of the position. It MUST NOT rely on the hub's arithmetic.
+- Casino bets follow `Held -> PendingVRF -> RandomReady -> Settled`, or an eligible refund path.
+  The player is the payer. Stake, payout cap, pricing, payees and fees are snapshotted at acceptance.
+- `amountPerRoll * betCount` is the stake. Multi-roll stop conditions refund unused stake and charge
+  house edge only on used turnover. Canonical RNG expansion is implemented once in `src/libs/RNG.sol`.
+- VRFHub transports randomness and supports detachment. Unknown/detached requests are ignored;
+  downstream callback failures are caught. Fulfillment is not an unconditional no-revert promise.
+- Native VRF charges, credits and adapter refunds MUST conserve value. Public eligible timeout
+  refunds and admitted modules' finalization paths provide recovery; a valid winner is not voided
+  to unblock a batch. Sports admission needs independent bounded terminal-path acceptance.
+- Modules share validate/maxPayout/resolve interfaces. Inputs use only current typed encodings;
+  roulette uses `(uint8 kind, uint40 payload)`. No raw historical payload formats are supported.
 
-12. **Non-retroactivity.** A position MUST settle under the edge, referral schedule and referral payees that
-    applied when the bet was accepted.
+## Referral liabilities
+
+- The registry uses first-touch binding, bounded anti-cycle checking and no rebinding. Pricing and
+  payees are resolved at bet acceptance. Later governance or referral changes are non-retroactive.
+- XP is the sum of accrued, locked and holdback buckets. Unlocking and vesting move liabilities
+  between buckets without changing NAV. Claims pay the entitled address through the Bank's checks.
+- Current edge allocation, referral caps and markup constraints follow below. LPs retain a fixed
+  50% share of the turnover edge; governance cannot change that share.
 
 ## 1. Definitions
 
@@ -75,14 +121,14 @@ referral engine) MUST compute, in this order:
 4. Markup amounts per section 4. They are `0` while markup is disabled.
 5. `PF_new = O − R0 − R1 − R2 − M`.
 
-LPs retain `E − O`. That amount MUST NOT be accrued as a liability of any kind; it remains in
-`NAV = B − PF − XP − exitPayable − playerPayableTotal` (the last two per ADR-0034).
+LPs retain `E − O` in gameplay accounting. That amount MUST NOT be accrued again as gameplay PF or XP.
+Capital ownership, ordinary exit liabilities and historical recovery backing follow ADR-0035. Its virtual
+capital residuals are a separate capital-accounting source and MUST NOT inflate gameplay fee counters.
 
 `PF_new ≥ 0` always holds, because `R0 + R1 + R2 ≤ floor(E_b × MAX_REFERRAL_BPS / 10000) ≤ floor(E_b / 2)`,
 `M ≤ floor(E_Δ / 2)` and `O ≥ floor(E_b / 2) + floor(E_Δ / 2)`.
 
-The fee withheld from a winning payout (`payoutGross − payoutNet`, ADR-0007) continues to apply to players
-unchanged. It stays in the Bank and is part of the game result LPs bear. It is not a second allocation base.
+The fee withheld from a winning payout (`payoutGross − payoutNet`, ADR-0007) applies to players. It stays in the Bank and is part of the game result LPs bear. It is not a second allocation base.
 
 A position that ends in a pure refund, including a VRF timeout refund, MUST allocate nothing:
 `E = PF_new = XP_new = 0`.
@@ -118,7 +164,7 @@ MAX_HOUSE_EDGE_BPS)` when a bet is priced, so a lower cap or base edge applies t
 
 ## 5. Settlement-boundary enforcement
 
-The SettlementRouter interface changes as follows for the v1.6 release unit:
+The SettlementRouter interface changes as follows for the Current release unit:
 
 - `openPosition(poolId, player, stake, reserved, snapshotHash, edgeBps)` MUST record `edgeBps` with the
   position and MUST revert if `edgeBps > MAX_HOUSE_EDGE_BPS`. Casino hubs pass `h_e`. Sports hubs pass `0`.
@@ -126,7 +172,8 @@ The SettlementRouter interface changes as follows for the v1.6 release unit:
   `E_R = floor(U × edgeBps / 10000)` and `cap = floor(E_R × (10000 − LP_SHARE_BPS) / 10000)`, and MUST revert
   unless `protocolFeeAccrual + Σ(accrued + locked + holdback over xpAwards) ≤ cap`.
 - A hub MAY accrue less than `cap`. Any difference remains with LPs.
-- The existing reserve, refund and net-payout checks remain in force.
+- The existing reserve, refund and net-payout checks remain in force. Bank also MUST enforce
+  `payoutNet + refundAmount + protocolFeeAccrual + all XP <= reserved` atomically before payment.
 - The Router SHOULD expose the cap as a view, `allocationCap(positionId, refundAmount)`, and SHOULD include
   `edgeBps` in its position-opened event.
 
@@ -162,7 +209,6 @@ result or the correctness of `payoutGross`; module review, randomness and hub au
 
 - Sports-domain allocation. Sports positions MUST settle with `PF_new = XP_new = 0` until a separate ADR
   defines it.
-- Migration of v1.5 pools. The operational plan belongs in a release runbook. LP migration MUST be voluntary.
 - Values of the adjustable parameters. Initial proposals are in ADR-0032 and require calibration before
   deployment.
 

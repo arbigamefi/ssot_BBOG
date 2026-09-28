@@ -137,7 +137,6 @@ function useUnreadBadge(
 
 export function GameRoomAuditLedger({
   game,
-  betAmount: _betAmount,
   recentBets,
   playerAddress,
   assetAddress,
@@ -149,8 +148,6 @@ export function GameRoomAuditLedger({
   releaseMeta
 }: {
   game: GameMeta;
-  /** Currently unused — kept for backward compat with existing callers. */
-  betAmount?: number;
   recentBets: readonly GameAuditBet[];
   playerAddress?: string;
   assetAddress?: string;

@@ -58,7 +58,7 @@ for (const backend of ["memory", "postgres"] as const) {
           connection: { search_path: schema }
         });
         store = createPostgresBetIndexStoreFromSql(sql);
-        await store.migrate();
+        await store.initializeSchema();
       }
     });
     beforeEach(async () => {

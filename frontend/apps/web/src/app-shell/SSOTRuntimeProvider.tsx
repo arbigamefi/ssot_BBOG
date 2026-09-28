@@ -26,8 +26,7 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
 
   const db: SSOTDb | undefined = React.useMemo(() => {
     if (!rel.release) return undefined;
-    // Rebuild financial facts for this release with terminal refunds. Retain the
-    // old database and its transaction journal for historical recovery.
+    // Isolate replayable facts by chain and current release identity.
     return getReleaseScopedSSOTDb(rel.release);
   }, [rel.release]);
 

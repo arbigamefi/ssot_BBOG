@@ -8,14 +8,19 @@ import type { EarnProviderLedgerEntry } from "./types";
 
 const LEDGER_PAGE_SIZE = 25;
 
-type ProviderLedgerApiRow = Omit<EarnProviderLedgerEntry, "assets" | "sharePrice" | "shares"> & {
+type ProviderLedgerApiRow = Omit<
+  EarnProviderLedgerEntry,
+  "assets" | "sharePrice" | "shares" | "epochId"
+> & {
   assets?: string;
   sharePrice?: string;
   shares: string;
+  epochId?: string;
 };
 
 type ProviderLedgerApiResponse = {
   rows: ProviderLedgerApiRow[];
+  coverage?: { fromBlock: number | null; toBlock: number; complete: boolean };
   page?: {
     limit: number;
     hasMore: boolean;
@@ -33,6 +38,7 @@ type UseBankProviderLedgerInput = {
   enabled?: boolean;
   sdk?: SSOTSDK;
   startBlock?: number;
+  endBlock?: bigint;
 };
 
 function parseOptionalBigInt(value?: string) {
@@ -44,6 +50,7 @@ function rowFromApi(row: ProviderLedgerApiRow): EarnProviderLedgerEntry {
     ...row,
     assets: parseOptionalBigInt(row.assets),
     sharePrice: parseOptionalBigInt(row.sharePrice),
+    epochId: parseOptionalBigInt(row.epochId),
     shares: BigInt(row.shares)
   };
 }
@@ -52,7 +59,8 @@ export function useBankProviderLedger({
   enabled = true,
   poolId,
   sdk,
-  startBlock
+  startBlock,
+  endBlock
 }: UseBankProviderLedgerInput) {
   const query = useInfiniteQuery({
     queryKey: [
@@ -60,12 +68,15 @@ export function useBankProviderLedger({
       "earn",
       "providerLedger",
       sdk?.release?.chainId,
+      sdk?.release?.releaseDigest,
+      sdk?.release?.pools.find((pool) => pool.poolId === poolId)?.bank.toLowerCase(),
       poolId,
       sdk?.account,
-      startBlock
+      startBlock,
+      endBlock?.toString()
     ],
     initialPageParam: undefined as ProviderLedgerCursor | undefined,
-    enabled: Boolean(enabled && sdk?.account && poolId),
+    enabled: Boolean(enabled && sdk?.account && poolId && endBlock != null),
     queryFn: async ({ pageParam }): Promise<ProviderLedgerApiResponse> => {
       if (!sdk?.account || !poolId) return { rows: [] };
       const params = new URLSearchParams({
@@ -74,7 +85,10 @@ export function useBankProviderLedger({
         owner: sdk.account as Address,
         poolId: String(poolId)
       });
+      const bank = sdk.release.pools.find((pool) => pool.poolId === poolId)?.bank;
+      if (bank) params.set("bank", bank);
       if (startBlock != null) params.set("startBlock", String(startBlock));
+      if (endBlock != null) params.set("endBlock", endBlock.toString());
       if (pageParam) {
         params.set("beforeBlock", String(pageParam.beforeBlock));
         params.set("beforeLogIndex", String(pageParam.beforeLogIndex));
@@ -91,17 +105,26 @@ export function useBankProviderLedger({
       return (await response.json()) as ProviderLedgerApiResponse;
     },
     getNextPageParam: (lastPage) => (lastPage.page?.hasMore ? lastPage.page.nextCursor : undefined),
-    refetchInterval: 30_000,
-    staleTime: 20_000
+    staleTime: Infinity
   });
 
   const entries = React.useMemo(
-    () => query.data?.pages.flatMap((page) => page.rows.map(rowFromApi)) ?? [],
-    [query.data]
+    () =>
+      query.data?.pages.flatMap((page) =>
+        page.rows
+          .filter((row) => endBlock != null && BigInt(row.blockNumber) <= endBlock)
+          .map(rowFromApi)
+      ) ?? [],
+    [query.data, endBlock]
   );
 
   return {
     ...query,
-    entries
+    entries,
+    coverageComplete:
+      !query.error &&
+      query.data?.pages.at(-1)?.coverage?.complete === true &&
+      query.data.pages.every((page) => page.coverage?.toBlock === Number(endBlock)) &&
+      query.hasNextPage === false
   };
 }

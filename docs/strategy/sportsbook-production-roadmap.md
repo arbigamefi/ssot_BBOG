@@ -1,136 +1,40 @@
 # Sportsbook Production Roadmap
 
-| Owner | Product + Protocol Lead |
-| Status | Active |
-| Last Updated | 2026-05-19 |
-| Depends on | `docs/strategy/fullstack-product-architecture.md`, `docs/ops/sportsbook-phase2-gonogo-2026-05-14.md`, `docs/ops/runbooks/sportsbook-ops.md` |
-| Supersedes | Chat-only sportsbook readiness discussion |
+The project is unlaunched. Sportsbook is a separate product and release decision, with an independent bankroll. Casino tests and casino settlement deadlines do not establish sports readiness. See the [current constitution](../constitution/SSOT.v1.6.md), [release guide](../release/README.md) and [sports operations runbook](../ops/runbooks/sportsbook-ops.md).
 
-## 1. Target
+## Initial scope
 
-The sportsbook target is a public mainnet, single-brand, B2C fixed-odds product:
+The proposed first service is pre-match fixed-odds football 1X2 singles, one chain and one approved asset. It does not include live betting, parlays, props, futures or shared casino/sports capital.
 
 ```text
-Market discovery -> market detail -> signed odds -> place ticket
-  -> ticket tracker -> result proof -> automatic terminalization -> receipt
+Market discovery -> signed odds -> accepted ticket -> tracker
+  -> result evidence and finality -> settlement or refund -> payment receipt
 ```
 
-The first public version remains narrow by design:
+SportsHub owns tickets and result lifecycle; SportsRiskEngine enforces exposure limits. Signed odds bind price, market version, expiry, nonce and risk parameters. Signatures establish authorization, while source evidence and the rulebook determine what a result means.
 
-- pre-match fixed-odds singles only;
-- one chain and one Sports Bank;
-- one approved asset;
-- low supervised limits;
-- football 1X2 first, then adjacent pre-match markets;
-- no live betting, parlays, props, futures, or shared casino/sports bankroll.
+## Admission and capital
 
-## 2. Current Verdict
+The Bank prices available redemption cash at activation and segregates current-position backing with its original holders' recovery rights. LP exits do not stop adequately funded betting, and unresolved historical positions do not gate later exits. Sports admission independently requires complete deadlines and public terminal paths for missing results, disputes, cancellation and voids: retaining recovery rights does not establish timely player payment. No timeout may silently replace a valid winning entitlement with a refund.
 
-The current codebase is a correct MVP foundation, not yet a public mainnet
-sportsbook.
+Until those conditions and their tests are complete, sports pools are not admitted to the casino Banks. A generic reserve haircut does not resolve ownership of a later release and is not part of the design. Pool, market and correlated-event limits must be calibrated against independent sports capital.
 
-Strong surfaces:
+## Required release evidence
 
-- `SportsHub` owns fixed-odds ticket lifecycle, result evidence, challenge,
-  void, and ticket debt-out.
-- `SportsRiskEngine` enforces exposure and payout caps.
-- signed odds snapshots keep provider odds, risk hash, expiry, nonce, and
-  market version bound to the player's ticket.
-- the web app has lobby, market detail, bet slip, ticket detail, player tickets,
-  provider odds APIs, and ops separation.
-- the keeper has opt-in SportsHub terminalization.
-- Postgres bet-index is the right MVP read-model; no subgraph is needed.
+| Area               | Required result                                                                                          |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| Player path        | Market selection, quote expiry, placement, ticket tracking and readable receipt work on intended wallets |
+| Rules and evidence | First market class has fixed rules, reproducible source evidence and explicit cancellation semantics     |
+| Authorization      | Odds, reporting, challenge and arbitration keys have identified roles and custody                        |
+| Terminalization    | Result finality, settlement, refunds and deadline recovery complete under failures and restarts          |
+| Capital            | Limits cover maximum liability, correlated events and simultaneous LP requests                           |
+| Operations         | Responsible operators, independent recovery access, funding, alerts and escalation are exercised         |
+| Release identity   | Exact code, ABI, configuration and deployed dependencies are verified in the target environment          |
 
-Open gaps:
+Receipts distinguish terminal economics from actual cash payment or player payable. Raw hashes can be available for inspection without being the primary player explanation. Normal users should not need operator screens to understand their ticket.
 
-- public player journey still needs product-grade ticket tracking after
-  placement;
-- market discovery needs real tabs and empty states, not a raw recent-market
-  list;
-- ticket proof should be player-readable by default and detailed hashes should
-  live behind an advanced drawer;
-- sports keeper needs production deployment evidence and canary logs;
-- no-go memos for custody, provider/evidence, jurisdiction/access, bankroll,
-  risk caps, monitoring, and final release artifacts remain unapproved.
+## Sequence
 
-## 3. Production Gates
+Complete rules and terminal deadlines alongside the player journey. Then validate provider evidence, custody, risk limits and operating recovery. Assemble the current release artifacts and run bounded acceptance in the intended environment before any public opening. Expand market classes only after the first scope has demonstrated reliable service and sustainable costs.
 
-### Gate A - Player UX Complete
-
-Acceptance:
-
-- `/sportsbook` supports Open, Live, Today, Upcoming, and Settled scanning.
-- `/sportsbook/[marketId]` lets a player pick one outcome, enter stake, place a
-  ticket, then immediately see a ticket tracker without waiting for index lag.
-- `/portfolio/tickets/[ticketId]` defaults to receipt, lifecycle, and result;
-  raw proof hashes are hidden behind an advanced proof drawer.
-- normal players are not sent to `/ops/sportsbook` from primary CTAs.
-- all user-facing text is localized in `en` and `zh-Hans`.
-
-### Gate B - Terminalization Complete
-
-Acceptance:
-
-- primary and backup sports terminalizers are deployed with independent RPCs;
-- a canary proves `ResultProposed -> finalizeResult -> settleTicket/refundTicket`
-  with tx hashes and final readbacks;
-- operator docs name the owner for each alert and escalation window;
-- player UI treats manual settle/refund as fallback, not the normal path.
-
-### Gate C - Provider And Evidence Approved
-
-Acceptance:
-
-- provider/evidence memo is approved and passes the repo check;
-- result source and evidence storage procedure are reproducible;
-- odds signing keys and result reporter keys have custody approvals;
-- rulebook templates are finalized for the first public market class.
-
-### Gate D - Public Risk-In Approved
-
-Acceptance:
-
-- jurisdiction/frontend access memo is approved;
-- bankroll and risk-cap memo is approved;
-- mainnet release artifacts, golden vectors, ABI export, strict release check,
-  and fork tests exist for the target commit;
-- fresh mainnet/staging canary is recorded after final parameters.
-
-## 4. Implementation Order
-
-1. **Close player UX:** market tabs, ticket tracker, receipt-first ticket detail,
-   and proof drawer.
-2. **Close terminalizer ops:** primary/backup deployment docs and a fresh sports
-   terminalizer canary.
-3. **Close provider/evidence:** final provider memo, evidence bundle path, and
-   result reporter procedure.
-4. **Close public risk-in:** access policy, bankroll/risk caps, final artifacts,
-   and fresh canary.
-5. **Expand markets:** add more football pre-match markets only after the first
-   market class is stable.
-
-## 5. Stop List
-
-Do not add these before Gate A-D pass:
-
-- The Graph subgraph;
-- live betting;
-- parlays;
-- props/futures;
-- cross-chain market discovery;
-- white-label sportsbook screens;
-- higher bankroll limits;
-- new market classes without approved rulebook/evidence procedures.
-
-## 6. How To Enforce
-
-Required checks for sportsbook PRs:
-
-```bash
-pnpm -C frontend/apps/web test -- 'src/app/(product)/sportsbook/pageClient.test.tsx' 'src/app/(product)/sportsbook/[marketId]/pageClient.test.tsx' 'src/app/(product)/portfolio/tickets/[ticketId]/pageClient.test.tsx' 'src/app/api/sportsbook/odds-snapshot/route.test.ts' 'src/app/api/sportsbook/provider-odds/route.test.ts' 'src/app/api/sportsbook/tickets/player/[address]/route.test.ts' 'src/features/sportsbook/provider-odds.test.ts'
-pnpm -C frontend/apps/keeper test -- sports-terminalizer.test.ts
-forge test --match-contract 'SportsHub.*|SportsRisk.*'
-```
-
-Before public risk-in, the Phase 2 go/no-go packet must change from NO-GO to GO
-with explicit evidence links. Code changes cannot bypass that packet.
+Existing SportsHub, SportsRiskEngine, frontend and keeper suites provide regression coverage; release evidence must state the exact revision, configuration, scenarios and limits verified. No dated status memo or passing unrelated casino suite substitutes for that evidence.

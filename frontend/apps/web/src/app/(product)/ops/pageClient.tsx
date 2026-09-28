@@ -130,7 +130,7 @@ export function OpsPageClient() {
       { label: t("releaseRows.vrfHub"), value: shortHex(release?.contracts.vrfHub) },
       { label: t("releaseRows.poolRegistry"), value: shortHex(release?.contracts.poolRegistry) },
       { label: t("releaseRows.primaryBank"), value: shortHex(primaryCasinoPool?.bank) },
-      { label: t("releaseRows.manifest"), value: "release-latest-v14.json" }
+      { label: t("releaseRows.manifest"), value: "release-latest-v16.json" }
     ],
     [primaryCasinoPool?.bank, release, t]
   );

@@ -14,15 +14,12 @@ import "forge-std/console2.sol";
 ///
 /// Outputs:
 /// - deployments/release-latest-v16.json
-/// - deployments/release/release-<chain>-<block>-v16.json
 contract ReleaseDigestV16 is Script {
     using stdJson for string;
 
     bytes32 internal constant SCHEMA = keccak256("SSOT_RELEASE_DIGEST_V16");
 
     function run() external {
-        vm.createDir("deployments/release", true);
-
         string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v16.json"));
         string memory snap = _readFileOrDie(snapshotPath);
 
@@ -55,16 +52,11 @@ contract ReleaseDigestV16 is Script {
         json = vm.serializeBytes32(obj, "r", r);
         json = vm.serializeBytes32(obj, "s", s);
 
-        string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v16");
-        string memory outPath = string.concat("deployments/release/release-", tag, ".json");
-
-        vm.writeJson(json, outPath);
         vm.writeJson(json, "deployments/release-latest-v16.json");
 
         console2.log("snapshot:", snapshotPath);
         console2.log("digest:", vm.toString(digest));
         console2.log("signer:", signer);
-        console2.log("wrote:", outPath);
         console2.log("wrote:", "deployments/release-latest-v16.json");
     }
 

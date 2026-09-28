@@ -8,10 +8,11 @@ import {IBank, IBankVault} from "../../src/core/interfaces/IBank.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {Errors} from "../../src/libs/Errors.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {BlacklistToken} from "../mocks/BlacklistToken.sol";
 
-/// @notice ADR-0034 in the Bank: ERC-7540 redemption Requests, time cutoffs, drained batch pricing, claims and
-///         player payables. This test is the Bank's SettlementRouter.
+/// @notice ADR-0035 in the Bank: liquid ERC-7540 claims, historical risk ownership and player payables.
+///         This test is the Bank's SettlementRouter; GameHubE2E covers the real game path.
 contract BankAsyncRedemptionTest is Test {
     uint256 internal constant DAY = 1 days;
 
@@ -113,6 +114,29 @@ contract BankAsyncRedemptionTest is Test {
 
     // ------------------------------------------------------------ requests
 
+    function test_pendingBatchViewShowsOnlyTheCurrentQueueAndKeepsRecoverySeparate() external {
+        _deposit(alice, 1_000e6);
+        _hold(10e6, 20e6);
+        _request(alice, 300e6);
+        _priceDue();
+        assertEq(bank.pendingRedeemRequest(0, alice), 0);
+        assertEq(bank.claimableRedeemRequest(0, alice), 300e6);
+        assertEq(bank.redeemBatch(1).assignedShares, 0, "views do not assign liquid entitlements");
+        assertEq(bank.getRecovery(1, alice).shares, 1_000e6, "all original units own recovery");
+        _request(alice, 200e6);
+        (uint256 id, uint256 shares_) = bank.pendingRedeemBatch(alice);
+        assertEq(id, 2);
+        assertEq(shares_, 200e6);
+        assertEq(bank.balanceOf(address(bank)), 200e6);
+        assertEq(bank.maxRedeem(alice), 300e6, "old cash is immediately claimable despite the open hold");
+        vm.prank(alice);
+        bank.cancelRedeemRequest(alice);
+        (id, shares_) = bank.pendingRedeemBatch(alice);
+        assertEq(id + shares_, 0);
+        assertEq(bank.balanceOf(alice), 700e6);
+        assertEq(bank.getRecovery(1, alice).shares, 1_000e6);
+    }
+
     function test_requestEscrowsSharesThatKeepBearingResults() external {
         _deposit(alice, 1_000e6);
         _deposit(bob, 1_000e6);
@@ -137,7 +161,7 @@ contract BankAsyncRedemptionTest is Test {
         // A win before the cutoff lowers what the requested shares are worth, like every other share.
         _winBet(100e6, 300e6); // NAV 2000 + 100 - 300 = 1800
         vm.warp(cutoff);
-        bank.settleBatch();
+        bank.activateBatch();
         assertEq(bank.redeemBatch(1).assets, 360e6, "400 of 2000 shares of a 1800 NAV");
     }
 
@@ -187,85 +211,104 @@ contract BankAsyncRedemptionTest is Test {
 
     // ------------------------------------------------------------ cutoffs and batches
 
-    function test_cutoffIsTheFirstBoundaryStrictlyAfterTheFirstRequest() external {
+    function test_cutoffIsEligibilityAndOverdueRequestsStillJoinTheQueue() external {
         _deposit(alice, 1_000e6);
         _request(alice, 1e6);
         assertEq(bank.redeemBatch(1).cutoff, 101 * DAY);
-
-        // A later request before the cutoff joins the same batch.
         vm.warp(101 * DAY - 1);
         _request(alice, 1e6);
-        assertEq(bank.nextBatchId(), 2);
-        assertEq(bank.redeemBatch(1).shares, 2e6);
-
-        // A request exactly on the cutoff joins the next batch, whose cutoff is the next boundary.
-        vm.warp(101 * DAY);
+        vm.warp(102 * DAY);
         _request(alice, 1e6);
-        assertEq(bank.nextBatchId(), 3);
-        assertEq(bank.redeemBatch(2).cutoff, 102 * DAY);
+        assertEq(bank.currentEpoch(), 1, "time cannot advance the ownership boundary");
+        assertEq(bank.redeemBatch(1).shares, 3e6);
+        assertEq(bank.redeemBatch(1).cutoff, 101 * DAY);
+        bank.activateBatch();
+        _request(alice, 1e6);
+        assertEq(bank.currentEpoch(), 2);
+        assertEq(bank.redeemBatch(2).cutoff, 103 * DAY);
     }
 
-    function test_bettingClosesAtTheCutoffWithoutAnyCall() external {
+    function test_bettingContinuesBeforeEligibilityAndAcrossHistoricalRecovery() external {
         _deposit(alice, 1_000e6);
         _request(alice, 100e6);
-
         vm.warp(101 * DAY - 1);
-        assertFalse(bank.redemptionDraining());
-        uint256 betId = _hold(10e6, 20e6);
-
+        uint256 beforeEligibility = _hold(10e6, 20e6);
         vm.warp(101 * DAY);
-        assertTrue(bank.redemptionDraining());
-        vm.expectRevert(IBank.RedemptionDraining.selector);
-        bank.holdBet(99, player, 10e6, 20e6, bytes32(0));
-
-        // Deposits stay open, and the position opened before the cutoff still settles.
+        uint256 afterEligibility = _hold(10e6, 20e6);
+        assertEq(bank.redeemBatch(1).activatedAt, 0);
+        bank.activateBatch();
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 2);
+        assertEq(bank.recoveryBacking(), 40e6);
+        assertEq(bank.redeemBatch(1).assets, 98e6);
+        assertEq(bank.totalSupply(), 900e6);
+        assertEq(bank.activeReserved(), 0);
+        uint256 later = _hold(10e6, 20e6);
         _deposit(bob, 100e6);
-        _settle(betId, 0);
-        bank.settleBatch();
-        assertFalse(bank.redemptionDraining(), "betting resumes once the batch is priced");
+        asset.mint(address(bank), 1e6);
+        _settle(later, 20e6);
+        assertEq(bank.recoveryEpoch(1).backingAssets, 40e6, "new operations cannot spend old backing");
+        uint256 newest = _hold(10e6, 20e6);
+        uint256 activeBefore = bank.totalAssets();
+        bank.refundBet(beforeEligibility, 10e6);
+        _settle(afterEligibility, 20e6);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 0);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, 10e6);
+        assertEq(bank.totalAssets(), activeBefore, "old recovery never enters active NAV");
+        assertEq(bank.openHolds(), 1);
+        assertEq(_claimRecovery(1, alice), 10e6, "wallet and exiting units share their original risk");
+        assertEq(bank.getRecovery(1, bob).shares, 0);
+        _settle(newest, 0);
         _hold(10e6, 20e6);
     }
 
-    function test_aRequestNeedingAThirdUnpricedBatchReverts() external {
+    function test_permanentlyOpenFirstEpochNeverBlocksLaterPositiveCashExits() external {
         _deposit(alice, 1_000e6);
-        _request(alice, 100e6); // batch 1, cutoff day 101
-        _hold(10e6, 20e6); // keeps batch 1 draining
-
-        vm.warp(101 * DAY + 1);
-        _request(alice, 100e6); // batch 2, cutoff day 102
-        vm.warp(102 * DAY);
-        assertEq(bank.nextBatchId() - bank.firstUnpricedBatch(), 2);
-        vm.prank(alice);
-        vm.expectRevert(IBank.RedeemBatchesFull.selector);
-        bank.requestRedeem(100e6, alice, alice);
-
-        assertEq(bank.redeemBatch(1).cutoff, 101 * DAY, "no cutoff moves");
-        assertEq(bank.redeemBatch(2).cutoff, 102 * DAY);
+        _hold(10e6, 20e6);
+        _request(alice, 100e6);
+        _priceDue();
+        for (uint256 epoch = 2; epoch <= 5; ++epoch) {
+            _deposit(bob, 100e6);
+            uint256 later = _hold(10e6, 20e6);
+            uint256 shares = bank.balanceOf(bob);
+            _request(bob, shares);
+            _priceDue();
+            assertEq(bank.currentEpoch(), epoch + 1);
+            vm.prank(bob);
+            assertGt(bank.redeem(shares, bob, bob), 0, "each later exit actually pays cash");
+            _settle(later, 0);
+            assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+            assertEq(bank.recoveryEpoch(1).settledCost, 0);
+            assertEq(bank.recoveryEpoch(1).remainingReserve, 20e6);
+        }
+        assertEq(bank.getRecovery(1, bob).shares, 0);
+        assertEq(bank.balanceOf(bob), 0);
     }
 
-    function test_cancelReturnsSharesToTheControllerBeforeTheCutoffOnly() external {
+    function test_cancelReturnsSharesToControllerUntilActualActivation() external {
         _deposit(alice, 1_000e6);
         vm.prank(alice);
         bank.approve(bob, type(uint256).max);
         vm.prank(bob);
-        bank.requestRedeem(300e6, bob, alice); // Bob controls Alice's former shares
-
+        bank.requestRedeem(300e6, bob, alice);
         vm.prank(alice);
         vm.expectRevert(Errors.Unauthorized.selector);
         bank.cancelRedeemRequest(bob);
-
+        vm.warp(102 * DAY);
         vm.expectEmit(true, true, true, true, address(bank));
         emit IBank.RedeemRequestCancelled(bob, bob, 1, 300e6);
         vm.prank(bob);
         assertEq(bank.cancelRedeemRequest(bob), 300e6);
-        assertEq(bank.balanceOf(bob), 300e6, "cancellation returns shares to the controller");
+        assertEq(bank.balanceOf(bob), 300e6);
         assertEq(bank.balanceOf(address(bank)), 0);
-
         _request(alice, 100e6);
-        vm.warp(101 * DAY);
+        uint256 oldBet = _hold(10e6, 20e6);
+        vm.warp(bank.redeemBatch(1).cutoff);
+        bank.activateBatch();
         vm.prank(alice);
         vm.expectRevert(IBank.NothingToCancel.selector);
         bank.cancelRedeemRequest(alice);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+        _settle(oldBet, 0);
     }
 
     function test_cancellingEveryRequestRetiresTheBatch() external {
@@ -281,12 +324,11 @@ contract BankAsyncRedemptionTest is Test {
         vm.prank(bob);
         bank.cancelRedeemRequest(bob);
 
-        assertEq(bank.nextBatchId(), 1, "the empty batch frees its ID");
+        assertEq(bank.currentEpoch(), 1, "cancellation does not seal or advance the epoch");
         assertEq(bank.redeemBatch(1).cutoff, 0);
         vm.warp(101 * DAY);
-        assertFalse(bank.redemptionDraining(), "a retired batch never blocks betting");
         vm.expectRevert(IBank.NoBatchDue.selector);
-        bank.settleBatch();
+        bank.activateBatch();
         _hold(10e6, 20e6);
 
         vm.warp(101 * DAY + 3 hours);
@@ -313,37 +355,35 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(bank.redeemBatch(1).cutoff, 101 * DAY, "an open batch keeps its cutoff");
 
         vm.warp(101 * DAY + 30 minutes);
-        bank.settleBatch();
+        bank.activateBatch();
         _request(alice, 1e6);
         assertEq(bank.redeemBatch(2).cutoff, 101 * DAY + 1 hours);
     }
 
     // ------------------------------------------------------------ pricing
 
-    function test_settleBatchWaitsForTheCutoffEveryPositionAndUnpause() external {
+    function test_activationRequiresEligibilityAndUnpauseButNeverOldCompletion() external {
         _deposit(alice, 1_000e6);
         _request(alice, 100e6);
-        uint256 betId = _hold(10e6, 20e6);
-
-        vm.expectRevert(abi.encodeWithSelector(IBank.OpenHolds.selector, 1));
-        bank.settleBatch();
-        _settle(betId, 0);
+        _hold(10e6, 20e6);
         vm.expectRevert(IBank.NoBatchDue.selector);
-        bank.settleBatch();
-
+        bank.activateBatch();
         vm.warp(101 * DAY);
         vm.prank(gov);
         bank.setRiskInPaused(true);
         vm.expectRevert(IBank.RiskInPaused.selector);
-        bank.settleBatch();
+        bank.activateBatch();
         vm.prank(gov);
         bank.setRiskInPaused(false);
-
-        vm.expectEmit(true, false, false, true, address(bank));
-        emit IBank.RedeemBatchPriced(1, 100e6, 100_999_000);
         vm.prank(stranger);
-        assertEq(bank.settleBatch(), 1, "anyone can price a due batch");
-        assertEq(bank.openHolds(), 0);
+        assertEq(bank.activateBatch(), 1);
+        assertEq(bank.maxWithdraw(alice), 99e6);
+        assertTrue(bank.redeemBatch(1).priced);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+        _request(alice, 100e6);
+        _priceDue();
+        assertEq(bank.currentEpoch(), 3);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
     }
 
     function test_profitablePoolPricesAtTheVirtualOffsetQuote() external {
@@ -353,15 +393,17 @@ contract BankAsyncRedemptionTest is Test {
         _settle(betId, 0); // NAV 1100 over 1000 shares
 
         _priceDue();
-        // min(1000 * 1101 / 1001, 1000 * 1100 / 1000): the virtual quote, leaving its residual in the vault.
+        // The virtual residual belongs to protocol capital on a full real-share exit.
         assertEq(bank.redeemBatch(1).assets, 1_099_900_099);
         assertEq(bank.totalSupply(), 0);
         assertEq(bank.exitPayable(), 1_099_900_099);
-        assertEq(bank.totalAssets(), 99_901);
+        assertEq(bank.totalAssets(), 0);
+        assertEq(bank.protocolFeesPayable(), 99_901);
+        assertEq(bank.totalProtocolFeeAccrued(), 0, "protocol capital is not a gameplay fee");
     }
 
     function test_depletedPoolPricesAtItsRealEquity() external {
-        // ADR-0034: S = 10e6, N = 5e6 and V = 1e6 quote 5,454,545 for the whole supply, but only 5,000,000 exist.
+        // Real-equity ceiling: S = 10e6, N = 5e6 and V = 1e6 quote 5,454,545 for the whole supply, but only 5,000,000 exist.
         _deposit(alice, 4e6);
         _deposit(bob, 6e6);
         _winBet(1e6, 6e6);
@@ -384,7 +426,7 @@ contract BankAsyncRedemptionTest is Test {
         vm.prank(alice);
         second.requestRedeem(4e6, alice, alice);
         vm.warp(second.redeemBatch(1).cutoff);
-        second.settleBatch();
+        second.activateBatch();
         assertEq(second.redeemBatch(1).assets, 2e6);
         assertEq(second.totalAssets(), 3e6, "the remaining LP keeps its proportional equity");
     }
@@ -407,21 +449,24 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(bank.maxRedeem(alice), 0, "the zero-asset shares are cleared");
     }
 
-    function test_twoDueBatchesArePricedInOneCall() external {
+    function test_nextQueuePricesItsCashBeforeAnyOldPositionTerminates() external {
         _deposit(alice, 1_000e6);
         _deposit(bob, 1_000e6);
         _request(alice, 500e6);
-        uint256 betId = _hold(100e6, 300e6);
-        vm.warp(101 * DAY + 1);
-        _request(bob, 500e6);
-        vm.warp(102 * DAY);
-        _settle(betId, 300e6); // NAV 1800 over 2000 shares
-
-        assertEq(bank.settleBatch(), 2);
+        uint256 oldBet = _hold(100e6, 300e6);
+        _priceDue();
         assertEq(bank.redeemBatch(1).assets, 450e6);
-        assertEq(bank.redeemBatch(2).assets, 450e6, "priced after the first, at the same real equity");
-        assertEq(bank.firstUnpricedBatch(), 3);
-        assertFalse(bank.redemptionDraining());
+        _request(bob, 500e6);
+        _priceDue();
+        assertEq(bank.redeemBatch(2).assets, 450e6);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+        assertEq(bank.currentEpoch(), 3);
+        assertEq(bank.totalSupply(), 1_000e6);
+        uint256 active = bank.totalAssets();
+        _settle(oldBet, 300e6);
+        assertEq(bank.totalAssets(), active);
+        assertEq(bank.getRecovery(1, alice).claimableAssets, 0);
+        assertEq(bank.getRecovery(1, bob).claimableAssets, 0);
     }
 
     function test_pricedAssetsAreIsolatedFromLaterBets() external {
@@ -519,6 +564,33 @@ contract BankAsyncRedemptionTest is Test {
         bank.redeem(1, address(0), alice);
     }
 
+    function test_repeatedFailedLiquidClaimsPreserveEveryUnitAndRetryPaysOnce() external {
+        _deposit(alice, 1_000e6);
+        _request(alice, 1_000e6);
+        _priceDue();
+        uint256 cash = asset.balanceOf(address(bank));
+        asset.setBlocked(alice, true);
+        for (uint256 i; i < 2; ++i) {
+            vm.prank(alice);
+            vm.expectRevert(bytes("blocked"));
+            bank.redeem(1_000e6, alice, alice);
+            assertEq(bank.maxRedeem(alice), 1_000e6);
+            assertEq(bank.maxWithdraw(alice), 1_000e6);
+            assertEq(bank.exitPayable(), 1_000e6);
+            assertEq(asset.balanceOf(address(bank)), cash);
+            assertEq(asset.balanceOf(alice), 0);
+        }
+        asset.setBlocked(alice, false);
+        vm.prank(alice);
+        assertEq(bank.redeem(1_000e6, alice, alice), 1_000e6);
+        assertEq(bank.exitPayable(), 0);
+        assertEq(bank.maxRedeem(alice), 0);
+        vm.prank(alice);
+        vm.expectRevert(IBank.ExceedsClaimable.selector);
+        bank.redeem(1, alice, alice);
+        assertEq(asset.balanceOf(alice), 1_000e6);
+    }
+
     function test_pauseStopsClaimsButNotRequestsSyncOrCancellation() external {
         _deposit(alice, 1_000e6);
         _request(alice, 500e6);
@@ -564,7 +636,7 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(bank.exitPayable(), 1, "an unsynced controller's entitlement stays reserved");
         uint256 navBefore = bank.totalAssets();
         vm.expectEmit(true, false, false, true, address(bank));
-        emit IBank.RedeemRemainderReleased(1, 1);
+        emit IBank.RedeemRemainderReleased(1, 1, false);
         bank.syncRedeem(carol);
         assertEq(bank.exitPayable(), 0, "floor(1 * 1 / 3) is zero for each; the unit returns to NAV");
         assertEq(bank.totalAssets(), navBefore + 1);
@@ -589,7 +661,7 @@ contract BankAsyncRedemptionTest is Test {
 
         _request(bob, 2_000e6);
         vm.warp(block.timestamp + DAY);
-        bank.settleBatch(); // prices Alice's second request together with Bob's
+        bank.activateBatch(); // prices Alice's second request together with Bob's
         assertEq(bank.redeemBatch(2).assets, 1_800_900_000);
         (uint256 pendingView, uint256 sharesView, uint256 assetsView) = bank.redeemRequestOf(alice);
         uint256 maxW = bank.maxWithdraw(alice);
@@ -603,6 +675,26 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(sharesAfter, sharesView);
         assertEq(assetsAfter, assetsView);
         assertEq(bank.claimableRedeemRequest(0, alice), sharesAfter);
+    }
+
+    function test_exitsAreExemptFromTheWithdrawalBuffer() external {
+        _deposit(alice, 1_000e6);
+        _deposit(bob, 1_000e6);
+        uint256 oldBet = _hold(100e6, 300e6);
+        _request(alice, 500e6);
+        _priceDue();
+        uint256 active = bank.totalAssets();
+        vm.prank(gov);
+        bank.setWithdrawalBufferBps(10_000);
+        assertEq(bank.getSSOT().withdrawable, 0);
+        bank.refundBet(oldBet, 100e6);
+        assertEq(bank.totalAssets(), active);
+        vm.prank(alice);
+        assertEq(bank.redeem(500e6, alice, alice), 450e6);
+        assertEq(_claimRecovery(1, alice), 100e6);
+        assertEq(bank.totalAssets(), active, "paying fixed exit debts cannot spend active capital");
+        assertEq(bank.getRecovery(1, bob).claimableAssets, 100e6);
+        assertEq(bank.recoveryBacking(), 100e6);
     }
 
     function test_claimToTheBankItselfDonatesToNav() external {
@@ -631,11 +723,40 @@ contract BankAsyncRedemptionTest is Test {
         vm.expectRevert(Errors.InsufficientAllowance.selector);
         bank.transferFrom(address(bank), stranger, 1);
 
-        // Shares sent to the Bank directly are not a Request and cannot be claimed or cancelled.
+        // Bank escrow has a controller; ordinary transfers cannot create ownerless snapshot units.
         vm.prank(alice);
+        vm.expectRevert();
         bank.transfer(address(bank), 100e6);
         assertEq(bank.pendingRedeemRequest(0, alice), 400e6);
         assertEq(bank.redeemBatch(1).shares, 400e6);
+    }
+
+    function test_allExternalShareDestinationsRejectTheBankWithoutChangingOwnership() external {
+        _deposit(alice, 1_000e6);
+        asset.mint(alice, 100e6);
+        uint256 cashBefore = asset.balanceOf(address(bank));
+        assertEq(bank.maxDeposit(address(bank)), 0);
+        assertEq(bank.maxMint(address(bank)), 0);
+        vm.startPrank(alice);
+        vm.expectRevert();
+        bank.deposit(10e6, address(bank));
+        vm.expectRevert();
+        bank.mint(10e6, address(bank));
+        vm.expectRevert();
+        bank.transfer(address(bank), 10e6);
+        bank.approve(bob, 100e6);
+        vm.expectRevert();
+        bank.requestRedeem(10e6, address(bank), alice);
+        vm.stopPrank();
+        vm.prank(bob);
+        vm.expectRevert();
+        bank.transferFrom(alice, address(bank), 10e6);
+        assertEq(bank.allowance(alice, bob), 100e6, "a rejected destination cannot consume allowance");
+        assertEq(bank.balanceOf(alice), 1_000e6);
+        assertEq(bank.balanceOf(address(bank)), 0);
+        assertEq(bank.totalSupply(), 1_000e6);
+        assertEq(bank.pendingRedeemRequest(0, address(bank)), 0);
+        assertEq(asset.balanceOf(address(bank)), cashBefore);
     }
 
     // ------------------------------------------------------------ player payables
@@ -659,7 +780,7 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(bank.totalAssets(), 800e6, "the payable is a liability outside NAV");
         assertEq(asset.balanceOf(address(bank)), 1_100e6);
 
-        bank.settleBatch();
+        bank.activateBatch();
         assertEq(bank.redeemBatch(1).assets, 800e6, "one blacklisted winner does not block the exit");
 
         // A payable claim works while paused, can be triggered by anyone and pays only the player.
@@ -695,15 +816,54 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(bank.openHolds(), 0);
     }
 
-    function test_payoutThatRanOutOfGasRevertsInsteadOfBecomingAPayable() external {
+    function test_tokenOutOfGasPreservesTheWholePayoutAsPayable() external {
+        _assertGasLimitedTransfer(false, false);
+    }
+
+    function test_proxyTokenOutOfGasPreservesTheWholePayoutAsPayable() external {
+        _assertGasLimitedTransfer(true, false);
+    }
+
+    function test_tokenOutOfGasPreservesTheWholeRefundAsPayable() external {
+        _assertGasLimitedTransfer(false, true);
+    }
+
+    function test_proxyTokenPaysDirectlyWithEnoughGas() external {
+        _useProxyAsset();
         _deposit(alice, 1_000e6);
         uint256 betId = _hold(100e6, 300e6);
-        asset.setGasSink(player);
+        asset.setGasSink(player, 10_000_000);
+        uint256 playerBefore = asset.balanceOf(player);
         SSOTTypes.XPAward[] memory none;
-        vm.expectRevert(IBank.PayoutOutOfGas.selector);
+        bank.settleBet{gas: 20_000_000}(betId, 300e6, 300e6, 0, 0, none);
+        assertEq(asset.balanceOf(player), playerBefore + 300e6);
+        assertEq(bank.playerPayable(player), 0);
+        assertEq(bank.playerPayableTotal(), 0);
+        assertEq(bank.openHolds(), 0);
+        assertEq(bank.totalAssets(), 800e6);
+    }
+
+    function test_underfundedSettlementRollsBackTheWholePosition() external {
+        _deposit(alice, 1_000e6);
+        uint256 betId = _hold(100e6, 300e6);
+        asset.setGasSink(player, 25_000_000);
+        SSOTTypes.XPAward[] memory none;
+        uint256 cashBefore = asset.balanceOf(address(bank));
+        // Not enough gas remains to book the payable and finish settlement. The whole operation must revert.
+        vm.expectRevert();
         bank.settleBet{gas: 1_000_000}(betId, 300e6, 300e6, 0, 0, none);
         assertEq(bank.openHolds(), 1);
+        assertEq(bank.totalReserved(), 300e6);
+        assertEq(bank.totalBetsSettled(), 0);
+        assertEq(bank.totalPayoutNet(), 0);
+        assertEq(bank.playerPayable(player), 0);
         assertEq(bank.playerPayableTotal(), 0);
+        assertEq(asset.balanceOf(address(bank)), cashBefore);
+
+        asset.setGasSink(address(0), 0);
+        _settle(betId, 300e6);
+        assertEq(bank.openHolds(), 0);
+        assertEq(bank.totalBetsSettled(), 1);
     }
 
     function test_everyNavComputationSubtractsBothPayables() external {
@@ -730,6 +890,523 @@ contract BankAsyncRedemptionTest is Test {
     }
 
     // ------------------------------------------------------------ helpers
+
+    function _useProxyAsset() internal {
+        asset = BlacklistToken(address(new ERC1967Proxy(address(new BlacklistToken()), "")));
+        asset.mint(player, 1_000_000e6);
+        bank = _freshBank();
+    }
+
+    function _assertGasLimitedTransfer(bool useProxy, bool refund) internal {
+        if (useProxy) _useProxyAsset();
+        _deposit(alice, 1_000e6);
+        _request(alice, 1_000e6);
+        uint256 betId = _hold(100e6, 300e6);
+        uint256 playerBefore = asset.balanceOf(player);
+        uint256 owed = refund ? 100e6 : 300e6;
+        asset.setGasSink(player, useProxy ? 10_000_000 : 25_000_000);
+        if (refund) {
+            bank.refundBet{gas: 20_000_000}(betId, owed);
+        } else {
+            SSOTTypes.XPAward[] memory none;
+            bank.settleBet{gas: useProxy ? 10_000_000 : 20_000_000}(betId, owed, owed, 0, 0, none);
+        }
+        assertEq(asset.balanceOf(player), playerBefore, "no cash transferred on failure");
+        assertEq(bank.playerPayable(player), owed);
+        assertEq(bank.playerPayableTotal(), owed);
+        assertEq(bank.openHolds(), 0);
+        assertEq(bank.totalReserved(), 0);
+        assertEq(bank.totalBetsSettled() + bank.totalBetsRefunded(), 1);
+        uint256 nav = 1_100e6 - owed;
+        assertEq(bank.totalAssets(), nav);
+        _priceDue();
+        assertEq(bank.maxWithdraw(alice), nav, "the unpaid player is excluded from LP equity");
+
+        vm.expectRevert();
+        bank.claimPlayerPayable{gas: 1_000_000}(player);
+        assertEq(bank.playerPayable(player), owed, "failed claim preserves the whole debt");
+        assertEq(bank.playerPayableTotal(), owed);
+
+        asset.setGasSink(address(0), 0);
+        vm.prank(stranger);
+        assertEq(bank.claimPlayerPayable(player), owed);
+        assertEq(asset.balanceOf(player), playerBefore + owed);
+        assertEq(bank.playerPayableTotal(), 0);
+        assertEq(bank.claimPlayerPayable(player), 0, "no double payment");
+        assertEq(bank.totalBetsSettled() + bank.totalBetsRefunded(), 1);
+        vm.prank(alice);
+        assertEq(bank.withdraw(nav, alice, alice), 1_000e6);
+        assertEq(bank.exitPayable(), 0);
+    }
+
+    function test_combinedPlayerProtocolAndEveryXpBucketMustFitTheHoldReserve() external {
+        _deposit(alice, 1_000e6);
+        uint256 oldBet = _hold(100e6, 200e6);
+        _request(alice, 500e6);
+        _priceDue();
+        uint256 active = bank.totalAssets();
+        SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](1);
+        awards[0] = SSOTTypes.XPAward({
+            payee: bob, sourcePlayer: player, accrued: 20e6, locked: 20e6, holdback: 20e6, reason: 0
+        });
+        vm.expectRevert(abi.encodeWithSelector(IBank.ReservedTooSmall.selector, oldBet, 200e6, 230e6));
+        bank.settleBet(oldBet, 120e6, 120e6, 20e6, 30e6, awards);
+        assertEq(bank.recoveryEpoch(1).settledCost, 0);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+        assertEq(bank.protocolFeesPayable(), 0);
+        assertEq(bank.externalPayablesTotal(), 0);
+        awards[0].accrued = 5e6;
+        awards[0].locked = 6e6;
+        awards[0].holdback = 7e6;
+        bank.settleBet(oldBet, 120e6, 100e6, 20e6, 10e6, awards);
+        assertEq(bank.recoveryEpoch(1).settledCost, 148e6);
+        assertEq(bank.recoveryEpoch(1).remainingReserve, 0);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, 52e6);
+        assertEq(bank.totalAssets(), active);
+        assertEq(bank.totalProtocolFeeAccrued(), 10e6);
+        assertEq(bank.protocolFeesPayable(), 10e6);
+        assertEq(bank.externalPayablesTotal(), 18e6);
+        assertEq(bank.xpLockedBySource(bob, player), 6e6);
+    }
+
+    function test_holdMustReserveAtLeastItsFullRefund() external {
+        _deposit(alice, 1_000e6);
+        vm.expectRevert(abi.encodeWithSelector(IBank.ReservedTooSmall.selector, 99, 9e6, 10e6));
+        bank.holdBet(99, player, 10e6, 9e6, bytes32(0));
+        assertEq(bank.totalBetsHeld(), 0);
+        assertEq(bank.totalReserved(), 0);
+    }
+
+    function test_cumulativeRecoveryRoundingCannotSpendTheRemainingReserve() external {
+        _deposit(alice, 4);
+        _winBet(1, 5);
+        uint256 first = _hold(1, 1);
+        uint256 second = _hold(1, 1);
+        _request(alice, 2);
+        _priceDue();
+        assertEq(bank.recoveryBacking(), 2);
+        assertEq(bank.totalAssets(), 0);
+        assertEq(bank.activeReserved(), 0);
+        bank.refundBet(first, 1);
+        assertEq(bank.recoveryBacking(), 1);
+        assertEq(bank.recoveryEpoch(1).remainingReserve, 1);
+        assertEq(_claimRecovery(1, alice), 0);
+        bank.refundBet(second, 1);
+        assertEq(bank.recoveryBacking(), 0);
+        vm.prank(alice);
+        assertEq(bank.redeem(2, alice, alice), 0);
+        assertEq(bank.getRecovery(1, alice).shares, 4, "zero recovery does not rewrite ownership");
+    }
+
+    function test_fullExitNeedsActiveCapitalAndNewDepositsDoNotOwnOldRecovery() external {
+        _deposit(alice, 1_000e6);
+        uint256 oldBet = _hold(100e6, 300e6);
+        _request(alice, 1_000e6);
+        _priceDue();
+        assertEq(bank.totalSupply(), 0);
+        assertEq(bank.totalAssets(), 0);
+        assertEq(bank.activeReserved(), 0);
+        assertEq(bank.recoveryBacking(), 300e6);
+        vm.prank(alice);
+        assertEq(bank.redeem(1_000e6, alice, alice), 800e6);
+        vm.expectRevert(IBank.SolvencyViolation.selector);
+        bank.holdBet(99, player, 10e6, 20e6, bytes32(0));
+        assertEq(_deposit(bob, 100e6), 100e6);
+        uint256 newer = _hold(10e6, 20e6);
+        uint256 active = bank.totalAssets();
+        bank.refundBet(oldBet, 100e6);
+        assertEq(_claimRecovery(1, alice), 200e6);
+        assertEq(bank.getRecovery(1, bob).shares, 0);
+        assertEq(bank.totalAssets(), active);
+        assertEq(bank.openHolds(), 1);
+        _settle(newer, 0);
+    }
+
+    function test_historicalPayableCostsAreChargedOnceRegardlessOfWhenThePlayerClaims() external {
+        _deposit(alice, 1_000e6);
+        _request(alice, 500e6);
+        uint256 paidLater = _hold(100e6, 300e6);
+        uint256 stillOpen = _hold(10e6, 20e6);
+        _priceDue();
+        asset.setBlocked(player, true);
+        _settle(paidLater, 300e6);
+        assertEq(bank.playerPayable(player), 300e6);
+        assertEq(bank.recoveryEpoch(1).settledCost, 300e6);
+        uint256 backing = bank.recoveryBacking();
+        uint256 active = bank.totalAssets();
+        asset.setBlocked(player, false);
+        bank.claimPlayerPayable(player);
+        assertEq(bank.recoveryBacking(), backing);
+        assertEq(bank.totalAssets(), active);
+        assertEq(bank.recoveryEpoch(1).settledCost, 300e6);
+        bank.refundBet(stillOpen, 10e6);
+        assertEq(bank.recoveryEpoch(1).settledCost, 310e6);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, 10e6);
+        assertEq(bank.redeemBatch(1).assets, 395e6);
+    }
+
+    function test_activeRiskChecksCannotBorrowHistoricalCapitalAndSsotUsesActiveReserve() external {
+        _deposit(alice, 1_000e6);
+        uint256 oldBet = _hold(100e6, 300e6);
+        _request(alice, 900e6);
+        _priceDue();
+        SSOTTypes.SSOT memory s = bank.getSSOT();
+        assertEq(s.NAV, 80e6);
+        assertEq(s.R, bank.activeReserved());
+        assertEq(s.R, 0);
+        assertEq(bank.totalReserved(), 300e6);
+        assertEq(s.riskFree, s.NAV - s.R);
+        vm.expectRevert(IBank.SolvencyViolation.selector);
+        bank.holdBet(99, player, 1e6, 200e6, bytes32(0));
+        _settle(oldBet, 0);
+        assertEq(bank.totalAssets(), s.NAV, "released old capital is not available for new risk");
+        assertEq(bank.activeReserved(), 0);
+        assertEq(bank.totalReserved(), 0);
+        assertGt(bank.recoveryBacking(), 0);
+    }
+
+    function test_feeAndXpOutflowChecksUseActiveReserveWithoutSpendingHistoricalBacking() external {
+        _deposit(alice, 1_000e6);
+        _hold(100e6, 300e6);
+        _request(alice, 900e6);
+        _priceDue();
+        uint256 backing = bank.recoveryBacking();
+        uint256 later = _hold(10e6, 20e6);
+        SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](1);
+        awards[0] =
+            SSOTTypes.XPAward({payee: bob, sourcePlayer: player, accrued: 1e6, locked: 0, holdback: 0, reason: 0});
+        bank.settleBet(later, 0, 0, 0, 1e6, awards);
+        uint256 active = bank.totalAssets();
+        assertLt(active, bank.totalReserved());
+        vm.prank(gov);
+        assertEq(bank.claimProtocolFees(1e6, gov), 1e6);
+        vm.prank(bob);
+        assertEq(bank.claimXPAccrued(1e6, bob), 1e6);
+        assertEq(bank.totalAssets(), active);
+        assertEq(bank.recoveryBacking(), backing);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+        assertEq(bank.recoveryEpoch(1).settledCost, 0);
+    }
+
+    function test_holdOwnershipUsesItsAcceptanceEpochNotBetId() external {
+        _deposit(alice, 1_000e6);
+        bank.holdBet(999, player, 10e6, 20e6, bytes32(0));
+        _request(alice, 100e6);
+        _priceDue();
+        bank.holdBet(1, player, 10e6, 20e6, bytes32(0));
+        bank.refundBet(1, 10e6);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+        assertEq(bank.recoveryEpoch(1).settledCost, 0);
+        bank.refundBet(999, 10e6);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 0);
+        assertEq(bank.recoveryEpoch(1).settledCost, 10e6);
+        assertEq(bank.redeemBatch(1).assets, 99e6);
+        assertEq(bank.getRecovery(1, alice).claimableAssets, 10e6);
+    }
+
+    function testFuzz_oldSettlementOrderPreservesRecoveryAndVirtualResidual(uint64 firstCost, uint64 secondCost)
+        external
+    {
+        uint256 c1 = bound(firstCost, 0, 200e6);
+        uint256 c2 = bound(secondCost, 0, 150e6);
+        _deposit(alice, 1_000e6);
+        uint256 first = _hold(100e6, 200e6);
+        uint256 second = _hold(50e6, 150e6);
+        _request(alice, 700e6);
+        _priceDue();
+        uint256 active = bank.totalAssets();
+        uint256 liquid = bank.redeemBatch(1).assets;
+        uint256 expected = _g(1_150e6 - c1 - c2, 1_000e6) - _g(800e6, 1_000e6);
+        uint256 snapshot = vm.snapshotState();
+        _settle(first, c1);
+        assertGe(bank.recoveryBacking(), bank.recoveryEpoch(1).remainingReserve);
+        uint256 interim = _claimRecovery(1, alice);
+        _settle(second, c2);
+        assertEq(interim + _claimRecovery(1, alice), expected);
+        uint256 protocol = bank.protocolFeesPayable();
+        assertEq(protocol, 350e6 - c1 - c2 - expected);
+        assertTrue(vm.revertToState(snapshot));
+        _settle(second, c2);
+        assertGe(bank.recoveryBacking(), bank.recoveryEpoch(1).remainingReserve);
+        _settle(first, c1);
+        assertEq(_claimRecovery(1, alice), expected);
+        assertEq(bank.protocolFeesPayable(), protocol);
+        assertEq(bank.totalProtocolFeeAccrued(), 0);
+        assertEq(bank.totalAssets(), active);
+        assertEq(bank.redeemBatch(1).assets, liquid);
+    }
+
+    function testFuzz_recoveryCurveIncludesProfitLossAndTinyVirtualBalances(
+        uint32 supplyRaw,
+        uint32 navRaw,
+        uint32 reserveRaw,
+        uint32 costRaw,
+        uint32 requestRaw
+    ) external {
+        uint256 supply = bound(supplyRaw, 1, 2e6);
+        uint256 nav = bound(navRaw, 0, 4e6);
+        _deposit(alice, supply);
+        if (nav > supply) asset.mint(address(bank), nav - supply);
+        else if (nav < supply) _winBet(1, supply - nav + 1);
+        uint256 reserve = bound(reserveRaw, 1, nav + 1);
+        uint256 cost = bound(costRaw, 0, reserve);
+        uint256 held = _hold(1, reserve);
+        uint256 requested = bound(requestRaw, 1, supply);
+        _request(alice, requested);
+        _priceDue();
+        uint256 liquidPool = _g(nav + 1 - reserve, supply);
+        uint256 liquid = Math.mulDiv(requested, liquidPool, supply);
+        assertEq(bank.redeemBatch(1).assets, liquid);
+        uint256 active = bank.totalAssets();
+        _settle(held, cost);
+        uint256 h = _g(nav + 1 - cost, supply) - liquidPool;
+        uint256 u = reserve - cost - h;
+        IBank.RecoveryEpoch memory epoch = bank.recoveryEpoch(1);
+        assertEq(epoch.recoveredAssets, h);
+        assertEq(epoch.protocolAssets, u);
+        assertEq(epoch.backingAssets, h);
+        assertEq(bank.protocolFeesPayable(), u + (requested == supply ? nav + 1 - reserve - liquidPool : 0));
+        assertEq(bank.totalProtocolFeeAccrued(), 0);
+        vm.prank(alice);
+        assertEq(bank.redeem(requested, alice, alice), liquid);
+        assertEq(_claimRecovery(1, alice), h);
+        assertEq(bank.recoveryBacking(), 0);
+        assertEq(bank.totalAssets(), active);
+    }
+
+    function test_snapshotIncludesWalletsAndControllersAndIgnoresLaterSameBlockTransfers() external {
+        _deposit(alice, 60e6);
+        _deposit(bob, 40e6);
+        uint256 oldBet = _hold(10e6, 20e6);
+        vm.prank(alice);
+        bank.requestRedeem(20e6, carol, alice);
+        _request(bob, 10e6);
+        uint256 blockBefore = block.number;
+        _priceDue();
+        assertEq(bank.getRecovery(1, alice).shares, 40e6);
+        assertEq(bank.getRecovery(1, bob).shares, 40e6);
+        assertEq(bank.getRecovery(1, carol).shares, 20e6);
+        assertEq(bank.getRecovery(1, address(bank)).shares, 0);
+        vm.prank(alice);
+        bank.transfer(stranger, 40e6);
+        _deposit(gov, 10e6);
+        vm.prank(bob);
+        bank.requestRedeem(5e6, carol, bob);
+        vm.prank(carol);
+        bank.cancelRedeemRequest(carol);
+        assertEq(block.number, blockBefore, "the ownership changes really occur in the activation block");
+        assertEq(bank.getRecovery(1, stranger).shares, 0);
+        assertEq(bank.getRecovery(1, gov).shares, 0);
+        assertEq(bank.getRecovery(1, alice).shares, 40e6);
+        assertEq(bank.getRecovery(1, carol).shares, 20e6);
+        bank.refundBet(oldBet, 10e6);
+        assertEq(_claimRecovery(1, alice), 4e6);
+        assertEq(_claimRecovery(1, bob), 4e6);
+        assertEq(_claimRecovery(1, carol), 2e6);
+        _request(stranger, 1e6);
+        _priceDue();
+        assertEq(bank.getRecovery(2, stranger).shares, 40e6);
+        assertEq(bank.getRecovery(1, stranger).shares, 0);
+    }
+
+    function test_queuedQuoteUsesQueuedUnitsWhileSealedRecoveryIncludesTheWholeOwner() external {
+        _deposit(alice, 60e6);
+        _deposit(bob, 40e6);
+        _hold(10e6, 20e6);
+        _request(alice, 20e6);
+        _request(bob, 10e6);
+        (uint256 liquid, uint256 upper) = bank.quoteQueuedRedeem(alice);
+        uint256 wholeRecovery = _g(110e6, 100e6) - _g(90e6, 100e6);
+        assertEq(liquid, 18e6);
+        assertEq(upper, Math.mulDiv(20e6, wholeRecovery, 100e6));
+        assertEq(bank.getRecovery(1, alice).shares, 0, "an unsealed epoch has no historical entitlement");
+        _priceDue();
+        IBank.RecoveryPosition memory r = bank.getRecovery(1, alice);
+        assertEq(r.shares, 60e6);
+        assertEq(r.claimableAssets, 0);
+        assertEq(r.claimedAssets, 0);
+        assertEq(r.pendingAssets, Math.mulDiv(60e6, wholeRecovery, 100e6));
+        (liquid, upper) = bank.quoteQueuedRedeem(alice);
+        assertEq(liquid + upper, 0);
+    }
+
+    function test_partialRecoveryIsClaimableWhileAnotherOldHoldRemainsOpen() external {
+        _deposit(alice, 50e6);
+        _deposit(bob, 50e6);
+        uint256 stuck = _hold(1e6, 20e6);
+        uint256 resolved = _hold(1e6, 20e6);
+        _request(alice, 10e6);
+        _priceDue();
+        _settle(resolved, 4e6);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, 16e6);
+        uint256 active = bank.totalAssets();
+        assertEq(_claimRecovery(1, alice), 8e6);
+        assertEq(_claimRecovery(1, bob), 8e6);
+        assertEq(bank.recoveryBacking(), 20e6, "remaining reserve cannot be withdrawn");
+        IBank.RecoveryPosition memory r = bank.getRecovery(1, alice);
+        assertEq(r.claimableAssets, 0);
+        assertEq(r.claimedAssets, 8e6);
+        assertEq(r.pendingAssets, Math.mulDiv(50e6, _g(98e6, 100e6) - _g(62e6, 100e6), 100e6) - 8e6);
+        bank.syncRecovery(1, alice);
+        assertFalse(bank.getRecovery(1, alice).finalSynced);
+        bank.refundBet(stuck, 1e6);
+        assertEq(_claimRecovery(1, alice), 9_500_000);
+        assertEq(_claimRecovery(1, bob), 9_500_000);
+        assertEq(bank.totalAssets(), active);
+        assertEq(bank.recoveryBacking(), 0);
+    }
+
+    function test_recoveryAuthorizationPauseAndRepeatedTransferFailurePreserveRights() external {
+        _deposit(alice, 1_000e6);
+        _deposit(bob, 1_000e6);
+        uint256 oldBet = _hold(100e6, 200e6);
+        _request(alice, 500e6);
+        _priceDue();
+        bank.refundBet(oldBet, 100e6);
+        vm.prank(alice);
+        bank.approve(bob, type(uint256).max);
+        vm.prank(bob);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        bank.claimRecovery(1, bob, alice);
+        vm.prank(alice);
+        bank.setOperator(carol, true);
+        vm.prank(gov);
+        bank.setRiskInPaused(true);
+        vm.prank(carol);
+        vm.expectRevert(IBank.RiskInPaused.selector);
+        bank.claimRecovery(1, stranger, alice);
+        vm.prank(stranger);
+        bank.syncRecovery(1, alice);
+        assertTrue(bank.getRecovery(1, alice).finalSynced);
+        assertEq(bank.getRecovery(1, alice).claimableAssets, 50e6, "views retain entitlement during pause");
+        _request(alice, 100e6);
+        vm.prank(alice);
+        bank.cancelRedeemRequest(alice);
+        vm.prank(gov);
+        bank.setRiskInPaused(false);
+        uint256 backing = bank.recoveryBacking();
+        uint256 active = bank.totalAssets();
+        asset.setBlocked(stranger, true);
+        for (uint256 i; i < 2; ++i) {
+            vm.prank(carol);
+            vm.expectRevert(bytes("blocked"));
+            bank.claimRecovery(1, stranger, alice);
+            assertEq(bank.getRecovery(1, alice).claimedAssets, 0);
+            assertEq(bank.getRecovery(1, alice).claimableAssets, 50e6);
+            assertEq(bank.recoveryBacking(), backing);
+            assertEq(bank.totalAssets(), active);
+        }
+        asset.setBlocked(stranger, false);
+        vm.expectEmit(true, true, true, true, address(bank));
+        emit IBank.RecoveryClaimed(1, alice, stranger, carol, 50e6);
+        vm.prank(carol);
+        assertEq(bank.claimRecovery(1, stranger, alice), 50e6);
+        assertEq(asset.balanceOf(stranger), 50e6);
+        assertEq(asset.balanceOf(carol), 0);
+        assertEq(bank.getRecovery(1, alice).shares, 1_000e6);
+        assertEq(bank.totalAssets(), active);
+        vm.recordLogs();
+        assertEq(_claimRecovery(1, alice), 0);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i; i < logs.length; ++i) {
+            assertTrue(logs[i].emitter != address(asset));
+        }
+        vm.prank(alice);
+        bank.setOperator(carol, false);
+        vm.prank(carol);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        bank.claimRecovery(1, carol, alice);
+    }
+
+    function test_finalSyncReleasesOnlyDustAndKeepsAssignedUnclaimedRecoveryBacked() external {
+        _deposit(alice, 2);
+        _deposit(bob, 1);
+        asset.mint(address(bank), 2);
+        uint256 oldBet = _hold(1, 5);
+        _request(alice, 2);
+        _priceDue();
+        _settle(oldBet, 0);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, 2);
+        assertEq(bank.recoveryBacking(), 2);
+        assertEq(bank.protocolFeesPayable(), 3);
+        bank.syncRecovery(1, alice);
+        assertEq(bank.recoveryBacking(), 2);
+        vm.prank(stranger);
+        bank.syncRecovery(1, bob);
+        assertEq(bank.recoveryBacking(), 1, "Alice's one assigned but unclaimed unit stays backed");
+        assertEq(bank.protocolFeesPayable(), 4);
+        assertEq(bank.totalProtocolFeeAccrued(), 0);
+        assertEq(bank.getRecovery(1, alice).claimedAssets, 0);
+        bank.syncRecovery(1, alice);
+        bank.syncRecovery(1, bob);
+        assertEq(bank.recoveryBacking(), 1);
+        assertEq(bank.protocolFeesPayable(), 4);
+        _deposit(stranger, 10);
+        uint256 active = bank.totalAssets();
+        vm.prank(gov);
+        bank.claimProtocolFees(4, gov);
+        assertEq(_claimRecovery(1, alice), 1);
+        assertEq(_claimRecovery(1, bob), 0);
+        assertEq(bank.getRecovery(1, stranger).shares, 0);
+        assertEq(bank.totalAssets(), active);
+        assertEq(bank.recoveryBacking(), 0);
+    }
+
+    function test_zeroLiquidFullExitDoesNotBlockALaterFundedFullExit() external {
+        _deposit(alice, 100);
+        uint256 oldBet = _hold(1, 101);
+        _request(alice, 100);
+        _priceDue();
+        assertEq(bank.totalSupply(), 0);
+        assertEq(bank.totalAssets(), 0);
+        vm.prank(alice);
+        assertEq(bank.redeem(100, alice, alice), 0);
+        assertEq(bank.getRecovery(1, alice).shares, 100);
+        assertEq(_deposit(bob, 20), 20);
+        uint256 newer = _hold(1, 2);
+        _request(bob, 20);
+        _priceDue();
+        vm.prank(bob);
+        assertEq(bank.redeem(20, bob, bob), 19);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+        assertEq(bank.recoveryEpoch(1).remainingReserve, 101);
+        _settle(newer, 1);
+        assertEq(_claimRecovery(2, bob), 1);
+        assertEq(bank.getRecovery(1, bob).shares, 0);
+        _settle(oldBet, 0);
+        assertEq(_claimRecovery(1, alice), 100);
+        assertEq(bank.protocolFeesPayable(), 1);
+        assertEq(bank.recoveryBacking(), 0);
+        assertEq(bank.totalAssets(), 0);
+        assertEq(bank.totalSupply(), 0);
+    }
+
+    function test_fullExitLiquidDustCannotBeInheritedAfterANewDeposit() external {
+        _deposit(alice, 1);
+        _deposit(bob, 1);
+        _winBet(1, 2);
+        _request(alice, 1);
+        _request(bob, 1);
+        _priceDue();
+        assertTrue(bank.redeemBatch(1).fullExit);
+        _deposit(stranger, 10);
+        bank.syncRedeem(alice);
+        bank.syncRedeem(bob);
+        assertEq(bank.protocolFeesPayable(), 1);
+        assertEq(bank.totalProtocolFeeAccrued(), 0);
+        assertEq(bank.totalAssets(), 10);
+        assertEq(bank.exitPayable(), 0);
+    }
+
+    function _g(uint256 assets_, uint256 supply_) internal pure returns (uint256) {
+        return Math.min(Math.mulDiv(supply_, assets_ + 1e6, supply_ + 1e6), assets_);
+    }
+
+    function _claimRecovery(uint256 epoch, address owner) internal returns (uint256) {
+        vm.prank(owner);
+        return bank.claimRecovery(epoch, owner, owner);
+    }
 
     function _sel(string memory signature) internal pure returns (bytes4) {
         return bytes4(keccak256(bytes(signature)));
@@ -773,8 +1450,8 @@ contract BankAsyncRedemptionTest is Test {
     }
 
     function _priceDue() internal {
-        vm.warp(bank.redeemBatch(bank.firstUnpricedBatch()).cutoff);
-        bank.settleBatch();
+        vm.warp(bank.redeemBatch(bank.currentEpoch()).cutoff);
+        bank.activateBatch();
     }
 
     function _freshBank() internal returns (Bank fresh) {

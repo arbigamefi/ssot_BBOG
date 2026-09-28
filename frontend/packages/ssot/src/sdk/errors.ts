@@ -148,10 +148,31 @@ function findRevert(err: unknown): any | undefined {
 function mapRevert(errorName: string, args?: unknown[]): DomainError {
   // Hub errors (subset)
   switch (errorName) {
+    case "ExceedsClaimable":
+      return {
+        code: "EXCEEDS_CLAIMABLE",
+        message: "The claimable amount changed. Refresh your position and try again.",
+        severity: "warning",
+        retryable: true
+      };
+    case "ClaimWouldStrandAssets":
+      return {
+        code: "CLAIM_WOULD_STRAND_ASSETS",
+        message:
+          "This partial withdrawal would leave assets without claim shares. Claim all assets or redeem fewer shares.",
+        severity: "warning"
+      };
+    case "NothingToCancel":
+      return {
+        code: "NOTHING_TO_CANCEL",
+        message: "No unactivated redemption request can be cancelled. Refresh your position.",
+        severity: "warning",
+        retryable: true
+      };
     case "RiskInPaused":
       return {
         code: "RISK_IN_PAUSED",
-        message: "New bets are currently paused for this asset.",
+        message: "New bets and optional withdrawals are currently paused for this asset.",
         severity: "warning",
         details: { asset: args?.[0] }
       };
@@ -254,7 +275,8 @@ function mapRevert(errorName: string, args?: unknown[]): DomainError {
     case "OptionalOutflowDomainViolation":
       return {
         code: "OPTIONAL_OUTFLOW_DOMAIN_VIOLATION",
-        message: "Optional outflow blocked: insufficient free liquidity after minLiq + reserves.",
+        message:
+          "Optional outflow blocked: insufficient liquidity after the withdrawal buffer and reserves.",
         severity: "warning"
       };
     case "NotHub":

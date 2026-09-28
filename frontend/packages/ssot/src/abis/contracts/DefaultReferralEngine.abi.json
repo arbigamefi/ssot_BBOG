@@ -1,0 +1,181 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "usedTurnover",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint16",
+              "name": "baseEdgeBps",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "effectiveEdgeBps",
+              "type": "uint16"
+            },
+            {
+              "internalType": "address",
+              "name": "player",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "l1",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "l2",
+              "type": "address"
+            },
+            {
+              "internalType": "uint16",
+              "name": "l0Bps",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "l1Bps",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "l2Bps",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "holdbackBps",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minTurnover",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "playerTurnover",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct IReferralEngine.AllocationInput",
+          "name": "input",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes",
+          "name": "skyline",
+          "type": "bytes"
+        }
+      ],
+      "name": "allocate",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "edge",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "operatorShare",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "r0",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "r1",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "r2",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "markup",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "protocolFee",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct IReferralEngine.Allocation",
+          "name": "alloc",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "payee",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "sourcePlayer",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "accrued",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "locked",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "holdback",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "reason",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct SSOTTypes.XPAward[]",
+          "name": "awards",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "bps",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidBps",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidConfig",
+      "type": "error"
+    }
+  ],
+  "contract": "DefaultReferralEngine"
+}

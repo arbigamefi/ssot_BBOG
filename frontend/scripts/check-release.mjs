@@ -13,8 +13,6 @@ const REQUIRED_CORE_CONTRACTS = [
   "adapter"
 ];
 const REQUIRED_SPORTS_CONTRACTS = ["sportsHub", "sportsRiskEngine"];
-const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
-const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
 const requiredChainIds = parseRequiredChainIds(process.env.REQUIRED_EMBEDDED_CHAIN_IDS);
 
 const dir = path.resolve(process.cwd(), "packages/ssot/src/release/embedded");
@@ -41,14 +39,8 @@ for (const f of jsons) {
   const fatalIssues = [];
   const contracts = raw?.contracts ?? {};
   if (raw.isPlaceholder) issues.push("isPlaceholder=true");
-  if (Object.hasOwn(contracts, LEGACY_GAME_AGGREGATOR_KEY)) {
-    fatalIssues.push("legacy game aggregator key present");
-  }
-  if (Object.hasOwn(contracts, LEGACY_BANK_DIRECTORY_KEY)) {
-    fatalIssues.push("legacy bank directory key present");
-  }
-  if (Object.hasOwn(raw?.sports ?? {}, LEGACY_GAME_AGGREGATOR_KEY)) {
-    fatalIssues.push("legacy sports aggregator key present");
+  if (raw?.meta?.releaseLock?.schema !== "SSOT_RELEASE_DIGEST_V16") {
+    fatalIssues.push("expected current v1.6 release schema");
   }
   if (raw?.meta?.schemaVersion !== 2) issues.push("schemaVersion is not 2");
 

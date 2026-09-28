@@ -404,7 +404,7 @@ describe("memory bet index store", () => {
       {
         action: "deposit",
         asset: ASSET,
-        bank: BANK,
+        bank: "0x0000000000000000000000000000000000000099",
         blockNumber: 83,
         chainId: 84532,
         id: "other-pool",
@@ -418,7 +418,7 @@ describe("memory bet index store", () => {
     ]);
 
     await expect(
-      store.getBankProviderLedger({ chainId: 84532, limit: 10, owner: PLAYER, poolId: 1 })
+      store.getBankProviderLedger({ chainId: 84532, limit: 10, owner: PLAYER, bank: BANK })
     ).resolves.toMatchObject([
       {
         action: "withdraw",
@@ -445,7 +445,7 @@ describe("memory bet index store", () => {
         chainId: 84532,
         limit: 10,
         owner: PLAYER,
-        poolId: 1
+        bank: BANK
       })
     ).resolves.toMatchObject([
       {
@@ -956,5 +956,79 @@ describe("memory bet index store", () => {
       gameId: GAME_ID
     });
     expect(gameOnePoints.map((point) => point.turnover)).toEqual(["10", "0"]);
+  });
+});
+
+describe("provider ledger canonical range replacement", () => {
+  it("atomically removes orphan cash rows including empty ranges, without crossing chain or Bank", async () => {
+    const store = createMemoryBetIndexStore();
+    const row = {
+      chainId: 84532,
+      poolId: "1",
+      owner: PLAYER,
+      bank: BANK,
+      asset: ASSET,
+      id: "ignored",
+      action: "recovery" as const,
+      assets: "8",
+      shares: "0",
+      txHash: "0xaa" as const,
+      blockNumber: 20,
+      logIndex: 1,
+      updatedAt: 0,
+      receiver: ASSET,
+      caller: PLAYER,
+      epochId: "1"
+    };
+    await store.writeBankProviderLedgerRows([
+      row,
+      { ...row, txHash: "0xbb", bank: ASSET },
+      { ...row, txHash: "0xcc", chainId: 1 }
+    ]);
+    const query = { chainId: 84532, bank: BANK, owner: PLAYER, limit: 10 };
+    await expect(
+      store.replaceBankProviderLedgerRange({
+        chainId: 84532,
+        bank: BANK,
+        fromBlock: 20n,
+        toBlock: 20n,
+        rows: [{ ...row, blockNumber: 21 }]
+      })
+    ).rejects.toThrow("outside replacement");
+    expect(await store.getBankProviderLedger(query)).toHaveLength(1);
+    await store.replaceBankProviderLedgerRange({
+      chainId: 84532,
+      bank: BANK,
+      fromBlock: 20n,
+      toBlock: 20n,
+      rows: []
+    });
+    expect(await store.getBankProviderLedger(query)).toEqual([]);
+    expect(await store.getBankProviderLedger({ ...query, bank: ASSET })).toHaveLength(1);
+    expect(await store.getBankProviderLedger({ ...query, chainId: 1 })).toHaveLength(1);
+    const canonical = {
+      ...row,
+      txHash: "0xdd" as const,
+      action: "donation" as const,
+      receiver: BANK
+    };
+    await store.replaceBankProviderLedgerRange({
+      chainId: 84532,
+      bank: BANK,
+      fromBlock: 20n,
+      toBlock: 20n,
+      rows: [canonical]
+    });
+    await store.replaceBankProviderLedgerRange({
+      chainId: 84532,
+      bank: BANK,
+      fromBlock: 20n,
+      toBlock: 20n,
+      rows: [canonical]
+    });
+    expect(await store.getBankProviderLedger(query)).toMatchObject([
+      { action: "donation", caller: PLAYER, receiver: BANK, epochId: "1" }
+    ]);
+    expect(await store.getBankProviderLedger({ ...query, endBlock: 19 })).toEqual([]);
   });
 });

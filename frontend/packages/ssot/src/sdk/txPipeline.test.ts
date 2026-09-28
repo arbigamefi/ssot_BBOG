@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BaseError, parseEventLogs, type Hex, type Address } from "viem";
+import {
+  BaseError,
+  encodeAbiParameters,
+  encodeEventTopics,
+  type AbiEvent,
+  type Hex,
+  type Address
+} from "viem";
 import {
   createTxPipeline,
   isTransientError,
@@ -7,14 +14,8 @@ import {
   type TxJournalEntry
 } from "./txPipeline";
 
-// ——— Mock viem parseEventLogs ———
-vi.mock("viem", async (importOriginal) => {
-  const orig = (await importOriginal()) as any;
-  return {
-    ...orig,
-    parseEventLogs: vi.fn(() => [{ args: { betId: 42n } }])
-  };
-});
+import { getContractAbis } from "../abis/index.mjs";
+const { GameHubAbi } = getContractAbis();
 
 // ——— Helpers ———
 const TX_HASH = "0xabc123" as Hex;
@@ -413,38 +414,67 @@ describe("createTxPipeline", () => {
 
   // ——— extractEventArgs ———
   describe("extractEventArgs", () => {
-    it("extracts event args from receipt logs", () => {
+    function eventLog(name: string, values: readonly unknown[], address = ACCOUNT) {
+      const event = GameHubAbi.find(
+        (item) => item.type === "event" && item.name === name
+      ) as AbiEvent;
+      return {
+        address,
+        data: encodeAbiParameters(
+          event.inputs.filter((input) => !input.indexed),
+          values
+        ),
+        topics: encodeEventTopics({
+          abi: GameHubAbi,
+          eventName: name,
+          args: { positionId: 42n }
+        }) as Hex[]
+      };
+    }
+
+    it("extracts only the requested event from a receipt using the complete current ABI", () => {
       const pipeline = createTxPipeline();
       const args = pipeline.extractEventArgs({
-        abi: [] as any,
-        receiptLogs: [],
-        eventName: "BetPlaced"
+        abi: GameHubAbi,
+        receiptLogs: [
+          eventLog("HouseEdgeAllocated", [100n, 200, 2n, 1n, 1n, 1n, 0n, 0n, 0n, 0n]),
+          eventLog("BetFinalized", [200n, 196n, 4n, 1n])
+        ],
+        eventName: "BetFinalized"
       });
-
-      // Our mock returns [{ args: { betId: 42n } }]
-      expect(args).toEqual([{ betId: 42n }]);
+      expect(args).toEqual([
+        {
+          positionId: 42n,
+          payoutGross: 200n,
+          payoutNet: 196n,
+          feeOnPayout: 4n,
+          protocolFeeAccrual: 1n
+        }
+      ]);
     });
 
     it("filters event logs to the expected emitter address", () => {
       const pipeline = createTxPipeline();
       const target = "0x00000000000000000000000000000000000000aa" as Address;
       const ignored = "0x00000000000000000000000000000000000000bb" as Address;
-      const targetLog = { address: target, data: "0x" as Hex, topics: [] as Hex[] };
-      const ignoredLog = { address: ignored, data: "0x" as Hex, topics: [] as Hex[] };
-
-      pipeline.extractEventArgs({
-        abi: [] as any,
-        receiptLogs: [ignoredLog, targetLog],
-        eventName: "BetPlaced",
+      const args = pipeline.extractEventArgs({
+        abi: GameHubAbi,
+        receiptLogs: [
+          eventLog("BetFinalized", [400n, 392n, 8n, 2n], ignored),
+          eventLog("BetFinalized", [200n, 196n, 4n, 1n], target)
+        ],
+        eventName: "BetFinalized",
         address: target
       });
-
-      expect(parseEventLogs).toHaveBeenCalledWith(
-        expect.objectContaining({
-          logs: [targetLog],
-          eventName: "BetPlaced"
-        })
-      );
+      expect(args).toEqual([
+        {
+          positionId: 42n,
+          payoutGross: 200n,
+          payoutNet: 196n,
+          feeOnPayout: 4n,
+          protocolFeeAccrual: 1n
+        }
+      ]);
     });
   });
 

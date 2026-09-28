@@ -224,7 +224,7 @@
       },
       {
         "q": "Casino avantajı (house edge) nedir?",
-        "a": "Casino avantajı, her oyunun ödemelerine yerleştirilmiş marjdır. Base ana ağında, mevcut v1.5 kurallarına göre protokol ücretlerini ve yönlendirme ödüllerini finanse eder; LP'lere ödenmez. Her oyun kesin güncel değeri Oyun Bilgisi sekmesinde gösterir; pazarlama tahmini yerine aktif release yapılandırması kullanılır."
+        "a": "Casino avantajı, oyun ödemelerindeki marjdır. Mevcut v1.6 tasarımında LP’ler, kullanılan bahis hacminden hesaplanan teorik casino avantajının %50’sini korur; protokol ücretleri ve yönlendirme ödülleri diğer yarıyı paylaşır. Bu, LP getirisi garantisi değildir. Proje henüz kullanıma açılmamıştır. Her oyunun geçerli oranı Oyun Bilgisi bölümünde gösterilir."
       },
       {
         "q": "Bahsim neden beklemede?",
@@ -719,58 +719,44 @@
     },
     "metrics": {
       "sharePrice": {
-        "label": "1k pay değeri",
-        "detail": "1.000 LP payı başına geri alınabilir varlık. Tek pay fiyatı rezerv defterinde kalır."
+        "label": "1k pay değeri"
       },
       "totalShares": {
-        "label": "Toplam pay",
-        "detail": "Dolaşımdaki LP pay arzı."
-      },
-      "freeReserve": {
-        "label": "Serbest rezerv",
-        "detail": "Açık yükümlülüklerin üzerinde rezerve edilmemiş bankroll."
-      },
-      "totalAssets": {
-        "label": "Geçerli kasa NAV",
-        "detail": "Seçili Bank kasasının doğrulanabilir NAV değeri."
-      },
-      "minLiquidity": {
-        "label": "Min. likidite",
-        "detail": "Ödeme kapasitesini koruyan çekim tabanı."
+        "label": "Aktif paylar",
+        "detail": "Aktif LP payları; fiyatlanmış çıkış payları yakılmıştır."
       }
     },
     "summary": {
       "capitalPosture": {
         "title": "Doğrulanabilir rezerv defteri",
         "readModel": "zincir üstü okuma",
-        "totalAssets": "Geçerli kasa NAV",
+        "totalAssets": "Aktif kasa NAV değeri",
         "loading": "En son Bank anlık görüntüsü okunuyor…",
-        "detail": "Seçili Bank kasası NAV aktif sözleşmeden okunur.",
-        "totalAssetsDetail": "Seçili kasa NAV aktif sözleşmeden okunur."
+        "detail": "Aktif payların güncel sermayesi; geçmiş teminat ve borçlar hariçtir.",
+        "totalAssetsDetail": "Aktif payların güncel sermayesi; geçmiş teminat ve borçlar hariçtir."
       },
       "freeReserve": {
         "label": "Serbest rezerv",
-        "detail": "Henüz açık yükümlülükler için rezerve edilmemiş sermaye."
+        "detail": "Açık pozisyonlar için ayrılmamış aktif sermaye."
       },
       "sharePrice": {
-        "label": "Pay fiyatı",
-        "detail": "Doğrudan ERC4626-like dönüşüm: bir tam LP payının temel varlık karşılığı."
+        "label": "Pay fiyatı"
       },
       "totalShares": {
-        "label": "Toplam pay",
-        "detail": "Şu anda çıkarılmış LP payları. Pool NAV değiştikçe pay değeri değişir."
+        "label": "Aktif paylar",
+        "detail": "Aktif LP payları; fiyatlanmış çıkış payları yakılmıştır."
       },
       "position": {
         "label": "Pozisyonunuz",
         "detail": "Bağlı cüzdan için varlık karşılığı."
       },
       "liquidity": {
-        "label": "Likidite politikası",
-        "detail": "Taban {floor} · Bank {bank}"
+        "label": "Risk rezervi politikası",
+        "detail": "Risk rezervi {floor} · Bank {bank}"
       },
       "reserved": {
-        "label": "Rezerve yükümlülükler",
-        "detail": "Serbest rezerv {freeReserve} · Min. likidite {minLiquidity}"
+        "label": "Aktif sermayenin ayrılmış yükümlülükleri",
+        "detail": "Serbest rezerv {freeReserve} · Risk rezervi {riskReserve}"
       }
     },
     "actions": {
@@ -822,6 +808,10 @@
         "view": "İşlem durumunu görüntüle",
         "close": "Kapat",
         "statusDialog": "Bank işlem durumu"
+      },
+      "depositsClosed": {
+        "title": "Yeni mevduat kabul edilmiyor",
+        "body": "Bu havuz yeni mevduat kabul etmiyor. LP çıkış talepleri ve alacak ödemeleri havuz kurallarına göre kullanılabilir."
       }
     },
     "flows": {
@@ -875,8 +865,8 @@
         "detail": "Rezerve yükümlülüklerden ({reserved}) sonra kalan serbest rezerv. Genel mevduat açılmadan önce maksimum ödeme kontrolleriyle karşılaştırın."
       },
       "liquidityFloor": {
-        "label": "Likidite tabanı",
-        "detail": "{bps} minimum likidite politikası, şu anda {amount}."
+        "label": "Çekim tamponu",
+        "detail": "Protokol ve yönlendirme alacakları için {bps} tampon; şu anda {amount}. Fiyatlanmış LP alacakları ve oyuncu borcu ödemeleri muaftır."
       },
       "release": {
         "label": "Release özeti",
@@ -918,25 +908,27 @@
     },
     "ledger": {
       "eyebrow": "Sağlayıcı defteri",
-      "title": "Yatırma ve çekme kayıtları",
-      "readModel": "ERC4626 olayları",
+      "title": "Yatırımlar, çıkışlar ve geri kazanım",
+      "readModel": "Bank nakit akışı olayları",
       "connectWallet": "Bank sağlayıcı defterinizi görmek için cüzdan bağlayın.",
       "loading": "Sağlayıcı defteri yükleniyor…",
       "loadingMore": "Daha fazlası yükleniyor…",
       "loadMore": "Daha fazla yükle",
       "loadedRows": "{count} satır yüklendi",
       "end": "Defter sonu",
-      "empty": "Bu cüzdan için yatırma veya çekme kaydı bulunamadı.",
-      "note": "Satırlar Bank pay mint/burn Transfer kayıtları ve aynı işlemdeki eşleşen varlık Transfer kaydıyla yeniden oluşturulur. Pay fiyatı, işlemdeki varlık miktarı / pay miktarıdır; güncel pay fiyatı değildir.",
+      "empty": "Bu cüzdan için LP nakit akışı bulunamadı.",
+      "note": "Yalnızca gerçek yatırımlar, çıkış ve geçmiş geri kazanım ödemeleri nakit akışıdır. Talepler, etkinleştirme ve alınabilir geri kazanım birer ödeme değildir. Bank bağışları alınmış nakde dahil edilmez. Pay fiyatı yalnızca pay içeren olaylarda gösterilir.",
       "block": "Blok {blockNumber}",
       "actions": {
         "deposit": "Yatırma",
-        "withdraw": "Çekme"
+        "withdraw": "Çekme",
+        "recovery": "Geri kazanım",
+        "donation": "Bağış"
       },
       "summary": {
         "deposited": "Yüklenen yatırmalar",
         "withdrawn": "Yüklenen çekmeler",
-        "openValue": "Açık değer",
+        "openValue": "Bilinen LP değeri",
         "netPnl": "Yüklenen net K/Z",
         "shares": "Paylar"
       },
@@ -947,13 +939,61 @@
         "shares": "Paylar",
         "sharePrice": "Pay fiyatı",
         "tx": "Tx"
-      }
+      },
+      "incomplete": "Bu ana kadarki nakit akışı kapsamı doğrulanmadı. Tam getiri gösterilemiyor."
     },
     "overview": {
       "totalAssets": {
         "label": "Geçerli kasa NAV",
         "detail": "Aktif release üzerinden seçili Bank kasası için doğrulanabilir NAV."
       }
+    },
+    "async": {
+      "inactivePool": "Bu havuz etkin değil; yeni bahis ve mevduat kabul etmiyor. Çıkış talepleri, uygun iptaller ve mevcut alacakların ödenmesi sözleşme kurallarına göre kullanılabilir.",
+      "requestDetail": "Cüzdan paylarıyla çıkış isteyin. Etkinleştirme kullanılabilir nakdi hemen fiyatlar ve geçmiş geri kazanım haklarını ayrı tutar. Çözülmemiş eski bahisler sonraki grupları engellemez.",
+      "pendingRisk": "Sıradaki paylar aktif havuz sonuçlarını taşır. Etkinleştirmede tüm mevcut sahipler eski bahislere ait haklarını korur. Nakit sıfır olabilir; geri kazanım belirsizdir ve daha sonra gelebilir.",
+      "queuedTitle": "Sıradaki talep",
+      "queuedDetail": "Paylar etkinleşmeye kadar aktif kalır. Çözülmemiş eski bahisler bu grubu engellemez. Nakit fiyatı etkinleşmede sabitlenir; geçmiş haklar ayrı kalır. Kullanılabilir teminat ve acil duraklatma kuralları geçerlidir; tam nakit ödeme süresi taahhüt edilmez.",
+      "eligibleAt": "En erken etkinleşme: {time}. Bu, kesin etkinleşme veya ödeme zamanı değildir.",
+      "remainingHolds": "Hâlâ açık önceki bahisler: {count}",
+      "cancelDetail": "Grup etkinleşmeden önce, en erken etkinleşme zamanı geçmiş olsa bile tüm sıradaki payları iptal ederek geri alın. Etkinleşen talepler iptal edilemez. İşlem güncel zincir durumunu kontrol eder.",
+      "cancel": "Sıradaki payları iptal et",
+      "paused": "Havuz duraklatıldı. Talepler ve sıra iptalleri açık; yatırımlar, çıkış nakdi ve geri kazanım ödemeleri yeniden başlamayı bekler.",
+      "depositTerms": "Yatırımlar güncel defter fiyatıyla hemen aktif sermayeye katılır. Mevcut sonuçlanmamış bahisleri içerir; önceki etkinleşmelerin geri kazanım haklarını içermez.",
+      "claimDetail": "Bu nakit çıkışınız için ayrılmıştır. Fiyatlanmış tüm payları almak, atanmış nakdi öder ve geçmiş geri kazanım haklarını korur.",
+      "totalEquityDetail": "Cüzdan değeri + sıra tahmini + fiyatlanmış nakit. Geçmiş geri kazanım ayrı gösterilir ve bu tahmine dahil değildir.",
+      "queuedEquity": "Sıradaki paylar / nakit tahmini",
+      "requested": "Çıkış talebi onaylandı. Sıradaki paylar grup etkinleşene kadar aktif kalır.",
+      "shareUnitDetail": "LP payı başına güncel aktif defter değeri. Geçmiş haklar aktif paylardan ayrıdır.",
+      "totalEquity": "Aktif ve fiyatlanmış LP değeri (tahmin)",
+      "queuedQuoteDetail": "Şimdi etkinleştirilse alınacak zincir üstü nakit kotasyonu; geçmiş geri kazanımı içermez ve değişebilir.",
+      "receiver": "Nakit alıcısı: {receiver}",
+      "exitLiabilities": "Ayrılmış çıkış nakdi ve oyuncu borçları"
+    },
+    "recovery": {
+      "title": "Geçmiş geri kazanım hakları",
+      "detail": "Eski bahisler havuzda kalanlar dahil ilk hak sahiplerine aittir. Cüzdan payının sıfır olması bu hakları kaldırmaz.",
+      "loading": "Geçmiş haklar aranıyor…",
+      "incomplete": "Geçmiş hak araması tamamlanmadı. Tüm pozisyonu değerlendirmeden önce kalan sayfaları yükleyin.",
+      "error": "Geçmiş haklar yüklenemedi. Haklarınız sıfır kabul edilmez.",
+      "empty": "Tam aramada geçmiş hak bulunamadı.",
+      "epoch": "Dönem {epoch}",
+      "units": "Anlık görüntü birimleri",
+      "claimable": "Alınabilir geri kazanım nakdi",
+      "upperBound": "Kalan geri kazanım üst sınırı",
+      "upperBoundDetail": "Üst sınır şu an alınabilir nakit veya ödeme taahhüdü değildir.",
+      "remainingHolds": "Açık kalan eski bahisler: {count}",
+      "settled": "Bu dönem tamamen sonuçlandı. Atanmış ve alınmamış nakit size aittir.",
+      "claim": "Geri kazanımı al",
+      "claimed": "Geri kazanım ödemesi onaylandı.",
+      "loadMore": "Daha fazla geçmiş hak yükle",
+      "refresh": "Geçmiş hakları yenile",
+      "receiver": "Nakit {receiver} adresine gönderilir. Bu işlem keeper için sizin adınıza talep yetkisi vermez.",
+      "incompleteReturn": "Getiri eksik: geçmiş haklar sonuçlanmadı veya arama tamamlanmadı.",
+      "backing": "Geçmiş hak teminatı",
+      "backingDetail": "Aktif sermayeye dahil değildir; eski borçları ve alınmamış geri kazanımı karşılar.",
+      "donationNote": "Bank bağışları hak sahibinin aldığı harici nakit sayılmaz.",
+      "snapshot": "Anlık görüntü: blok {block}, {time}. Yeni etkinlikler için yenileyin."
     }
   },
   "casino": {
@@ -2503,7 +2543,7 @@
       "loading": {
         "eyebrow": "Okuma",
         "title": "Piyasa yükleniyor",
-        "description": "Piyasa, sonuç ve risk kayıtları v1.3 SDK üzerinden okunuyor.",
+        "description": "Piyasa, sonuç ve risk kayıtları SDK üzerinden okunuyor.",
         "body": "SportsHub piyasa durumu yükleniyor..."
       },
       "market": {

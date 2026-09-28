@@ -8,7 +8,7 @@
 set -uo pipefail
 umask 077
 
-CONTAINER="${BACKUP_PG_CONTAINER:-arbigamefi-v15-postgres-1}"
+CONTAINER="${BACKUP_PG_CONTAINER:-arbigamefi-postgres-1}"
 DIR="${BACKUP_DIR:-/var/backups/arbigamefi/bet-index}"
 DUMP="${1:-$(ls -1 "$DIR"/bet-index-*.dump 2>/dev/null | sort | tail -1)}"
 [ -n "$DUMP" ] && [ -f "$DUMP" ] || { echo "no dump found in $DIR" >&2; exit 1; }

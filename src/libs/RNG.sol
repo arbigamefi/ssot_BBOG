@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// @notice Canonical RNG expansion for multi-roll (SSOT.v1.1).
+/// @notice Canonical RNG expansion for multi-roll (current SSOT).
 ///
 /// seed := randomWords[0]
 /// domain := "SSOT_RNG_V1"

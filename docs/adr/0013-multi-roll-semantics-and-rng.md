@@ -93,5 +93,5 @@ Modules MUST NOT use external state (timestamp, blockhash, etc.) as randomness.
 
 ## Links
 
-- Constitution: `docs/constitution/SSOT.v1.1.md`
-- Executable SSOT: `docs/constitution/ExecutableSSOT.v1.1.md`
+- Constitution: `docs/constitution/SSOT.v1.6.md`
+- Executable SSOT: `docs/constitution/ExecutableSSOT.v1.6.md`

@@ -1,391 +1,180 @@
 # Casino Keeper
 
-Permissionless casino settlement worker for v1.5 `GameHub.finalize(betId)`.
+The keeper finalizes casino results, refunds expired pending VRF bets, activates
+eligible Bank redemption queues and monitors historical recovery. It uses the current generated contract ABIs
+from `@ssot/ssot/abis` and the addresses in `KEEPER_RELEASE_PATH`.
 
-Normal player UX signs only approval and `placeBet`. This worker listens for
-`RandomReady` bets and settles them automatically.
+This repository does not contain a live deployment configuration. Supply a
+validated release for the deployment being operated; test fixtures are not
+operational release files.
 
-## Build
+## Build and run
 
 ```bash
 pnpm -C frontend keeper:build
-```
-
-## Run
-
-Start from `frontend/deploy/casino-keeper/primary.env.example` or
-`frontend/deploy/casino-keeper/backup.env.example`, copy it to a local
-gitignored file in that same directory, and fill in the real values. The local
-wrappers read only `frontend/deploy/casino-keeper/${KEEPER_ENV_FILE:-primary.env}`;
-they do not read repo-root `.env`, frontend web `.env.local`, or legacy sports
-env files.
-
-For local Base Sepolia development, this starts Next.js and the keeper together,
-writes the health snapshot, and lets the casino room auto-settle after VRF
-fulfills:
-
-```bash
-pnpm -C frontend dev:with-keeper -- --port 3002
-```
-
-The local wrapper writes chain-specific health snapshots under
-`frontend/.runtime/` unless `KEEPER_HEALTH_PATH` is explicitly provided in the
-shell. This keeps local status checks aligned with the production multi-chain
-layout.
-
-For local multi-chain health checks, run both the Base mainnet and Base Sepolia
-primary keepers next to the web app:
-
-```bash
-pnpm -C frontend dev:with-keepers -- --port 3002
-```
-
-This uses `primary.base-mainnet.env` for chain `8453` and `primary.env` for
-chain `84532`. Each keeper writes a chain-specific snapshot:
-
-```text
-frontend/.runtime/casino-keeper-health-8453.json
-frontend/.runtime/casino-keeper-health-84532.json
-```
-
-The web app receives matching `KEEPER_HEALTH_PATH_8453` and
-`KEEPER_HEALTH_PATH_84532` values, so `/status?chainId=8453` and
-`/status?chainId=84532` report the actual keeper for each chain. The single
-`dev:with-keeper` command remains useful when you only want the default Base
-Sepolia keeper.
-
-The dev wrapper resolves relative keeper paths from the repo root and derives
-`KEEPER_START_BLOCK` from the current chain head when it is not set, rewinding
-2,000 blocks by default. Override with `KEEPER_DEV_REWIND_BLOCKS` or an explicit
-`KEEPER_START_BLOCK` when you need a longer catch-up window.
-
-Keeper-only local run:
-
-```bash
-pnpm -C frontend keeper:dev
-```
-
-Keeper-only multi-chain local run:
-
-```bash
-pnpm -C frontend keeper:dev:all
-```
-
-Use another deploy env file by selecting a file inside
-`frontend/deploy/casino-keeper/`:
-
-```bash
-KEEPER_ENV_FILE=backup.env pnpm -C frontend keeper:dev
-```
-
-Use a custom multi-keeper list by selecting comma-separated files inside
-`frontend/deploy/casino-keeper/`:
-
-```bash
-KEEPER_ENV_FILES=primary.base-mainnet.env,primary.env pnpm -C frontend keeper:dev:all
-```
-
-Backup instance:
-
-```bash
-KEEPER_ENV_FILE=backup.env pnpm -C frontend keeper:dev
-```
-
-## Production
-
-The supported v1.5 production path uses CI-built immutable Docker images and
-`frontend/compose.production.yml`. Follow the [keeper production runbook](../../../docs/ops/runbooks/casino-keeper-production.md)
-and the [Docker release runbook](../../deploy/docker/README.md). Retired standalone
-systemd units are not supported deployment instructions.
-
-Local wrappers read only
-`frontend/deploy/casino-keeper/${KEEPER_ENV_FILE:-primary.env}` and do not fall
-back to repo-root `.env` or `apps/web/.env.local`.
-
-The `backup-local` profile is a rehearsal facility, not evidence of deployed
-cross-host failover. Separate hosts, keys, RPC providers, recovery and monitoring
-need their own verification before a high-availability claim.
-
-The keeper always re-reads `getBet(betId)` before broadcasting and only calls
-`finalize` when the bet state is `RandomReady`.
-
-Sportsbook automatic terminalization is opt-in:
-
-Set `KEEPER_SPORTS_TERMINALIZER_ENABLED=true` and the sports scan limits in the
-selected deploy env file only after the sportsbook Phase 2 packet records GO.
-Sports ticket indexing is also opt-in via `KEEPER_SPORTS_TICKET_INDEX_ENABLED`;
-leave it `false` while the public sportsbook is disabled so the casino keeper
-does not spend RPC budget scanning unused `SportsHub` ticket events.
-
-When enabled and the active release exposes `SportsHub`, the keeper listens for
-`ResultProposed`, `ResultFinalized`, `MarketVoided`, and challenge resolution
-events. It waits until result finality, calls `SportsHub.finalizeResult`, then
-settles held tickets for resolved markets or refunds held tickets for voided
-markets. Every write is simulated first; player-side ticket actions remain a
-fallback path.
-
-Sports recovery requires `BET_INDEX_WRITE_ENABLED=true`, a reachable
-`BET_INDEX_DATABASE_URL`, and a `sportsHub` address in the release. Missing
-configuration or a failed database migration aborts startup before event watchers,
-workers, or transactions start. Casino-only mode still supports running without
-a database. This is an intentional change from the old database-free sports fallback.
-
-The keeper adds `keeper_sports_work` and `keeper_sports_tickets` through the normal
-idempotent migration. Both isolate data by chain and SportsHub. A bounded
-`TicketPlaced` history scan builds the recovery ticket IDs independently of the
-public `sport_tickets` feed. Each sports scanner keeps its own durable checkpoint
-in `indexer_cursors`, keyed by SportsHub with sources
-`sports-markets-v1:<start-block>` and `sports-tickets-v1:<start-block>`.
-Changing the casino `KEEPER_START_BLOCK` or its cursor does not advance sports
-coverage. Pending page checkpoints bind to the coverage origin and reset when it
-is widened. Configure the same origin on primary and backup; a worker with a
-narrower origin leaves wider-history work for the matching worker. Sports history starts at the release block by default; a configured
-sports start must include that block. Widening the range starts a new coverage
-checkpoint.
-
-Market events are saved as pending work before advancing the event cursor.
-Pending work survives restarts, RPC errors and more than eight failed attempts.
-Settlement reads require complete ticket coverage through the durable market
-event block (after ticket placement closes), rather than a moving chain head, and process at most `KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET` IDs per page.
-This setting is a page size, not a market total. The next page is retained as
-work; already terminal tickets are skipped using their on-chain state. A crash
-after a transaction but before its checkpoint therefore safely rereads the page.
-Work is removed only after the last covered page completes. A stale worker cannot
-acknowledge a newer job revision.
-
-`KEEPER_SPORTS_TICKET_INDEX_ENABLED` separately enables the public sportsbook
-feed's four event types on the independent history scanner. It is not required
-for terminalization's recovery ID index. The old
-`KEEPER_SPORTS_TICKET_ENUMERATION_MAX` is accepted for environment compatibility
-but no longer supplies a recent-ID sample as a complete market list.
-Use `KEEPER_SPORTS_TERMINALIZER_MARKET_IDS=1,2` for recovery when an already
-terminal market must be queued at startup. It does not bypass coverage checks.
-
-Durable bet-feed indexing can be enabled with:
-
-```bash
-BET_INDEX_WRITE_ENABLED=true \
-BET_INDEX_DATABASE_URL=postgres://... \
 pnpm -C frontend keeper:start
 ```
 
-When enabled, the keeper runs the Postgres migration, writes `GameHub` lifecycle
-events, and resumes scan windows from the persisted `gamehub-events` cursor when
-that cursor is ahead of `KEEPER_START_BLOCK`. Index failures stop that scan before
-its cursor advances, and the next pass retries the failed range. Ready casino bets
-are queued before index writes, so an index outage does not suppress their
-settlement. Websocket index errors are recovered by the historical scanner when
-`KEEPER_SCAN_INDEX_EVENTS_ENABLED=true`. Existing gaps created by an older binary
-still need an audited backfill; upgrading does not prove an old cursor's history.
-Concurrent migrations take one transaction-scoped PostgreSQL advisory lock.
+Set these environment variables before starting:
 
-At startup, and after scans, the keeper requeues up to 50 indexed
-`BetRandomReady` IDs by chain and GameHub. Each requeued ID costs an on-chain
-`getBet` read, so with polls shorter than 300 seconds this runs every nth scan
-(every fifth at 60 seconds), about every 300 seconds. A numeric keyset advances past stale or repeatedly
-failing IDs and wraps at the end. This closes the crash window between persisting
-a scan cursor and draining the in-memory settlement queue. If RPC scanning is
-disabled, a database-only recovery pass runs every 300 seconds. Recorded terminal
-events are excluded; any stale rows are checked against on-chain `getBet` before
-writing. Durable recovery cannot recover events that were never indexed and were
-already skipped by an older cursor.
+| Variable                      | Purpose                                                                                 |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| `KEEPER_RELEASE_PATH`         | Current release JSON, including contract and active pool addresses and deployment block |
+| `KEEPER_RPC_HTTP`             | HTTP RPC endpoint                                                                       |
+| `KEEPER_PRIVATE_KEY`          | Transaction signer key                                                                  |
+| `KEEPER_RPC_WS`               | Optional websocket endpoint; HTTP recovery remains active                               |
+| `KEEPER_ROLE`                 | `primary` or `backup`                                                                   |
+| `KEEPER_BACKUP_DELAY_SECONDS` | Delay before a backup processes queued work                                             |
+| `KEEPER_HEALTH_PATH`          | Optional path for the atomic health JSON snapshot                                       |
+| `BET_INDEX_WRITE_ENABLED`     | Enable durable event, ledger and recovery storage                                       |
+| `BET_INDEX_DATABASE_URL`      | PostgreSQL connection string                                                            |
+| `BET_INDEX_SSL`               | Enable SSL for PostgreSQL                                                               |
 
-LP provider ledger indexing is intentionally decoupled from the high-priority
-GameHub scan. `KEEPER_BANK_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS` defaults to
-`60`, so Bank `Deposit`/`Withdraw` rows remain durable without forcing every
-casino settlement poll to also scan every Bank pool. Set it to `0` only when the
-provider ledger is intentionally disabled.
+`KEEPER_CHAIN_ID`, when provided, must match the release. Local wrappers select
+a file under `frontend/deploy/casino-keeper/` using `KEEPER_ENV_FILE`; they do not
+read repo-root or web-app environment files. `keeper:dev`, `dev:with-keeper`,
+and `dev:with-keepers` use those selected local configurations.
 
-## Local Postgres
+## Casino settlement and LP pricing
 
-Use Docker Compose for local durable index development:
+Before every transaction, the keeper reads `GameHub.getBet`:
+
+- `RandomReady` calls `finalize` using **3,050,000 transaction gas** for both
+  simulation and send: the admitted 3,000,000 execution budget plus intrinsic
+  gas/calldata allowance. Additional modules, assets or referral configurations
+  require their own gas qualification.
+- `PendingVRF` stays queued until the current on-chain
+  `placedAt + refundTimeoutSeconds` is reached, then calls public `refund`.
+  The timeout and chain timestamp are reread on retries. A callback racing a
+  refund triggers another state read; a known result goes through finalization.
+- Terminal bets need no new transaction. Retryable errors use bounded backoff
+  without an attempt-count cutoff.
+
+Every distinct Bank in the current release pools is reconciled at a single numbered
+block. The keeper reads `currentEpoch`, `redeemBatch(currentEpoch)`, and `riskInPaused`.
+An eligible nonempty queue on an unpaused Bank permits `activateBatch`; the keeper verifies
+that the epoch advanced. A race with another caller or a pause triggers a fresh read.
+Historical open positions never gate activation. Activation prices liquid assets immediately
+and retains the old reserve and recovery rights under that epoch.
+
+Historical recovery monitoring discovers `RedeemBatchActivated` events from the release origin,
+rescans the recent overlap for reorgs and polls at most 50 known epochs per turn. Unvisited old
+alerts are retained; incomplete discovery reports degraded health rather than claiming complete
+coverage. This monitor does not gate betting or later exits.
+
+Casino finalization, timeout refunds and batch activation share a serialized write
+path. Pausing a Bank does not block settlement/refund debt-out. The keeper does
+not request or cancel LP redemptions, claim LP/player funds, or set operators.
+Shutdown stops scheduling, waits for in-flight scans and writes, then closes the
+database and marks health stopped.
+
+## Storage and event recovery
+
+`BetIndexStore.initializeSchema()` creates the current schema and indexes.
+Initialization is idempotent; a transaction-scoped advisory lock serializes
+concurrent worker startup. There is no schema upgrade or data migration path.
+Bets are identified by chain, GameHub and bet ID. LP ledger reads require Bank
+identity; pool display IDs cannot substitute for it.
+
+The regular `gamehub-events` cursor serves recent indexing and settlement.
+Independent full lifecycle recovery starts at the release block, inclusive,
+under `casino-open-bets-v1:<origin>`. `KEEPER_CASINO_RECOVERY_START_BLOCK` may
+widen this history range but cannot move past the deployment block.
+`KEEPER_START_BLOCK` and the regular event cursor cannot advance lifecycle
+coverage. Events are persisted before each recovery checkpoint. Failed writes
+leave the range retryable.
+
+Startup and periodic recovery page through indexed nonterminal `BetPlaced` and
+`BetRandomReady` IDs numerically, scoped by chain and GameHub. Recorded terminal
+events are excluded, and chain state is reread before sending. This also repairs
+the crash window between persisting events and processing the in-memory queue.
+Without PostgreSQL, casino recovery replays bounded release history on restart.
+Lifecycle reconciliation continues when ordinary event scanning is disabled.
+
+`KEEPER_POLL_INTERVAL_SECONDS` controls ordinary HTTP scanning.
+`KEEPER_SCAN_CHUNK_BLOCKS` defaults to 10 and
+`KEEPER_SCAN_MAX_CHUNKS_PER_PASS` defaults to 50. These bound each historical
+pass. `casino.keeper.scan_capped` reports remaining backlog; do not fast-forward
+recovery cursors to suppress it. Adjust limits to the RPC provider and allow
+catch-up to complete. `KEEPER_RPC_MIN_INTERVAL_MS` spaces tracked RPC calls
+within a process; it does not coordinate separate workers or the web app.
+
+Bank `Deposit`/`Withdraw`/`RecoveryClaimed` cash-flow indexing runs independently at
+`KEEPER_BANK_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS` (default 60). Set it to zero
+only when provider-ledger indexing is intentionally disabled. Each casino scan
+and each Bank-ledger scan combines its event types into one log request per
+chunk; block timestamps and contract reads add RPC work.
+
+## Sports recovery
+
+Sports indexing and terminalization are separately enabled by
+`KEEPER_SPORTS_TICKET_INDEX_ENABLED` and
+`KEEPER_SPORTS_TERMINALIZER_ENABLED`. They require durable writes, a reachable
+database and a SportsHub in the release. Missing configuration or failed schema
+initialization aborts startup before workers send transactions.
+
+Market events are persisted as pending work before advancing their cursor.
+Independent `TicketPlaced` history builds the recovery ticket index, scoped by
+chain and SportsHub. The market and ticket checkpoints include their coverage
+origin; widening that origin invalidates narrower page progress. Neither a
+casino cursor nor a partial public ticket feed proves complete ticket coverage.
+
+Settlement waits for ticket-history coverage through the market event block,
+then reads finality and current ticket state. Resolved markets finalize and
+settle held tickets; voided markets refund them. Writes are simulated first.
+`KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET` is a page size, not a total
+limit. Pending pages survive restart and retry, and stale workers cannot
+acknowledge a newer work revision. `KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS` bounds
+history per pass. Manual `KEEPER_SPORTS_TERMINALIZER_MARKET_IDS` use the same
+coverage checks.
+
+## Health
+
+Health JSON includes queue depth, scan progress, transaction outcomes, RPC
+usage, each Bank's current queue and pause state, and historical recovery epochs,
+remaining holds, backing and age. The
+existing health service consumes this file; the keeper does not deliver alerts.
+Keep the file outside the web app's public directory.
+
+Each failure is cleared only by success on its own path:
+
+| `degradedBy`      | Meaning                                                                        |
+| ----------------- | ------------------------------------------------------------------------------ |
+| `scan` / `ledger` | Event or provider-ledger scan failed                                           |
+| `finalize`        | Casino terminalization failed                                                  |
+| `recovery`        | Lifecycle coverage is incomplete or persistence/read failed                    |
+| `redemption`      | Bank read or queue-activation reconciliation failed                            |
+| `pocket-recovery` | Historical epoch discovery is incomplete or failed                             |
+| `pocket`          | Historical recovery read failed or unresolved holds exceeded the age threshold |
+| `stalled`         | Scan progress or lifecycle reconciliation stopped advancing                    |
+
+Historical recovery age uses chain timestamp minus activation time, including while
+paused. An overdue unactivated queue is not a historical recovery alert. Restart
+and unrelated successful settlements cannot reset historical age. Lifecycle
+reconciliation stalled for five minutes degrades health even if normal event
+scanning still works. Logs and health errors redact RPC URLs and credentials.
+
+## Local checks
 
 ```bash
-pnpm -C frontend bet-index:db:up
+pnpm -C frontend/apps/keeper test
+pnpm -C frontend/apps/keeper typecheck
+pnpm -C frontend/apps/keeper build
+pnpm -C frontend/packages/bet-index test
 ```
 
-The default local connection string is:
-
-```text
-postgres://arbigamefi:arbigamefi_dev_only@127.0.0.1:54329/arbigamefi
-```
-
-Run a no-risk one-block write canary against the local database:
-
-```bash
-BET_INDEX_FROM_BLOCK=1 \
-BET_INDEX_TO_BLOCK=1 \
-pnpm -C frontend bet-index:backfill:local
-```
-
-Operational commands:
-
-```bash
-pnpm -C frontend bet-index:db:ps
-pnpm -C frontend bet-index:db:logs
-pnpm -C frontend bet-index:db:down
-pnpm -C frontend bet-index:db:reset
-```
-
-Compose is for local development and staging canaries. For mainnet production,
-prefer managed Postgres with backups, point-in-time restore, disk monitoring,
-and upgrade automation. A self-hosted Docker Postgres is only acceptable if
-those controls are explicitly owned and tested.
-
-One-shot durable index backfill or canary run:
-
-```bash
-KEEPER_ENV_FILE=primary.base-mainnet.env \
-BET_INDEX_DATABASE_URL=postgres://... \
-BET_INDEX_FROM_BLOCK=41562978 \
-BET_INDEX_TO_BLOCK=41570000 \
-pnpm -C frontend keeper:backfill
-```
-
-Show the no-side-effect usage summary:
-
-```bash
-pnpm -C frontend keeper:backfill --help
-```
-
-The wrapper reads the selected file in `frontend/deploy/casino-keeper/`, builds
-the keeper, scans `BetPlaced`, `BetRandomReady`, `BetFinalized`, and
-`BetRefunded`, writes idempotent rows, and prints a JSON summary with the block
-range and recent rows. Use
-`BET_INDEX_DRY_RUN=true` to verify RPC/event access without writing Postgres.
-
-`KEEPER_SCAN_CHUNK_BLOCKS` defaults to `10` so free RPC providers with tight
-`eth_getLogs` range limits can still catch delayed events. Match it to the
-`KEEPER_RPC_HTTP` provider's logs range: Alchemy's free tier rejects anything
-above 10 with `-32600`, public Base endpoints accept 1,000 (Sepolia) to 2,000
-(mainnet), and production runs 1,000 on Infura, which accepted 10,000 in testing.
-
-`KEEPER_SCAN_MAX_CHUNKS_PER_PASS` defaults to `50` and bounds how much ground one
-catch-up pass covers. Without it a cursor that has fallen far behind expands into
-one provider request per chunk with no ceiling — a two-month gap at a 10-block
-chunk size is ~750k `eth_getLogs` calls, which exhausts a monthly quota in days
-and then keeps doing it after every quota reset.
-
-Providers bill `eth_getLogs` per call, not per event, so each casino scanner
-fetches a chunk with one call. A gamehub chunk is one `eth_getLogs` for
-`BetPlaced`, `BetRandomReady`, `BetFinalized` and `BetRefunded`, which serves
-both settlement and the index; with index scanning off it asks for
-`BetRandomReady` alone. A bank-ledger chunk is one `eth_getLogs` for `Deposit`
-and `Withdraw` across every configured pool. Block timestamp reads are added only
-when events are found. Sports recovery still costs one ticket event request per
-chunk, or four when the public ticket feed is enabled, plus four market event
-requests. Budget each independent scanner accordingly.
-
-At the 10-block chunk size a 300s pass needs only ~15 chunks to keep pace with
-Base's 2s blocks, so the default leaves roughly 3x headroom and still drains a
-short outage quickly. Production's 1,000-block chunks and 60-second polls need
-one chunk per pass. When a pass is capped the keeper logs
-`casino.keeper.scan_capped` with the remaining block count. Occasional entries
-after a restart are normal. Sustained capping requires a bounded recovery plan
-with a provider budget and an audit of outstanding bets. **Do not fast-forward
-`gamehub-events` to suppress this log**: it also finds missed `BetRandomReady`
-events, so advancing it can skip unsettled bets. Repair and verify the skipped
-range before changing a settlement cursor.
-
-`KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS` defaults to `50000` and now limits the
-number of history blocks in a single pass, in addition to the chunk-count cap.
-Every successful chunk persists progress; a months-old release resumes over
-bounded passes instead of failing forever because of its age. A failed RPC or
-index write cannot advance coverage over its range. Do not move the sports start
-forward to exclude unresolved history. No casino cursor or partial public index
-is accepted as proof that recovery has all tickets.
-
-The periodic sports scan uses `KEEPER_POLL_INTERVAL_SECONDS` (300 seconds if that
-interval is disabled); durable due work is checked once per second, one bounded
-market page at a time. Websocket market events can trigger a bounded catch-up
-scan immediately. Finality-pending jobs retain their due time; transient failures
-back off to 30 seconds and remain recoverable until they succeed.
-
-For dedicated keeper RPC provider apps, set `KEEPER_RPC_MIN_INTERVAL_MS=250` in
-each keeper env file. The keeper then serializes tracked in-process RPC calls
-without adding seconds of avoidable settlement latency after a VRF callback. Use
-`1000` to `2000` only when the keeper shares a severely constrained free-tier
-RPC app with other traffic. Production runs `1200`: both keepers share one
-Infura free-tier key, whose 500 credits per second they stay under even when
-every call is a 255-credit `eth_getLogs`.
-
-The daily budget on that key (3M credits, reset daily; `eth_getLogs` 255,
-`eth_blockNumber` 80) is set by the poll and ledger intervals. With 60-second
-polls and a 300-second ledger interval, one keeper uses
-`1,440 × (80 + 255) + 288 × (80 + 255)` ≈ 0.58M credits a day, so the mainnet and
-testnet keepers together use about 1.16M. Settlements add a few reads and a
-transaction each. Without WebSocket events, the poll interval is the longest
-wait between a VRF callback and settlement. This does not coordinate across separate keeper
-processes or the web app, so production should still use separate provider
-apps/keys for the browser API, mainnet keeper, and testnet keeper where possible.
-
-When `KEEPER_HEALTH_PATH` is set, the keeper writes an atomic JSON health
-snapshot with queue depth, last scan, last finalize success/failure, and RPC
-usage counters for the current one-minute window plus process lifetime totals.
-The local web app reads that file through the route
-`/ops/casino-keeper-health.json`, so the health file must stay outside
-`apps/web/public` to avoid a public-file / route conflict.
-
-The snapshot reports `degraded`, and `/api/healthz` with it, while any of these
-is open (`degradedBy` names them):
-
-- `scan`: the last event scan failed. The next successful scan clears it.
-- `ledger`: the last bank-provider ledger pass failed. The next successful pass
-  clears it.
-- `finalize`: a finalize attempt failed. The next bet that settles, or is found
-  already settled, clears it.
-- `stalled`: polling is on and the event scan has not advanced for three poll
-  intervals, and at least five minutes (15 minutes at the production 300-second
-  interval). The heartbeat keeps checking this when the scan loop itself hangs.
-
-Each failure clears only on its own path's next success, so a settled bet does
-not hide a failing scan. A single RPC error no longer keeps the keeper degraded
-until the next bet settles.
-
-## Logs
-
-Each line is one JSON object. `level`, `message` and `ts` come first and are
-written by the logger: `message` is always the event name, such as
-`casino.keeper.scan_failed`, and no field can replace it. Error text goes in
-`error`. It is built from the error's structured fields (viem's `shortMessage`,
-`details`, `code` or `status`, and the root cause) because viem's own `message`
-embeds the RPC URL and its API key. Any URL that remains is written as
-`[redacted-url]`. The health snapshot's `lastError` and
-`lastFinalizeFailure.reason`, which `/ops/casino-keeper-health.json` serves
-publicly, carry the same text.
-
-Websocket watcher failures are logged as `*_watch_error` with
-`"transport":"websocket"`, one line per watcher:
-
-```text
-{"level":"error","message":"casino.keeper.gamehub_index_watch_error","ts":"2026-09-26T16:11:29.000Z","eventName":"BetPlaced","transport":"websocket","error":"ErrorEvent: error event without a message"}
-```
-
-`ErrorEvent: error event without a message` is how Node's WebSocket reports a
-connection that the `KEEPER_RPC_WS` provider refused, rejected or dropped. It
-does not expose the HTTP status, so a 401 (bad key) and a 429 (such as an
-exhausted Alchemy monthly quota) look the same; check the provider dashboard.
-When an established connection drops, each watcher also logs
-`SocketClosedError: The socket has been closed.`, and viem reconnects and
-resubscribes about two seconds later. If that one reconnect fails, viem does not
-try again. If the first connection at startup fails, the watchers are never
-subscribed, even though viem opens a new socket two seconds later. Either way
-they stay down until the keeper restarts, even after the provider recovers.
-Settlement then relies on the HTTP scan every `KEEPER_POLL_INTERVAL_SECONDS`, and
-`/api/healthz` still reports `ok`. Restart the keeper once the provider accepts
-connections again.
-
-## Recovery regression checks
-
-Run `pnpm -C frontend/apps/keeper test` and `pnpm -C frontend/packages/bet-index test`.
-The PostgreSQL integration suite additionally needs a disposable local database:
+Enable real SQL integration with a disposable local PostgreSQL database:
 
 ```bash
 KEEPER_TEST_POSTGRES_URL=postgres://user:password@127.0.0.1:5432/test_db \
   pnpm -C frontend/packages/bet-index test
 ```
 
-The SQL suite refuses remote hosts, creates and removes its own schema, and checks
-concurrent fresh migrations, rollback/replay, scope isolation, numeric pages,
-stale acknowledgements and casino recovery queries. Without this explicit local
-URL it is skipped; memory tests still run.
+These tests refuse remote hosts and create/remove isolated schemas. They cover
+concurrent initialization, rollback/replay, chain/contract isolation, numeric
+pagination, stale acknowledgements, financial receipts and pending-bet recovery.
+Without the explicit URL, SQL integration tests are skipped.
+
+For local durable indexing, `pnpm -C frontend bet-index:db:up` starts the local
+Compose database. `pnpm -C frontend keeper:backfill --help` describes the bounded
+historical event ingestion command; this is event recovery, not a schema upgrade.

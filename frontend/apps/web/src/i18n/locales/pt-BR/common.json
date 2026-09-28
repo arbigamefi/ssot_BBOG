@@ -224,7 +224,7 @@
       },
       {
         "q": "O que é a vantagem da casa?",
-        "a": "A vantagem da casa é a margem embutida nos pagamentos de cada jogo. Na Base mainnet, pelas regras atuais da v1.5, ela financia as taxas do protocolo e as recompensas de indicação; não é paga aos LPs. Cada jogo mostra o valor atual exato na aba Info do jogo, usando a configuração da release ativa em vez de uma estimativa de marketing."
+        "a": "A vantagem da casa é a margem nos pagamentos dos jogos. No modelo atual v1.6, os LPs retêm 50% da vantagem teórica calculada sobre o volume efetivamente utilizado; taxas do protocolo e recompensas de indicação dividem a outra metade. Isso não garante retorno aos LPs. O projeto ainda não foi lançado. A taxa aplicável de cada jogo aparece em Info do jogo."
       },
       {
         "q": "Por que minha aposta está pendente?",
@@ -719,58 +719,44 @@
     },
     "metrics": {
       "sharePrice": {
-        "label": "Valor / 1k cotas",
-        "detail": "Ativos resgatáveis por 1.000 cotas LP. O preço de uma cota permanece no livro de reservas."
+        "label": "Valor / 1k cotas"
       },
       "totalShares": {
-        "label": "Total de cotas",
-        "detail": "Oferta de cotas LP em circulação."
-      },
-      "freeReserve": {
-        "label": "Reserva livre",
-        "detail": "Bankroll não reservado acima dos passivos em aberto."
-      },
-      "totalAssets": {
-        "label": "NAV do cofre atual",
-        "detail": "NAV verificável do cofre Bank selecionado."
-      },
-      "minLiquidity": {
-        "label": "Liquidez mínima",
-        "detail": "Piso de saque que protege a capacidade de pagamento."
+        "label": "Cotas ativas",
+        "detail": "Cotas LP ativas; as cotas de saída precificadas já foram queimadas."
       }
     },
     "summary": {
       "capitalPosture": {
         "title": "Livro de reservas verificável",
         "readModel": "leitura on-chain",
-        "totalAssets": "NAV do cofre atual",
+        "totalAssets": "NAV ativo do cofre",
         "loading": "Lendo o snapshot mais recente do Bank…",
-        "detail": "NAV do cofre Bank selecionado lido do contrato ativo.",
-        "totalAssetsDetail": "NAV do cofre selecionado lido do contrato ativo."
+        "detail": "Capital atual das cotas ativas; exclui reservas históricas e obrigações.",
+        "totalAssetsDetail": "Capital atual das cotas ativas; exclui reservas históricas e obrigações."
       },
       "freeReserve": {
         "label": "Reserva livre",
-        "detail": "Capital ainda não reservado para passivos em aberto."
+        "detail": "Capital ativo não reservado para posições abertas."
       },
       "sharePrice": {
-        "label": "Preço por cota",
-        "detail": "Conversão ERC4626-like direta: uma cota LP completa para ativos subjacentes."
+        "label": "Preço por cota"
       },
       "totalShares": {
-        "label": "Total de cotas",
-        "detail": "LP shares emitidas atualmente. Mudanças no NAV do pool refletem no valor por share."
+        "label": "Cotas ativas",
+        "detail": "Cotas LP ativas; as cotas de saída precificadas já foram queimadas."
       },
       "position": {
         "label": "Sua posição",
         "detail": "Equivalente em ativos da carteira conectada."
       },
       "liquidity": {
-        "label": "Política de liquidez",
-        "detail": "Piso {floor} · Bank {bank}"
+        "label": "Política de reserva de risco",
+        "detail": "Reserva de risco {floor} · Bank {bank}"
       },
       "reserved": {
-        "label": "Passivos reservados",
-        "detail": "Reserva livre {freeReserve} · Liquidez mínima {minLiquidity}"
+        "label": "Passivos reservados do capital ativo",
+        "detail": "Reserva livre {freeReserve} · Reserva de risco {riskReserve}"
       }
     },
     "actions": {
@@ -822,6 +808,10 @@
         "view": "Ver status da transação",
         "close": "Fechar",
         "statusDialog": "Status da transação do Bank"
+      },
+      "depositsClosed": {
+        "title": "Novos depósitos estão fechados",
+        "body": "Este pool não aceita novos depósitos. Pedidos de saída e resgates continuam disponíveis conforme as regras do pool."
       }
     },
     "flows": {
@@ -875,8 +865,8 @@
         "detail": "Reserva livre após passivos reservados ({reserved}). Compare com controles de pagamento máximo antes de abrir depósitos públicos."
       },
       "liquidityFloor": {
-        "label": "Piso de liquidez",
-        "detail": "Política de liquidez mínima de {bps}, atualmente {amount}."
+        "label": "Buffer de saque",
+        "detail": "Buffer de {bps} para resgates do protocolo e de indicações, atualmente {amount}. Resgates LP já precificados e valores devidos a jogadores são isentos."
       },
       "release": {
         "label": "Digest do release",
@@ -918,25 +908,27 @@
     },
     "ledger": {
       "eyebrow": "Livro do provedor",
-      "title": "Depósitos e saques",
-      "readModel": "eventos ERC4626",
+      "title": "Depósitos, saídas e recuperação",
+      "readModel": "Eventos de caixa do Bank",
       "connectWallet": "Conecte uma carteira para ver seu histórico como provedor do Bank.",
       "loading": "Carregando livro do provedor…",
       "loadingMore": "Carregando mais…",
       "loadMore": "Carregar mais",
       "loadedRows": "{count} linhas carregadas",
       "end": "Fim do livro",
-      "empty": "Nenhum depósito ou saque encontrado para esta carteira.",
-      "note": "As linhas são reconstruídas a partir dos mints/burns de cotas do Bank e da transferência de ativo correspondente na mesma transação. O preço da cota é o valor do ativo da transação dividido pela quantidade de cotas, não o preço atual.",
+      "empty": "Nenhum fluxo de caixa LP encontrado para esta carteira.",
+      "note": "Somente depósitos, pagamentos de saída e recuperação histórica efetivos são fluxos de caixa. Solicitações, ativação e recuperação disponível não são recebimentos. Doações ao Bank não contam como dinheiro recebido. O preço por cota só aparece para eventos com cotas.",
       "block": "Bloco {blockNumber}",
       "actions": {
         "deposit": "Depósito",
-        "withdraw": "Saque"
+        "withdraw": "Saque",
+        "recovery": "Recuperação",
+        "donation": "Doação"
       },
       "summary": {
         "deposited": "Depósitos carregados",
         "withdrawn": "Saques carregados",
-        "openValue": "Valor aberto",
+        "openValue": "Valor LP conhecido",
         "netPnl": "P&L carregado",
         "shares": "Cotas"
       },
@@ -947,13 +939,61 @@
         "shares": "Cotas",
         "sharePrice": "Preço da cota",
         "tx": "Tx"
-      }
+      },
+      "incomplete": "A cobertura dos fluxos de caixa até este snapshot ainda não foi verificada. O retorno completo está indisponível."
     },
     "overview": {
       "totalAssets": {
         "label": "NAV do cofre atual",
         "detail": "NAV verificável do cofre Bank selecionado a partir da release ativa."
       }
+    },
+    "async": {
+      "inactivePool": "Este pool está inativo e fechado para novas apostas e depósitos. Pedidos de resgate, cancelamentos permitidos e recebimento de valores devidos continuam disponíveis conforme as regras do contrato.",
+      "requestDetail": "Solicite a saída com cotas da carteira. A ativação fixa o dinheiro disponível imediatamente e preserva os direitos históricos de recuperação. Apostas antigas pendentes não bloqueiam lotes posteriores.",
+      "pendingRisk": "As cotas na fila ainda participam dos resultados ativos. Na ativação, todos os titulares mantêm seus direitos sobre apostas anteriores. O dinheiro pode ser zero; a recuperação é incerta e pode chegar depois.",
+      "queuedTitle": "Pedido na fila",
+      "queuedDetail": "As cotas permanecem ativas até a ativação. Apostas antigas pendentes não bloqueiam este lote. O dinheiro é precificado na ativação; a recuperação histórica permanece separada. A reserva disponível e pausas de emergência continuam valendo; não há prazo garantido para pagamento integral em dinheiro.",
+      "eligibleAt": "Ativação possível a partir de: {time}. Não é um prazo garantido de ativação ou pagamento.",
+      "remainingHolds": "Apostas anteriores ainda abertas: {count}",
+      "cancelDetail": "Cancele para devolver todas as cotas na fila enquanto o lote não for ativado, mesmo após o horário mínimo. Solicitações ativadas não podem ser canceladas. A transação verifica o estado atual.",
+      "cancel": "Cancelar cotas na fila",
+      "paused": "O pool está pausado. Solicitações e cancelamentos na fila continuam disponíveis; depósitos, saques e recuperação aguardam a retomada.",
+      "depositTerms": "Depósitos entram imediatamente no capital ativo pelo valor contábil atual. Incluem apostas atuais pendentes, mas não direitos de recuperação de ativações anteriores.",
+      "claimDetail": "Este dinheiro está reservado para sua saída. Resgatar todas as cotas precificadas paga o valor atribuído e preserva os direitos históricos de recuperação.",
+      "totalEquityDetail": "Valor da carteira + estimativa na fila + dinheiro precificado. A recuperação histórica aparece separadamente e não integra esta estimativa.",
+      "queuedEquity": "Cotas na fila / dinheiro estimado",
+      "requested": "Pedido de resgate confirmado. As cotas na fila permanecem ativas até a ativação do lote.",
+      "shareUnitDetail": "Valor contábil ativo por cota LP. Direitos históricos de recuperação são separados das cotas ativas.",
+      "totalEquity": "Valor LP ativo e precificado (estimativa)",
+      "queuedQuoteDetail": "Cotação on-chain do dinheiro se ativado agora; exclui recuperação histórica e pode mudar.",
+      "receiver": "Destinatário do dinheiro: {receiver}",
+      "exitLiabilities": "Dinheiro de saída e pagamentos a jogadores reservados"
+    },
+    "recovery": {
+      "title": "Direitos históricos de recuperação",
+      "detail": "Apostas anteriores continuam atribuídas aos titulares originais, incluindo quem permaneceu no pool. Zero cotas na carteira não elimina esses direitos.",
+      "loading": "Buscando direitos históricos…",
+      "incomplete": "A busca histórica está incompleta. Carregue as páginas restantes antes de avaliar toda a posição.",
+      "error": "Não foi possível carregar a recuperação histórica. Seus direitos não são considerados zero.",
+      "empty": "Nenhum direito histórico encontrado na busca completa.",
+      "epoch": "Época {epoch}",
+      "units": "Unidades no snapshot",
+      "claimable": "Dinheiro de recuperação disponível",
+      "upperBound": "Limite superior da recuperação restante",
+      "upperBoundDetail": "O limite não é dinheiro disponível agora nem promessa de pagamento.",
+      "remainingHolds": "Apostas anteriores ainda abertas: {count}",
+      "settled": "Esta época foi totalmente liquidada. O dinheiro atribuído e não resgatado continua sendo seu.",
+      "claim": "Resgatar recuperação",
+      "claimed": "Pagamento de recuperação confirmado.",
+      "loadMore": "Carregar mais direitos históricos",
+      "refresh": "Atualizar direitos históricos",
+      "receiver": "O dinheiro será enviado a {receiver}. Esta ação não autoriza um keeper a resgatar por você.",
+      "incompleteReturn": "Retorno incompleto: há direitos históricos pendentes ou a busca ainda não terminou.",
+      "backing": "Reserva histórica",
+      "backingDetail": "Excluída do capital ativo; cobre obrigações anteriores e recuperação não resgatada.",
+      "donationNote": "Doações ao Bank não são dinheiro recebido externamente pelo titular.",
+      "snapshot": "Snapshot: bloco {block}, {time}. Atualize para ver novas atividades."
     }
   },
   "casino": {
@@ -2503,7 +2543,7 @@
       "loading": {
         "eyebrow": "Leitura",
         "title": "Carregando mercado",
-        "description": "Lendo registros de mercado, resultado e exposição pelo SDK v1.3.",
+        "description": "Lendo registros de mercado, resultado e exposição pelo SDK.",
         "body": "Carregando o estado do mercado da SportsHub..."
       },
       "market": {

@@ -1,5 +1,5 @@
 import type { PublicClient, WalletClient } from "viem";
-import { getAddress, parseAbiItem, parseEventLogs, type Address, type Hex } from "viem";
+import { getAddress, getAbiItem, type AbiEvent, type Address, type Hex } from "viem";
 import type { SSOTRelease } from "../release/schema";
 import type {
   DomainBankPosition,
@@ -13,7 +13,11 @@ import type {
 } from "../domain";
 import { decodeStakeSpec } from "../encoding/stakeSpec";
 import { ERC20_ABI } from "../abis/erc20";
-import { getReleaseAbis } from "../abis/release/resolver";
+import { readRecoveryPosition, readRecoveryPage } from "./bankRecovery";
+import { readAsyncBankState, readAsyncBankPosition } from "./bankRedemption";
+import { decodeBankProviderCashEvent } from "@ssot/bet-index/bank-cash-ledger";
+import { extractPlayerPaymentProof, type PlayerPaymentProof } from "@ssot/bet-index/player-payment";
+import { getContractAbis } from "../abis/index.mjs";
 import { createTxPipeline, type JournalSink, type TxResult } from "./txPipeline";
 import type {
   PlaceBetInput,
@@ -40,72 +44,14 @@ import type {
 import { toDomainError } from "./errors";
 import { planExactApproval } from "./approval";
 
-/** Minimal ABI shared by all GameModule contracts for maxPayout calculation. */
-const GAME_MODULE_ABI = [
-  {
-    inputs: [
-      { name: "params", type: "bytes" },
-      {
-        components: [
-          { name: "amountPerRoll", type: "uint256" },
-          { name: "betCount", type: "uint32" },
-          { name: "stopGain", type: "uint256" },
-          { name: "stopLoss", type: "uint256" }
-        ],
-        name: "stakeSpec",
-        type: "tuple"
-      }
-    ],
-    name: "maxPayout",
-    outputs: [{ name: "reserved", type: "uint256" }],
-    stateMutability: "pure",
-    type: "function"
-  }
-] as const;
-
-const GAME_HUB_OUTCOME_READ_ABI = [
-  {
-    inputs: [{ name: "positionId", type: "uint256" }],
-    name: "getBetParams",
-    outputs: [{ name: "", type: "bytes" }],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [{ name: "positionId", type: "uint256" }],
-    name: "getBetRandomWords",
-    outputs: [{ name: "", type: "uint256[]" }],
-    stateMutability: "view",
-    type: "function"
-  }
-] as const;
-
 const GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS = 250n;
 const GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS = 10n;
 const ALLOWANCE_CONFIRMATION_ATTEMPTS = 6;
 const ALLOWANCE_CONFIRMATION_DELAY_MS = 500;
-const ZERO_ADDRESS = `0x${"0".repeat(40)}` as Address;
-const ERC20_TRANSFER_EVENT = parseAbiItem(
-  "event Transfer(address indexed from, address indexed to, uint256 amount)"
-);
-const ERC20_TRANSFER_ABI = [ERC20_TRANSFER_EVENT] as const;
 // Base public RPC rejects eth_getLogs ranges above 2,000 blocks. Keep this
 // below the cap to avoid inclusive range interpretation differences.
 const PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS = 1_900n;
 const PROVIDER_LEDGER_DEFAULT_LIMIT = 50;
-
-type TransferLogLike = {
-  transactionHash?: Hex | null;
-  blockNumber?: bigint | null;
-  logIndex?: number | null;
-  args?: {
-    from?: Address;
-    to?: Address;
-    amount?: bigint;
-  };
-};
-
-type ReceiptLogLike = { address: Address; data: Hex; topics: Hex[] };
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -145,76 +91,10 @@ function canBankHoldBet({
   return navAfterStake - reservedAfterStake >= riskReserveAfterStake;
 }
 
-function sameAddress(a?: string | null, b?: string | null) {
-  return Boolean(a && b && a.toLowerCase() === b.toLowerCase());
-}
-
 function assetPerShare(assets: bigint | undefined, shares: bigint, decimals: number) {
   if (assets == null || shares <= 0n) return undefined;
   const shareUnit = 10n ** BigInt(decimals);
   return (assets * shareUnit) / shares;
-}
-
-async function readProviderTransferLogs({
-  address,
-  args,
-  fromBlock,
-  publicClient,
-  toBlock
-}: {
-  address: Address;
-  args: { from?: Address; to?: Address };
-  fromBlock: bigint;
-  publicClient: PublicClient;
-  toBlock: bigint;
-}): Promise<TransferLogLike[]> {
-  const rows: TransferLogLike[] = [];
-  let cursor = fromBlock;
-  while (cursor <= toBlock) {
-    const end =
-      cursor + PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS > toBlock
-        ? toBlock
-        : cursor + PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS;
-    const logs = await publicClient.getLogs({
-      address,
-      args,
-      event: ERC20_TRANSFER_EVENT,
-      fromBlock: cursor,
-      toBlock: end
-    } as Parameters<PublicClient["getLogs"]>[0]);
-    rows.push(...(logs as TransferLogLike[]));
-    cursor = end + 1n;
-  }
-  return rows;
-}
-
-function extractProviderAssetAmount({
-  account,
-  action,
-  asset,
-  bank,
-  logs
-}: {
-  account: Address;
-  action: BankProviderLedgerEntry["action"];
-  asset: Address;
-  bank: Address;
-  logs: ReceiptLogLike[];
-}): bigint | undefined {
-  const decoded = parseEventLogs({
-    abi: ERC20_TRANSFER_ABI,
-    eventName: "Transfer",
-    logs: logs.filter((log) => sameAddress(log.address, asset)) as never
-  }) as Array<{ args: { from?: Address; to?: Address; amount?: bigint } }>;
-
-  const match = decoded.find((log) => {
-    const from = log.args.from;
-    const to = log.args.to;
-    if (action === "deposit") return sameAddress(from, account) && sameAddress(to, bank);
-    return sameAddress(from, bank) && sameAddress(to, account);
-  });
-
-  return match?.args.amount;
 }
 
 export interface CreateSSOTSDKParams {
@@ -255,19 +135,20 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   }
 
   function getPool(
-    poolId: number
+    poolId: number,
+    allowInactive = false
   ): NonNullable<SSOTRelease["pools"]>[number] | { error: DomainError } {
     const pool = release.pools.find((item) => item.poolId === poolId);
     if (!pool) {
       return {
         error: {
           code: "UNKNOWN_POOL",
-          message: `No pool found for poolId ${poolId} in the v1.3 release bundle.`,
+          message: `No pool found for poolId ${poolId} in the current release configuration.`,
           severity: "error"
         }
       };
     }
-    if (!pool.active) {
+    if (!pool.active && !allowInactive) {
       return {
         error: {
           code: "POOL_INACTIVE",
@@ -287,11 +168,10 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     };
   }
 
-  function resolvePool(poolId: number) {
-    const pool = getPool(poolId);
-    if ("error" in pool) {
-      throw new Error(pool.error.message);
-    }
+  // Disabling new deposits/bets must not hide existing holdings or prevent debt claims.
+  function resolveBankPool(poolId: number) {
+    const pool = getPool(poolId, true);
+    if ("error" in pool) throw new Error(pool.error.message);
     return normalizePool(pool);
   }
 
@@ -299,13 +179,17 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   const vrfHubAddress = getAddress(release.contracts.vrfHub) as Address;
   const sportsHubAddress = getAddress(release.contracts.sportsHub) as Address;
 
-  // ABI resolution MUST be driven by the synchronized release bundle.
+  // Every deployment uses the current source ABI.
   const {
     GameHubAbi: GAME_HUB_ABI,
     BankAbi: BANK_ABI,
     VRFHubAbi: VRFHUB_ABI,
-    SportsHubAbi: SPORTS_HUB_ABI
-  } = getReleaseAbis(release.chainId);
+    SportsHubAbi: SPORTS_HUB_ABI,
+    IGameModuleAbi: GAME_MODULE_ABI
+  } = getContractAbis();
+  const BANK_DEPOSIT_EVENT = getAbiItem({ abi: BANK_ABI, name: "Deposit" }) as AbiEvent;
+  const BANK_WITHDRAW_EVENT = getAbiItem({ abi: BANK_ABI, name: "Withdraw" }) as AbiEvent;
+  const BANK_RECOVERY_EVENT = getAbiItem({ abi: BANK_ABI, name: "RecoveryClaimed" }) as AbiEvent;
 
   async function readTokenAllowance(token: Address, owner: Address, spender: Address) {
     return (await publicClient.readContract({
@@ -427,29 +311,23 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   }
 
   async function readTerminalReceipt(betId: bigint): Promise<GameHubTerminalProof | null> {
-    let receipt: any;
-    try {
-      receipt = await publicClient.readContract({
-        address: gameHubAddress,
-        abi: GAME_HUB_ABI,
-        functionName: "getBetTerminal",
-        args: [betId]
-      } as any);
-    } catch {
-      // Older dev deployments do not expose getBetTerminal. Keep event-log proof as fallback.
-      return null;
-    }
+    const receipt = (await publicClient.readContract({
+      address: gameHubAddress,
+      abi: GAME_HUB_ABI,
+      functionName: "getBetTerminal",
+      args: [betId]
+    })) as any;
 
-    const state = Number(receipt?.state ?? 0);
+    const state = Number(receipt.state);
     if (state === 4) {
       return {
         kind: "settled",
         settlement: {
-          payoutGross: BigInt(receipt.payoutGross ?? 0n),
-          payoutNet: BigInt(receipt.payoutNet ?? 0n),
-          refundAmount: receipt.refundAmount == null ? undefined : BigInt(receipt.refundAmount),
-          feeOnPayout: BigInt(receipt.feeOnPayout ?? 0n),
-          protocolFeeAccrual: BigInt(receipt.protocolFeeAccrual ?? 0n)
+          payoutGross: BigInt(receipt.payoutGross),
+          payoutNet: BigInt(receipt.payoutNet),
+          refundAmount: BigInt(receipt.refundAmount),
+          feeOnPayout: BigInt(receipt.feeOnPayout),
+          protocolFeeAccrual: BigInt(receipt.protocolFeeAccrual)
         }
       };
     }
@@ -458,12 +336,61 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       return {
         kind: "refunded",
         refund: {
-          refundAmount: BigInt(receipt.refundAmount ?? 0n)
+          refundAmount: BigInt(receipt.refundAmount)
         }
       };
     }
 
     return null;
+  }
+
+  async function withPlayerPayment(
+    betId: bigint,
+    proof: GameHubTerminalProof | null
+  ): Promise<GameHubTerminalProof | null> {
+    if (!proof) return null;
+    const terminal = proof.kind === "settled" ? proof.settlement : proof.refund;
+    const amount =
+      proof.kind === "settled"
+        ? proof.settlement.payoutNet != null && proof.settlement.refundAmount != null
+          ? proof.settlement.payoutNet + proof.settlement.refundAmount
+          : undefined
+        : proof.refund.refundAmount;
+    let payment: PlayerPaymentProof =
+      amount == null ? { status: "unknown" } : { status: "unknown", amount: amount.toString() };
+    if (terminal.txHash && amount != null) {
+      try {
+        const [receipt, bet] = await Promise.all([
+          publicClient.getTransactionReceipt({ hash: terminal.txHash }),
+          publicClient.readContract({
+            address: gameHubAddress,
+            abi: GAME_HUB_ABI,
+            functionName: "getBet",
+            args: [betId],
+            blockNumber: terminal.blockNumber
+          })
+        ]);
+        const identity = bet as { bank: Address; asset: Address; player: Address };
+        if (
+          receipt.status === "success" &&
+          (terminal.blockNumber == null || receipt.blockNumber === terminal.blockNumber)
+        ) {
+          payment = extractPlayerPaymentProof({
+            logs: receipt.logs,
+            bank: getAddress(identity.bank),
+            asset: getAddress(identity.asset),
+            player: getAddress(identity.player),
+            betId,
+            amount
+          });
+        }
+      } catch {
+        // Economic terminal proof survives missing receipt or identity evidence. No inference from counters.
+      }
+    }
+    return proof.kind === "settled"
+      ? { ...proof, settlement: { ...proof.settlement, payment } }
+      : { ...proof, refund: { ...proof.refund, payment } };
   }
 
   const gameHub: SSOTGameHubAPI = {
@@ -878,7 +805,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           address: gameHubAddress
         });
         const first = ev[0];
-        const rawBetId = first?.positionId ?? first?.betId;
+        const rawBetId = first?.positionId;
         if (rawBetId != null) betId = BigInt(rawBetId as any);
       } catch {
         // ignore
@@ -917,7 +844,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           address: gameHubAddress
         });
         const first = ev[0];
-        const rawBetId = first?.positionId ?? first?.betId;
+        const rawBetId = first?.positionId;
         if (rawBetId != null) {
           return { ok: true, betId: BigInt(rawBetId as any), source: "receipt" as const };
         }
@@ -1062,7 +989,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     async getBetParams(betId: bigint): Promise<Hex> {
       return (await publicClient.readContract({
         address: gameHubAddress,
-        abi: GAME_HUB_OUTCOME_READ_ABI,
+        abi: GAME_HUB_ABI,
         functionName: "getBetParams",
         args: [betId]
       })) as Hex;
@@ -1071,7 +998,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     async getBetRandomWords(betId: bigint): Promise<bigint[]> {
       const words = (await publicClient.readContract({
         address: gameHubAddress,
-        abi: GAME_HUB_OUTCOME_READ_ABI,
+        abi: GAME_HUB_ABI,
         functionName: "getBetRandomWords",
         args: [betId]
       })) as readonly bigint[];
@@ -1079,10 +1006,10 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     },
 
     async getTerminalProof(betId: bigint): Promise<GameHubTerminalProof | null> {
-      const terminalReceipt = await readTerminalReceipt(betId);
-
+      const terminal = await readTerminalReceipt(betId);
+      if (!terminal) return null;
+      // Terminal storage proves economics. Logs locate the transaction for delivery evidence.
       let latest: Awaited<ReturnType<typeof readTerminalEventsInRange>>[number] | undefined;
-
       try {
         const latestBlock = await publicClient.getBlockNumber();
         for (const range of terminalProofRanges(latestBlock)) {
@@ -1091,82 +1018,144 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           if (latest) break;
         }
       } catch {
-        return terminalReceipt;
+        return withPlayerPayment(betId, terminal);
       }
-
-      if (!latest) return terminalReceipt;
-
-      const args = latest.event.args ?? {};
-      const txHash = latest.event.transactionHash as Hex | undefined;
-      const blockNumber = latest.event.blockNumber as bigint | undefined;
-
-      if (latest.kind === "settled") {
-        const receiptSettlement =
-          terminalReceipt?.kind === "settled" ? terminalReceipt.settlement : undefined;
-        return {
-          kind: "settled",
-          settlement: {
-            txHash,
-            blockNumber,
-            payoutGross: receiptSettlement?.payoutGross ?? BigInt(args.payoutGross ?? 0n),
-            payoutNet: receiptSettlement?.payoutNet ?? BigInt(args.payoutNet ?? 0n),
-            // BetFinalized does not emit the unused stake refund. Only the
-            // terminal receipt proves this amount, including a confirmed zero.
-            refundAmount: receiptSettlement?.refundAmount,
-            feeOnPayout: receiptSettlement?.feeOnPayout ?? BigInt(args.feeOnPayout ?? 0n),
-            protocolFeeAccrual:
-              receiptSettlement?.protocolFeeAccrual ?? BigInt(args.protocolFeeAccrual ?? 0n)
-          }
-        };
-      }
-
-      const receiptRefund =
-        terminalReceipt?.kind === "refunded" ? terminalReceipt.refund : undefined;
-      return {
-        kind: "refunded",
-        refund: {
-          txHash,
-          blockNumber,
-          refundAmount: receiptRefund?.refundAmount ?? BigInt(args.refundAmount ?? 0n)
-        }
+      if (!latest || latest.kind !== terminal.kind) return withPlayerPayment(betId, terminal);
+      const location = {
+        txHash: latest.event.transactionHash as Hex | undefined,
+        blockNumber: latest.event.blockNumber as bigint | undefined
       };
+      return withPlayerPayment(
+        betId,
+        terminal.kind === "settled"
+          ? { kind: "settled", settlement: { ...terminal.settlement, ...location } }
+          : { kind: "refunded", refund: { ...terminal.refund, ...location } }
+      );
     }
   };
 
+  async function bankExit(
+    poolId: number,
+    functionName: string,
+    action: string,
+    args: (self: Address) => readonly unknown[]
+  ): Promise<TxResult> {
+    const wallet = requireWallet();
+    if ("error" in wallet) return { txHash: "0x0", ok: false, error: wallet.error };
+    const poolReq = getPool(poolId, true);
+    if ("error" in poolReq) return { txHash: "0x0", ok: false, error: poolReq.error };
+    const pool = normalizePool(poolReq);
+    try {
+      return tx.simulateAndWrite({
+        chainId: release.chainId,
+        releaseDigest: release.releaseDigest,
+        action,
+        publicClient,
+        walletClient: wallet.walletClient,
+        account: wallet.account,
+        address: pool.bank,
+        abi: BANK_ABI,
+        functionName,
+        args: args(wallet.account)
+      });
+    } catch (error) {
+      return { txHash: "0x0", ok: false, error: toDomainError(error) };
+    }
+  }
+
   const bank: SSOTBankAPI = {
-    async getSnapshot(poolId: number): Promise<DomainBankSnapshot> {
-      const pool = resolvePool(poolId);
+    requestRedeem(poolId, shares, controller, owner) {
+      return bankExit(poolId, "requestRedeem", "REQUEST_REDEEM", (self) => [
+        shares,
+        controller ?? self,
+        owner ?? self
+      ]);
+    },
+    cancelRedeemRequest(poolId, controller) {
+      return bankExit(poolId, "cancelRedeemRequest", "CANCEL_REDEEM", (self) => [
+        controller ?? self
+      ]);
+    },
+    syncRedeem(poolId, controller) {
+      return bankExit(poolId, "syncRedeem", "SYNC_REDEEM", (self) => [controller ?? self]);
+    },
+    claimPlayerPayable(poolId, player) {
+      return bankExit(poolId, "claimPlayerPayable", "CLAIM_PLAYER_PAYABLE", (self) => [
+        player ?? self
+      ]);
+    },
+    syncRecovery(poolId, epochId, controller) {
+      return bankExit(poolId, "syncRecovery", "SYNC_RECOVERY", (self) => [
+        epochId,
+        controller ?? self
+      ]);
+    },
+    claimRecovery(poolId, epochId, receiver, controller) {
+      return bankExit(poolId, "claimRecovery", "CLAIM_RECOVERY", (self) => [
+        epochId,
+        receiver ?? self,
+        controller ?? self
+      ]);
+    },
+    async getRecovery(poolId, epochId, controller, opts) {
+      const pool = resolveBankPool(poolId);
+      const blockNumber = opts?.blockNumber ?? (await publicClient.getBlockNumber());
+      const block = await publicClient.getBlock({ blockNumber });
+      return readRecoveryPosition(
+        publicClient,
+        pool.bank,
+        epochId,
+        controller,
+        blockNumber,
+        block.timestamp
+      );
+    },
+    async getRecoveryPage(poolId, controller, opts) {
+      const pool = resolveBankPool(poolId);
+      return readRecoveryPage(publicClient, pool.bank, controller, release.chainId, opts);
+    },
+    async getSnapshot(poolId: number, opts): Promise<DomainBankSnapshot> {
+      const pool = resolveBankPool(poolId);
+      const blockNumber = opts?.blockNumber ?? (await publicClient.getBlockNumber());
+      const block = await publicClient.getBlock({ blockNumber });
       const shareUnit = 10n ** BigInt(pool.decimals);
       const [ssot, totalSupply, assetsPerShare, performance] = (await Promise.all([
         publicClient.readContract({
           address: pool.bank,
           abi: BANK_ABI,
           functionName: "getSSOT",
-          args: []
+          args: [],
+          blockNumber
         }),
         publicClient.readContract({
           address: pool.bank,
           abi: BANK_ABI,
           functionName: "totalSupply",
-          args: []
+          args: [],
+          blockNumber
         }),
         publicClient.readContract({
           address: pool.bank,
           abi: BANK_ABI,
           functionName: "convertToAssets",
-          args: [shareUnit]
+          args: [shareUnit],
+          blockNumber
         }),
         publicClient.readContract({
           address: pool.bank,
           abi: BANK_ABI,
           functionName: "getPerformance",
-          args: []
+          args: [],
+          blockNumber
         })
-      ])) as [any, bigint, bigint, readonly bigint[]];
+      ])) as [
+        any,
+        bigint,
+        bigint,
+        readonly [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+      ];
 
-      const minLiquidityBps = Number(ssot.minLiquidityBps);
-      const riskReserveBps = Number(ssot.riskReserveBps ?? ssot.minLiquidityBps);
-      const withdrawalBufferBps = Number(ssot.withdrawalBufferBps ?? ssot.minLiquidityBps);
+      const asyncState = await readAsyncBankState(publicClient, pool.bank, blockNumber);
 
       return {
         chainId: release.chainId,
@@ -1176,50 +1165,71 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         totalAssets: BigInt(ssot.NAV),
         totalSupply,
         assetsPerShare,
-        totalReserved: BigInt(ssot.R),
+        activeReserved: BigInt(ssot.R),
+        ...asyncState,
+        updatedAtBlock: blockNumber,
+        snapshotTimestamp: block.timestamp,
         riskInPaused: ssot.riskInPaused,
-        minLiquidityBps,
-        riskReserveBps,
-        riskReserve: BigInt(ssot.riskReserve ?? ssot.minLiq),
-        riskFree: BigInt(ssot.riskFree ?? ssot.free),
-        withdrawalBufferBps,
-        withdrawalBuffer: BigInt(ssot.withdrawalBuffer ?? ssot.minLiq),
-        withdrawable: BigInt(ssot.withdrawable ?? ssot.free),
+        riskReserveBps: Number(ssot.riskReserveBps),
+        riskReserve: BigInt(ssot.riskReserve),
+        riskFree: BigInt(ssot.riskFree),
+        withdrawalBufferBps: Number(ssot.withdrawalBufferBps),
+        withdrawalBuffer: BigInt(ssot.withdrawalBuffer),
+        withdrawable: BigInt(ssot.withdrawable),
         protocolFeesPayable: BigInt(ssot.PF),
         externalPayablesTotal: BigInt(ssot.XP),
-        totalTurnover: BigInt(performance[0] ?? 0n),
-        totalPayoutGross: BigInt(performance[1] ?? 0n),
-        totalPayoutNet: BigInt(performance[2] ?? 0n),
-        totalRefunded: BigInt(performance[3] ?? 0n),
-        totalFeeOnPayout: BigInt(performance[4] ?? 0n),
-        totalProtocolFeeAccrued: BigInt(performance[5] ?? 0n),
-        totalBetsHeld: BigInt(performance[6] ?? 0n),
-        totalBetsSettled: BigInt(performance[7] ?? 0n),
-        totalBetsRefunded: BigInt(performance[8] ?? 0n)
+        totalTurnover: BigInt(performance[0]),
+        totalPayoutGross: BigInt(performance[1]),
+        totalPayoutNet: BigInt(performance[2]),
+        totalRefunded: BigInt(performance[3]),
+        totalFeeOnPayout: BigInt(performance[4]),
+        totalProtocolFeeAccrued: BigInt(performance[5]),
+        totalBetsHeld: BigInt(performance[6]),
+        totalBetsSettled: BigInt(performance[7]),
+        totalBetsRefunded: BigInt(performance[8])
       };
     },
 
-    async getPosition(poolId: number, user: AddressT): Promise<DomainBankPosition> {
-      const pool = resolvePool(poolId);
-      const shares = (await publicClient.readContract({
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "balanceOf",
-        args: [user]
-      })) as bigint;
-
+    async getPosition(poolId: number, user: AddressT, opts): Promise<DomainBankPosition> {
+      const pool = resolveBankPool(poolId);
+      const blockNumber = opts?.blockNumber ?? (await publicClient.getBlockNumber());
+      const [block, shares] = await Promise.all([
+        publicClient.getBlock({ blockNumber }),
+        publicClient.readContract({
+          address: pool.bank,
+          abi: BANK_ABI,
+          functionName: "balanceOf",
+          args: [user],
+          blockNumber
+        })
+      ]);
       const assetsEquivalent = (await publicClient.readContract({
         address: pool.bank,
         abi: BANK_ABI,
         functionName: "convertToAssets",
-        args: [shares]
+        args: [shares],
+        blockNumber
       })) as bigint;
-
-      return { poolId, user, shares, assetsEquivalent };
+      const state = await readAsyncBankPosition(
+        publicClient,
+        pool.bank,
+        user,
+        blockNumber,
+        shares as bigint,
+        assetsEquivalent
+      );
+      return {
+        poolId,
+        user,
+        shares: shares as bigint,
+        updatedAtBlock: blockNumber,
+        snapshotTimestamp: block.timestamp,
+        ...state
+      };
     },
 
     async convertToShares(poolId: number, assets: bigint): Promise<bigint> {
-      const pool = resolvePool(poolId);
+      const pool = resolveBankPool(poolId);
       return (await publicClient.readContract({
         address: pool.bank,
         abi: BANK_ABI,
@@ -1229,7 +1239,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     },
 
     async convertToAssets(poolId: number, shares: bigint): Promise<bigint> {
-      const pool = resolvePool(poolId);
+      const pool = resolveBankPool(poolId);
       return (await publicClient.readContract({
         address: pool.bank,
         abi: BANK_ABI,
@@ -1241,11 +1251,18 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     async getProviderLedger(
       poolId: number,
       owner: AddressT,
-      opts?: { startBlock?: number; limit?: number }
+      opts?: {
+        startBlock?: number;
+        endBlock?: number;
+        beforeBlock?: number;
+        beforeLogIndex?: number;
+        limit?: number;
+      }
     ): Promise<BankProviderLedgerEntry[]> {
-      const pool = resolvePool(poolId);
+      const pool = resolveBankPool(poolId);
       const ownerAddress = getAddress(owner) as Address;
-      const latest = await publicClient.getBlockNumber();
+      const latest =
+        opts?.endBlock != null ? BigInt(opts.endBlock) : await publicClient.getBlockNumber();
       const fromBlock =
         opts?.startBlock != null && opts.startBlock >= 0
           ? BigInt(opts.startBlock)
@@ -1254,70 +1271,70 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
             : 0n;
       const limit = opts?.limit ?? PROVIDER_LEDGER_DEFAULT_LIMIT;
 
-      const [mints, burns] = await Promise.all([
-        readProviderTransferLogs({
+      type CashLog = {
+        transactionHash: Hex | null;
+        blockNumber: bigint | null;
+        logIndex: number | null;
+        cash: NonNullable<ReturnType<typeof decodeBankProviderCashEvent>>;
+      };
+      const cashLogs: CashLog[] = [];
+      for (
+        let start = fromBlock;
+        start <= latest;
+        start += PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS + 1n
+      ) {
+        const end =
+          start + PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS < latest
+            ? start + PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS
+            : latest;
+        const logs = await publicClient.getLogs({
           address: pool.bank,
-          args: { from: ZERO_ADDRESS, to: ownerAddress },
-          fromBlock,
-          publicClient,
-          toBlock: latest
-        }),
-        readProviderTransferLogs({
-          address: pool.bank,
-          args: { from: ownerAddress, to: ZERO_ADDRESS },
-          fromBlock,
-          publicClient,
-          toBlock: latest
-        })
-      ]);
-
-      const shareLogs = [
-        ...mints.map((log) => ({ ...log, action: "deposit" as const })),
-        ...burns.map((log) => ({ ...log, action: "withdraw" as const }))
-      ]
-        .filter((log) => log.transactionHash && log.blockNumber != null && log.args?.amount != null)
-        .sort((a, b) => {
-          const blockDelta = Number((b.blockNumber ?? 0n) - (a.blockNumber ?? 0n));
-          if (blockDelta !== 0) return blockDelta;
-          return Number(b.logIndex ?? 0) - Number(a.logIndex ?? 0);
-        })
+          events: [BANK_DEPOSIT_EVENT, BANK_WITHDRAW_EVENT, BANK_RECOVERY_EVENT],
+          fromBlock: start,
+          toBlock: end
+        });
+        for (const log of logs) {
+          const cash = decodeBankProviderCashEvent(
+            pool.bank,
+            log.eventName!,
+            log.args as Record<string, unknown>
+          );
+          if (
+            cash?.owner === ownerAddress.toLowerCase() &&
+            log.transactionHash &&
+            log.blockNumber != null &&
+            log.logIndex != null &&
+            !log.removed &&
+            (opts?.beforeBlock == null ||
+              log.blockNumber < BigInt(opts.beforeBlock) ||
+              (log.blockNumber === BigInt(opts.beforeBlock) &&
+                log.logIndex < (opts.beforeLogIndex ?? 0)))
+          )
+            cashLogs.push({ ...log, cash });
+        }
+      }
+      const selected = cashLogs
+        .sort((a, b) => Number(b.blockNumber! - a.blockNumber!) || b.logIndex! - a.logIndex!)
         .slice(0, limit);
-
-      const entries = await Promise.all(
-        shareLogs.map(async (log): Promise<BankProviderLedgerEntry | null> => {
-          const txHash = log.transactionHash;
-          const blockNumber = log.blockNumber;
-          const shares = log.args?.amount;
-          if (!txHash || blockNumber == null || shares == null) return null;
-
-          const [receipt, block] = await Promise.all([
-            publicClient.getTransactionReceipt({ hash: txHash }),
-            publicClient.getBlock({ blockNumber })
-          ]);
-          const receiptLogs = receipt.logs as ReceiptLogLike[];
-          const assets = extractProviderAssetAmount({
-            account: ownerAddress,
-            action: log.action,
-            asset: pool.asset,
-            bank: pool.bank,
-            logs: receiptLogs
-          });
-
+      return Promise.all(
+        selected.map(async (log): Promise<BankProviderLedgerEntry> => {
+          const block = await publicClient.getBlock({ blockNumber: log.blockNumber! });
           return {
-            id: `${release.chainId}:${txHash}:${log.logIndex ?? 0}`,
-            action: log.action,
-            txHash,
-            blockNumber: Number(blockNumber),
+            id: `${release.chainId}:${log.transactionHash}:${log.logIndex ?? 0}`,
+            action: log.cash.action,
+            txHash: log.transactionHash!,
+            blockNumber: Number(log.blockNumber),
             logIndex: log.logIndex ?? 0,
             timestamp: Number(block.timestamp) * 1000,
-            assets,
-            shares,
-            sharePrice: assetPerShare(assets, shares, pool.decimals)
+            assets: log.cash.assets,
+            shares: log.cash.shares,
+            receiver: log.cash.receiver,
+            caller: log.cash.caller,
+            epochId: log.cash.epochId,
+            sharePrice: assetPerShare(log.cash.assets, log.cash.shares, pool.decimals)
           };
         })
       );
-
-      return entries.filter((entry): entry is BankProviderLedgerEntry => Boolean(entry));
     },
 
     async getAssetBalance(asset: AddressT, user: AddressT): Promise<bigint> {
@@ -1330,7 +1347,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     },
 
     async getAllowance(poolId: number, owner: AddressT): Promise<bigint> {
-      const pool = resolvePool(poolId);
+      const pool = resolveBankPool(poolId);
       return (await publicClient.readContract({
         address: pool.asset,
         abi: ERC20_ABI,
@@ -1406,56 +1423,20 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       });
     },
 
-    async withdraw(
-      poolId: number,
-      assets: bigint,
-      receiver: AddressT,
-      owner: AddressT
-    ): Promise<TxResult & { shares?: bigint }> {
-      const walletReq = requireWallet();
-      if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
-      const poolReq = getPool(poolId);
-      if ("error" in poolReq) return { txHash: "0x0" as Hex, ok: false, error: poolReq.error };
-      const pool = normalizePool(poolReq);
-
-      return tx.simulateAndWrite({
-        chainId: release.chainId,
-        releaseDigest: release.releaseDigest,
-        action: "WITHDRAW",
-        publicClient,
-        walletClient: walletReq.walletClient,
-        account: walletReq.account,
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "withdraw",
-        args: [assets, receiver, owner]
-      });
+    withdraw(poolId, assets, receiver, owner) {
+      return bankExit(poolId, "withdraw", "WITHDRAW", (self) => [
+        assets,
+        receiver ?? self,
+        owner ?? self
+      ]);
     },
 
-    async redeem(
-      poolId: number,
-      shares: bigint,
-      receiver: AddressT,
-      owner: AddressT
-    ): Promise<TxResult & { assets?: bigint }> {
-      const walletReq = requireWallet();
-      if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
-      const poolReq = getPool(poolId);
-      if ("error" in poolReq) return { txHash: "0x0" as Hex, ok: false, error: poolReq.error };
-      const pool = normalizePool(poolReq);
-
-      return tx.simulateAndWrite({
-        chainId: release.chainId,
-        releaseDigest: release.releaseDigest,
-        action: "REDEEM",
-        publicClient,
-        walletClient: walletReq.walletClient,
-        account: walletReq.account,
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "redeem",
-        args: [shares, receiver, owner]
-      });
+    redeem(poolId, shares, receiver, owner) {
+      return bankExit(poolId, "redeem", "REDEEM", (self) => [
+        shares,
+        receiver ?? self,
+        owner ?? self
+      ]);
     },
 
     async mint(
@@ -1469,11 +1450,13 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       if ("error" in poolReq) return { txHash: "0x0" as Hex, ok: false, error: poolReq.error };
       const pool = normalizePool(poolReq);
 
+      const blockNumber = await publicClient.getBlockNumber();
       const assetsNeeded = (await publicClient.readContract({
         address: pool.bank,
         abi: BANK_ABI,
-        functionName: "convertToAssets",
-        args: [shares]
+        functionName: "previewMint",
+        args: [shares],
+        blockNumber
       })) as bigint;
 
       const allowance = (await publicClient.readContract({
@@ -1536,24 +1519,17 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     },
 
     async maxWithdraw(poolId: number, owner: AddressT): Promise<bigint> {
-      const pool = resolvePool(poolId);
-      const shares = (await publicClient.readContract({
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "maxRedeem",
-        args: [owner]
-      })) as bigint;
-      if (shares === 0n) return 0n;
+      const pool = resolveBankPool(poolId);
       return (await publicClient.readContract({
         address: pool.bank,
         abi: BANK_ABI,
-        functionName: "convertToAssets",
-        args: [shares]
+        functionName: "maxWithdraw",
+        args: [owner]
       })) as bigint;
     },
 
     async maxRedeem(poolId: number, owner: AddressT): Promise<bigint> {
-      const pool = resolvePool(poolId);
+      const pool = resolveBankPool(poolId);
       return (await publicClient.readContract({
         address: pool.bank,
         abi: BANK_ABI,
@@ -1563,7 +1539,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     },
 
     async playerTurnover(poolId: number, player: AddressT): Promise<bigint> {
-      const pool = resolvePool(poolId);
+      const pool = resolveBankPool(poolId);
       return (await publicClient.readContract({
         address: pool.bank,
         abi: BANK_ABI,
@@ -1623,7 +1599,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     },
 
     async getXPBuckets(poolId: number, payee: AddressT): Promise<DomainXPBuckets> {
-      const pool = resolvePool(poolId);
+      const pool = resolveBankPool(poolId);
       const [accrued, locked, holdback, releasable] = await Promise.all([
         publicClient.readContract({
           address: pool.bank,

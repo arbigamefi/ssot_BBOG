@@ -23,7 +23,7 @@ vi.mock("../ssot/release/ReleaseProvider", () => ({
   })
 }));
 
-vi.mock("./WalletButton", () => ({
+vi.mock("./wallet-entry-context", () => ({
   useConnectModal: () => ({ openConnectModal: vi.fn() })
 }));
 
@@ -170,7 +170,7 @@ describe("AppShell", () => {
     }
   });
 
-  it("renders at least one WalletButton", () => {
+  it("renders wallet connection control", () => {
     render(
       <AppShell>
         <div>content</div>

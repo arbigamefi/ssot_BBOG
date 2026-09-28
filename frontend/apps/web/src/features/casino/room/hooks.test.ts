@@ -61,7 +61,29 @@ describe("game room hooks helpers", () => {
 });
 
 describe("live pool availability", () => {
-  const snapshot = { totalAssets: 100n, totalReserved: 0n, riskInPaused: false };
+  const snapshot = {
+    totalAssets: 100n,
+    totalReserved: 0n,
+    activeReserved: 0n,
+    riskInPaused: false
+  };
+  it("keeps betting ready while historical epochs have earlier bets outstanding", async () => {
+    const sdk = {
+      bank: {
+        getSnapshot: vi.fn().mockResolvedValue({
+          ...snapshot,
+          recoveryBacking: 50n,
+          totalReserved: 20n,
+          currentOpenHolds: 0n,
+          currentEpoch: 2n,
+          queuedBatch: null
+        })
+      }
+    };
+    const { result } = renderHook(() => usePoolSnapshot({ sdk, poolId: 1 }));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.snapshot?.riskInPaused).toBe(false);
+  });
   it("blocks until a read completes, shows pause, and refreshes after governance resumes", async () => {
     const getSnapshot = vi
       .fn()
@@ -75,11 +97,11 @@ describe("live pool availability", () => {
     expect(result.current.status).toBe("loading");
     await waitFor(() => expect(result.current.status).toBe("ready"));
   });
-  it("does not interpret failed or incomplete reads as an open pool", async () => {
+  it("does not interpret failed reads as an open pool", async () => {
     const getSnapshot = vi
       .fn()
       .mockRejectedValueOnce(new Error("offline"))
-      .mockResolvedValue({ totalAssets: 100n, totalReserved: 0n });
+      .mockRejectedValue(new Error("RPC unavailable"));
     const sdk = { bank: { getSnapshot } };
     const { result } = renderHook(() => usePoolSnapshot({ sdk, poolId: 1 }));
     await waitFor(() => expect(result.current.status).toBe("unavailable"));

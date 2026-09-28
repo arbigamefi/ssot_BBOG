@@ -47,8 +47,8 @@ interface IERC20MetadataLikeV16 {
 ///   POOL_ID_i                         default i + 1
 ///   POOL_ASSET_i                      required
 ///   POOL_DOMAIN_i                     default 1; 1=Casino, 2=Sports, 3=Future
-///   BANK_MIN_LIQ_BPS_i                default 1000; legacy alias for risk reserve
-///   BANK_WITHDRAWAL_BUFFER_BPS_i      default BANK_MIN_LIQ_BPS_i
+///   BANK_RISK_RESERVE_BPS_i                default 1000
+///   BANK_WITHDRAWAL_BUFFER_BPS_i      default BANK_RISK_RESERVE_BPS_i
 ///   BANK_MIN_TURNOVER_FOR_UNLOCK_i    default 20 asset units
 ///   BANK_HOLDBACK_VESTING_SECONDS_i   default 86400
 ///   LP_NAME_i / LP_SYMBOL_i / LP_DECIMALS_i
@@ -134,7 +134,7 @@ contract DeployV16 is Script {
         address asset;
         address bank;
         SSOTTypes.PoolDomain domain;
-        uint16 minLiqBps;
+        uint16 riskReserveBps;
         uint16 withdrawalBufferBps;
         uint256 minTurnoverForUnlock;
         uint256 holdbackVestingSeconds;
@@ -178,7 +178,7 @@ contract DeployV16 is Script {
         PoolConfig[] memory pools = new PoolConfig[](cfg.poolCount);
         for (uint256 i = 0; i < cfg.poolCount; ++i) {
             pools[i] = _readPoolConfig(i);
-            require(pools[i].minLiqBps <= 10_000, "BANK_MIN_LIQ_BPS_i out of range");
+            require(pools[i].riskReserveBps <= 10_000, "BANK_RISK_RESERVE_BPS_i out of range");
             require(pools[i].withdrawalBufferBps <= 10_000, "BANK_WITHDRAWAL_BUFFER_BPS_i out of range");
         }
         bool hasSports = _hasSportsPool(pools);
@@ -283,7 +283,12 @@ contract DeployV16 is Script {
 
         for (uint256 i = 0; i < pools.length; ++i) {
             Bank bank = new Bank(
-                pools[i].asset, cfg.gov, pools[i].minLiqBps, pools[i].lpName, pools[i].lpSymbol, pools[i].lpDecimals
+                pools[i].asset,
+                cfg.gov,
+                pools[i].riskReserveBps,
+                pools[i].lpName,
+                pools[i].lpSymbol,
+                pools[i].lpDecimals
             );
             pools[i].bank = address(bank);
             bank.setRiskInPaused(true);
@@ -293,7 +298,7 @@ contract DeployV16 is Script {
             bank.setSettlementRouterOnce(address(d.router));
             bank.setMinPlayerTurnoverForUnlock(pools[i].minTurnoverForUnlock);
             bank.setHoldbackVestingSeconds(pools[i].holdbackVestingSeconds);
-            if (pools[i].withdrawalBufferBps != pools[i].minLiqBps) {
+            if (pools[i].withdrawalBufferBps != pools[i].riskReserveBps) {
                 bank.setWithdrawalBufferBps(pools[i].withdrawalBufferBps);
             }
 
@@ -372,15 +377,7 @@ contract DeployV16 is Script {
         );
         cfg.poolCount = vm.envOr("NUM_POOLS", uint256(1));
 
-        // SSOT v1.6 allocation. The v1.5 budget/level variables no longer mean anything; refuse them rather than
-        // deploy a schedule the operator did not intend. Markup always starts disabled.
-        _rejectRetiredEnv("MAX_AFFILIATE_DELTA_BPS");
-        _rejectRetiredEnv("REF_BASE_BUDGET_BPS");
-        _rejectRetiredEnv("REF_DELTA_BUDGET_BPS");
-        _rejectRetiredEnv("REF_LEVELS");
-        for (uint256 i; i < 6; ++i) {
-            _rejectRetiredEnv(string.concat("REF_LEVEL", vm.toString(i), "_BPS"));
-        }
+        // The current referral schedule; affiliate markup starts disabled.
         cfg.refConfig.l0Bps = _bps("REF_L0_BPS", 1000);
         cfg.refConfig.l1Bps = _bps("REF_L1_BPS", 2000);
         cfg.refConfig.l2Bps = _bps("REF_L2_BPS", 500);
@@ -389,10 +386,6 @@ contract DeployV16 is Script {
             uint256(cfg.refConfig.l0Bps) + cfg.refConfig.l1Bps + cfg.refConfig.l2Bps <= HouseEdgeLib.MAX_REFERRAL_BPS,
             "REF_L0_BPS + REF_L1_BPS + REF_L2_BPS exceeds 3500"
         );
-    }
-
-    function _rejectRetiredEnv(string memory key) internal view {
-        require(!vm.envExists(key), string.concat(key, " is retired by the v1.6 allocation; remove it"));
     }
 
     function _readSportsConfig(bool enabled) internal view returns (SportsConfig memory cfg) {
@@ -461,8 +454,8 @@ contract DeployV16 is Script {
         uint256 domainRaw = vm.envOr(string.concat("POOL_DOMAIN_", suffix), uint256(1));
         cfg.domain = _domainFromRaw(domainRaw);
 
-        cfg.minLiqBps = _bps(string.concat("BANK_MIN_LIQ_BPS_", suffix), 1000);
-        cfg.withdrawalBufferBps = _bps(string.concat("BANK_WITHDRAWAL_BUFFER_BPS_", suffix), cfg.minLiqBps);
+        cfg.riskReserveBps = _bps(string.concat("BANK_RISK_RESERVE_BPS_", suffix), 1000);
+        cfg.withdrawalBufferBps = _bps(string.concat("BANK_WITHDRAWAL_BUFFER_BPS_", suffix), cfg.riskReserveBps);
         cfg.minTurnoverForUnlock =
             vm.envOr(string.concat("BANK_MIN_TURNOVER_FOR_UNLOCK_", suffix), uint256(20 * oneAssetUnit));
         cfg.holdbackVestingSeconds = vm.envOr(string.concat("BANK_HOLDBACK_VESTING_SECONDS_", suffix), uint256(86400));
@@ -471,7 +464,6 @@ contract DeployV16 is Script {
         uint256 lpDecimals = vm.envOr(string.concat("LP_DECIMALS_", suffix), uint256(assetDecimals));
         require(lpDecimals == assetDecimals, "LP_DECIMALS_i must match asset decimals");
         cfg.lpDecimals = uint8(lpDecimals);
-        require(cfg.lpDecimals == assetDecimals, "LP_DECIMALS_i must match asset decimals");
     }
 
     function _bps(string memory key, uint256 fallbackValue) internal view returns (uint16) {
@@ -687,8 +679,8 @@ contract DeployV16 is Script {
             json = vm.serializeUint(
                 obj, string.concat("poolBankDecimals_", suffix), uint256(Bank(pools[i].bank).decimals())
             );
-            json = vm.serializeUint(obj, string.concat("poolBankMinLiqBps_", suffix), pools[i].minLiqBps);
-            json = vm.serializeUint(obj, string.concat("poolBankRiskReserveBps_", suffix), pools[i].minLiqBps);
+            json = vm.serializeUint(obj, string.concat("poolBankMinLiqBps_", suffix), pools[i].riskReserveBps);
+            json = vm.serializeUint(obj, string.concat("poolBankRiskReserveBps_", suffix), pools[i].riskReserveBps);
             json = vm.serializeUint(
                 obj, string.concat("poolBankWithdrawalBufferBps_", suffix), pools[i].withdrawalBufferBps
             );
@@ -726,7 +718,7 @@ contract DeployV16 is Script {
                     abi.encode(
                         pools[i].asset,
                         cfg.gov,
-                        pools[i].minLiqBps,
+                        pools[i].riskReserveBps,
                         pools[i].lpName,
                         pools[i].lpSymbol,
                         pools[i].lpDecimals
@@ -837,7 +829,7 @@ contract DeployV16 is Script {
                     abi.encode(
                         pools[i].asset,
                         cfg.gov,
-                        pools[i].minLiqBps,
+                        pools[i].riskReserveBps,
                         pools[i].lpName,
                         pools[i].lpSymbol,
                         pools[i].lpDecimals

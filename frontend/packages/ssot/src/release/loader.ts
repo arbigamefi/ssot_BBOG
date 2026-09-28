@@ -17,12 +17,15 @@ export function loadEmbeddedRelease(chainId: number): ReleaseLoadResult {
   }
 
   const release = parsed.data;
+  if (release.meta?.releaseLock?.schema !== "SSOT_RELEASE_DIGEST_V16") {
+    return { ok: false, error: "Expected current v1.6 release metadata" };
+  }
   const warnings: string[] = [];
   if (release.isPlaceholder) {
     warnings.push("Release snapshot is marked as placeholder");
   }
   if (release.meta?.schemaVersion !== 2) {
-    warnings.push("Release schemaVersion is not v1.3 schemaVersion=2");
+    warnings.push("Release schemaVersion must be 2");
   }
   if (release.contracts.gameHub === "0x0000000000000000000000000000000000000000") {
     warnings.push("GameHub address is zero; release is not usable for writes");

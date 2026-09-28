@@ -58,7 +58,7 @@ contract BankObservabilityTest is Test {
         vm.stopPrank();
 
         vm.warp(bank.redeemBatch(1).cutoff);
-        bank.settleBatch();
+        bank.activateBatch();
         assertEq(bank.maxWithdraw(alice), 25e6, "the controller's priced claim");
         assertEq(bank.maxWithdraw(bob), 0, "claims are scoped to the controller, not the global cap");
 
@@ -77,9 +77,8 @@ contract BankObservabilityTest is Test {
         vm.prank(gov);
         bufferedBank.setSettlementRouterOnce(address(this));
 
-        assertEq(bufferedBank.minLiquidityBps(), 9000, "legacy minLiquidityBps aliases risk reserve");
-        assertEq(bufferedBank.riskReserveBps(), 9000, "risk reserve should initialize from legacy ctor arg");
-        assertEq(bufferedBank.withdrawalBufferBps(), 9000, "withdrawal buffer defaults to legacy ctor arg");
+        assertEq(bufferedBank.riskReserveBps(), 9000, "risk reserve should initialize from initial buffer");
+        assertEq(bufferedBank.withdrawalBufferBps(), 9000, "withdrawal buffer defaults to initial buffer");
 
         asset.mint(alice, 1_000e6);
         vm.startPrank(alice);
@@ -89,7 +88,7 @@ contract BankObservabilityTest is Test {
         vm.stopPrank();
 
         vm.warp(bufferedBank.redeemBatch(1).cutoff);
-        bufferedBank.settleBatch();
+        bufferedBank.activateBatch();
         vm.prank(alice);
         bufferedBank.withdraw(1_000e6, alice, alice);
         assertEq(bufferedBank.totalAssets(), 0, "a priced exit draws on exitPayable, not on the 90% buffer");

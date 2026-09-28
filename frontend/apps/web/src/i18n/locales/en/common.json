@@ -588,23 +588,23 @@
         "title": "Bet details",
         "outcomes": {
           "refunded": {
-            "label": "Stake refunded",
-            "detail": "The refund path returned the stake after the VRF timeout window."
+            "label": "Refund settled",
+            "detail": "The refund path settled after the VRF timeout window. See the transfer status below."
           },
           "win": {
             "label": "Won bet",
-            "detail": "The round settled on-chain and payout is confirmed."
+            "detail": "The round settled on-chain. See the transfer status below."
           },
           "winPending": {
             "label": "Won bet",
             "detail": "The VRF result is revealed. Payout settlement is still pending."
           },
           "returned": {
-            "label": "Stake returned",
+            "label": "Settlement equals stake",
             "detail": "The settled payout equals the stake."
           },
           "returnedPending": {
-            "label": "Stake returned",
+            "label": "Expected settlement equals stake",
             "detail": "The VRF result is revealed. Settlement confirmation is still pending."
           },
           "loss": {
@@ -629,7 +629,7 @@
           "player": "Player",
           "multiplier": "Multiplier",
           "betAmount": "Bet amount",
-          "payout": "Total returned",
+          "payout": "Settlement amount",
           "expectedPayout": "Potential payout",
           "pending": "Pending",
           "betId": "Bet ID",
@@ -703,7 +703,7 @@
         },
         "metrics": {
           "stake": "Stake",
-          "payout": "Total returned",
+          "payout": "Settlement amount",
           "net": "Net",
           "state": "State"
         },
@@ -985,6 +985,12 @@
         "unavailableLabel": "Pool status unavailable",
         "pausedLabel": "Pool paused",
         "refresh": "Check pool status"
+      },
+      "payment": {
+        "transferred": "This settlement transaction transferred the settlement amount to the player wallet.",
+        "payable": "The transfer did not complete during this settlement; the amount was recorded as payable. Check Earn for the current claimable total and your wallet for later claims.",
+        "unknown": "The settlement amount is confirmed; the wallet transfer for this bet has not been verified.",
+        "noPayment": "No player transfer is due for this bet."
       }
     },
     "directory": {
@@ -1762,7 +1768,7 @@
       "loading": {
         "eyebrow": "Readback",
         "title": "Loading market",
-        "description": "Reading market, result, and exposure records through the v1.3 SDK.",
+        "description": "Reading market, result, and exposure records through the SDK.",
         "body": "Loading SportsHub market state..."
       },
       "market": {
@@ -2334,7 +2340,7 @@
           "lost": "Lost",
           "randomReady": "Random ready",
           "placed": "Placed",
-          "refunded": "Refunded",
+          "refunded": "Refund settled",
           "pending": "Pending",
           "refreshing": "Refreshing"
         },
@@ -2362,13 +2368,13 @@
           }
         },
         "toast": {
-          "refunded": "Bet refunded successfully",
+          "refunded": "Refund settlement completed. Verify the wallet transfer separately.",
           "refundFailed": "Refund transaction failed",
           "finalized": "Bet finalized successfully",
           "finalizeFailed": "Finalize transaction failed"
         },
         "outcomes": {
-          "refunded": "Refunded",
+          "refunded": "Refund settled",
           "netResult": "Net result",
           "loss": "Loss"
         },
@@ -2399,7 +2405,7 @@
           "vrfFeeCharged": "VRF fee charged",
           "vrfRequestId": "VRF request id",
           "randomHash": "Random hash",
-          "payout": "Total returned",
+          "payout": "Settlement amount",
           "protocolFee": "Protocol fee",
           "refund": "Refund",
           "placedAt": "Placed at",
@@ -2440,8 +2446,8 @@
               "description": "GameHub settled payout or loss."
             },
             "refunded": {
-              "title": "Refunded",
-              "description": "Stake returned to the player."
+              "title": "Refund settled",
+              "description": "The refund path settled; the wallet transfer must be verified separately."
             }
           }
         },
@@ -2738,65 +2744,50 @@
     "hero": {
       "eyebrow": "Bankroll provider",
       "title": "Provide payout capital to the {symbol} pool.",
-      "description": "LPs back casino payouts and carry the variance of game results. Under the current v1.5 rules, the house edge accrues to protocol fees and referral rewards, not to LP shares.",
-      "descriptionLpShare": "LPs back casino payouts and carry the variance of game results. Under the v1.6 rules, LPs keep half of every settled bet's house edge; the other half funds referral rewards and protocol fees.",
+      "description": "LPs back casino payouts and carry the variance of game results. Under the v1.6 rules, LPs keep half of every settled bet's house edge; the other half funds referral rewards and protocol fees.",
       "disclosure": "Reserve, share price, and lifetime performance (gross gaming revenue, hold, velocity) are read on-chain from the Bank contract and are verifiable. Only the daily trend chart and max drawdown are indexed and may lag.",
       "bankAddress": "Bank address"
     },
     "metrics": {
       "sharePrice": {
-        "label": "Value / 1k shares",
-        "detail": "Redeemable assets per 1,000 LP shares. The one-share price remains in the reserve ledger."
+        "label": "Value / 1k shares"
       },
       "totalShares": {
-        "label": "Total shares",
-        "detail": "Outstanding LP share supply."
-      },
-      "freeReserve": {
-        "label": "Free reserve",
-        "detail": "Unreserved bankroll available above open liabilities."
-      },
-      "totalAssets": {
-        "label": "Current vault NAV",
-        "detail": "Verifiable NAV for the selected Bank vault."
-      },
-      "minLiquidity": {
-        "label": "Min liquidity",
-        "detail": "Withdrawal floor that protects payout capacity."
+        "label": "Active shares",
+        "detail": "Active LP share supply; priced exit shares have been burned."
       }
     },
     "summary": {
       "capitalPosture": {
         "title": "Verifiable reserve ledger",
         "readModel": "on-chain read",
-        "totalAssets": "Current vault NAV",
+        "totalAssets": "Active vault NAV",
         "loading": "Reading the latest bank snapshot…",
-        "detail": "Selected Bank vault NAV read from the active contract.",
-        "totalAssetsDetail": "Selected vault NAV read from the active contract."
+        "detail": "Current capital backing active shares; historical backing and payables are excluded.",
+        "totalAssetsDetail": "Current capital backing active shares; historical backing and payables are excluded."
       },
       "freeReserve": {
         "label": "Free reserve",
-        "detail": "Capital not currently reserved for open liabilities."
+        "detail": "Active capital not reserved for open positions."
       },
       "sharePrice": {
-        "label": "Share price",
-        "detail": "Direct ERC4626-like conversion: one full LP share into underlying assets."
+        "label": "Share price"
       },
       "totalShares": {
-        "label": "Total shares",
-        "detail": "LP shares currently issued. Pool NAV changes are reflected in share value."
+        "label": "Active shares",
+        "detail": "Active LP share supply; priced exit shares have been burned."
       },
       "position": {
         "label": "Your position",
         "detail": "Assets equivalent for the connected wallet."
       },
       "liquidity": {
-        "label": "Liquidity policy",
-        "detail": "Floor {floor} · Bank {bank}"
+        "label": "Risk reserve policy",
+        "detail": "Risk reserve {floor} · Bank {bank}"
       },
       "reserved": {
-        "label": "Reserved liabilities",
-        "detail": "Free reserve {freeReserve} · Min liquidity {minLiquidity}"
+        "label": "Active reserved liabilities",
+        "detail": "Free reserve {freeReserve} · Risk reserve {riskReserve}"
       }
     },
     "actions": {
@@ -2850,9 +2841,8 @@
         "statusDialog": "Bank transaction status"
       },
       "depositsClosed": {
-        "title": "Mainnet deposits are closed",
-        "body": "Under the current v1.5 rules, LPs carry the variance of game results, while the house edge accrues to protocol fees and referral rewards rather than LP shares. New deposits stay closed on mainnet until the pool terms change. Existing shares can still be withdrawn under the pool's rules.",
-        "bodyLpShare": "New deposits stay closed on mainnet until this pool opens them. Existing shares can still be withdrawn under the pool's rules."
+        "title": "New deposits are closed",
+        "body": "This pool is not accepting new deposits. Existing LP requests and claims remain available under the pool’s rules."
       }
     },
     "flows": {
@@ -2906,8 +2896,8 @@
         "detail": "Free reserve after reserved liabilities ({reserved}). Compare this with max-payout controls before opening deposits publicly."
       },
       "liquidityFloor": {
-        "label": "Liquidity floor",
-        "detail": "{bps} minimum liquidity policy, currently {amount}."
+        "label": "Withdrawal buffer",
+        "detail": "{bps} buffer for protocol and referral claims, currently {amount}. Priced LP claims and player payables are exempt."
       },
       "release": {
         "label": "Release digest",
@@ -2958,8 +2948,7 @@
         "d7": "7d",
         "d30": "30d"
       },
-      "note": "Lifetime gross gaming revenue comes from Bank.getPerformance() on-chain (turnover minus gross payouts). It is not LP profit: the LP share price also reflects the payout fees the pool keeps and the protocol fees and referral rewards accrued against it. Capital velocity is lifetime turnover divided by current chain-read vault assets. The daily chart below is indexed and may lag. Not promised yield.",
-      "noteLpShare": "Lifetime gross gaming revenue comes from Bank.getPerformance() on-chain (turnover minus gross payouts). It is not LP profit: the LP share price also reflects the payout fees the pool keeps and the referral rewards and protocol fees accrued against it, which together take at most half of each bet's house edge. Capital velocity is lifetime turnover divided by current chain-read vault assets. The daily chart below is indexed and may lag. Not promised yield.",
+      "note": "Lifetime gross gaming revenue comes from Bank.getPerformance() on-chain (turnover minus gross payouts). It is not LP profit: the LP share price also reflects the payout fees the pool keeps and the referral rewards and protocol fees accrued against it, which together take at most half of each bet's house edge. Capital velocity is lifetime turnover divided by current chain-read vault assets. The daily chart below is indexed and may lag. Not promised yield.",
       "equityTitle": "Cumulative gross gaming revenue",
       "peak": "Peak",
       "trough": "Trough",
@@ -2967,27 +2956,29 @@
     },
     "ledger": {
       "eyebrow": "Provider ledger",
-      "title": "Deposits and withdrawals",
-      "readModel": "ERC4626 events",
+      "title": "Deposits, exits and recovery",
+      "readModel": "Bank cash-flow events",
       "connectWallet": "Connect a wallet to view your bank provider ledger.",
       "loading": "Loading provider ledger…",
       "loadingMore": "Loading more…",
       "loadMore": "Load more",
       "loadedRows": "{count} rows loaded",
       "end": "End of ledger",
-      "empty": "No deposits or withdrawals found for this wallet.",
-      "note": "Rows are reconstructed from Bank share mint/burn transfers and the matching asset transfer in the same transaction. Share price is the transaction asset amount divided by the share amount, not the current share price.",
+      "empty": "No LP cash flows found for this wallet.",
+      "note": "Only actual deposits, exit payments and historical recovery payments are cash flows. Requests, activation and available recovery are not receipts. Donations to the Bank are excluded from cash received. Share price is shown only when the event has shares.",
       "block": "Block {blockNumber}",
       "actions": {
         "deposit": "Deposit",
-        "withdraw": "Withdraw"
+        "withdraw": "Withdraw",
+        "recovery": "Recovery",
+        "donation": "Donation"
       },
       "summary": {
         "deposited": "Loaded deposits",
         "withdrawn": "Loaded withdrawals",
-        "openValue": "Open value",
+        "openValue": "Known LP value",
         "netPnl": "Loaded net P&L",
-        "shares": "Shares"
+        "shares": "Wallet shares"
       },
       "columns": {
         "type": "Type",
@@ -2996,13 +2987,86 @@
         "shares": "Shares",
         "sharePrice": "Share price",
         "tx": "Tx"
-      }
+      },
+      "incomplete": "Cash-flow coverage through this snapshot is not yet verified. A complete return is unavailable."
     },
     "overview": {
       "totalAssets": {
         "label": "Current vault NAV",
         "detail": "Verifiable NAV for the selected Bank vault from the active release."
       }
+    },
+    "async": {
+      "title": "Request and claim an exit",
+      "requestDetail": "Request an exit using wallet shares. Activation prices available cash immediately and preserves historical recovery rights separately. Unresolved old bets do not block later batches.",
+      "requestAmount": "Shares to request",
+      "wallet": "Wallet: {amount} shares",
+      "pendingRisk": "Queued shares still bear active pool results. At activation, all existing holders retain their share of earlier bets. Cash can be zero; recovery is uncertain and may arrive later.",
+      "request": "Request redemption",
+      "cancelDetail": "Cancel returns all your queued shares while the batch remains unactivated, including after the earliest activation time. Activated requests cannot be cancelled. The transaction checks current chain state.",
+      "cancel": "Cancel queued shares",
+      "claimableTitle": "Priced assets to claim",
+      "claimDetail": "These assets are reserved for your exit. Claiming all priced shares pays the assigned cash and preserves every historical recovery right.",
+      "claimAll": "Claim all exit assets",
+      "clearZero": "Clear zero-value exit shares",
+      "paused": "The pool is paused. Requests and queued cancellations remain available; deposits, exit cash claims and recovery payments wait until it resumes.",
+      "unknown": "Pool status is temporarily unavailable. Refresh before trying again.",
+      "refresh": "Refresh pool state",
+      "depositTerms": "Deposits join active capital immediately at its current book price. This includes current unsettled bets, but excludes recovery rights from earlier activations.",
+      "issuerRisk": "Token issuer restrictions can delay transfers and claims. A recorded entitlement does not mean cash has reached your wallet.",
+      "totalEquity": "Active and priced LP value (estimate)",
+      "totalEquityDetail": "Wallet value + queued estimate + priced cash. Historical recovery is shown separately and is not included in this estimate.",
+      "walletEquity": "Wallet shares / book value",
+      "claimableEquity": "Priced exit assets",
+      "playerTitle": "Player award awaiting payment",
+      "playerDetail": "A settled or refunded bet has recorded an unpaid award. This is separate from LP equity. Claim pays only your player address and remains available while the pool is paused; issuer restrictions may still prevent delivery.",
+      "claimPlayer": "Claim player award",
+      "requested": "Redemption request confirmed. Queued shares remain active until batch activation.",
+      "cancelled": "Eligible shares returned to your wallet.",
+      "claimed": "Exit claim confirmed.",
+      "playerClaimed": "Player payment confirmed.",
+      "sharePriceDetail": "Current book value per 1,000 LP shares; this is not a priced exit entitlement.",
+      "shareUnitDetail": "Current active book value per LP share. Historical recovery rights are separate from active shares.",
+      "exitLiabilities": "Reserved exit cash and player payables",
+      "exitLiabilitiesDetail": "LP exits: {exits}. Unpaid player awards: {players}. Both are already excluded from NAV.",
+      "inactivePool": "This pool is inactive and closed to new bets and deposits. Existing redemption requests, eligible cancellations and claims remain available under the contract rules.",
+      "queuedTitle": "Queued request",
+      "queuedDetail": "Shares remain active until activation. Earlier unresolved bets do not block this batch. Its cash price is fixed at activation; historical recovery remains separate. Available backing and emergency pauses still apply; no deadline for a full cash payment is promised.",
+      "eligibleAt": "Earliest activation: {time}. This is not a guaranteed activation or payment time.",
+      "remainingHolds": "Earlier bets still open: {count}",
+      "queuedEquity": "Queued shares / liquid cash estimate",
+      "queuedQuoteDetail": "Current on-chain cash quote if activated now; historical recovery is excluded and the quote can change.",
+      "receiver": "Cash receiver: {receiver}"
+    },
+    "pools": {
+      "label": "Pool",
+      "option": "{symbol} · Pool #{poolId} · {bank}",
+      "historyUnavailable": "The historical chart cannot isolate this pool. Cumulative figures above come from the selected pool’s on-chain records."
+    },
+    "recovery": {
+      "title": "Historical recovery rights",
+      "detail": "Earlier bets remain assigned to their original holders, including holders who stayed in the pool. A zero wallet share balance does not remove these rights.",
+      "loading": "Discovering historical rights…",
+      "incomplete": "Historical discovery is incomplete. Load the remaining pages before assessing your full position.",
+      "error": "Historical recovery could not be loaded. Your rights are not assumed to be zero.",
+      "empty": "No historical rights found in the complete discovery.",
+      "epoch": "Epoch {epoch}",
+      "units": "Snapshot units",
+      "claimable": "Available recovery cash",
+      "upperBound": "Remaining recovery upper bound",
+      "upperBoundDetail": "An upper bound is not cash available now or a promised payout.",
+      "remainingHolds": "Earlier bets still open: {count}",
+      "settled": "This epoch is fully settled. Assigned but unclaimed cash remains yours.",
+      "claim": "Claim recovery",
+      "claimed": "Recovery payment confirmed.",
+      "loadMore": "Load more historical rights",
+      "refresh": "Refresh historical rights",
+      "receiver": "Cash is sent to {receiver}. This action does not grant a keeper permission to claim for you.",
+      "incompleteReturn": "Incomplete return: historical rights remain unresolved or discovery is unfinished.",
+      "backing": "Historical backing",
+      "backingDetail": "Excluded from active capital; supports earlier obligations and unclaimed recovery.",
+      "donationNote": "Donations to the Bank are not external cash received by the holder.",
+      "snapshot": "Snapshot: block {block}, {time}. Refresh to load newer activity."
     }
   },
   "ops": {
@@ -3782,7 +3846,7 @@
       },
       {
         "q": "What is house edge?",
-        "a": "House edge is the margin built into each game's payouts. On Base mainnet, under the current v1.5 rules, it funds protocol fees and referral rewards; it is not paid to LPs. Each game shows its exact current value in the Game Info tab, using the live release configuration rather than a marketing estimate."
+        "a": "House edge is the margin built into game payouts. In the current v1.6 design, LPs retain 50% of theoretical house edge calculated from used turnover; protocol fees and referral rewards share the other half. This is not a guaranteed LP return. The project has not launched. Each game shows its applicable rate in Game Info."
       },
       {
         "q": "Why is my bet pending?",

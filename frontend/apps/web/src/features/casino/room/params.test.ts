@@ -257,7 +257,7 @@ describe("game room params", () => {
     });
   });
 
-  it("encodes mixed Roulette selections as the V14 typed bitmask tuple", () => {
+  it("encodes mixed Roulette selections as the typed bitmask tuple", () => {
     const roulette = buildGameParams({
       slug: "roulette",
       diceTarget: 50,
@@ -288,7 +288,6 @@ describe("game room params", () => {
       plinkoRisk: "medium"
     });
     expect(dice.ok && decodeDiceParams(dice.params)).toEqual({
-      cap: 55,
       direction: "under",
       target: 55
     });

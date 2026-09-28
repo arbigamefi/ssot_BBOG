@@ -1,4 +1,4 @@
-# ADR-0004 · No Subgraph For MVP Indexing
+# ADR-0004 · No Subgraph For Shared Indexing
 
 | Status | Accepted |
 | Date | 2026-05-17 |
@@ -6,7 +6,7 @@
 | Reviewers | Product Lead |
 | Supersedes | None |
 | Superseded by | None |
-| Affects | `docs/design/indexing-strategy.md`, `docs/design/14-data-and-state.md`, `docs/frontend/casino-keeper-v1.md` |
+| Affects | `docs/design/durable-bet-index.md`, `docs/design/14-data-and-state.md`, `frontend/apps/keeper/README.md` |
 
 ## 1. Context
 
@@ -19,13 +19,14 @@ The existing `@ssot/ssot/indexer` is a browser-local Dexie replay indexer. It is
 good for user-verifiable local history, but it cannot represent a global feed
 until each browser has replayed the relevant chain window.
 
-The Graph hosted service is no longer the default low-friction option. Current
-subgraph deployment routes require The Graph Network or self-managed
-infrastructure, which adds operational and schema-coupling cost.
+The shared API uses the Postgres index described in
+[ADR-0005](./0005-postgres-durable-bet-index.md), with bounded RPC aggregation
+available when durable reads are disabled or unavailable.
 
 ## 2. Decision
 
-We will not introduce a The Graph subgraph for MVP casino/sportsbook indexing.
+Use the existing API, durable Postgres index, and RPC read paths for shared
+casino/sportsbook indexing, without a The Graph subgraph.
 
 ## 3. Rationale
 
@@ -36,9 +37,10 @@ We will not introduce a The Graph subgraph for MVP casino/sportsbook indexing.
 - Browser-local Dexie replay should remain as a verification layer, not as the
   source for global product feeds.
 - Introducing GraphQL schemas and subgraph deployment before complex query
-  requirements exist would increase migration cost without improving protocol
+  requirements exist would add operating cost without improving protocol
   truth.
-- Result proof and critical settlement UI must remain chain-log backed.
+- Result amounts come from terminal contract state; transaction receipts supply
+  payment evidence, as defined in [ADR-0006](./0006-casino-terminal-receipt-view.md).
 
 ## 4. Alternatives Considered
 
@@ -46,21 +48,21 @@ We will not introduce a The Graph subgraph for MVP casino/sportsbook indexing.
 | --- | --- | --- | --- |
 | The Graph subgraph | familiar indexed GraphQL API, third-party queryability | new schema, deployment, lag, fallback, and network/self-hosting operations | overbuilt for current query shapes |
 | Browser Dexie only | already implemented, replayable | not global, cold-start dependent, inconsistent across devices | cannot power product-wide feeds |
-| Next.js API + short cache | small surface, uses existing RPC/release facts | cache is not durable across serverless instances | best MVP tradeoff |
-| Keeper-backed durable cache | production-friendly shared feed | needs storage choice and ops runbook | Phase 3 after API contract stabilizes |
+| Next.js API + short cache | small surface, uses existing RPC/release facts | cache is not durable across serverless instances | bounded RPC read path |
+| Keeper-backed Postgres index | shared durable event ledger and feeds | database initialization and operations | adopted in ADR-0005 |
 
 ## 5. Consequences
 
 Positive:
 
-- Fewer moving parts before mainnet.
+- No separate subgraph service to operate.
 - No new third-party trust layer for settlement-facing UI.
-- Shared feeds can ship quickly and remain replaceable.
+- Shared feeds reuse the existing API and index package.
 
 Negative:
 
 - Serverless in-memory cache is not durable.
-- Deep historical analytics will need a later storage layer.
+- Durable history requires Postgres availability and complete index coverage.
 
 Neutral:
 
@@ -68,33 +70,32 @@ Neutral:
 - A future subgraph remains possible if query volume or third-party API needs
   justify it.
 
-## 6. Migration / Rollout Plan
+## 6. Current Implementation
 
-1. Document the indexing strategy.
-2. Add `/api/bets/recent`.
-3. Switch home and casino recent feeds to the server API.
-4. Add player activity API after the recent-feed contract stabilizes.
-5. Evaluate keeper-backed SQLite/Redis/Postgres persistence before production.
+- `/api/bets/recent` and `/api/bets/player/[address]` provide shared feeds.
+- Keeper ingestion and public-read backfill populate the Postgres index.
+- API reads use the configured durable store with bounded RPC aggregation as
+  their fallback. Browser-local Dexie replay provides an additional local view.
+- Index freshness and coverage remain explicit; cache availability does not
+  establish settlement or payment completion.
 
 ## 7. SSOT Documents Affected
 
-- `docs/design/indexing-strategy.md` — new strategy document.
+- [Durable bet index](../durable-bet-index.md) — event storage and shared read paths.
 - `docs/design/14-data-and-state.md` — should treat "indexer subgraph" as an
   optional source, not a required source.
-- `docs/frontend/casino-keeper-v1.md` — future durable aggregation can reuse the
-  keeper event stream.
+- [Keeper](../../../frontend/apps/keeper/README.md) — durable aggregation reuses
+  the keeper event stream.
 
 ## 8. Acceptance Criteria
 
-- [x] Strategy document created.
-- [x] ADR accepted.
-- [x] `/api/bets/recent` implemented and tested.
-- [x] Home/casino global feed no longer depends on browser-local `useBets`.
-- [x] `/api/bets/player/[address]` implemented as a cold-start accelerator.
-- [x] Portfolio activity merges player API rows with local replay rows.
-- [ ] Future persistent cache decision documented before mainnet.
+- Shared recent and player feeds work independently of browser-local history.
+- Durable-read failures preserve the documented bounded RPC behavior.
+- Portfolio activity can combine API rows with local replay rows.
+- Current Postgres schema initialization follows ADR-0005.
+- Missing terminal or payment evidence remains explicit under ADR-0006.
 
 ## 9. References
 
-- The Graph hosted service sunset: https://thegraph.com/blog/sunsetting-hosted-service/
-- The Graph Post-Sunrise FAQ: https://thegraph.com/docs/sv/archived/sunrise/
+- [Shared recent-bet reads](../../../frontend/apps/web/src/server/betting/recent-bets.ts)
+- [Durable store implementation](../../../frontend/packages/bet-index/src/index.ts)

@@ -28,9 +28,9 @@ describe("GameEncoderRegistry", () => {
   describe("dice encoder", () => {
     it("encodes and decodes roundtrip", () => {
       const enc = requireGameEncoder("dice");
-      const hex = enc.encode({ cap: 42 });
+      const hex = enc.encode({ direction: "over", target: 42 });
       const decoded = enc.decode(hex);
-      expect(decoded.cap).toBe(42);
+      expect(decoded.target).toBe(42);
     });
 
     it("has correct defaults", () => {

@@ -7,8 +7,22 @@ import {
   type PublicClient
 } from "viem";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
+
+vi.mock("@ssot/ssot/release", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@ssot/ssot/release")>();
+  const { default: fixture } =
+    await import("../../../../../packages/ssot/src/fixtures/release-v16.fixture.json");
+  return {
+    ...actual,
+    loadEmbeddedRelease: (chainId: number) => ({
+      ok: true,
+      release: { ...fixture, chainId }
+    })
+  };
+});
 import type { BetRow } from "@ssot/bet-index";
 import { HOUSE_EDGE_ALLOCATED_ABI } from "@ssot/bet-index/house-edge";
+import { PLAYER_PAYMENT_ABI } from "@ssot/bet-index/player-payment";
 const factory = vi.hoisted(() => vi.fn());
 vi.mock("@ssot/bet-index", () => ({ createPostgresBetIndexStore: factory }));
 import { clearRecentBetsCache, materializeBetReceipt, queryBetReceipt } from "./recent-bets";
@@ -16,6 +30,7 @@ import { clearRecentBetsCache, materializeBetReceipt, queryBetReceipt } from "./
 const txHash = `0x${"aa".repeat(32)}` as const;
 const asset = "0x4444444444444444444444444444444444444444";
 const player = "0x2222222222222222222222222222222222222222";
+const bank = "0x5555555555555555555555555555555555555555";
 const gameId = `0x${"11".repeat(32)}` as const;
 const abi = parseAbi([
   "event BetFinalized(uint256 indexed positionId, uint256 payoutGross, uint256 payoutNet, uint256 feeOnPayout, uint256 protocolFeeAccrual)"
@@ -67,6 +82,7 @@ function clientWithTerminal(proof = terminal, extraLogs: unknown[] = []) {
         ? proof
         : {
             asset,
+            bank,
             player,
             gameId,
             pricingAffiliate: player,
@@ -127,6 +143,65 @@ afterEach(() => {
 });
 
 describe("receipt refund proof repair", () => {
+  it.each(["payable", "transferred"] as const)(
+    "distinguishes terminal %s evidence from the economic payout",
+    async (status) => {
+      stored = { ...stored, refundAmount: "100000" };
+      const paymentLog =
+        status === "payable"
+          ? {
+              address: bank,
+              topics: encodeEventTopics({
+                abi: PLAYER_PAYMENT_ABI,
+                eventName: "PlayerPayableCreated",
+                args: { betId: 42n, player }
+              }),
+              data: encodeAbiParameters([{ type: "uint256" }], [296000n])
+            }
+          : {
+              address: asset,
+              topics: encodeEventTopics({
+                abi: PLAYER_PAYMENT_ABI,
+                eventName: "Transfer",
+                args: { from: bank, to: player }
+              }),
+              data: encodeAbiParameters([{ type: "uint256" }], [296000n])
+            };
+      const logs = [
+        {
+          address: bank,
+          topics: encodeEventTopics({
+            abi: PLAYER_PAYMENT_ABI,
+            eventName: "BetReserveReleased",
+            args: { betId: 42n, player }
+          }),
+          data: encodeAbiParameters([{ type: "uint256" }], [400000n])
+        },
+        paymentLog,
+        {
+          address: bank,
+          topics: encodeEventTopics({
+            abi: PLAYER_PAYMENT_ABI,
+            eventName: "BetSettled",
+            args: { betId: 42n, player }
+          }),
+          data: encodeAbiParameters(
+            Array.from({ length: 8 }, () => ({ type: "uint256" as const })),
+            [200000n, 196000n, 100000n, 4000n, 2000n, 0n, 0n, 0n]
+          )
+        }
+      ];
+      const result = await queryBetReceipt({
+        betId: "42",
+        chainId: 84532,
+        client: clientWithTerminal(terminal, logs)
+      });
+      expect(result.payment).toEqual({ status, amount: "296000" });
+      expect(result.row).toMatchObject({ payout: "196000", refundAmount: "100000" });
+      expect(writeBetRows).not.toHaveBeenCalled();
+    }
+  );
+
   it("repairs an old durable receipt for reading without claiming the RPC result is indexed", async () => {
     const result = await queryBetReceipt({
       betId: "42",
@@ -168,6 +243,7 @@ describe("receipt refund proof repair", () => {
     const client = clientWithTerminal();
     const result = await queryBetReceipt({ betId: "42", chainId: 84532, client });
     expect(result.row?.refundAmount).toBeUndefined();
+    expect(result.payment).toBeUndefined();
     expect(client.readContract).not.toHaveBeenCalled();
   });
   it("materializes the verified refund even when an incomplete terminal row already exists", async () => {
@@ -194,6 +270,7 @@ describe("receipt refund proof repair", () => {
         houseEdgeLog(hub)
       ])
     });
+    expect(result.row).not.toBeNull();
     expect(writeGameHubEvents).toHaveBeenCalledOnce();
     expect(writeGameHubEvents.mock.calls[0]![0]).toMatchObject([
       { eventName: "HouseEdgeAllocated", logIndex: 0, txHash, blockNumber: 1000n }

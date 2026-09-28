@@ -141,6 +141,7 @@ describe("BankrollPerformancePanel", () => {
     expect(screen.getByRole("tab", { name: "30d", selected: true })).toBeDefined();
     expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({
       asset: undefined,
+      enabled: true,
       days: 30
     });
     for (const name of ["24h", "7d", "All"]) {
@@ -148,7 +149,11 @@ describe("BankrollPerformancePanel", () => {
     }
     fireEvent.click(screen.getByRole("tab", { name: "7d" }));
     expect(screen.getByRole("tab", { name: "7d", selected: true })).toBeDefined();
-    expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({ asset: undefined, days: 7 });
+    expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({
+      asset: undefined,
+      days: 7,
+      enabled: true
+    });
   });
 
   it("scopes indexed performance reads to the selected asset", () => {
@@ -165,8 +170,28 @@ describe("BankrollPerformancePanel", () => {
 
     expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({
       asset: assetAddress,
+      enabled: true,
       days: 30
     });
+  });
+
+  it("hides asset-level history while retaining the selected Bank totals", () => {
+    render(
+      <BankrollPerformancePanel
+        assetDecimals={6}
+        assetSymbol="USDC"
+        chainPerformance={chainPerformance}
+        vaultAssets={1000000000n}
+        showIndexedHistory={false}
+      />
+    );
+    expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({
+      asset: undefined,
+      days: 30,
+      enabled: false
+    });
+    expect(screen.queryByRole("tab", { name: "30d" })).toBeNull();
+    expect(screen.getByText("earn.pools.historyUnavailable")).toBeDefined();
   });
 
   it("reveals a per-day tooltip when the equity chart is hovered", () => {

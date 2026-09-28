@@ -21,6 +21,14 @@
     "./financials": {
       "types": "./dist/financials.d.ts",
       "import": "./dist/financials.js"
+    },
+    "./player-payment": {
+      "types": "./dist/player-payment.d.ts",
+      "import": "./dist/player-payment.js"
+    },
+    "./bank-cash-ledger": {
+      "types": "./dist/bank-cash-ledger.d.ts",
+      "import": "./dist/bank-cash-ledger.js"
     }
   },
   "dependencies": {

@@ -48,8 +48,8 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 BUNDLE_ROOT="$WORK_DIR/ssot-audit-${TAG}-${SAFE_DIGEST}"
 mkdir -p "$BUNDLE_ROOT"
 
-# --- Copy release artifacts (canonical + conventional paths) ---
-mkdir -p "$BUNDLE_ROOT/deployments" "$BUNDLE_ROOT/deployments/snapshots" "$BUNDLE_ROOT/deployments/release" "$BUNDLE_ROOT/deployments/verify"
+# --- Copy current release artifacts ---
+mkdir -p "$BUNDLE_ROOT/deployments"
 
 cp -f "$SNAPSHOT_PATH" "$BUNDLE_ROOT/deployments/latest-v16.json"
 cp -f "$RELEASE_PATH" "$BUNDLE_ROOT/deployments/release-latest-v16.json"
@@ -57,26 +57,8 @@ cp -f "$NOTES_PATH" "$BUNDLE_ROOT/deployments/release-notes-latest-v16.md"
 cp -f "$FRONTEND_MANIFEST_PATH" "$BUNDLE_ROOT/deployments/frontend-manifest-latest-v16.json"
 cp -f "$GOLDEN_VECTORS_PATH" "$BUNDLE_ROOT/deployments/golden-vectors-latest-v16.json"
 
-SNAPSHOT_CONV="deployments/snapshots/deploy-${CHAIN_ID}-${BLOCK_NUMBER}-v16.json"
-[[ -f "$SNAPSHOT_CONV" ]] && cp -f "$SNAPSHOT_CONV" "$BUNDLE_ROOT/$SNAPSHOT_CONV"
-
-RELEASE_CONV="deployments/release/release-${CHAIN_ID}-${BLOCK_NUMBER}-v16.json"
-[[ -f "$RELEASE_CONV" ]] && cp -f "$RELEASE_CONV" "$BUNDLE_ROOT/$RELEASE_CONV"
-
-NOTES_CONV="deployments/release/release-notes-${CHAIN_ID}-${BLOCK_NUMBER}-v16.md"
-[[ -f "$NOTES_CONV" ]] && cp -f "$NOTES_CONV" "$BUNDLE_ROOT/$NOTES_CONV"
-
-FRONTEND_CONV="deployments/release/frontend-manifest-${CHAIN_ID}-${BLOCK_NUMBER}-v16.json"
-[[ -f "$FRONTEND_CONV" ]] && cp -f "$FRONTEND_CONV" "$BUNDLE_ROOT/$FRONTEND_CONV"
-
-VECTORS_CONV="deployments/release/golden-vectors-${CHAIN_ID}-${BLOCK_NUMBER}-v16.json"
-[[ -f "$VECTORS_CONV" ]] && cp -f "$VECTORS_CONV" "$BUNDLE_ROOT/$VECTORS_CONV"
-
 VERIFY_LATEST="deployments/verify-latest-v16.sh"
 [[ -f "$VERIFY_LATEST" ]] && cp -f "$VERIFY_LATEST" "$BUNDLE_ROOT/$VERIFY_LATEST"
-
-VERIFY_CONV="deployments/verify/verify-${CHAIN_ID}-${BLOCK_NUMBER}-v16.sh"
-[[ -f "$VERIFY_CONV" ]] && cp -f "$VERIFY_CONV" "$BUNDLE_ROOT/$VERIFY_CONV"
 
 # --- Copy source code and tooling (excluding vendored deps) ---
 for path in src test script docs .github; do

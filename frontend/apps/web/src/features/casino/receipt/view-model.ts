@@ -1,4 +1,5 @@
 import { getCasinoCashReturned } from "@ssot/bet-index/financials";
+import type { PlayerPaymentProof } from "@ssot/bet-index/player-payment";
 import type { BetRow } from "@ssot/ssot/indexer";
 
 import { getExplorerTxUrl } from "../../../app-shell/chain-registry";
@@ -40,6 +41,7 @@ export type CasinoReceiptViewModel = {
   netValue: string;
   payout: bigint;
   payoutValue: string;
+  payment: PlayerPaymentProof;
   placedBlock?: number;
   player?: string;
   pricingAffiliate?: string;
@@ -93,7 +95,8 @@ export function buildCasinoReceiptFromTerminalResult({
     stake: result.stake,
     state,
     terminalTxHash,
-    payout
+    payout,
+    payment: result.kind === "refunded" ? result.refund.payment : result.settlement.payment
   });
 }
 
@@ -103,7 +106,8 @@ export function buildCasinoReceiptFromBetRow({
   chainId,
   gameLabel,
   gameSlug,
-  row
+  row,
+  payment
 }: {
   assetDecimals: number;
   assetSymbol: string;
@@ -111,6 +115,7 @@ export function buildCasinoReceiptFromBetRow({
   gameLabel: string;
   gameSlug?: string;
   row: BetRow;
+  payment?: PlayerPaymentProof;
 }): CasinoReceiptViewModel {
   const state: CasinoReceiptState = row.state === "refunded" ? "refunded" : "finalized";
   const model = buildCasinoReceiptViewModel({
@@ -134,6 +139,7 @@ export function buildCasinoReceiptFromBetRow({
     terminalTxHash:
       row.terminalTxHash ?? row.finalizedTxHash ?? row.refundedTxHash ?? row.lastTxHash,
     payout: getRowPayout(row),
+    payment,
     updatedAt: row.updatedAt
   });
   const houseEdge = row.houseEdge
@@ -194,7 +200,8 @@ export function buildCasinoReceiptProofText({
     `Game: ${model.gameLabel}`,
     `Asset: ${assetLabel ?? model.assetSymbol}`,
     `Stake: ${model.stakeValue}`,
-    `Payout: ${model.payoutValue}`,
+    `Settlement amount: ${model.payoutValue}`,
+    `Transfer evidence: ${paymentProofDescription(model.payment.status)}`,
     `Net: ${model.netValue}`,
     `Chain ID: ${model.chainId ?? "—"}`,
     `Player: ${model.player ?? "—"}`,
@@ -273,6 +280,7 @@ function buildCasinoReceiptViewModel({
   state,
   terminalTxHash,
   payout,
+  payment,
   updatedAt
 }: {
   assetAddress?: string;
@@ -294,12 +302,19 @@ function buildCasinoReceiptViewModel({
   state: CasinoReceiptState;
   terminalTxHash?: string;
   payout: bigint;
+  payment?: PlayerPaymentProof;
   updatedAt?: number;
 }): CasinoReceiptViewModel {
   const net = payout - stake;
   const tone = state === "finalized" ? toneFromNet(net) : "neutral";
   const signedNetValue = formatSignedReceiptTokenAmount(net, assetDecimals, assetSymbol);
   const txHref = getExplorerTxUrl(chainId, terminalTxHash) ?? undefined;
+  const provenPayment: PlayerPaymentProof =
+    payout === 0n
+      ? { status: "none", amount: "0" }
+      : payment?.amount === payout.toString() && ["transferred", "payable"].includes(payment.status)
+        ? payment
+        : { status: "unknown", amount: payout.toString() };
   return {
     assetAddress,
     assetDecimals,
@@ -315,6 +330,7 @@ function buildCasinoReceiptViewModel({
     netValue: formatReceiptTokenAmount(net, assetDecimals, assetSymbol),
     payout,
     payoutValue: formatReceiptTokenAmount(payout, assetDecimals, assetSymbol),
+    payment: provenPayment,
     placedBlock,
     player,
     pricingAffiliate,
@@ -331,6 +347,19 @@ function buildCasinoReceiptViewModel({
     txHref,
     updatedAt
   };
+}
+
+function paymentProofDescription(status: PlayerPaymentProof["status"]) {
+  switch (status) {
+    case "transferred":
+      return "Transferred to the player in the settlement transaction";
+    case "payable":
+      return "Recorded as a player payable at settlement; later claims are not attributed to this bet";
+    case "none":
+      return "No player transfer due";
+    default:
+      return "Settlement is confirmed; the wallet transfer has not been verified";
+  }
 }
 
 function getRowPayout(row: BetRow) {

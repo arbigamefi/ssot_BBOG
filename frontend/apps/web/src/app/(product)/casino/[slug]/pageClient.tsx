@@ -567,7 +567,6 @@ export function GamePageClient({ slug }: { slug: string }) {
   const AuditLedger = (
     <GameRoomAuditLedger
       game={game}
-      betAmount={betAmountNumber}
       recentBets={recentBets}
       playerAddress={sdk?.account}
       assetAddress={casinoPoolAsset.asset.address}

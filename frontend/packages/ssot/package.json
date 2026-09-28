@@ -10,7 +10,12 @@
     "./domain": "./src/domain/index.ts",
     "./sdk": "./src/sdk/index.ts",
     "./encoding": "./src/encoding/index.ts",
-    "./indexer": "./src/indexer/index.ts"
+    "./indexer": "./src/indexer/index.ts",
+    "./abis": {
+      "types": "./src/abis/index.d.mts",
+      "import": "./src/abis/index.mjs",
+      "default": "./src/abis/index.mjs"
+    }
   },
   "dependencies": {
     "dexie": "^4.0.10",

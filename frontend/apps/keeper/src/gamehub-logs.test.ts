@@ -138,7 +138,7 @@ describe("decodeHouseEdgeLog", () => {
     });
   });
 
-  it("finds nothing in a v1.5 or refund receipt", () => {
+  it("finds nothing when the receipt has no allocation or is a refund", () => {
     expect(
       decodeHouseEdgeLog({
         betId: 7n,

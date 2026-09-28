@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 /// @notice Every contract `script/DeployV16.s.sol` deploys must fit the EIP-170 runtime limit. Forge's test EVM
 ///         does not enforce it, so a contract that grows past the limit passes every other test and fails only
-///         when it is deployed. The v1.5 GameHub shipped 121 bytes under the limit.
+///         when it is deployed. Runtime sizes are checked against the current build.
 contract ContractSizesTest is Test {
     uint256 internal constant EIP170_RUNTIME_LIMIT = 24_576;
 

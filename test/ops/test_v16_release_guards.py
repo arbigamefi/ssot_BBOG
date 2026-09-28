@@ -17,8 +17,7 @@ DIGEST = "0x" + "1" * 64
 REAL_CHECK_OUTPUT = subprocess.check_output
 
 
-# Mainnet stays on the v1.5 line while Base Sepolia runs v1.6.
-LINES = {8453: "SSOT_RELEASE_DIGEST_V15", 84532: "SSOT_RELEASE_DIGEST_V16"}
+LINES = {8453: "SSOT_RELEASE_DIGEST_V16", 84532: "SSOT_RELEASE_DIGEST_V16"}
 
 
 def manifest(chain):

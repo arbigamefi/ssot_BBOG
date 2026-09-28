@@ -130,7 +130,7 @@ contract SecurityFixes is Test {
         vm.prank(attacker);
         bank.requestRedeem(1, attacker, attacker);
         vm.warp(bank.redeemBatch(1).cutoff);
-        bank.settleBatch();
+        bank.activateBatch();
         vm.prank(attacker);
         uint256 swept = bank.redeem(1, attacker, attacker);
         assertLt(swept, donation + 1, "attacker must not profit from direct donation inflation");
@@ -375,7 +375,9 @@ contract SecurityFixes is Test {
         ReferralRegistry refReg = new ReferralRegistry(gov);
         DefaultReferralEngine refEng = new DefaultReferralEngine();
 
-        hub = new GameHub(address(router), address(vrf), address(refReg), address(refEng), gov, 3600, defaultHE, 0, 0, 0, 0);
+        hub = new GameHub(
+            address(router), address(vrf), address(refReg), address(refEng), gov, 3600, defaultHE, 0, 0, 0, 0
+        );
 
         vm.startPrank(gov);
         poolRegistry.registerPool(1, address(asset), address(bank), SSOTTypes.PoolDomain.Casino);

@@ -24,7 +24,7 @@ const config: KeeperConfig = {
   betIndexSsl: false,
   bankProviderLedgerPools: [],
   bankProviderLedgerScanIntervalMs: 0,
-  sportsTicketEnumerationMax: 500,
+
   sportsTerminalizerMarketIds: [],
   sportsTicketScanStartBlock: 100n,
   sportsTerminalizerScanChunkBlocks: 10n,

@@ -5,7 +5,7 @@ import { ConnectWalletPrompt } from "./ConnectWalletPrompt";
 
 const mockOpenConnectModal = vi.fn();
 
-vi.mock("../app-shell/WalletButton", () => ({
+vi.mock("../app-shell/wallet-entry-context", () => ({
   useConnectModal: () => ({ openConnectModal: mockOpenConnectModal })
 }));
 

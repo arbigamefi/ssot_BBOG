@@ -164,15 +164,11 @@ contract GenerateGoldenVectorsV16 is Script {
             "}\n"
         );
 
-        string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v16");
-        string memory outTagged = string.concat("deployments/release/golden-vectors-", tag, ".json");
-
-        vm.writeFile(OUT_LATEST, json);
-        vm.writeFile(outTagged, json);
+        string memory outputPath = vm.envOr("VECTORS_OUTPUT_PATH", OUT_LATEST);
+        vm.writeFile(outputPath, json);
 
         console2.log("snapshot:", snapshotPath);
-        console2.log("Wrote:", OUT_LATEST);
-        console2.log("Wrote:", outTagged);
+        console2.log("Wrote:", outputPath);
     }
 
     function _vectorJson(

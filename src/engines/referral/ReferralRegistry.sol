@@ -8,7 +8,7 @@ import {IReferralRegistry} from "./IReferralRegistry.sol";
 /// @notice First-touch referral registry with anti-cycle.
 ///
 /// Notes:
-/// - v1.0 limits cycle checks to a bounded number of hops (64) for gas safety.
+/// - Cycle checks are limited to a bounded number of hops (64) for gas safety.
 /// - `binder` is intended to be the authorized game hub and is set once.
 contract ReferralRegistry is IReferralRegistry, Governable {
     uint8 internal constant MAX_HOPS = 64;

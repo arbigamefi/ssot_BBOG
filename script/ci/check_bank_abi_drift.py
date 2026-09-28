@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Fail if frontend-published Bank ABI drifts from the compiled artifact.
-
-The frontend consumes per-chain ABI files from
-`frontend/packages/ssot/src/abis/release/chain-*/Bank.abi.json`. Bank SSOT
-shape changes are high-risk because the UI reads accounting truth through
-`getSSOT()`. This guard compares the `getSSOT` output tuple from those
-frontend ABI files against `out/Bank.sol/Bank.json`.
-"""
+"""Fail when the single current Bank ABI getSSOT tuple differs from the compiled source."""
 
 from __future__ import annotations
 
@@ -73,9 +66,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact", default="out/Bank.sol/Bank.json")
     parser.add_argument(
-        "--frontend-glob",
-        default="frontend/packages/ssot/src/abis/release/chain-*/Bank.abi.json",
-        help="Glob of frontend-published Bank ABI files to compare.",
+        "--frontend",
+        default="frontend/packages/ssot/src/abis/contracts/Bank.abi.json",
+        help="Current source-generated Bank ABI to compare.",
     )
     args = parser.parse_args()
 
@@ -83,9 +76,7 @@ def main() -> None:
     expected_outputs = [_normalize_abi_param(output) for output in _get_function_outputs(artifact_path, "getSSOT")]
     expected_summary = _summarize(expected_outputs)
 
-    frontend_paths = sorted(Path(".").glob(args.frontend_glob))
-    if not frontend_paths:
-        raise SystemExit(f"no frontend Bank ABI files matched: {args.frontend_glob}")
+    frontend_paths = [Path(args.frontend)]
 
     failures: list[str] = []
     for path in frontend_paths:

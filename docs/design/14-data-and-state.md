@@ -3,7 +3,7 @@
 | Owner | Frontend Lead |
 | Status | Active |
 | Last Updated | 2026-05-18 |
-| Depends on | `13-web3-ux.md`, `durable-bet-index.md`, `indexing-strategy.md` |
+| Depends on | `13-web3-ux.md`, `durable-bet-index.md` |
 | Supersedes | Draft v1 data platform spec |
 
 Data architecture should keep truth simple: contracts are truth, release

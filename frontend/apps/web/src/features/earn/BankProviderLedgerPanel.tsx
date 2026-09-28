@@ -39,6 +39,9 @@ export function BankProviderLedgerPanel({
   onLoadMore,
   positionAssets,
   positionShares,
+  recoveryComplete = false,
+  hasUnsettledRecovery = false,
+  cashFlowComplete = false,
   symbol
 }: {
   connected: boolean;
@@ -52,16 +55,26 @@ export function BankProviderLedgerPanel({
   onLoadMore?: () => void;
   positionAssets?: bigint;
   positionShares?: bigint;
+  recoveryComplete?: boolean;
+  hasUnsettledRecovery?: boolean;
+  cashFlowComplete?: boolean;
   symbol: string;
 }) {
   const t = useTranslations();
   const locale = useLocale();
 
   const deposited = sumAssets(entries, "deposit");
-  const withdrawn = sumAssets(entries, "withdraw");
+  const withdrawn = sumAssets(entries, "withdraw") + sumAssets(entries, "recovery");
   const openValue = positionAssets ?? 0n;
   const netPnl = withdrawn + openValue - deposited;
   const hasCompleteAssetRows = entries.every((entry) => entry.assets != null);
+  const canEstimateReturn =
+    hasCompleteAssetRows &&
+    !hasMore &&
+    positionAssets != null &&
+    cashFlowComplete &&
+    recoveryComplete &&
+    !hasUnsettledRecovery;
 
   const summaryVisible = connected && !loading && !error;
   const summary = [
@@ -83,11 +96,8 @@ export function BankProviderLedgerPanel({
     {
       key: "netPnl",
       label: t("earn.ledger.summary.netPnl"),
-      value:
-        hasCompleteAssetRows && positionAssets != null
-          ? formatSignedToken(netPnl, decimals, symbol)
-          : "—",
-      tone: netPnl >= 0n ? "win" : "loss"
+      value: canEstimateReturn ? formatSignedToken(netPnl, decimals, symbol) : "—",
+      tone: canEstimateReturn ? (netPnl >= 0n ? "win" : "loss") : undefined
     },
     {
       key: "shares",
@@ -109,6 +119,17 @@ export function BankProviderLedgerPanel({
           {t("earn.ledger.readModel")}
         </span>
       </div>
+
+      {connected && (!recoveryComplete || hasUnsettledRecovery) ? (
+        <p role="status" className="border-b border-border-soft px-5 py-3 text-sm text-warn">
+          {t("earn.recovery.incompleteReturn")}
+        </p>
+      ) : null}
+      {connected && !cashFlowComplete ? (
+        <p role="status" className="border-b border-border-soft px-5 py-3 text-sm text-warn">
+          {t("earn.ledger.incomplete")}
+        </p>
+      ) : null}
 
       <div className="grid divide-y divide-border-soft border-b border-border-soft sm:grid-cols-5 sm:divide-x sm:divide-y-0">
         {summary.map((item) => (
@@ -172,6 +193,21 @@ export function BankProviderLedgerPanel({
                     <div className="mt-1 font-mono text-[11px] text-fg-subtle">
                       {t("earn.ledger.block", { blockNumber: entry.blockNumber })}
                     </div>
+                    {entry.epochId != null ? (
+                      <div className="mt-1 text-xs text-fg-muted">
+                        {t("earn.recovery.epoch", { epoch: entry.epochId.toString() })}
+                      </div>
+                    ) : null}
+                    {entry.receiver ? (
+                      <div className="mt-1 break-all text-xs text-fg-subtle">
+                        {t("earn.async.receiver", { receiver: entry.receiver })}
+                      </div>
+                    ) : null}
+                    {entry.action === "donation" ? (
+                      <div className="mt-1 text-xs text-warn">
+                        {t("earn.recovery.donationNote")}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="truncate text-right font-mono font-bold text-fg">
                     {formatTokenAmount(entry.assets, decimals, symbol, 4)}

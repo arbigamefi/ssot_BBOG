@@ -161,7 +161,7 @@ export async function runBetIndexBackfill({
         }));
 
   try {
-    await indexStore.migrate();
+    await indexStore.initializeSchema();
     const latestBlock = await publicClient.getBlockNumber();
     const range = resolveBackfillRange({
       confirmations: config.confirmations,
@@ -209,8 +209,15 @@ export async function runBetIndexBackfill({
         publicClient,
         range: chunk
       });
-      for (const { rows } of rowsByPool) {
-        bankProviderLedgerRowCount += (await indexStore.writeBankProviderLedgerRows(rows)).length;
+      for (const { pool, rows } of rowsByPool) {
+        bankProviderLedgerRowCount += (
+          await indexStore.replaceBankProviderLedgerRange({
+            chainId: config.chainId,
+            bank: pool.bank,
+            ...chunk,
+            rows
+          })
+        ).length;
       }
       await indexStore.setCursor({
         blockNumber: chunk.toBlock,

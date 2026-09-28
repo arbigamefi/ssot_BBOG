@@ -12,3 +12,8 @@ export const WalletEntryContext = React.createContext<{
 export function useWalletEntry() {
   return React.useContext(WalletEntryContext);
 }
+
+export function useConnectModal() {
+  const entry = useWalletEntry();
+  return { openConnectModal: entry?.open };
+}

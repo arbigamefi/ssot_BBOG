@@ -19,7 +19,7 @@ function mk(
     txHash,
     eventName,
     args: {
-      betId: 123n,
+      positionId: 123n,
       gameId: "0x" + "11".repeat(32),
       asset: "0x0000000000000000000000000000000000000002",
       player: "0x0000000000000000000000000000000000000003",
@@ -95,11 +95,11 @@ describe("indexer reducer", () => {
     });
     bet = applyGameHubEventToBet(bet, {
       ...mk("BetRandomReady", 11, TX2),
-      args: { betId: 123n, requestId: 99n, randomHash: "0x" + "55".repeat(32) }
+      args: { positionId: 123n, requestId: 99n, randomHash: "0x" + "55".repeat(32) }
     });
     bet = applyGameHubEventToBet(bet, {
       ...mk("BetFinalized", 12, TX3),
-      args: { betId: 123n, payoutGross: 200n, payoutNet: 196n }
+      args: { positionId: 123n, payoutGross: 200n, payoutNet: 196n }
     });
 
     expect(bet).toMatchObject({
@@ -113,13 +113,8 @@ describe("indexer reducer", () => {
     });
   });
 
-  it("records the issuing GameHub, also on rows cached before it was recorded", () => {
+  it("records the issuing GameHub", () => {
     expect(applyGameHubEventToBet(undefined, mk("BetPlaced", 10, TX1)).gameHub).toBe(HUB);
-    const { gameHub: _omitted, ...cached } = applyGameHubEventToBet(
-      undefined,
-      mk("BetPlaced", 10, TX1)
-    );
-    expect(applyGameHubEventToBet(cached, mk("BetRandomReady", 11, TX2)).gameHub).toBe(HUB);
   });
 
   // ——— Refund from placed (skip finalized) ———
@@ -135,25 +130,6 @@ describe("indexer reducer", () => {
     bet = applyGameHubEventToBet(bet, mk("BetRefunded", 11, TX2));
     bet = applyGameHubEventToBet(bet, mk("BetRandomReady", 12, TX3));
     expect(bet.state).toBe("refunded");
-  });
-
-  // ——— user field fallback ———
-  it("falls back to args.user when args.player is absent", () => {
-    const ev: GameHubEventNormalized = {
-      chainId: 84532,
-      gameHub: HUB,
-      blockNumber: 10,
-      txHash: TX1,
-      eventName: "BetPlaced",
-      args: {
-        betId: 456n,
-        gameId: "0x" + "22".repeat(32),
-        asset: "0x0000000000000000000000000000000000000005",
-        user: "0x0000000000000000000000000000000000000006"
-      }
-    };
-    const bet = applyGameHubEventToBet(undefined, ev);
-    expect(bet.player).toBe("0x0000000000000000000000000000000000000006");
   });
 });
 

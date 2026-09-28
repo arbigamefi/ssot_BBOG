@@ -96,8 +96,8 @@ export const ReleaseSchema = z.object({
       blockNumber: z.number().int().nonnegative().optional(),
       schemaVersion: z.literal(2).optional(),
       generatedAt: z.number().int().optional(),
-      // The signed release lock; its schema names the release line.
-      releaseLock: z.object({ schema: z.string().optional() }).optional()
+      // Only the current signed release schema is supported.
+      releaseLock: z.object({ schema: z.literal("SSOT_RELEASE_DIGEST_V16") }).optional()
     })
     .partial()
     .optional()

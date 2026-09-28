@@ -3,21 +3,19 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WalletHeaderMenu } from "./WalletHeaderMenu";
+import { WalletEntryContext } from "./wallet-entry-context";
 
 const walletAddress = "0xd6622cBaA82995bD62b3316b696c23314263BFB9";
 const disconnect = vi.fn();
 const openConnectModal = vi.fn();
 const switchChain = vi.fn();
-
-vi.mock("@rainbow-me/rainbowkit", () => ({
-  useConnectModal: () => ({ openConnectModal })
-}));
+let isConnected = true;
 
 vi.mock("wagmi", () => ({
   useAccount: () => ({
     address: walletAddress,
     connector: { name: "Browser Wallet" },
-    isConnected: true
+    isConnected
   }),
   useChainId: () => 84532,
   useDisconnect: () => ({ disconnect }),
@@ -74,6 +72,26 @@ describe("WalletHeaderMenu", () => {
     disconnect.mockClear();
     openConnectModal.mockClear();
     switchChain.mockClear();
+    isConnected = true;
+  });
+
+  it("opens the wallet selector through the application provider when disconnected", () => {
+    isConnected = false;
+    render(
+      <WalletEntryContext.Provider
+        value={{
+          eligible: false,
+          dismissed: false,
+          mainnetUnavailable: false,
+          open: openConnectModal
+        }}
+      >
+        <WalletHeaderMenu />
+      </WalletEntryContext.Provider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "connectWalletButton" }));
+    expect(openConnectModal).toHaveBeenCalledOnce();
   });
 
   it("opens connected wallet actions in the shared mobile sheet", async () => {

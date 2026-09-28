@@ -11,10 +11,10 @@
 set -uo pipefail
 umask 077
 
-CONF="${ALERT_CONFIG_FILE:-/opt/arbigamefi-v15/ops/alert.env}"
+CONF="${ALERT_CONFIG_FILE:-/opt/arbigamefi/ops/alert.env}"
 [ -f "$CONF" ] && . "$CONF"
 
-CONTAINER="${BACKUP_PG_CONTAINER:-arbigamefi-v15-postgres-1}"
+CONTAINER="${BACKUP_PG_CONTAINER:-arbigamefi-postgres-1}"
 DIR="${BACKUP_DIR:-/var/backups/arbigamefi/bet-index}"
 KEEP="${BACKUP_KEEP:-7}"
 NOTIFY="$(cd -- "$(dirname -- "$0")" && pwd)/alert-notify.py"

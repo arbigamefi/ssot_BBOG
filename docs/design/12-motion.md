@@ -3,7 +3,7 @@
 | Owner | Frontend Lead |
 | Status | Active |
 | Last Updated | 2026-05-18 |
-| Depends on | `10-design-tokens.md`, `frontend-implementation-roadmap.md` |
+| Depends on | `10-design-tokens.md`, `../architecture/overview.md` |
 | Supersedes | Draft v1 motion catalog |
 
 Motion is functional. It should clarify state, not decorate the product.

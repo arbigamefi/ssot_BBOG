@@ -15,7 +15,7 @@ export type EarnMetric = {
   detail: string;
 };
 
-export type EarnProviderLedgerAction = "deposit" | "withdraw";
+export type EarnProviderLedgerAction = "deposit" | "withdraw" | "recovery" | "donation";
 
 export type EarnProviderLedgerEntry = {
   id: string;
@@ -27,4 +27,7 @@ export type EarnProviderLedgerEntry = {
   assets?: bigint;
   shares: bigint;
   sharePrice?: bigint;
+  receiver?: `0x${string}`;
+  caller?: `0x${string}`;
+  epochId?: bigint;
 };

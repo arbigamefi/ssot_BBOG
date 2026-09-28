@@ -22,7 +22,6 @@ ABIS_DIR="${ABIS_DIR:-deployments/abis-v16}"
 ABIS_INDEX_PATH="${ABIS_INDEX_PATH:-deployments/abis-v16/index.json}"
 
 TAG_NAME="${TAG_NAME:-}"
-RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:--v16}"
 
 SNAPSHOT_LATEST_NAME="${SNAPSHOT_LATEST_NAME:-latest-v16.json}"
 RELEASE_LATEST_NAME="${RELEASE_LATEST_NAME:-release-latest-v16.json}"
@@ -85,15 +84,10 @@ cp "$NOTES_PATH" "$STAGE/deployments/$NOTES_LATEST_NAME"
 cp "$FRONTEND_MANIFEST_PATH" "$STAGE/deployments/$FRONTEND_MANIFEST_LATEST_NAME"
 cp "$GOLDEN_VECTORS_PATH" "$STAGE/deployments/$GOLDEN_VECTORS_LATEST_NAME"
 
-# Also include per-release copies if present
-for f in   "deployments/release/frontend-manifest-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.json"   "deployments/release/golden-vectors-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.json"   "deployments/release/release-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.json"   "deployments/release/release-notes-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.md"   "deployments/release/abi-index-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.json" ; do
-  [[ -f "$f" ]] && { mkdir -p "$STAGE/$(dirname "$f")"; cp "$f" "$STAGE/$f"; }
-done
-
-# Verify helpers (optional)
-for f in "deployments/verify-latest${RELEASE_TAG_SUFFIX}.sh" "deployments/verify/verify-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.sh"; do
-  [[ -f "$f" ]] && { mkdir -p "$STAGE/$(dirname "$f")"; cp "$f" "$STAGE/$f"; }
-done
+# Current verification helper (optional).
+if [[ -f deployments/verify-latest-v16.sh ]]; then
+  cp deployments/verify-latest-v16.sh "$STAGE/deployments/verify-latest-v16.sh"
+fi
 
 # Frontend-only ABIs
 cp "$ABIS_DIR"/*.abi.json "$STAGE/abis/"

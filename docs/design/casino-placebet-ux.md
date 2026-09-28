@@ -3,7 +3,7 @@
 | Owner | Frontend Lead + Protocol Lead |
 | Status | Active |
 | Last Updated | 2026-05-18 |
-| Depends-on | `13-web3-ux.md`, `14-data-and-state.md`, `../frontend/25-observability.md`, `../constitution/SSOT.v1.3.md` |
+| Depends-on | `13-web3-ux.md`, `14-data-and-state.md`, `../frontend/25-observability.md`, `../constitution/SSOT.v1.6.md` |
 | Supersedes | two-click casino `plan -> execute` UX and any user-default `finalize` flow |
 
 This document defines the production casino round flow. The user-facing promise
@@ -24,7 +24,7 @@ keeper path is late.
 `RandomReady`, detach the VRF request, and emit `BetRandomReady`.
 
 It must not call `SettlementRouter.settlePosition` from inside the VRF callback.
-This preserves the v1.3 invariant that fulfillment must not be coupled to game
+This preserves the current invariant that fulfillment must not be coupled to game
 settlement complexity.
 
 ### 1.2 Settlement is keeper driven

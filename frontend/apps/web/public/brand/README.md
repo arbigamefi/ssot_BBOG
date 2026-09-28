@@ -94,8 +94,6 @@
 frontend/apps/web/public/
 ├── favicon.svg              # Browser favicon, based on logo-favicon.svg
 └── brand/                   # Brand assets (this directory)
-    ├── arbigamefi-lockup.svg # Compatibility alias for legacy callers
-    ├── arbigamefi-mark.svg   # Compatibility alias for legacy callers
     ├── logo.svg              # Primary logo
     ├── logo-icon.svg         # Icon version
     ├── logo-favicon.svg      # Favicon version

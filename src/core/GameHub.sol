@@ -299,6 +299,9 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     // ---------------------------------------------------------------------
 
     uint32 internal constant MAX_BET_COUNT = 100;
+    // The admitted casino formats contain at most two static ABI words. Bound the bytes stored and
+    // later copied during finalization; abi.decode alone accepts arbitrarily long trailing data.
+    uint256 internal constant MAX_GAME_PARAMS_BYTES = 64;
 
     function quoteVRFFee(uint32 betCount) public view override returns (uint256 fee, uint32 callbackGasLimit) {
         // Callback gas scales with betCount (multi-roll). Keep a safe cap.
@@ -320,6 +323,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         if (!pool_.active || IBank(pool_.bank).riskInPaused()) revert RiskInPaused(poolId);
         if (stakeSpec.amountPerRoll == 0) revert Errors.InsufficientBalance();
         if (stakeSpec.betCount == 0 || stakeSpec.betCount > MAX_BET_COUNT) revert Errors.InvalidConfig();
+        if (params.length > MAX_GAME_PARAMS_BYTES) revert Errors.InvalidConfig();
 
         uint256 stake = stakeSpec.amountPerRoll * uint256(stakeSpec.betCount);
         if (stake == 0) revert Errors.InsufficientBalance();
@@ -493,8 +497,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         uint256 payoutGross;
         uint256 refundAmount;
         try IGameModule(module).resolve(betParams[betId], spec, betId, randomWords) returns (
-            uint256 resolvedPayoutGross,
-            uint256 resolvedRefundAmount
+            uint256 resolvedPayoutGross, uint256 resolvedRefundAmount
         ) {
             payoutGross = resolvedPayoutGross;
             refundAmount = resolvedRefundAmount;
@@ -524,8 +527,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         uint256 usedTurnover = b.stake - refundAmount;
 
         // ---- house-edge allocation (turnover-based, SSOT v1.6) and the XP awards that pay it ----
-        (IReferralEngine.Allocation memory alloc, SSOTTypes.XPAward[] memory awards) =
-            _allocate(betId, b, usedTurnover);
+        (IReferralEngine.Allocation memory alloc, SSOTTypes.XPAward[] memory awards) = _allocate(betId, b, usedTurnover);
         uint256 protocolFeeAccrual = alloc.protocolFee;
 
         b.resolvedAt = uint64(block.timestamp);

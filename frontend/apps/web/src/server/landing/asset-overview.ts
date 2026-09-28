@@ -1,47 +1,11 @@
 import { createPublicClient, getAddress, http, type Address } from "viem";
+import { getContractAbis } from "@ssot/ssot/abis";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 import { getPoolAssetContext } from "../../features/assets/pool-asset";
 import { resolveServerRpcUrl } from "../rpc";
 
-const BANK_SSOT_ABI = [
-  {
-    inputs: [],
-    name: "getSSOT",
-    outputs: [
-      {
-        components: [
-          { name: "NAV", type: "uint256" },
-          { name: "R", type: "uint256" },
-          { name: "minLiquidityBps", type: "uint256" },
-          { name: "PF", type: "uint256" },
-          { name: "XP", type: "uint256" }
-        ],
-        name: "",
-        type: "tuple"
-      }
-    ],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [],
-    name: "getPerformance",
-    outputs: [
-      { name: "turnover", type: "uint256" },
-      { name: "payoutGross", type: "uint256" },
-      { name: "payoutNet", type: "uint256" },
-      { name: "refunded", type: "uint256" },
-      { name: "feeOnPayout", type: "uint256" },
-      { name: "protocolFeeAccrued", type: "uint256" },
-      { name: "betsHeld", type: "uint256" },
-      { name: "betsSettled", type: "uint256" },
-      { name: "betsRefunded", type: "uint256" }
-    ],
-    stateMutability: "view",
-    type: "function"
-  }
-] as const;
+const { BankAbi } = getContractAbis();
 
 export type LandingAssetOverviewResponse = {
   schemaVersion: 1;
@@ -113,13 +77,13 @@ export async function queryLandingAssetOverview(
         const [ssot, perf] = await Promise.all([
           publicClient.readContract({
             address: bank,
-            abi: BANK_SSOT_ABI,
+            abi: BankAbi,
             functionName: "getSSOT",
             args: []
           }),
           publicClient.readContract({
             address: bank,
-            abi: BANK_SSOT_ABI,
+            abi: BankAbi,
             functionName: "getPerformance",
             args: []
           })
@@ -130,10 +94,14 @@ export async function queryLandingAssetOverview(
           bank,
           symbol: poolAsset.asset.symbol,
           decimals: poolAsset.asset.decimals,
-          totalAssets: BigInt(ssot.NAV).toString(),
-          totalReserved: BigInt(ssot.R).toString(),
-          turnover: BigInt(perf[0]).toString(),
-          protocolFee: BigInt(perf[5]).toString()
+          totalAssets: BigInt((ssot as { NAV: bigint }).NAV).toString(),
+          totalReserved: BigInt((ssot as { R: bigint }).R).toString(),
+          turnover: BigInt(
+            (perf as readonly [bigint, bigint, bigint, bigint, bigint, bigint])[0]
+          ).toString(),
+          protocolFee: BigInt(
+            (perf as readonly [bigint, bigint, bigint, bigint, bigint, bigint])[5]
+          ).toString()
         };
       })
     );

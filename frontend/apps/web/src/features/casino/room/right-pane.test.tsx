@@ -609,3 +609,37 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("+ 0.096 USDC")).toBeDefined();
   });
 });
+
+describe("casino result payment evidence", () => {
+  afterEach(cleanup);
+  it.each(["transferred", "payable", "unknown", "none"] as const)(
+    "renders %s independently of the round result",
+    async (status) => {
+      const payout = status === "none" ? 0n : 296000n;
+      render(
+        <GameRoomRightPane
+          {...baseProps}
+          gameSlug="dice"
+          showResult
+          resultProof={{
+            kind: "settled",
+            betId: 7n,
+            requestId: 8n,
+            player: "0x0000000000000000000000000000000000000003",
+            randomHash: `0x${"aa".repeat(32)}`,
+            stake: 200000n,
+            settlement: {
+              payoutNet: payout,
+              refundAmount: 0n,
+              payment: { status, amount: payout.toString() }
+            }
+          }}
+        />
+      );
+      const message = await screen.findByText(
+        `casino.room.payment.${status === "none" ? "noPayment" : status}`
+      );
+      expect(message.getAttribute("data-payment-status")).toBe(status);
+    }
+  );
+});
