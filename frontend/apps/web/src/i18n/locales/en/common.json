@@ -988,7 +988,7 @@
       },
       "payment": {
         "transferred": "This settlement transaction transferred the settlement amount to the player wallet.",
-        "payable": "The transfer did not complete during this settlement; the amount was recorded as payable. Check Earn for the current claimable total and your wallet for later claims.",
+        "payable": "The transfer did not complete during this settlement, so the amount is held for your wallet. It is paid to you automatically once the transfer can go through; you can also claim it yourself on Earn.",
         "unknown": "The settlement amount is confirmed; the wallet transfer for this bet has not been verified.",
         "noPayment": "No player transfer is due for this bet."
       }

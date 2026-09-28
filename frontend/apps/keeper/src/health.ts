@@ -47,6 +47,15 @@ export type PocketDiscoveryHealth = {
   error?: string;
 };
 
+/** Player payables awaiting a keeper claim. Informational: a refused claim is an owed debt, not a fault. */
+export type PayableHealth = {
+  bank: Address;
+  scannedThrough?: string;
+  caughtUp: boolean;
+  pending: number;
+  error?: string;
+};
+
 /** A running keeper whose event scan has not advanced for this long is reported degraded. */
 export function scanStaleAfterMs(pollIntervalMs: number) {
   return pollIntervalMs > 0 ? Math.max(3 * pollIntervalMs, 300_000) : 0;
@@ -90,6 +99,7 @@ export type KeeperHealthSnapshot = {
   lastRedemptionScanAt?: string;
   pockets?: PocketHealth[];
   pocketDiscovery?: PocketDiscoveryHealth[];
+  payables?: PayableHealth[];
   casinoRecoveryScannedThrough?: string;
   degradedBy?: Array<KeeperFailureSource | "stalled">;
   rpc?: {
@@ -273,6 +283,10 @@ export class KeeperHealthReporter {
     if (errors.length) this.fail("pocket", errors.join("; "));
     else this.failures.delete("pocket");
     await this.update({ pockets, pocketDiscovery, queueDepth });
+  }
+
+  async recordPayables(payables: PayableHealth[], queueDepth: number) {
+    await this.update({ payables, queueDepth });
   }
 
   async recordFinalizeOutcome(

@@ -47,7 +47,13 @@ import {
   createPocketMonitor,
   reconcileRedemptionBank
 } from "./redemption.js";
-import type { PocketDiscoveryHealth, PocketHealth, RedemptionHealth } from "./health.js";
+import { createPayableClaimer } from "./payables.js";
+import type {
+  PayableHealth,
+  PocketDiscoveryHealth,
+  PocketHealth,
+  RedemptionHealth
+} from "./health.js";
 
 // Stage-2 admission calls GameHub with 3m execution gas. Transactions also pay intrinsic gas
 // (21k + 36 calldata bytes); use the same 3.05m envelope for eth_call and the actual transaction.
@@ -285,6 +291,14 @@ export function createKeeperRuntime({
   );
   const pocketMonitors = [...banks.values()].map((pool) =>
     createPocketMonitor({
+      bank: pool.bank,
+      origin: recoveryOrigin,
+      chunkSize: config.scanChunkBlocks,
+      maxChunks: config.scanMaxChunksPerPass
+    })
+  );
+  const payableClaimers = [...banks.values()].map((pool) =>
+    createPayableClaimer({
       bank: pool.bank,
       origin: recoveryOrigin,
       chunkSize: config.scanChunkBlocks,
@@ -973,6 +987,28 @@ export function createKeeperRuntime({
       return { ...receipt, txHash };
     });
 
+  // claimPlayerPayable pays only the player, so the keeper needs no authority to complete a deferred payout.
+  const claimPlayerPayable = (bank: Address, player: Address) =>
+    withWriteLock(async () => {
+      if (stopped) throw new Error("Keeper stopped before a payable claim");
+      const request = {
+        address: bank,
+        abi: BANK_REDEMPTION_KEEPER_ABI,
+        functionName: "claimPlayerPayable" as const,
+        args: [player] as const
+      };
+      await publicClient.simulateContract({ ...request, account: account.address });
+      const txHash = await walletClient.writeContract({ ...request, account, chain });
+      const receipt = await waitFinalizeReceipt(txHash);
+      logger.info("casino.keeper.player_payable_claimed", {
+        bank,
+        player,
+        txHash,
+        status: receipt.status
+      });
+      return { ...receipt, txHash };
+    });
+
   const runLifecycleScan = async () => {
     if (stopped || lifecycleScanning || Date.now() < nextLifecycleScanAt) return;
     lifecycleScanning = true;
@@ -1003,6 +1039,10 @@ export function createKeeperRuntime({
         discovery.push(result.discovery);
       }
       await health.recordPockets(pockets, discovery, queue.size);
+      const payables: PayableHealth[] = [];
+      for (const claimer of payableClaimers)
+        payables.push(await claimer.run(publicClient, claimPlayerPayable));
+      await health.recordPayables(payables, queue.size);
     } catch (error) {
       await health.recordError(describeError(error), queue.size, "redemption");
     } finally {

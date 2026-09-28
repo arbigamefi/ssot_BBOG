@@ -44,7 +44,7 @@ Only the controller or its currently approved operator can claim to a receiver. 
 
 `settleBet` and `refundBet` first attempt to pay the player. A refused transfer records the full player debt, releases the hold reserve and permits the position to reach its terminal state. Use the pinned OpenZeppelin `SafeERC20.trySafeTransfer`; only transfer failure is converted, never arbitrary Router/settlement reverts.
 
-A token's internal out-of-gas failure, including through a proxy, follows the same debt policy. A caller can defer cash delivery by under-funding the transfer but cannot reduce or redirect the debt. Completing the Bank, Router and Hub terminal state must all succeed or the entire transaction reverts. There is no guarantee with an arbitrary transaction gas limit.
+A token's internal out-of-gas failure, including through a proxy, follows the same debt policy. A caller can defer cash delivery by under-funding the transfer but cannot reduce or redirect the debt, and the keeper claims every payable for its player on its next pass. Completing the Bank, Router and Hub terminal state must all succeed or the entire transaction reverts. There is no guarantee with an arbitrary transaction gas limit.
 
 Every admitted token must leave balances unchanged after a failed transfer; returning false does not undo token side effects. Admission retains exact-transfer, non-rebasing assets. A token that moves assets and then returns false fails this assumption.
 
@@ -72,7 +72,7 @@ Casino Hub/module admission still requires public terminal paths, bounded inputs
 
 ## Consumers and verification
 
-Keeper activation and historical monitoring are independent. Keeper continues finalization and eligible refunds, tolerates transaction races and reconciles missed events/restarts. Alert state advances only after notification succeeds. Delayed historical recovery never becomes a scheduled betting shutdown.
+Keeper activation and historical monitoring are independent. Keeper continues finalization and eligible refunds, claims player payables for their players (with backoff while the asset refuses the transfer), tolerates transaction races and reconciles missed events/restarts. Alert state advances only after notification succeeds. Delayed historical recovery never becomes a scheduled betting shutdown.
 
 Earn distinguishes waiting shares, priced liquid cash and historical recovery. Cash-flow/PnL indexing includes actual ordinary withdrawals and recovery payments with correct beneficiaries; segregation and share burns are not cash receipts. Incomplete discovery or uncertain recovery must remain visible rather than being silently valued at zero.
 
