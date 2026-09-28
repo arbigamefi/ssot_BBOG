@@ -52,7 +52,7 @@ review and is not enabled by casino acceptance.
 
 The source interfaces are authoritative for signatures and storage structures.
 Tests in `test/unit/PoolRegistry.t.sol`, `test/unit/SettlementRouter.t.sol`,
-`test/unit/GameHubE2E.t.sol` and `test/unit/SportsHub.t.sol` exercise these boundaries.
+`test/unit/GameHubE2E.t.sol` and the `test/unit/SportsHub*.t.sol` suites exercise these boundaries.
 See [SSOT v1.6](../constitution/SSOT.v1.6.md) and
 [Executable SSOT v1.6](../constitution/ExecutableSSOT.v1.6.md) for the current contract
 rules and acceptance gates.

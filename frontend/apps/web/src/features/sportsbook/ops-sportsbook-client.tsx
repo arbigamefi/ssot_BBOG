@@ -33,16 +33,6 @@ const RECENT_MARKET_LIMIT = 8;
 
 const CONTROL_LINKS = [
   {
-    labelKey: "opsSportsbook.controls.links.goNoGo",
-    href: "/ops",
-    detail: "docs/ops/sportsbook-phase2-gonogo-2026-05-14.md"
-  },
-  {
-    labelKey: "opsSportsbook.controls.links.frontendAccess",
-    href: "/ops",
-    detail: "docs/ops/sportsbook-frontend-access.md"
-  },
-  {
     labelKey: "opsSportsbook.controls.links.providerPolicy",
     href: "/ops",
     detail: "docs/ops/sportsbook-provider-the-odds-api.md"

@@ -2121,8 +2121,6 @@
       "title": "上线阻塞项",
       "description": "仍然阻塞公开上线的运营文档链接。",
       "links": {
-        "goNoGo": "Go/no-go 包",
-        "frontendAccess": "前端访问策略",
         "providerPolicy": "Provider 策略"
       }
     }

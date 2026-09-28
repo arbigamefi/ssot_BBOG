@@ -146,7 +146,6 @@ Run adapter-mode gates only:
 
 ```bash
 forge test --match-path "test/diff/StatefulSystemDiffAdapter.t.sol" -vvv
-forge test --match-path "test/invariants/InvariantsAdapter.t.sol" -vvv
 ```
 
 ## Frontend release artifacts

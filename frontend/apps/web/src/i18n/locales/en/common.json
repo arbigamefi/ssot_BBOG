@@ -2121,8 +2121,6 @@
       "title": "Launch blockers",
       "description": "Links to the ops documents that still gate public launch.",
       "links": {
-        "goNoGo": "Go/no-go packet",
-        "frontendAccess": "Frontend access policy",
         "providerPolicy": "Provider policy"
       }
     }

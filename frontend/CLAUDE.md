@@ -1,13 +1,11 @@
 # ArbiGameFi Frontend — AI Runtime Rules
 
 This file is the short rule set for AI-assisted work inside `frontend/`.
-Detailed policy lives in `../docs/frontend/32-ai-pairing.md`; current execution
-order lives in `../docs/design/frontend-implementation-roadmap.md`; the
-fullstack boundary lives in
+Detailed policy lives in `../docs/frontend/`; the fullstack boundary lives in
 `../docs/strategy/fullstack-product-architecture.md`.
 
-If this file conflicts with release artifacts, contract SSOT, accepted ADRs, or
-the active roadmap, those sources win.
+If this file conflicts with release artifacts, contract SSOT or accepted ADRs,
+those sources win.
 
 ## Operating Priority
 
