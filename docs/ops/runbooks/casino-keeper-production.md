@@ -1,13 +1,19 @@
-# v1.5 keeper operations
+# Keeper operations
 
-Production uses the [immutable Docker stack](../../../frontend/deploy/docker/README.md). The old standalone systemd unit and host-build procedure have been removed.
+Deploy the current keeper using the [Docker stack](../../../frontend/deploy/docker/README.md) and
+[keeper configuration](../../../frontend/apps/keeper/README.md). Use a verified current manifest,
+dedicated signer, chain-specific RPC and the current PostgreSQL schema.
 
-The current stack runs one keeper per chain with dedicated credentials, persistent health/cursor storage and PostgreSQL. Check `/api/healthz?chainId=8453` and `/api/healthz?chainId=84532`, keeper queue depth and database receipts. An HTTP response alone does not prove chain settlement.
+The keeper finalizes eligible casino results, refunds timed-out PendingVRF positions, handles admitted
+sports terminal paths, activates LP queues to price liquid cash without waiting for old positions, and
+claims player payables, which always pay the player's own address. It does not hold user claim permissions.
+Requests/claims are not inferred from health status; check contract events and actual receipts.
 
-Keeper logs are JSON lines whose `message` is the event name and whose `error` holds the error text; see [keeper logs](../../../frontend/apps/keeper/README.md#logs). `/api/healthz` does not cover the websocket watchers. After `*_watch_error` lines they may stay down, because viem does not keep retrying a failed websocket connection; restart the keeper once the `KEEPER_RPC_WS` provider accepts connections again.
+Monitor health, backlog, oldest open positions, historical-recovery age and discovery completeness, write failures and database replay
+coverage. Restart after a transport incident only once the configured RPC is available; reconcile
+pending transaction receipts and signer nonces. Shutdown waits for in-flight writes before closing the
+store. Use independent credentials for redundant workers.
 
-Use reviewed chain-specific environment files and CI-built image digests. Keep environment directories at 0700 and files at 0600. Never run two active keeper processes using the same signer. For a failed broadcast, inspect its receipt and nonce before deciding whether any retry is needed.
-
-Keeper finalization is permissionless; it is not governance authority. Guardian pause and Safe recovery are separate operations. Follow the [v1.5 governance workflow](../../deploy/v15-release.md) and [recovery evidence](../../deploy/v15/recovery-and-guardian-drills.zh-CN.md). See the [implementation record](../../deploy/v15/implementation-status.zh-CN.md) for current scope and outstanding acceptance.
-
-Local development templates remain in `frontend/deploy/casino-keeper/`, used only by development/backfill helpers.
+Alert delivery failures must remain retryable. A healthy HTTP snapshot alone does not prove all bets
+terminated or all user funds were transferred. Governance and guardian actions remain separate from
+permissionless keeper calls; follow the [deployment workflow](../../deploy/v16-release.md).

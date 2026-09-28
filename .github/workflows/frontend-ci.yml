@@ -83,7 +83,7 @@ jobs:
       - name: Unit tests
         env:
           KEEPER_TEST_POSTGRES_URL: postgres://keeper_test:local_ci_only@127.0.0.1:5432/keeper_test
-        run: pnpm test:strict
+        run: pnpm test
 
       - name: Build
         run: pnpm build

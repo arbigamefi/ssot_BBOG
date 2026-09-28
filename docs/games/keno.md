@@ -4,7 +4,7 @@ This repository includes a pure, deterministic **Keno** module (`KenoModule`) de
 
 - Module is **stateless** and purely semantic (deterministic given params, stake spec, and RNG seed).
 - House edge is **not baked into the module**; it is applied by `GameHub` as **fee-on-payout** (ADR-0007).
-- Multi-roll semantics (refund + stopGain/stopLoss) follow SSOT.v1.1 / ADR-0013.
+- Multi-roll semantics (refund + stopGain/stopLoss) follow the current SSOT / ADR-0013.
 
 ## Rules (current config)
 

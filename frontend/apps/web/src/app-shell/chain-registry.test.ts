@@ -1,13 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { embeddedChainIds } = vi.hoisted(() => ({ embeddedChainIds: [] as number[] }));
+vi.mock("@ssot/ssot/release", () => ({ embeddedChainIds }));
 
 import {
   getExplorerAddressUrl,
   getExplorerTxUrl,
   getSupportedAppChains,
+  isSupportedAppChain,
   resolveDefaultAppChainId
 } from "./chain-registry";
 
 describe("chain registry", () => {
+  beforeEach(() => {
+    embeddedChainIds.splice(0, embeddedChainIds.length, 8453, 84532);
+  });
+
   it("exposes embedded mainnet and testnet releases as selectable chains", () => {
     const chains = getSupportedAppChains();
 
@@ -19,6 +27,22 @@ describe("chain registry", () => {
   it("resolves a configured default chain only when it is embedded", () => {
     expect(resolveDefaultAppChainId("84532")).toBe(84532);
     expect(resolveDefaultAppChainId("99999")).toBe(8453);
+  });
+
+  it("keeps the wallet shell usable without exposing an undeployed selectable chain", () => {
+    embeddedChainIds.length = 0;
+    expect(getSupportedAppChains()).toEqual([]);
+    expect(isSupportedAppChain(8453)).toBe(false);
+    expect(isSupportedAppChain(84532)).toBe(false);
+    // A provider needs a chain context; it is not an admitted deployment.
+    expect(resolveDefaultAppChainId("8453")).toBe(84532);
+  });
+
+  it("admits only the configured first deployment", () => {
+    embeddedChainIds.splice(0, embeddedChainIds.length, 84532);
+    expect(getSupportedAppChains().map((chain) => chain.id)).toEqual([84532]);
+    expect(isSupportedAppChain(8453)).toBe(false);
+    expect(resolveDefaultAppChainId("8453")).toBe(84532);
   });
 
   it("builds explorer URLs per chain and returns null when inputs are missing", () => {

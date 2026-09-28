@@ -28,8 +28,7 @@ const releasePath =
   readArg("--release") ??
   path.resolve(frontendRoot, "packages/ssot/src/release/embedded", `chain-${chainId}.json`);
 const abiRoot =
-  readArg("--abi-root") ??
-  path.resolve(frontendRoot, "packages/ssot/src/abis/release", `chain-${chainId}`);
+  readArg("--abi-root") ?? path.resolve(frontendRoot, "packages/ssot/src/abis/contracts");
 const rpcRetries = readPositiveInteger(
   readArg("--rpc-retries") ?? process.env.RELEASE_SMOKE_RPC_RETRIES,
   2
@@ -64,8 +63,6 @@ const PoolRegistryAbi = await loadAbi("PoolRegistry");
 const SportsHubAbi = await loadAbi("SportsHub");
 const SportsRiskEngineAbi = await loadAbi("SportsRiskEngine");
 const ERC20Abi = parseAbi(["function decimals() view returns (uint8)"]);
-const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
-const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
 const MAX_BPS = 10_000n;
 const SSOT_FIELDS = [
   "B",
@@ -73,9 +70,6 @@ const SSOT_FIELDS = [
   "XP",
   "NAV",
   "R",
-  "minLiquidityBps",
-  "minLiq",
-  "free",
   "riskReserveBps",
   "riskReserve",
   "riskFree",
@@ -115,12 +109,8 @@ await check("release schemaVersion", () => {
     throw new Error(`expected schemaVersion=2, got ${release?.meta?.schemaVersion}`);
   }
   const contracts = release?.contracts ?? {};
-  if (
-    Object.hasOwn(contracts, LEGACY_GAME_AGGREGATOR_KEY) ||
-    Object.hasOwn(contracts, LEGACY_BANK_DIRECTORY_KEY) ||
-    Object.hasOwn(release?.sports ?? {}, LEGACY_GAME_AGGREGATOR_KEY)
-  ) {
-    throw new Error("legacy release keys are present in embedded release");
+  if (release?.meta?.releaseLock?.schema !== "SSOT_RELEASE_DIGEST_V16" || release.isPlaceholder) {
+    throw new Error("expected an authenticated current deployed release");
   }
   for (const key of REQUIRED_CORE_CONTRACTS) {
     const address = contracts[key];
@@ -142,7 +132,7 @@ await check("release schemaVersion", () => {
       }
     }
   }
-  return "v1.3";
+  return "v1.6";
 });
 
 await check("rpc chainId", async () => {
@@ -269,13 +259,34 @@ for (const pool of release.pools ?? []) {
   await checkCode(`pool ${pool.poolId} bank bytecode`, pool.bank);
 
   await check(`Bank pool ${pool.poolId} getSSOT`, async () => {
-    const ssot = await rpcReadContract({
-      address: getAddress(pool.bank),
-      abi: BankAbi,
-      functionName: "getSSOT",
-      args: []
-    });
-    return validateBankSSOT(ssot);
+    const blockNumber = await rpcCall("getBlockNumber", () => client.getBlockNumber());
+    const [ssot, exitPayable, playerPayableTotal, recoveryBacking, activeReserved, totalReserved] =
+      await Promise.all(
+        [
+          "getSSOT",
+          "exitPayable",
+          "playerPayableTotal",
+          "recoveryBacking",
+          "activeReserved",
+          "totalReserved"
+        ].map((functionName) =>
+          rpcReadContract({
+            address: getAddress(pool.bank),
+            abi: BankAbi,
+            functionName,
+            args: [],
+            blockNumber
+          })
+        )
+      );
+    return validateBankSSOT(
+      ssot,
+      exitPayable,
+      playerPayableTotal,
+      recoveryBacking,
+      activeReserved,
+      totalReserved
+    );
   });
 
   await check(`Bank pool ${pool.poolId} getPerformance`, async () => {
@@ -530,7 +541,14 @@ function safeHost(url) {
   }
 }
 
-function validateBankSSOT(ssot) {
+function validateBankSSOT(
+  ssot,
+  exitPayable,
+  playerPayableTotal,
+  recoveryBacking,
+  activeReserved,
+  totalReserved
+) {
   assertTupleShape("Bank.getSSOT", ssot, SSOT_FIELDS);
 
   const B = requiredBigintField("Bank.getSSOT", ssot, "B", SSOT_FIELDS);
@@ -538,9 +556,6 @@ function validateBankSSOT(ssot) {
   const XP = requiredBigintField("Bank.getSSOT", ssot, "XP", SSOT_FIELDS);
   const NAV = requiredBigintField("Bank.getSSOT", ssot, "NAV", SSOT_FIELDS);
   const R = requiredBigintField("Bank.getSSOT", ssot, "R", SSOT_FIELDS);
-  const minLiquidityBps = requiredBigintField("Bank.getSSOT", ssot, "minLiquidityBps", SSOT_FIELDS);
-  const minLiq = requiredBigintField("Bank.getSSOT", ssot, "minLiq", SSOT_FIELDS);
-  const free = requiredBigintField("Bank.getSSOT", ssot, "free", SSOT_FIELDS);
   const riskReserveBps = requiredBigintField("Bank.getSSOT", ssot, "riskReserveBps", SSOT_FIELDS);
   const riskReserve = requiredBigintField("Bank.getSSOT", ssot, "riskReserve", SSOT_FIELDS);
   const riskFree = requiredBigintField("Bank.getSSOT", ssot, "riskFree", SSOT_FIELDS);
@@ -562,17 +577,30 @@ function validateBankSSOT(ssot) {
   const xpLockedTotal = requiredBigintField("Bank.getSSOT", ssot, "xpLockedTotal", SSOT_FIELDS);
   const xpHoldbackTotal = requiredBigintField("Bank.getSSOT", ssot, "xpHoldbackTotal", SSOT_FIELDS);
 
-  assertBps("Bank.getSSOT.minLiquidityBps", minLiquidityBps);
   assertBps("Bank.getSSOT.riskReserveBps", riskReserveBps);
   assertBps("Bank.getSSOT.withdrawalBufferBps", withdrawalBufferBps);
 
-  if (riskReserveBps !== minLiquidityBps) {
+  if (
+    [exitPayable, playerPayableTotal, recoveryBacking, activeReserved, totalReserved].some(
+      (value) => typeof value !== "bigint"
+    )
+  ) {
+    throw new Error("Bank payable and historical backing totals must decode as bigint");
+  }
+  if (B !== NAV + PF + XP + exitPayable + playerPayableTotal + recoveryBacking) {
     throw new Error(
-      `riskReserveBps ${riskReserveBps} must match legacy minLiquidityBps ${minLiquidityBps}`
+      `NAV identity failed: B=${B} NAV=${NAV} PF=${PF} XP=${XP} exitPayable=${exitPayable} playerPayableTotal=${playerPayableTotal} recoveryBacking=${recoveryBacking}`
     );
   }
-  if (B !== NAV + PF + XP) {
-    throw new Error(`NAV identity failed: B=${B} NAV=${NAV} PF=${PF} XP=${XP}`);
+  if (
+    R !== activeReserved ||
+    totalReserved < activeReserved ||
+    totalReserved - activeReserved > recoveryBacking
+  ) {
+    throw new Error("Bank active/historical reserve allocation is inconsistent");
+  }
+  if (NAV < R || B < PF + XP + exitPayable + playerPayableTotal + totalReserved) {
+    throw new Error("Bank active or global backing is below its reserved obligations");
   }
   if (XP !== xpAccruedTotal + xpLockedTotal + xpHoldbackTotal) {
     throw new Error(
@@ -581,15 +609,13 @@ function validateBankSSOT(ssot) {
   }
   const expectedRiskReserve = (NAV * riskReserveBps) / MAX_BPS;
   const expectedRiskFree = NAV >= R + expectedRiskReserve ? NAV - R - expectedRiskReserve : 0n;
-  if (riskReserve !== expectedRiskReserve || minLiq !== expectedRiskReserve) {
+  if (riskReserve !== expectedRiskReserve) {
     throw new Error(
-      `risk reserve mismatch: riskReserve=${riskReserve} minLiq=${minLiq} expected=${expectedRiskReserve}`
+      `risk reserve mismatch: riskReserve=${riskReserve} expected=${expectedRiskReserve}`
     );
   }
-  if (riskFree !== expectedRiskFree || free !== expectedRiskFree) {
-    throw new Error(
-      `risk free mismatch: riskFree=${riskFree} free=${free} expected=${expectedRiskFree}`
-    );
+  if (riskFree !== expectedRiskFree) {
+    throw new Error(`risk free mismatch: riskFree=${riskFree} expected=${expectedRiskFree}`);
   }
   const expectedWithdrawalBuffer = (NAV * withdrawalBufferBps) / MAX_BPS;
   const expectedWithdrawable =

@@ -7,6 +7,9 @@ export type FinalizerDeps = {
   readBet: (betId: bigint) => Promise<BetRead>;
   simulateFinalize: (betId: bigint) => Promise<void>;
   writeFinalize: (betId: bigint) => Promise<Hex>;
+  readRefundClock?: () => Promise<{ timestamp: bigint; timeoutSeconds: bigint }>;
+  simulateRefund?: (betId: bigint) => Promise<void>;
+  writeRefund?: (betId: bigint) => Promise<Hex>;
   waitFinalizeReceipt: (txHash: Hex) => Promise<{ status: "success" | "reverted" }>;
   materializeReceipt?: (event: KeeperEvent, txHash: Hex) => Promise<void>;
   now?: () => number;
@@ -47,7 +50,7 @@ export async function finalizeIfReady(
   const startedAt = now();
   const before = await deps.readBet(event.betId);
 
-  if (!shouldFinalize(before.state)) {
+  if (!shouldFinalize(before.state) && before.state !== "pendingVrf") {
     if (isTerminalState(before.state)) {
       logger.info("casino.finalize.raced", { betId: event.betId.toString(), state: before.state });
       return { kind: "raced", state: before.state };
@@ -57,11 +60,41 @@ export async function finalizeIfReady(
   }
 
   try {
-    await deps.simulateFinalize(event.betId);
-    const txHash = await deps.writeFinalize(event.betId);
+    let action: "finalize" | "refund" = "finalize";
+    if (before.state === "pendingVrf") {
+      if (
+        before.placedAt == null ||
+        !deps.readRefundClock ||
+        !deps.simulateRefund ||
+        !deps.writeRefund
+      ) {
+        throw new Error(
+          "PendingVRF recovery requires placedAt and the current on-chain refund clock"
+        );
+      }
+      const { timestamp, timeoutSeconds } = await deps.readRefundClock();
+      const readyAt = before.placedAt + timeoutSeconds;
+      if (timestamp < readyAt) {
+        // Governance can shorten the timeout. Re-read within a minute rather than sleeping to an old deadline.
+        return {
+          kind: "deferred",
+          state: "pendingVrf",
+          retryAfterMs: Math.min(Number(readyAt - timestamp) * 1000, 60_000)
+        };
+      }
+      action = "refund";
+    }
+    await (action === "refund"
+      ? deps.simulateRefund!(event.betId)
+      : deps.simulateFinalize(event.betId));
+    const txHash = await (action === "refund"
+      ? deps.writeRefund!(event.betId)
+      : deps.writeFinalize(event.betId));
     const receipt = await deps.waitFinalizeReceipt(txHash);
     if (receipt.status !== "success") {
-      return { kind: "failed", reason: "finalize transaction reverted", retryable: true };
+      const raced = await deps.readBet(event.betId);
+      if (isTerminalState(raced.state)) return { kind: "raced", state: raced.state };
+      return { kind: "failed", reason: `${action} transaction reverted`, retryable: true };
     }
 
     const after = await readTerminalAfterReceipt(event, deps);
@@ -92,6 +125,14 @@ export async function finalizeIfReady(
       retryable: true
     };
   } catch (error) {
+    // A callback may make an eligible refund RandomReady, or another caller may finish first.
+    // Re-read terminal state; a new RandomReady result remains retryable and is never refunded blindly.
+    try {
+      const raced = await deps.readBet(event.betId);
+      if (isTerminalState(raced.state)) return { kind: "raced", state: raced.state };
+    } catch {
+      /* Preserve the original failure when the reconciliation read also fails. */
+    }
     // The reason also lands in the public health snapshot, so it must not carry the RPC URL.
     const reason = describeError(error);
     logger.error("casino.finalize.failed", { betId: event.betId.toString(), error: reason });

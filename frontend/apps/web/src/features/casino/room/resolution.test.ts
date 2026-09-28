@@ -288,3 +288,76 @@ describe("game room resolution helpers", () => {
     ).resolves.toBeNull();
   });
 });
+
+describe("payment evidence alongside indexed settlement", () => {
+  const indexedTx = `0x${"ab".repeat(32)}` as const;
+  function db() {
+    return {
+      gameHubEvents: {
+        where: () => ({
+          equals: () => ({
+            toArray: async () => [
+              {
+                eventName: "BetFinalized",
+                txHash: indexedTx,
+                argsJson: JSON.stringify({
+                  positionId: "7",
+                  payoutNet: "19600",
+                  refundAmount: "10000"
+                })
+              }
+            ]
+          })
+        })
+      }
+    } as any;
+  }
+  const recentBets = [{ betId: "7", state: "finalized" as const, lastTxHash: indexedTx }];
+  it("does not mistake complete indexed payout facts for proof of cash delivery", async () => {
+    const payment = { status: "payable", amount: "29600" };
+    const getTerminalProof = vi.fn().mockResolvedValue({
+      kind: "settled",
+      settlement: { txHash: indexedTx, payoutNet: 19600n, refundAmount: 10000n, payment }
+    });
+    const proof = await resolveCasinoTerminalProof({
+      terminalBet: baseBet,
+      recentBets,
+      db: db(),
+      gameHub: { getTerminalProof }
+    });
+    expect(getTerminalProof).toHaveBeenCalledWith(7n);
+    expect(proof).toMatchObject({ kind: "settled", settlement: { txHash: indexedTx, payment } });
+  });
+  it("keeps indexed settlement available without claiming a transfer when RPC is unavailable", async () => {
+    const getTerminalProof = vi.fn().mockRejectedValue(new Error("RPC unavailable"));
+    const proof = await resolveCasinoTerminalProof({
+      terminalBet: baseBet,
+      recentBets,
+      db: db(),
+      gameHub: { getTerminalProof }
+    });
+    expect(proof).toMatchObject({
+      kind: "settled",
+      settlement: { payoutNet: 19600n, refundAmount: 10000n, txHash: indexedTx }
+    });
+    if (proof?.kind === "settled") expect(proof.settlement.payment).toBeUndefined();
+  });
+  it("does not attach replacement transaction payment evidence to the old indexed transaction", async () => {
+    const replacement = {
+      kind: "settled",
+      settlement: {
+        txHash: `0x${"cd".repeat(32)}`,
+        payoutNet: 19600n,
+        refundAmount: 10000n,
+        payment: { status: "transferred", amount: "29600" }
+      }
+    };
+    const proof = await resolveCasinoTerminalProof({
+      terminalBet: baseBet,
+      recentBets,
+      db: db(),
+      gameHub: { getTerminalProof: vi.fn().mockResolvedValue(replacement) }
+    });
+    expect(proof).toEqual(replacement);
+  });
+});

@@ -1,12 +1,12 @@
 import * as React from "react";
+import { StickyActionBar } from "../../components/overlay/StickyActionBar";
 import { useTranslations } from "next-intl";
-import { AssetSelector, type AssetOption, type TxStepItem, type TxStatus } from "@ssot/ui";
+import type { TxStepItem, TxStatus } from "@ssot/ui";
 import type { DomainError } from "@ssot/ssot";
 
 import { TokenLogo } from "../../components/TokenLogo";
 import { requestWalletConnect } from "../../app-shell/wallet-connect-events";
 import type { EarnAmountMode, EarnTab } from "./types";
-import { useLpsKeepHouseEdgeShare } from "./terms";
 
 const TABS: Array<{ key: EarnTab; label: string; description: string }> = [
   {
@@ -42,9 +42,9 @@ export function EarnActionPanel({
   onTabChange,
   amountMode,
   onAmountModeChange,
-  assets,
-  asset,
-  onAssetChange,
+  pools,
+  poolKey,
+  onPoolChange,
   amount,
   onAmountChange,
   symbol,
@@ -58,15 +58,17 @@ export function EarnActionPanel({
   flow,
   onSubmit,
   connected,
-  depositsClosed = false
+  depositsClosed = false,
+  withdrawContent,
+  notice
 }: {
   tab: EarnTab;
   onTabChange: (tab: EarnTab) => void;
   amountMode: EarnAmountMode;
   onAmountModeChange: (mode: EarnAmountMode) => void;
-  assets: readonly AssetOption[];
-  asset: `0x${string}`;
-  onAssetChange: (asset: `0x${string}`) => void;
+  pools: readonly { key: string; label: string }[];
+  poolKey: string;
+  onPoolChange: (key: string) => void;
   amount: string;
   onAmountChange: (amount: string) => void;
   symbol: string;
@@ -82,12 +84,15 @@ export function EarnActionPanel({
   connected: boolean;
   /** Website switch for new LP capital; withdrawals are unaffected. */
   depositsClosed?: boolean;
+  /** Request, cancellation and claim controls for the selected pool. */
+  withdrawContent: React.ReactNode;
+  notice?: React.ReactNode;
 }) {
   const t = useTranslations();
-  const lpShare = useLpsKeepHouseEdgeShare();
   const displayedAvailableValue = connected ? availableValue : "—";
   const activeTab = TABS.find((item) => item.key === tab);
   const showDepositsClosed = tab === "deposit" && depositsClosed;
+  const showWithdrawContent = tab === "withdraw";
 
   return (
     <section
@@ -123,11 +128,13 @@ export function EarnActionPanel({
           ))}
         </div>
 
-        <p className="min-w-0 text-sm leading-6 text-fg-muted">
-          {activeTab ? t(activeTab.description) : ""}
-        </p>
+        {!showWithdrawContent ? (
+          <p className="min-w-0 text-sm leading-6 text-fg-muted">
+            {activeTab ? t(activeTab.description) : ""}
+          </p>
+        ) : null}
 
-        {showDepositsClosed ? null : (
+        {showDepositsClosed || showWithdrawContent ? null : (
           <>
             <div className="grid min-w-0 gap-2">
               <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
@@ -155,30 +162,41 @@ export function EarnActionPanel({
           </>
         )}
 
-        <AssetSelector
-          title={t("earn.actions.asset")}
-          assets={[...assets]}
-          value={asset}
-          onValueChange={onAssetChange}
-          disabled={flow.busy}
-          error={unsupportedAsset ? t("earn.errors.unsupportedWriteAsset") : undefined}
-          renderLogo={(option) => <TokenLogo symbol={option.symbol} size={20} />}
-          className="min-w-0"
-        />
+        <div className="grid min-w-0 gap-2">
+          <label
+            htmlFor="earn-pool"
+            className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle"
+          >
+            {t("earn.pools.label")}
+          </label>
+          <select
+            id="earn-pool"
+            value={poolKey}
+            onChange={(event) => onPoolChange(event.target.value)}
+            disabled={flow.busy || pools.length === 0}
+            className="min-h-11 w-full min-w-0 rounded-md border border-border bg-surface-0 px-3 text-sm text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50"
+          >
+            {pools.map((pool) => (
+              <option key={pool.key} value={pool.key}>
+                {pool.label}
+              </option>
+            ))}
+          </select>
+          {unsupportedAsset ? (
+            <p className="text-sm text-warn">{t("earn.errors.unsupportedWriteAsset")}</p>
+          ) : null}
+        </div>
+        {notice}
 
-        {showDepositsClosed ? (
+        {showWithdrawContent ? (
+          withdrawContent
+        ) : showDepositsClosed ? (
           <div
             role="status"
             className="rounded-md border border-warn/30 bg-warn/10 p-4 text-sm leading-6"
           >
             <div className="font-bold text-fg">{t("earn.actions.depositsClosed.title")}</div>
-            <p className="mt-1 text-fg-muted">
-              {t(
-                lpShare
-                  ? "earn.actions.depositsClosed.bodyLpShare"
-                  : "earn.actions.depositsClosed.body"
-              )}
-            </p>
+            <p className="mt-1 text-fg-muted">{t("earn.actions.depositsClosed.body")}</p>
           </div>
         ) : (
           <>
@@ -247,17 +265,42 @@ export function EarnActionPanel({
                 ? t("app.connectWalletButton")
                 : flow.busy
                   ? t("earn.actions.submit.executing")
-                  : tab === "deposit"
-                    ? amountMode === "shares"
-                      ? t("earn.actions.submit.mint")
-                      : t("earn.actions.submit.deposit")
-                    : amountMode === "shares"
-                      ? t("earn.actions.submit.redeem")
-                      : t("earn.actions.submit.withdraw")}
+                  : amountMode === "shares"
+                    ? t("earn.actions.submit.mint")
+                    : t("earn.actions.submit.deposit")}
             </button>
           </>
         )}
       </div>
     </section>
+  );
+}
+
+export function EarnMobileActions({
+  tab,
+  onTabChange
+}: {
+  tab: EarnTab;
+  onTabChange: (tab: EarnTab) => void;
+}) {
+  const t = useTranslations();
+  return (
+    <StickyActionBar innerClassName="grid grid-cols-2 gap-2">
+      {(["deposit", "withdraw"] as const).map((item) => (
+        <button
+          key={item}
+          type="button"
+          aria-controls="earn-actions"
+          onClick={() => onTabChange(item)}
+          className={`min-h-12 rounded-xl border px-4 text-sm font-bold transition-colors ${
+            tab === item
+              ? "border-brand bg-brand text-fg-inverse"
+              : "border-border-soft bg-surface-1 text-fg hover:border-brand/40 hover:bg-brand-soft"
+          }`}
+        >
+          {t(`earn.actions.tabs.${item}.label`)}
+        </button>
+      ))}
+    </StickyActionBar>
   );
 }

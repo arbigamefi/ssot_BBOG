@@ -8,6 +8,7 @@ import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {IPoolRegistry} from "../../src/core/interfaces/IPoolRegistry.sol";
 import {ISettlementRouter} from "../../src/core/interfaces/ISettlementRouter.sol";
+import {IBank} from "../../src/core/interfaces/IBank.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
@@ -278,7 +279,7 @@ contract SettlementRouterTest is Test {
     function test_settlePosition_rejectsXpThatTakesTheLpShare() external {
         uint256 positionId = _open(100e6, 250e6);
 
-        // A hub that pays its whole edge out as referral XP, the v1.5 allocation, is refused.
+        // A hub that pays its whole edge out as referral XP, an excessive allocation, is refused.
         SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](2);
         awards[0] = _award(1e6, 1e6);
         awards[1] = _award(1e6, 1e6);
@@ -324,14 +325,44 @@ contract SettlementRouterTest is Test {
         assertEq(bank.protocolFeesPayable(), 0);
     }
 
-    function testFuzz_settlementAcceptedIffWithinOperatorShare(
+    function test_settlePosition_rejectsCombinedCostBeyondReserveWithoutClosingThePosition() external {
+        uint256 positionId = _open(100e6, 250e6);
+        SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](1);
+        awards[0] = _award(0.5e6, 0.3e6);
+        uint256 playerBefore = usdc.balanceOf(player);
+        uint256 bankBefore = usdc.balanceOf(address(bank));
+        vm.prank(hub);
+        vm.expectRevert(abi.encodeWithSelector(IBank.ReservedTooSmall.selector, positionId, 250e6, 252e6));
+        router.settlePosition(positionId, 250e6, 250e6, 0, 1.2e6, awards);
+        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Held));
+        (,,,, bool open,) = bank.holds(positionId);
+        assertTrue(open);
+        assertEq(bank.totalReserved(), 250e6);
+        assertEq(bank.protocolFeesPayable(), 0);
+        assertEq(bank.externalPayablesTotal(), 0);
+        assertEq(usdc.balanceOf(player), playerBefore);
+        assertEq(usdc.balanceOf(address(bank)), bankBefore);
+
+        vm.prank(hub);
+        router.settlePosition(positionId, 250e6, 248e6, 0, 1.2e6, awards);
+        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
+        assertEq(bank.totalReserved(), 0);
+        assertEq(usdc.balanceOf(player), playerBefore + 248e6);
+        assertEq(bank.protocolFeesPayable() + bank.externalPayablesTotal(), 2e6);
+    }
+
+    function testFuzz_settlementAcceptedIffWithinOperatorShareAndCombinedReserve(
         uint256 stake,
         uint256 refund,
         uint16 edge,
-        uint256 allocated
+        uint256 allocated,
+        uint256 payoutGross,
+        uint256 payoutNet
     ) external {
         stake = bound(stake, 1, 1_000e6);
-        refund = bound(refund, 0, stake);
+        payoutGross = bound(payoutGross, 0, stake);
+        payoutNet = bound(payoutNet, 0, payoutGross);
+        refund = bound(refund, 0, stake - payoutGross);
         edge = uint16(bound(edge, 0, 500));
         uint256 cap = ((stake - refund) * edge / 10_000) * 5_000 / 10_000;
         allocated = bound(allocated, 0, cap + 3);
@@ -346,8 +377,14 @@ contract SettlementRouterTest is Test {
             vm.expectRevert(
                 abi.encodeWithSelector(ISettlementRouter.AllocationExceedsCap.selector, positionId, allocated, cap)
             );
+        } else if (payoutNet + refund + allocated > stake) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IBank.ReservedTooSmall.selector, positionId, stake, payoutNet + refund + allocated
+                )
+            );
         }
-        router.settlePosition(positionId, 0, 0, refund, allocated, awards);
+        router.settlePosition(positionId, payoutGross, payoutNet, refund, allocated, awards);
     }
 
     function test_getPositionRejectsUnknownPosition() external {

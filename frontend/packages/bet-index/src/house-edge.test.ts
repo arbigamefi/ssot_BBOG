@@ -14,8 +14,8 @@ if (url && !["localhost", "127.0.0.1", "::1", "[::1]"].includes(new URL(url).hos
 }
 
 const chainId = 84532;
-const v15Hub = "0x00000000000000000000000000000000000000a5" as const;
-const v16Hub = "0x00000000000000000000000000000000000000a6" as const;
+const otherHub = "0x00000000000000000000000000000000000000a5" as const;
+const gameHub = "0x00000000000000000000000000000000000000a6" as const;
 const finalizeTx = `0x${"f1".repeat(32)}` as const;
 
 function event(
@@ -39,7 +39,7 @@ const placed = (gameHub: `0x${string}`) =>
     `0x${"a1".repeat(32)}`
   );
 // GameHub.finalize emits HouseEdgeAllocated right before BetFinalized.
-const allocated = event(v16Hub, "HouseEdgeAllocated", 3, {
+const allocated = event(gameHub, "HouseEdgeAllocated", 3, {
   positionId: 1n,
   usedTurnover: 1_000_000n,
   effectiveHouseEdgeBps: 200,
@@ -88,7 +88,7 @@ for (const backend of ["memory", "postgres"] as const) {
           connection: { search_path: schema }
         });
         store = createPostgresBetIndexStoreFromSql(sql);
-        await store.migrate();
+        await store.initializeSchema();
       }
     });
     beforeEach(async () => {
@@ -104,7 +104,7 @@ for (const backend of ["memory", "postgres"] as const) {
     it.each(["after", "before"])(
       "annotates a settled bet written %s its lifecycle without changing it",
       async (order) => {
-        const lifecycle = [placed(v16Hub), finalized(v16Hub)];
+        const lifecycle = [placed(gameHub), finalized(gameHub)];
         if (order === "after") {
           await store.writeGameHubEvents(lifecycle);
           // The keeper writes each event type in its own batch.
@@ -113,7 +113,7 @@ for (const backend of ["memory", "postgres"] as const) {
           expect(await store.writeGameHubEvents([allocated])).toEqual([]);
           await store.writeGameHubEvents(lifecycle);
         }
-        const bet = await store.getBet({ chainId, gameHub: v16Hub, betId: 1n });
+        const bet = await store.getBet({ chainId, gameHub: gameHub, betId: 1n });
         expect(bet).toMatchObject({
           state: "finalized",
           lastEventName: "BetFinalized",
@@ -136,23 +136,23 @@ for (const backend of ["memory", "postgres"] as const) {
     );
 
     it("keeps an allocation to the hub that emitted it", async () => {
-      // A v1.5 hub settles its bet 1 without an allocation; the v1.6 hub's bet 1 has one.
-      await store.writeGameHubEvents([placed(v15Hub), finalized(v15Hub)]);
-      await store.writeGameHubEvents([placed(v16Hub), allocated, finalized(v16Hub)]);
+      // Only one hub's bet 1 has an indexed allocation; never borrow it for the other hub.
+      await store.writeGameHubEvents([placed(otherHub), finalized(otherHub)]);
+      await store.writeGameHubEvents([placed(gameHub), allocated, finalized(gameHub)]);
       expect(
-        (await store.getBet({ chainId, gameHub: v15Hub, betId: 1n }))?.houseEdge
+        (await store.getBet({ chainId, gameHub: otherHub, betId: 1n }))?.houseEdge
       ).toBeUndefined();
-      expect((await store.getBet({ chainId, gameHub: v16Hub, betId: 1n }))?.houseEdge).toEqual(
+      expect((await store.getBet({ chainId, gameHub: gameHub, betId: 1n }))?.houseEdge).toEqual(
         expectedHouseEdge
       );
     });
 
     it("does not store an allocation passed with a bet row", async () => {
-      await store.writeGameHubEvents([placed(v15Hub)]);
-      const row = await store.getBet({ chainId, gameHub: v15Hub, betId: 1n });
+      await store.writeGameHubEvents([placed(otherHub)]);
+      const row = await store.getBet({ chainId, gameHub: otherHub, betId: 1n });
       await store.writeBetRows([{ ...row!, houseEdge: expectedHouseEdge }]);
       expect(
-        (await store.getBet({ chainId, gameHub: v15Hub, betId: 1n }))?.houseEdge
+        (await store.getBet({ chainId, gameHub: otherHub, betId: 1n }))?.houseEdge
       ).toBeUndefined();
     });
   });

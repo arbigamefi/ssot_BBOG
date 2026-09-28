@@ -30,15 +30,8 @@ describe("server RPC resolution", () => {
     ).toBe("https://base-mainnet.g.alchemy.com/v2/alchemy-key");
   });
 
-  it("ignores generic RPC_URL unless explicitly allowed", () => {
+  it("ignores unscoped RPC URLs", () => {
     expect(resolveServerRpcUrl(8453, { RPC_URL: "https://generic.example" })).toBeUndefined();
-    expect(
-      resolveServerRpcUrl(
-        8453,
-        { RPC_URL: "https://generic.example" },
-        { allowGenericFallback: true }
-      )
-    ).toBe("https://generic.example");
   });
 
   it("resolves Arbitrum scoped RPC URLs", () => {

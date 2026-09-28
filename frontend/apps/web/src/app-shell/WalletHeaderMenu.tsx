@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { useConnectModal } from "./WalletButton";
+import { useConnectModal } from "./wallet-entry-context";
 import { mainnet } from "wagmi/chains";
 import {
   useAccount,
@@ -36,7 +36,7 @@ function shortAddress(address: string) {
 }
 
 /**
- * Unified header control: replaces the old WalletButton + NetworkSwitcher
+ * Wallet connection, account and network controls
  * pair. One trigger button summarises the current state; the popover
  * exposes the full surface area (identity, chain switching, explorer link,
  * wallet-chain mismatch warning, disconnect).

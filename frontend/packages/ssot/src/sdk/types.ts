@@ -1,6 +1,9 @@
 import type {
   DomainBankPosition,
   DomainBankSnapshot,
+  DomainRecoveryPosition,
+  DomainRecoveryPage,
+  BankRecoveryCursor,
   DomainBet,
   DomainError,
   DomainSportsMarket,
@@ -8,6 +11,8 @@ import type {
   DomainSportsTicket,
   DomainXPBuckets
 } from "../domain";
+import type { PlayerPaymentProof } from "@ssot/bet-index/player-payment";
+export type { PlayerPaymentProof } from "@ssot/bet-index/player-payment";
 
 export type Address = `0x${string}`;
 export type Hex = `0x${string}`;
@@ -89,7 +94,7 @@ export interface TxResult {
   error?: DomainError;
 }
 
-export type BankProviderLedgerAction = "deposit" | "withdraw";
+export type BankProviderLedgerAction = "deposit" | "withdraw" | "recovery" | "donation";
 
 export type BankProviderLedgerEntry = {
   id: string;
@@ -101,9 +106,14 @@ export type BankProviderLedgerEntry = {
   assets?: bigint;
   shares: bigint;
   sharePrice?: bigint;
+  receiver?: Address;
+  caller?: Address;
+  epochId?: bigint;
 };
 
 export type GameHubSettlementProof = {
+  /** Historical terminal transaction delivery; payable does not imply still unclaimed today. */
+  payment?: PlayerPaymentProof;
   txHash?: Hex;
   blockNumber?: bigint;
   payoutGross?: bigint;
@@ -115,6 +125,7 @@ export type GameHubSettlementProof = {
 };
 
 export type GameHubRefundProof = {
+  payment?: PlayerPaymentProof;
   txHash?: Hex;
   blockNumber?: bigint;
   refundAmount?: bigint;
@@ -187,17 +198,56 @@ export interface SSOTGameHubAPI {
 }
 
 export interface SSOTBankAPI {
-  getSnapshot(poolId: number): Promise<DomainBankSnapshot>;
-  getPosition(poolId: number, user: Address): Promise<DomainBankPosition>;
+  getSnapshot(poolId: number, opts?: { blockNumber?: bigint }): Promise<DomainBankSnapshot>;
+  getPosition(
+    poolId: number,
+    user: Address,
+    opts?: { blockNumber?: bigint }
+  ): Promise<DomainBankPosition>;
+  getRecovery(
+    poolId: number,
+    epochId: bigint,
+    controller: Address,
+    opts?: { blockNumber?: bigint }
+  ): Promise<DomainRecoveryPosition>;
+  getRecoveryPage(
+    poolId: number,
+    controller: Address,
+    opts?: { cursor?: BankRecoveryCursor; limit?: number; blockNumber?: bigint }
+  ): Promise<DomainRecoveryPage>;
+  syncRecovery(poolId: number, epochId: bigint, controller?: Address): Promise<TxResult>;
+  claimRecovery(
+    poolId: number,
+    epochId: bigint,
+    receiver?: Address,
+    controller?: Address
+  ): Promise<TxResult>;
   convertToShares(poolId: number, assets: bigint): Promise<bigint>;
   convertToAssets(poolId: number, shares: bigint): Promise<bigint>;
   getProviderLedger(
     poolId: number,
     owner: Address,
-    opts?: { startBlock?: number; limit?: number }
+    opts?: {
+      startBlock?: number;
+      endBlock?: number;
+      beforeBlock?: number;
+      beforeLogIndex?: number;
+      limit?: number;
+    }
   ): Promise<BankProviderLedgerEntry[]>;
   getAssetBalance(asset: Address, user: Address): Promise<bigint>;
   getAllowance(poolId: number, owner: Address): Promise<bigint>;
+  /** Defaults to the connected wallet. Does not grant any operator or share allowance. */
+  requestRedeem(
+    poolId: number,
+    shares: bigint,
+    controller?: Address,
+    owner?: Address
+  ): Promise<TxResult>;
+  cancelRedeemRequest(poolId: number, controller?: Address): Promise<TxResult>;
+  syncRedeem(poolId: number, controller?: Address): Promise<TxResult>;
+  /** Permissionless trigger; payment goes only to the specified player. */
+  claimPlayerPayable(poolId: number, player?: Address): Promise<TxResult>;
 
   // ERC4626-like vault operations
   deposit(
@@ -208,20 +258,20 @@ export interface SSOTBankAPI {
   withdraw(
     poolId: number,
     assets: bigint,
-    receiver: Address,
-    owner: Address
+    receiver?: Address,
+    owner?: Address
   ): Promise<TxResult & { shares?: bigint }>;
   redeem(
     poolId: number,
     shares: bigint,
-    receiver: Address,
-    owner: Address
+    receiver?: Address,
+    owner?: Address
   ): Promise<TxResult & { assets?: bigint }>;
   mint(poolId: number, shares: bigint, receiver: Address): Promise<TxResult & { assets?: bigint }>;
 
-  /** Maximum assets the owner can withdraw (accounting for reserves and solvency). */
+  /** Assets claimable now for async Banks; excludes pending requests and wallet equity. */
   maxWithdraw(poolId: number, owner: Address): Promise<bigint>;
-  /** Maximum shares the owner can redeem. */
+  /** Claimable request shares for async Banks; excludes pending and wallet shares. */
   maxRedeem(poolId: number, owner: Address): Promise<bigint>;
   /** Player's cumulative turnover (used for XP unlock eligibility check). */
   playerTurnover(poolId: number, player: Address): Promise<bigint>;

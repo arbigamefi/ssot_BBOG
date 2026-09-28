@@ -16,13 +16,13 @@ This creates an additional ETH accounting surface that must be kept aligned with
 
 ## Decision
 
-Add an adapter-mode invariant suite (`test/invariants/InvariantsAdapter.t.sol`) that enforces:
+The adapter-mode stateful differential test (`test/diff/StatefulSystemDiffAdapter.t.sol`) and `test/unit/VRFFeeCreditClaim.t.sol` enforce:
 
-1) `Hub` retains no ETH.
-2) Adapter retains no ETH.
-3) Wrapper retains exactly the sum of `vrfFeeCharged` across successfully accepted bets.
-4) `VRFHub` retains only `refundCredit` (its ETH balance equals the sum of per-payer credits).
-5) If `claimRefund()` is attempted when a credit exists, it must not fail.
+1. `Hub` retains no ETH.
+2. Adapter retains no ETH.
+3. Wrapper retains exactly the sum of `vrfFeeCharged` across successfully accepted bets.
+4. `VRFHub` retains only `refundCredit` (its ETH balance equals the sum of per-payer credits).
+5. If `claimRefund()` is attempted when a credit exists, it must not fail.
 
 The suite uses a `ToggleReceiver` (rejecting ETH) plus deliberate overpayment to force credit creation, ensuring the credit path is continuously exercised.
 

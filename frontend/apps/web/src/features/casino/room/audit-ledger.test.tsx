@@ -309,7 +309,7 @@ describe("GameRoomAuditLedger", () => {
   afterEach(() => cleanup());
 
   it("renders all five tab buttons", () => {
-    render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
+    render(<GameRoomAuditLedger game={game} recentBets={[]} />);
     for (const name of ["Live bets", "My bets", "Leaderboard", "Analytics", "Game info"]) {
       expect(screen.getByRole("button", { name })).toBeDefined();
     }
@@ -320,7 +320,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={{ ...game, slug: "sic-bo", label: "Sic Bo" }}
-        betAmount={10}
         gameMeta={{ slug: "sic-bo", houseEdgeBps: 100 }}
         recentBets={[]}
       />
@@ -345,7 +344,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={{ ...game, slug: "keno", label: "Keno" }}
-        betAmount={10}
         gameMeta={{ slug: "keno", houseEdgeBps: 200 }}
         recentBets={[]}
       />
@@ -357,7 +355,7 @@ describe("GameRoomAuditLedger", () => {
   });
 
   it("shows the live-bets empty state when recentBets is empty", () => {
-    render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
+    render(<GameRoomAuditLedger game={game} recentBets={[]} />);
     expect(screen.getByText("No bets yet")).toBeDefined();
   });
 
@@ -365,7 +363,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={game}
-        betAmount={10}
         assetSymbol="USDC"
         recentBets={[
           {
@@ -397,7 +394,6 @@ describe("GameRoomAuditLedger", () => {
       render(
         <GameRoomAuditLedger
           game={game}
-          betAmount={10}
           assetSymbol={symbol}
           assetDecimals={decimals}
           recentBets={[{ betId: "1", state: "finalized", stake, payout, refundAmount: "0" }]}
@@ -412,7 +408,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={game}
-        betAmount={10}
         assetSymbol="USDC"
         assetDecimals={6}
         assetContexts={[
@@ -456,20 +451,20 @@ describe("GameRoomAuditLedger", () => {
   });
 
   it("writes the active tab to the URL when a tab is clicked", () => {
-    render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
+    render(<GameRoomAuditLedger game={game} recentBets={[]} />);
     fireEvent.click(screen.getByRole("button", { name: "Leaderboard" }));
     expect(replaceMock).toHaveBeenCalledWith("/casino/roulette?tab=leaderboard", { scroll: false });
   });
 
   it("shows the connect-wallet empty state on the My bets tab without a wallet", () => {
     setTab("mine");
-    render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
+    render(<GameRoomAuditLedger game={game} recentBets={[]} />);
     expect(screen.getByText("Connect your wallet to see your history.")).toBeDefined();
   });
 
   it("renders the game-info table from t.raw bets array", () => {
     setTab("info");
-    render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
+    render(<GameRoomAuditLedger game={game} recentBets={[]} />);
     expect(screen.getByText("European roulette tagline.")).toBeDefined();
     expect(screen.getByText("2.70%")).toBeDefined();
     expect(screen.getByText("Straight up")).toBeDefined();
@@ -480,7 +475,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={game}
-        betAmount={10}
         chainId={84532}
         recentBets={[
           {
@@ -505,7 +499,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={game}
-        betAmount={10}
         chainId={84532}
         recentBets={[
           {
@@ -523,15 +516,7 @@ describe("GameRoomAuditLedger", () => {
   });
 
   it("shows the chain badge in the header when chainId resolves", () => {
-    render(
-      <GameRoomAuditLedger
-        game={game}
-        betAmount={10}
-        assetSymbol="USDC"
-        chainId={84532}
-        recentBets={[]}
-      />
-    );
+    render(<GameRoomAuditLedger game={game} assetSymbol="USDC" chainId={84532} recentBets={[]} />);
     expect(screen.getByText("On Base Sepolia")).toBeDefined();
   });
 
@@ -540,7 +525,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={game}
-        betAmount={10}
         assetSymbol="USDC"
         chainId={84532}
         recentBets={[]}
@@ -554,15 +538,7 @@ describe("GameRoomAuditLedger", () => {
 
   it("shows the per-game turnover leaderboard on the Leaderboard tab", () => {
     setTab("leaderboard");
-    render(
-      <GameRoomAuditLedger
-        game={game}
-        betAmount={10}
-        assetSymbol="USDC"
-        chainId={84532}
-        recentBets={[]}
-      />
-    );
+    render(<GameRoomAuditLedger game={game} assetSymbol="USDC" chainId={84532} recentBets={[]} />);
     // Ranked player + formatted turnover (30 USDC from "30000000" @ 6 decimals, trailing zeros trimmed).
     expect(screen.getByText("30 USDC")).toBeDefined();
     expect(screen.getByRole("tab", { name: "By volume", selected: true })).toBeDefined();
@@ -573,7 +549,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={game}
-        betAmount={10}
         chainId={84532}
         recentBets={[]}
         // Same address as the ranked turnover row (checksum-cased to prove the
@@ -589,7 +564,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={game}
-        betAmount={10}
         chainId={84532}
         recentBets={[]}
         playerAddress="0xdddd000000000000000000000000000000000099"
@@ -604,7 +578,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={game}
-        betAmount={10}
         assetSymbol="USDC"
         chainId={84532}
         recentBets={[]}
@@ -620,7 +593,7 @@ describe("GameRoomAuditLedger", () => {
 
   it("shows durable top wins by multiplier inside the Leaderboard tab", () => {
     setTab("leaderboard");
-    render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
+    render(<GameRoomAuditLedger game={game} recentBets={[]} />);
     fireEvent.click(screen.getByRole("tab", { name: "Top wins" }));
     const multipliers = screen.getAllByText(/\d+\.\d{2}×/);
     expect(multipliers[0]?.textContent).toBe("30.00×");
@@ -629,7 +602,7 @@ describe("GameRoomAuditLedger", () => {
 
   it("shows per-game professional analytics (RTP, gain ratio, payout) on the Analytics tab", () => {
     setTab("analytics");
-    render(<GameRoomAuditLedger game={game} betAmount={10} chainId={84532} recentBets={[]} />);
+    render(<GameRoomAuditLedger game={game} chainId={84532} recentBets={[]} />);
     // turnover 50, payout 25 → RTP 50.00%; wonCount 2 / betCount 5 → 40.00%.
     expect(screen.getByText("50.00%")).toBeDefined(); // RTP headline
     expect(screen.getByText("50 USDC")).toBeDefined(); // total wagered
@@ -641,7 +614,7 @@ describe("GameRoomAuditLedger", () => {
 
   it("switches analytics to the all-games aggregate via the scope toggle", () => {
     setTab("analytics");
-    render(<GameRoomAuditLedger game={game} betAmount={10} chainId={84532} recentBets={[]} />);
+    render(<GameRoomAuditLedger game={game} chainId={84532} recentBets={[]} />);
     // Default scope: the per-game RTP.
     expect(screen.getByText("50.00%")).toBeDefined();
     expect(screen.getByRole("tab", { name: "This game", selected: true })).toBeDefined();
@@ -658,7 +631,7 @@ describe("GameRoomAuditLedger", () => {
 
   it("offers a 24h/7d/30d/All time-range selector on the Analytics tab", () => {
     setTab("analytics");
-    render(<GameRoomAuditLedger game={game} betAmount={10} chainId={84532} recentBets={[]} />);
+    render(<GameRoomAuditLedger game={game} chainId={84532} recentBets={[]} />);
     // Defaults to all-time.
     expect(screen.getByRole("tab", { name: "All", selected: true })).toBeDefined();
     for (const name of ["24h", "7d", "30d"]) {

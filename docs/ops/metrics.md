@@ -1,364 +1,66 @@
-# Monitoring metrics inventory (Milestone 4)
-
-This document defines the **minimum on-chain monitoring surface** required to operate the SSOT protocol in production.
-It is intentionally **contract-first** (events + simple view calls) so it can be implemented with any stack:
-Substreams, The Graph, custom indexers, or centralized log pipelines.
-
-## Principles
-
-- Prefer **events** over storage reads for high-volume signals.
-- Use **storage reads** for low-frequency health checks (balances, paused flags, credit totals).
-- Every alert should map to an actionable runbook step (see `docs/ops/runbooks/`).
-- Alert rules inventory: `docs/ops/alerts.md`
-- Incident templates: `docs/ops/incident-templates.md`
-
-## Data sources
-
-### Primary events
-
-From `IGameHub`:
-
-- `BetPlaced`
-- `BetRandomReady`
-- `BetFinalized`
-- `BetRefunded`
-- `GameRegistered`
-- `RiskInPausedSet`
-- `RefundTimeoutSet`
-
-From `IVRFHub` / `VRFHub`:
-
-- `Requested`
-- `Detached`
-- `VRFFeeCharged`
-- `VRFFeeRefundClaimed`
-- `Fulfilled`
-- `Ignored`
-- `HubCallbackFailed`
-
-From `IBank`:
-
-- `BetHeld`
-- `BetSettled`
-- `BetRefunded` (bank-side)
-
-From `ISportsHub`:
-
-- `MarketCreated`
-- `MarketStateSet`
-- `OddsSignerSetHashSet`
-- `OddsSignerSet`
-- `ResultReporterSetHashSet`
-- `ResultReporterThresholdSet`
-- `ResultReporterSet`
-- `TicketPlaced`
-- `ResultProposed`
-- `ResultChallenged`
-- `ResultChallengeResolved`
-- `ResultFinalized`
-- `TicketSettled`
-- `TicketRefunded`
-- `TicketVoided`
-
-From `SportsRiskEngine`:
-
-- `RiskLimitsSet`
-- `PoolRiskLimitsSet`
-
-From `Governable`:
-
-- `GovernanceTransferStarted`
-- `GovernanceTransferred`
-
-From `ChainlinkV2PlusWrapperAdapter`:
-
-- `VRFHubSet`
-
-### Low-frequency view calls
-
-- `VRFHub.refundCreditOf(payer)` (spot checks / sampling; do **not** iterate all payers on-chain)
-- `Bank.totalAssets()` (NAV proxy / sanity)
-- `Bank.riskInPaused()` and `GameHub.riskInPaused(asset)`
-- `SportsHub.marketReserved(marketId)`, `marketOutcomeReserved(marketId,outcomeId)`,
-  `poolEventReserved(poolId,eventId)`, `eventReserved(eventId)` aggregate
-- `SportsHub.oddsSignerSetHash()`, `resultReporterSetHash()`, `resultReporterThreshold()`,
-  `resultChallengeTimeoutSeconds()`
-- `SportsRiskEngine.limits()`, `limitsForPool(poolId)`, `currentRiskHashForPool(poolId)`
-- `address(GameHub).balance`, `address(VRFHub).balance`, `address(Adapter).balance` (should be ~0 by design)
-
----
-
-## Bank V14 performance counter canon
-
-Bank V14 exposes lifetime, single-asset performance counters through
-`getPerformance()` / individual views. These are chain-readable and should be
-the canonical source for provider-facing lifetime metrics.
-
-**Counter semantics:**
-
-- `totalTurnover`: accepted stake after settle-path partial refunds. On
-  settlement it increases by `stake - refundAmount`; `refundBet` full refunds do
-  not add turnover.
-- `totalPayoutGross`: gross winning payout before fee-on-payout is retained.
-- `totalPayoutNet`: actual player cash payout after fee-on-payout.
-- `totalFeeOnPayout`: fee retained from gross payouts before net player payout.
-- `totalRefunded`: refunded stake across both terminal paths, including
-  settle-path partial refunds and `refundBet` full refunds.
-- `totalBetsRefunded`: count of `refundBet` full-refund terminal calls only.
-  It is intentionally not directly reconcilable with `totalRefunded`.
-- `totalProtocolFeeAccrued`: protocol accounting; it is not the same as house
-  P&L.
-
-**Canonical identities:**
-
-```text
-GGR_gross = totalTurnover - totalPayoutGross + totalFeeOnPayout
-realizedHoldBps = totalTurnover == 0 ? 0 : GGR_gross * 10_000 / totalTurnover
-capitalVelocity = totalAssets() == 0 ? 0 : totalTurnover / totalAssets()
-```
-
-Use `GGR_gross` for house-performance / hold calculations. Do **not** compute
-GGR as `totalTurnover - totalPayoutNet`: `payoutNet` already excludes the
-fee-on-payout retained by the Bank, so that formula silently double-counts the
-retained fee as house P&L.
-
-Daily charts, game splits, player counts, and leaderboards still come from the
-durable index and may lag. Label those as indexed / best-effort. Lifetime Bank
-counters above are chain-readable.
-
----
-
-## Metric set
-
-The list below is the **minimum** recommended inventory. Add labels only where they improve actionability.
-
-### A. Core throughput & liveness
-
-**A1. bets_placed_total** (counter)
-Source: `IGameHub.BetPlaced`
-Labels: `asset`, `gameId`, `bank`
-
-**A2. bets_random_ready_total** (counter)
-Source: `IGameHub.BetRandomReady`
-Labels: `asset`, `gameId`, `bank`
-
-**A3. bets_finalized_total** (counter)
-Source: `IGameHub.BetFinalized`
-Labels: `asset`, `gameId`, `bank`
-
-**A4. bets_refunded_total** (counter)
-Source: `IGameHub.BetRefunded`
-Labels: `asset`, `gameId`, `bank`
-Notes: includes refund-timeout and any other refund path.
-
-**A5. bets_in_flight** (gauge; derived)
-Compute: `placed - finalized - refunded` over a moving window (or track bet states in the indexer).
-Alert suggestion:
-
-- warn if rising steadily for > 15 min
-- page if exceeds an absolute threshold (set per chain capacity)
-
----
-
-### B. VRF health & latency
-
-**B1. vrf_requests_total** (counter)
-Source: `IVRFHub.Requested`
-Labels: `hub`
-
-**B2. vrf_fulfilled_total** (counter)
-Source: `VRFHub.Fulfilled`
-Labels: `hub`
-
-**B3. vrf_ignored_total** (counter)
-Source: `VRFHub.Ignored`
-Alert suggestion: non-zero should be investigated (unexpected transport / late fulfill).
-
-**B4. vrf_hub_callback_failed_total** (counter)
-Source: `VRFHub.HubCallbackFailed`
-Alert suggestion: **page immediately** if non-zero (should be near-impossible in the design).
-
-**B5. vrf_request_latency_seconds** (histogram; derived)
-Compute: time delta between `Requested(requestId)` and `Fulfilled(requestId)` (or between `BetPlaced` and `BetRandomReady`).
-Alert suggestion:
-
-- warn at p95 > X seconds (chain-dependent)
-- page if p99 exceeds SLA for sustained interval
-
-**B6. vrf_pending_requests** (gauge; derived)
-Compute: count of `Requested - (Fulfilled + Detached + Ignored)` over window.
-
----
-
-### C. VRF fee accounting & refundCredit
-
-**C1. vrf_fee_paid_total** (counter; sum)
-Source: `IVRFHub.VRFFeeCharged.paid`
-Labels: `payer`, optional (consider sampling or hashing payer to avoid cardinality blowup)
-
-**C2. vrf_fee_charged_total** (counter; sum)
-Source: `IVRFHub.VRFFeeCharged.charged`
-
-**C3. vrf_fee_refund_due_total** (counter; sum)
-Source: `IVRFHub.VRFFeeCharged.refundDue`
-
-**C4. vrf_fee_refund_failed_total** (counter)
-Source: `IVRFHub.VRFFeeCharged` where `refundSucceeded == false`
-Alert suggestion:
-
-- warn if > 0 (often indicates payers are smart contracts rejecting ETH)
-
-**C5. vrf_refund_claimed_total** (counter; sum)
-Source: `IVRFHub.VRFFeeRefundClaimed.amount`
-
-**C6. refund_credit_outstanding_estimate** (gauge; derived)
-Compute: `sum(refundDue where refundSucceeded=false) - sum(refundClaimed)` from events.
-Notes: this is an indexer-side estimate; storage reads (`refundCreditOf`) can be used for spot verification.
-
-Alert suggestion:
-
-- warn if outstanding grows monotonically without corresponding claims (UX issue)
-- page if outstanding spikes after a release (regression indicator)
-
----
-
-### D. Solvency / reserve safety (SSOT accounting surfaces)
-
-These metrics do **not** replace the on-chain invariants, but they help operators detect abnormal regimes fast.
-
-**D1. bank_total_assets** (gauge)
-Source: `Bank.totalAssets()` per bank (poll at low frequency, e.g., 1–5 min)
-Labels: `asset`, `bank`
-Alert suggestion:
-
-- page if drops sharply without corresponding expected withdrawals / payouts
-
-**D2. bet_reserved_total** (gauge; derived)
-Compute: sum of `BetHeld.reserved` minus released amounts inferred from `BetSettled` / refunds.
-Labels: `asset`, `bank`
-Alert suggestion:
-
-- page if reserved approaches total assets (liquidity crunch)
-
-**D3. payout_gross_total / payout_net_total** (counter; sum)
-Source: `IBank.BetSettled.payoutGross`, `payoutNet`
-Labels: `asset`, `bank`, `gameId` (if you can join with betId->gameId from `BetPlaced`)
-
-**D4. protocol_fee_accrual_total** (counter; sum)
-Source: `IGameHub.BetFinalized.protocolFeeAccrual` or `IBank.BetSettled.protocolFeeAccrual`
-Alert suggestion: unexpected drops to zero may indicate misconfiguration.
-
----
-
-### E. Pause / config drift / governance safety
-
-**E1. risk_in_paused** (gauge)
-Source: `GameHub.riskInPaused(asset)` or `IGameHub.RiskInPausedSet` events
-Alert suggestion: page on pause toggles (expected only during incidents / maintenance)
-
-**E2. refund_timeout_seconds** (gauge)
-Source: `IGameHub.RefundTimeoutSet` events (track latest value)
-Alert suggestion: page on changes outside approved windows.
-
-**E3. module_registry_changes_total** (counter)
-Source: `IGameHub.GameRegistered`
-Alert suggestion: page on any change (should be rare; governance change control)
-
-**E4. governance_changes_total** (counter)
-Source: `Governable.GovernanceTransferStarted/Transferred`
-Alert suggestion: page immediately.
-
----
-
-### F. ETH balance sanity (adapter invariants operationalized)
-
-These are lightweight checks that mirror the **adapter ETH/credit invariants** at runtime.
-
-**F1. hub_eth_balance** (gauge)
-Source: `eth_getBalance(GameHub)`
-Alert: warn if > dust threshold; page if sustained or growing.
-
-**F2. vrfhub_eth_balance** (gauge)
-Source: `eth_getBalance(VRFHub)`
-Alert: should be near 0 except transient; page if sustained.
-
-**F3. adapter_eth_balance** (gauge)
-Source: `eth_getBalance(Adapter)`
-Alert: should be near 0; page if sustained.
-
-**F4. vrf_wrapper_eth_balance** (gauge)
-Source: `eth_getBalance(Wrapper)`
-Interpretation: should track **charged fees**; large deviations should be investigated together with `vrf_fee_charged_total`.
-
----
-
-### G. SportsHub sportsbook operations
-
-These metrics apply to v1.3 Sports pools and map to `docs/ops/runbooks/sportsbook-ops.md`.
-
-**G1. sports_tickets_placed_total** (counter)
-Source: `ISportsHub.TicketPlaced`
-Labels: `poolId`, `marketId`, `eventId`, `outcomeId`
-Notes: avoid player labels in high-cardinality monitoring systems.
-
-**G2. sports_tickets_terminal_total** (counter)
-Source: `TicketSettled`, `TicketRefunded`, `TicketVoided`
-Labels: `poolId`, `marketId`, terminal type
-Use with `G1` to derive held Sports tickets.
-
-**G2a. sports_markets_voided_total** (counter)
-Source: `MarketVoided`
-Labels: `poolId`, `marketId`, `eventId`
-Use `reasonHash` as event detail or incident metadata, not as a high-cardinality metric label.
-
-**G3. sports_exposure_reserved** (gauge)
-Source: derived from `TicketPlaced` minus terminal ticket events, with spot reads from
-`marketReserved`, `marketOutcomeReserved`, and `poolEventReserved`.
-Labels: `poolId`, `marketId`, `eventId`, optional `outcomeId`.
-
-**G4. sports_result_finality_pending_seconds** (gauge)
-Source: `ResultProposed.finalizesAt` until `ResultFinalized` or `ResultChallenged`.
-Alert when a result remains unfinalized beyond finality plus operator SLA.
-
-**G5. sports_oracle_config_changes_total** (counter)
-Source: `OddsSignerSetHashSet`, `OddsSignerSet`, `ResultReporterSetHashSet`,
-`ResultReporterThresholdSet`, `ResultReporterSet`, `ResultChallengerSet`, and `ResultArbitratorSet`.
-Alert on any change outside an approved window.
-
-**G6. sports_risk_limits_changes_total** (counter)
-Source: `SportsRiskEngine.RiskLimitsSet` and `PoolRiskLimitsSet`.
-Track new `riskHash` per pool; odds snapshots must use `currentRiskHashForPool(poolId)` after any cap change.
-
-**G7. sports_ticket_reverts_total** (counter; derived from failed tx traces)
-Source: failed `placeTicket` transactions grouped by custom error:
-`BadOddsSignature`, `OddsExpired`, `BadOddsSnapshot`, `StakeTooLarge`, `PayoutTooLarge`,
-`MarketExposureExceeded`, `OutcomeExposureExceeded`, `EventExposureExceeded`.
-Alert on spikes by market/event.
-
----
-
-## Implementation notes (non-normative)
-
-- Avoid high-cardinality labels (`payer`, `player`) in Prometheus-style systems. Prefer:
-  - sampling,
-  - hashing into buckets,
-  - or logs-only pipelines for per-address details.
-- Maintain an indexer-side **BetState table** keyed by `betId`:
-  - created at `BetPlaced`
-  - `randomReady` at `BetRandomReady`
-  - finalized at `BetFinalized`
-  - refunded at `BetRefunded`
-    This enables robust liveness and reconciliation metrics.
-
----
-
-## Next: alerts & runbooks
-
-- [Alert rules inventory](alerts.md)
-- [Incident + postmortem templates](incident-templates.md)
-
-- [VRF + refundCredit](runbooks/vrf-refundcredit.md)
-- [Bank solvency / reserve anomalies](runbooks/bank-solvency.md)
-- [SportsHub odds, result finality, and exposure caps](runbooks/sportsbook-ops.md)
-- [Pause + config drift + governance safety](runbooks/pause-config-drift.md)
-- [Game finalization stalls / diff anomalies](runbooks/game-finalization-diffs.md)
+# Metrics and reconciliation
+
+This is the current monitoring inventory, not a claim that every series already has an exporter.
+The implemented keeper health snapshot and web `/api/healthz` are described in the
+[keeper README](../../frontend/apps/keeper/README.md). Contract reconciliation requires separate
+fixed-block reads and event processing.
+
+Label records with chain ID and contract address. Use `(chainId, GameHub, betId)` for casino bets,
+`(chainId, SportsHub, ticketId)` for Sports tickets and `(chainId, Bank)` for LP accounting. A pool ID,
+bet ID or address without its chain is insufficient. Convert asset units only using the verified
+asset decimals; keep ETH fees separate from asset-denominated payout amounts.
+
+## Bank
+
+| Observation          | Source and meaning                                                                                                                                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cash and liabilities | `getSSOT().B`, PF, XP; separate `exitPayable`, `playerPayableTotal` and `recoveryBacking` reads                                                                                                                            |
+| NAV and backing      | `NAV = B - PF - XP - exitPayable - playerPayableTotal - recoveryBacking`; verify active NAV >= activeReserved and cash covers fixed debts, recoveryBacking and activeReserved (without double counting historical reserve) |
+| Risk capacity        | `riskReserveBps`, `riskReserve`, `riskFree`, R; new hold capacity is not an LP cash entitlement                                                                                                                            |
+| Optional outflow     | `withdrawalBufferBps`, `withdrawalBuffer`, `withdrawable`; reserve/buffer headroom, not a per-claim cap. PF/XP claims enforce the post-payment NAV domain; priced LP claims draw from exit payable                         |
+| Open holds           | `openHolds = totalBetsHeld - totalBetsSettled - totalBetsRefunded`; do not substitute R == 0                                                                                                                               |
+| Redemption           | `currentEpoch`, its queued `redeemBatch`, escrowed shares, fixed exits and paginated historical recovery                                                                                                                   |
+| Recovery age         | Chain timestamp minus actual epoch activation, with remaining holds and complete discovery state; survives worker restart                                                                                                  |
+| Pause                | Bank pause bit, pool active state and active-capital insufficiency are distinct; LP queue/recovery state cannot gate risk-in                                                                                               |
+| Performance          | Lifetime turnover, payouts and fee counters describe settled accounting; they do not alone prove cash transfer                                                                                                             |
+
+Read related values at the same numbered block. Counter differences over a window must preserve the
+starting baseline and handle reorgs. Reconcile liability movements against actual transfer events;
+failed player transfers may become payable debt while the bet is already terminal.
+
+## Casino and VRF
+
+Track PendingVRF and RandomReady counts, oldest placement/random-ready timestamps, terminal outcomes,
+refunds, module fallback refunds and failed finalization errors. Measure queue and lifecycle recovery
+coverage independently: an empty live-event queue may still leave historical bets unresolved.
+
+For PendingVRF, derive refund readiness from `placedAt + current refundTimeoutSeconds`, using chain
+time. RandomReady age is a finalization concern, not timeout-refund eligibility. Record the actual
+simulation/send gas and admission configuration when investigating failures.
+
+Track VRF Requested, Fulfilled, Detached, HubCallbackFailed and Ignored events with request identity.
+Derive active work from actual request/Hub state; Ignored callbacks can repeat and are not one-for-one
+request completions. Monitor payer refund credits and claims separately. VRFHub ETH balances can
+back those credits and are not required to be zero.
+
+## Keeper, database and application
+
+Track health snapshot age, queue depth, last successful scans, recovery coverage origins/cursors,
+oldest unresolved work, write errors, transaction outcomes, RPC throttling and per-Bank queued activation and historical recovery state.
+Watch each `degradedBy` cause independently; an unrelated success cannot clear a failed recovery or
+activation or historical discovery path. Observe signer gas balance and nonce progress without logging keys or provider tokens.
+
+Database checks include connectivity, storage capacity, cursor advancement relative to confirmed
+chain head, duplicate/reorg reconciliation and backup age. Receipt APIs must distinguish unavailable
+proof from an actual zero payment. The provider ledger requires Bank identity; its history does not
+replace on-chain current balances.
+
+The health endpoint aggregates release, keeper and database checks. Its healthy response is a point
+in time observation, not proof that every bet ended or every payable was claimed.
+
+## Sports
+
+If Sports is admitted, monitor market state, lock/finality/challenge timestamps, result hashes,
+reporter quorum, outstanding tickets and pool/event exposure. Track keeper history coverage and
+pending ticket pages through terminalization. Missing reports and repeated reopenings require an
+owner; they have no universal finite timeout. See [Sports operations](runbooks/sportsbook-ops.md).

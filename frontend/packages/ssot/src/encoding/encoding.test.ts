@@ -20,7 +20,7 @@ describe("encoding", () => {
 
   it("dice roundtrip", () => {
     const hex = encodeDiceParams({ direction: "under", target: 42 });
-    expect(decodeDiceParams(hex)).toEqual({ cap: 42, direction: "under", target: 42 });
+    expect(decodeDiceParams(hex)).toEqual({ direction: "under", target: 42 });
   });
 
   it("cointoss roundtrip", () => {
@@ -37,12 +37,6 @@ describe("encoding", () => {
     const hex = encodeRouletteParams({ kind: "bitmask", mask: 0x12345n });
     expect((hex.length - 2) / 2).toBe(64);
     expect(decodeRouletteParams(hex)).toEqual({ kind: "bitmask", mask: 0x12345n });
-  });
-
-  it("roulette legacy raw bitmask decode remains supported for old payloads", () => {
-    expect(
-      decodeRouletteParams("0x0000000000000000000000000000000000000000000000000000000000012345")
-    ).toEqual({ kind: "bitmask", mask: 0x12345n });
   });
 
   it("keno roundtrip", () => {

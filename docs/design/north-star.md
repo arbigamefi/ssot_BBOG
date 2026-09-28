@@ -3,7 +3,7 @@
 | Owner | Frontend Lead |
 | Status | Active |
 | Last Updated | 2026-05-18 |
-| Depends on | `../strategy/fullstack-product-architecture.md`, `frontend-implementation-roadmap.md` |
+| Depends on | `../strategy/fullstack-product-architecture.md`, `../architecture/overview.md` |
 | Supersedes | monolithic North Star and rewrite index |
 
 This file is now a short orientation page. It should not grow back into a
@@ -55,9 +55,9 @@ Detailed token and component references remain in:
 - Strategy:
   [`../strategy/fullstack-product-architecture.md`](../strategy/fullstack-product-architecture.md)
 - Roadmap:
-  [`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md)
+  [`../architecture/overview.md`](./../architecture/overview.md)
 - Architecture:
-  [`frontend-rewrite-blueprint.md`](./frontend-rewrite-blueprint.md)
+  [`../architecture/overview.md`](./../architecture/overview.md)
 - Casino round UX:
   [`casino-placebet-ux.md`](./casino-placebet-ux.md)
 - Engineering launch docs:

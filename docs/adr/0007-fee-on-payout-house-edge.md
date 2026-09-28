@@ -39,6 +39,6 @@ The Bank MUST:
 
 ## Links
 
-- Constitution: `docs/constitution/SSOT.v1.0.md` (§3.3.1)
+- Constitution: `docs/constitution/SSOT.v1.6.md` (§3.3.1)
 - Current implementation after ADR-0029: `src/core/GameHub.sol`, `src/core/SettlementRouter.sol`,
   `src/core/Bank.sol`

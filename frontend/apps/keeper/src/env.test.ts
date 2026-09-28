@@ -160,3 +160,45 @@ describe("loadKeeperConfig", () => {
     );
   });
 });
+
+describe("casino lifecycle recovery configuration", () => {
+  it("binds recovery to release history instead of an operator's advanced normal cursor", () => {
+    const config = loadKeeperConfig(baseEnv({ KEEPER_START_BLOCK: "999999" }));
+    expect(config.startBlock).toBe(999999n);
+    expect(config.casinoRecoveryStartBlock).toBe(123n);
+  });
+  it("permits widening history but rejects skipping the release block", () => {
+    expect(
+      loadKeeperConfig(baseEnv({ KEEPER_CASINO_RECOVERY_START_BLOCK: "100" }))
+        .casinoRecoveryStartBlock
+    ).toBe(100n);
+    expect(() => loadKeeperConfig(baseEnv({ KEEPER_CASINO_RECOVERY_START_BLOCK: "124" }))).toThrow(
+      /PendingVRF/
+    );
+  });
+});
+
+it("only reconciles the active pools in the current release", () => {
+  const path = writeRelease();
+  writeFileSync(
+    path,
+    JSON.stringify({
+      chainId: 84532,
+      contracts: {
+        gameHub: "0x0000000000000000000000000000000000000001",
+        vrfHub: "0x0000000000000000000000000000000000000002"
+      },
+      pools: [
+        {
+          poolId: 7,
+          asset: "0x0000000000000000000000000000000000000003",
+          bank: "0x0000000000000000000000000000000000000004",
+          active: false
+        }
+      ],
+      meta: { blockNumber: 123 }
+    })
+  );
+  const config = loadKeeperConfig(baseEnv({ KEEPER_RELEASE_PATH: path }));
+  expect(config.bankProviderLedgerPools).toEqual([]);
+});

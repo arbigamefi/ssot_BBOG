@@ -66,7 +66,6 @@ describe("game room place bet builder", () => {
     expect(result.input.betCount).toBe(3);
     expect(result.input.stake).toBe(75_000_000n);
     expect(decodeDiceParams(result.input.params)).toEqual({
-      cap: 55,
       direction: "under",
       target: 55
     });

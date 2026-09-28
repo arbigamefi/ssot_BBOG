@@ -2,17 +2,12 @@
 
 This document defines the machine-checkable proof obligations for [SSOT v1.6](SSOT.v1.6.md).
 
-v1.6 extends ExecutableSSOT v1.3. All v1.3 statements remain in force, except where section A below
-replaces the v1.0 turnover-budget obligations for casino positions in a v1.6 release unit.
-
 > Related ADR:
 >
 > - [ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md) (fixed LP share, operator-funded referrals)
+> - [ADR-0034](../adr/0034-async-lp-redemption-continuous-betting.md) (asynchronous LP redemptions, section L)
 
-**Status: implemented in source; not audited or deployed.** Every obligation below has tests, listed in
-[Test mapping](#test-mapping). The v1.5 baseline they replace was pinned by
-`test/unit/HouseEdgeAllocationV15.t.sol` at commit `efb83e0a4`, which proved that v1.5 accrues the full
-turnover edge to PF and XP.
+**Status: current prelaunch proof obligations.** Test coverage is mapped below; network acceptance and external audit remain separate.
 
 ## Scope & implementation
 
@@ -20,7 +15,7 @@ The authoritative enforcement points after implementation SHOULD include:
 
 - unit tests for the allocation arithmetic in `GameHub` (every row of the SSOT v1.6 worked example);
 - unit tests for the `SettlementRouter` cap, including a hub that tries to exceed it;
-- migrated casino E2E tests through `GameHub -> SettlementRouter -> Bank`;
+- casino E2E tests through `GameHub -> SettlementRouter -> Bank`;
 - a reference-model differential test (ADR-0009) that recomputes each allocation independently;
 - invariant handlers that mix referred and unreferred players, refunds, multi-roll bets and schedule changes.
 
@@ -79,15 +74,77 @@ edge equals the base edge and `M = 0`.
 
 For every settled sports position: `PF_new = XP_new = 0` and `edge[i] = 0`.
 
-## B — Accounting (unchanged obligations restated for v1.6 units)
+## B — Accounting
 
 ### B1. NAV identity
 
-`NAV = B − PF − XP` and `totalAssets() == NAV` hold after every settlement.
+`NAV = B − PF − XP − exitPayable − playerPayableTotal − recoveryBacking` and `totalAssets() == NAV`
+hold after every completed operation. `getSSOT().R == activeReserved()`; totalReserved is a separate global view.
 
 ### B2. Solvency
 
-`B ≥ PF + XP` and `NAV ≥ R` hold after every settlement.
+Cash covers PF, XP, fixed LP/player payables and totalReserved. Active NAV covers activeReserved.
+Each terminal position's net player payout, refund and all new PF/XP together must not exceed its reserve.
+
+## L — LP exits and historical recovery (ADR-0034/0035)
+
+### L1. Continuous betting and later exits
+
+One waiting queue remains cancellable until actual activation, including after eligibility. Activation
+prices available cash immediately, burns the queued shares once, freezes all original recovery holders
+and advances the epoch. A permanently open old hold cannot gate a later batch, adequate new betting or
+payment of already available cash. The all-reserve case may produce zero liquid cash; rights persist.
+
+### L2. Complete reserve segregation
+
+Only the current epoch's R0 is segregated. Historical reserve is never segregated again. Active NAV
+excludes the entire `recoveryBacking`, not just remaining reserves. Released but unpaid recovery stays
+outside active NAV. Every hold terminalizes once against its immutable epoch; costs include all player,
+refund, PF and XP amounts when booked. Paying existing debt does not charge the epoch twice.
+
+### L3. Pricing and recovery
+
+`G(x)=min(floor(S*(x+V)/(S+V)),x)`, `L=N-R0`. The liquid batch gets `floor(Q*G(L)/S)`.
+`D=R0-C-R`, `H=G(L+D)-G(L)` and `U=D-H` are cumulative. A snapshot holder gets
+`floor(units*H/S)-alreadyClaimed`; do not floor successive release increments independently.
+The model `test/model/recovery_pocket_model.py` is an independent finite-domain oracle. Solidity
+unit, invariant and real Hub/Router/Bank tests must prove the corresponding implementation paths.
+
+### L4. Historical ownership
+
+Snapshot wallet balances and that epoch's controller requests sum to S exactly once. Bank escrow is
+not a second owner. After activation, same-block transfers, deposits, claims, cancellation in later
+queues and zero active supply cannot overwrite old weights. Ordinary Bank share destinations and
+Bank/zero controllers are rejected. Checkpoint lookup is bounded; no global epoch or holder loop
+is permitted in settlement, activation, transfer or standard redemption views.
+
+### L5. Claims, synchronization and residuals
+
+Controllers/operators choose claim receivers. Ordinary and recovery claims stop while paused; sync
+remains permissionless without transfers. Partial ordinary withdrawals cannot strand assets without
+units, and clearing zero-asset liquid units preserves recovery. Failed transfers revert claims atomically.
+Final recovery dust is released once, only after all historical units' final entitlements are assigned;
+unclaimed assigned assets stay backed. Virtual residuals and full-exit liquid remainder go to protocol
+capital without incrementing gameplay fee counters. Partial exits do not skim all stayers' liquid residual.
+
+### L6. Player payables
+
+Failed payout/refund transfers preserve full debt and terminalization if the entire transaction can
+complete. Otherwise everything reverts. Anyone can claim a player payable during pause, only to that
+player, and a failed claim retains the debt. Admission enforces exact-transfer token assumptions.
+
+### L7. Consumers
+
+SDK quotes and history pages share a block identity. Historical discovery includes staying holders,
+not only request submitters. Recovery cash is attributed once to its holder, independently of caller
+and receiver, with explicit Bank donations distinguished. Reorg replacement removes orphaned cash
+facts. Wallet-zero and incomplete-history cases retain visible historical rights and uncertainty.
+
+### L8. Standard surface
+
+The Bank answers ERC-165 for ERC-7540 operators (`0xe3bc4e65`), asynchronous redemption (`0x620ee8e4`),
+ERC-7575 (`0x2f0a18c5`) and its share (`0xf815c03d`), not asynchronous deposits. `previewRedeem` and
+`previewWithdraw` revert. Standard max/pending views cover ordinary requests only; recovery is separate.
 
 ## G — Governance
 
@@ -117,22 +174,42 @@ overflow.
 
 ## Test mapping
 
-| Obligation                     | Tests                                                                                                                                                                                                                                                              |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A1 Conservation                | `HouseEdgeAllocationV16`: worked examples and `testFuzz_allocationConservesTheEdge`; `StatefulSystemDiff` recomputes every settlement independently                                                                                                                |
-| A2 LP floor at the Router      | `SettlementRouter.t.sol` cap tests and `testFuzz_settlementAcceptedIffWithinOperatorShare`; `SettlementRouterInvariants.invariant_allocation_never_exceeds_operator_share`                                                                                         |
-| A3 Referral cap                | `testFuzz_allocationConservesTheEdge`; `test_scheduleCapAndVersions`                                                                                                                                                                                               |
-| A4 Payee existence             | `test_workedExample_noReferrer`, `test_nothingIsPaidBeyondL2`, fuzzed chains of depth 0 to 2                                                                                                                                                                       |
-| A5 Unclaimed share to protocol | worked examples; `test_roundingRemaindersAccrueToProtocol`                                                                                                                                                                                                         |
-| A6 Refunds allocate nothing    | `test_timeoutRefundAllocatesNothing`, `test_partialRefundAllocatesOnUsedTurnoverOnly`; `SecurityFixes` invalid-result refunds                                                                                                                                      |
-| A7 Non-retroactivity           | `test_bindingAfterAcceptanceDoesNotAddPayees`, `test_uplineBindingAfterAcceptanceDoesNotAddL2`, `test_scheduleChangeAfterAcceptanceDoesNotApply`, `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`; `StatefulSystemDiff` late bindings and governance changes |
-| A8 Edge bound                  | `test_openPosition_rejectsEdgeAboveMax` and the Router invariant; `test_markupStartsDisabled`, `test_staleAffiliateEdgeIsClampedToTheCurrentCap`, `test_staleAffiliateEdgeIsClampedToALowerCap`                                                                    |
-| A9 Sports positions            | `SportsHubTicket` asserts edge `0`; `test_zeroEdgePositionCannotAccrueAnything`                                                                                                                                                                                    |
-| B1 NAV identity, B2 solvency   | checked after every settlement in `HouseEdgeAllocationV16`; `BankInvariants`                                                                                                                                                                                       |
-| G1 Constants                   | `test_constants`                                                                                                                                                                                                                                                   |
-| G2 Delayed changes             | `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`, `test_markupIncreaseWaitsForDelay_decreaseIsImmediate`, `test_cancelledBaseEdgeChangeCannotActivate`                                                                                                        |
-| G3 Schedule validity           | `test_scheduleCapAndVersions`; `SecurityFixes` referral-config tests                                                                                                                                                                                               |
-| G4 Guardian scope              | `test_onlyGovernanceChangesAllocationParameters`                                                                                                                                                                                                                   |
-| G5 Refund timeout bound        | `test_refundTimeoutIsBoundedToOneDay`, `test_constructorRefusesARefundTimeoutAboveOneDay`; `DeploymentV16.testRefundTimeoutAboveOneDayIsRefusedBeforeBroadcast`                                                                                                    |
+### Casino admission (ADR-0034 stage 2)
+
+`GameHubE2E` covers all eight admitted casino modules at `betCount=100`, both XP eligibility states,
+six skyline segments and nine nonzero awards. Successful finalization must preserve the module's result,
+clear exactly one hold, allocate the correct liabilities and permit batch pricing and LP claim. A failed
+whole transaction must preserve the pending position and all balances for retry. Router allocation-cap
+errors must revert; they must not become invalid-module refunds. Parameters above 64 bytes must be
+rejected before a position or VRF request is created.
+
+Run `make test-casino-admission` to apply the 3,000,000-gas call envelope with isolated transaction gas
+accounting; PR CI runs the same target. Asset/provider and network acceptance are separate release checks.
+
+| Obligation                     | Tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1 Conservation                | `HouseEdgeAllocationV16`: worked examples and `testFuzz_allocationConservesTheEdge`; `StatefulSystemDiff` recomputes every settlement independently                                                                                                                                                                                                                                                                                                                     |
+| A2 LP floor at the Router      | `SettlementRouter.t.sol` cap tests and `testFuzz_settlementAcceptedIffWithinOperatorShareAndCombinedReserve`; `SettlementRouterInvariants.invariant_allocation_never_exceeds_operator_share`                                                                                                                                                                                                                                                                            |
+| A3 Referral cap                | `testFuzz_allocationConservesTheEdge`; `test_scheduleCapAndVersions`                                                                                                                                                                                                                                                                                                                                                                                                    |
+| A4 Payee existence             | `test_workedExample_noReferrer`, `test_nothingIsPaidBeyondL2`, fuzzed chains of depth 0 to 2                                                                                                                                                                                                                                                                                                                                                                            |
+| A5 Unclaimed share to protocol | worked examples; `test_roundingRemaindersAccrueToProtocol`                                                                                                                                                                                                                                                                                                                                                                                                              |
+| A6 Refunds allocate nothing    | `test_timeoutRefundAllocatesNothing`, `test_partialRefundAllocatesOnUsedTurnoverOnly`; `SecurityFixes` invalid-result refunds                                                                                                                                                                                                                                                                                                                                           |
+| A7 Non-retroactivity           | `test_bindingAfterAcceptanceDoesNotAddPayees`, `test_uplineBindingAfterAcceptanceDoesNotAddL2`, `test_scheduleChangeAfterAcceptanceDoesNotApply`, `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`; `StatefulSystemDiff` late bindings and governance changes                                                                                                                                                                                                      |
+| A8 Edge bound                  | `test_openPosition_rejectsEdgeAboveMax` and the Router invariant; `test_markupStartsDisabled`, `test_staleAffiliateEdgeIsClampedToTheCurrentCap`, `test_staleAffiliateEdgeIsClampedToALowerCap`                                                                                                                                                                                                                                                                         |
+| A9 Sports positions            | `SportsHubTicket` asserts edge `0`; `test_zeroEdgePositionCannotAccrueAnything`                                                                                                                                                                                                                                                                                                                                                                                         |
+| B1 NAV identity, B2 solvency   | checked after every settlement in `HouseEdgeAllocationV16`; `BankInvariants`                                                                                                                                                                                                                                                                                                                                                                                            |
+| L1 Old-risk ownership          | `BankPendingExposure`; `BankAsyncRedemption`; real Hub/Router continuity test in `GameHubE2E`                                                                                                                                                                                                                                                                                                                                                                           |
+| L2 Continuous betting          | `GameHubE2E.test_asyncExitKeepsBettingLiveAndHistoricalRecoveriesSeparate`; `BankInvariants.invariant_historical_epochs_preserve_ownership_backing_and_current_risk`                                                                                                                                                                                                                                                                                                    |
+| L3 Frozen pricing              | `BankAsyncRedemption`: all-holder recovery, full exits, deposits and reserve allocation; `test/model/recovery_pocket_model.py`; `BankInvariants`                                                                                                                                                                                                                                                                                                                        |
+| L4 Claims                      | `test_partialClaimOrderDoesNotChangeTheTotal`, `test_withdrawCannotConsumeEveryShareAndLeaveAssets`, `test_onlyTheControllerOrItsOperatorClaimsAndPicksTheReceiver`, `test_pauseStopsClaimsButNotRequestsSyncOrCancellation`, `test_exitsAreExemptFromTheWithdrawalBuffer`                                                                                                                                                                                              |
+| L5 Assignment                  | `test_remainderReturnsToNavOnceEveryShareIsAssigned`, `test_viewsAgreeWithStoredStateAfterSync`; `BankInvariants.invariant_priced_exits_are_conserved`                                                                                                                                                                                                                                                                                                                  |
+| L6 Queued escrow               | `BankAsyncRedemption`: cancellation before activation, allowances and rescue; `BankInvariants.invariant_escrow_matches_pending_requests`                                                                                                                                                                                                                                                                                                                                |
+| L7 Player payables             | `test_refusedPayoutBecomesAPayableAndTheBatchStillPrices`, `test_refusedRefundBecomesAPayable`, `test_tokenOutOfGasPreservesTheWholePayoutAsPayable`, `test_proxyTokenOutOfGasPreservesTheWholePayoutAsPayable`, `test_tokenOutOfGasPreservesTheWholeRefundAsPayable`, `test_proxyTokenPaysDirectlyWithEnoughGas`, `test_underfundedSettlementRollsBackTheWholePosition`, `test_everyNavComputationSubtractsBothPayables`; `BankInvariants` blocks and unblocks players |
+| L8 Standard surface            | `test_supportsTheErc7540RedeemAndErc7575InterfaceIds`, `test_theBankIsItsOwnShareToken`, `test_redemptionPreviewsRevertAndDepositViewsFollowPause`                                                                                                                                                                                                                                                                                                                      |
+| G1 Constants                   | `test_constants`                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| G2 Delayed changes             | `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`, `test_markupIncreaseWaitsForDelay_decreaseIsImmediate`, `test_cancelledBaseEdgeChangeCannotActivate`                                                                                                                                                                                                                                                                                                             |
+| G3 Schedule validity           | `test_scheduleCapAndVersions`; `SecurityFixes` referral-config tests                                                                                                                                                                                                                                                                                                                                                                                                    |
+| G4 Guardian scope              | `test_onlyGovernanceChangesAllocationParameters`                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| G5 Refund timeout bound        | `test_refundTimeoutIsBoundedToOneDay`, `test_constructorRefusesARefundTimeoutAboveOneDay`; `DeploymentV16.testRefundTimeoutAboveOneDayIsRefusedBeforeBroadcast`                                                                                                                                                                                                                                                                                                         |
 
 Unless another file is named, tests are in `test/unit/HouseEdgeAllocationV16.t.sol`.

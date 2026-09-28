@@ -588,23 +588,23 @@
         "title": "投注详情",
         "outcomes": {
           "refunded": {
-            "label": "本金已退回",
-            "detail": "VRF 超时窗口后，退款路径已退回本金。"
+            "label": "退款已结算",
+            "detail": "VRF 超时窗口后，退款路径已完成结算。转账状态见下方。"
           },
           "win": {
             "label": "本局中奖",
-            "detail": "本局已在链上完成结算，赔付已确认。"
+            "detail": "本局已在链上完成结算。转账状态见下方。"
           },
           "winPending": {
             "label": "本局中奖",
             "detail": "VRF 结果已揭晓，赔付结算仍在确认中。"
           },
           "returned": {
-            "label": "本金已返回",
+            "label": "结算金额等于本金",
             "detail": "本次结算赔付等于本金。"
           },
           "returnedPending": {
-            "label": "本金返回",
+            "label": "预期结算金额等于本金",
             "detail": "VRF 结果已揭晓，结算确认仍在等待中。"
           },
           "loss": {
@@ -629,7 +629,7 @@
           "player": "玩家",
           "multiplier": "倍率",
           "betAmount": "投注金额",
-          "payout": "总到账金额",
+          "payout": "结算金额",
           "expectedPayout": "潜在赔付",
           "pending": "等待中",
           "betId": "投注 ID",
@@ -703,7 +703,7 @@
         },
         "metrics": {
           "stake": "投注金额",
-          "payout": "总到账金额",
+          "payout": "结算金额",
           "net": "净额",
           "state": "状态"
         },
@@ -985,6 +985,12 @@
         "unavailableLabel": "金库状态暂不可用",
         "pausedLabel": "金库已暂停",
         "refresh": "检查金库状态"
+      },
+      "payment": {
+        "transferred": "本笔结算交易已将结算金额转入玩家钱包。",
+        "payable": "本笔结算时转账未完成，金额已为你的钱包保留。转账恢复后会自动支付给你，你也可以在资金池页面自行领取。",
+        "unknown": "结算金额已确认，尚未核实本笔钱包转账。",
+        "noPayment": "本笔无须向玩家转账。"
       }
     },
     "directory": {
@@ -1762,7 +1768,7 @@
       "loading": {
         "eyebrow": "读回",
         "title": "正在加载市场",
-        "description": "正在通过 v1.3 SDK 读取市场、赛果和敞口记录。",
+        "description": "正在通过 SDK 读取市场、赛果和敞口记录。",
         "body": "正在加载 SportsHub 市场状态..."
       },
       "market": {
@@ -2115,8 +2121,6 @@
       "title": "上线阻塞项",
       "description": "仍然阻塞公开上线的运营文档链接。",
       "links": {
-        "goNoGo": "Go/no-go 包",
-        "frontendAccess": "前端访问策略",
         "providerPolicy": "Provider 策略"
       }
     }
@@ -2334,7 +2338,7 @@
           "lost": "未获胜",
           "randomReady": "随机数已就绪",
           "placed": "已下注",
-          "refunded": "已退款",
+          "refunded": "退款已结算",
           "pending": "待读取",
           "refreshing": "刷新中"
         },
@@ -2362,13 +2366,13 @@
           }
         },
         "toast": {
-          "refunded": "投注已成功退款",
+          "refunded": "退款已完成结算，转账状态需另行核实。",
           "refundFailed": "退款交易失败",
           "finalized": "投注已成功结算",
           "finalizeFailed": "结算交易失败"
         },
         "outcomes": {
-          "refunded": "已退款",
+          "refunded": "退款已结算",
           "netResult": "净结果",
           "loss": "亏损"
         },
@@ -2399,7 +2403,7 @@
           "vrfFeeCharged": "已计费 VRF 费用",
           "vrfRequestId": "VRF 请求 ID",
           "randomHash": "随机哈希",
-          "payout": "总到账金额",
+          "payout": "结算金额",
           "protocolFee": "协议费用",
           "refund": "退款",
           "placedAt": "下注时间",
@@ -2440,8 +2444,8 @@
               "description": "GameHub 已结算赔付或亏损。"
             },
             "refunded": {
-              "title": "已退款",
-              "description": "本金已返还给玩家。"
+              "title": "退款已结算",
+              "description": "退款路径已完成结算；转账状态需另行核实。"
             }
           }
         },
@@ -2738,65 +2742,50 @@
     "hero": {
       "eyebrow": "金库出资人",
       "title": "为 {symbol} 池提供赔付资本",
-      "description": "LP 为赌场赔付提供资本，承担游戏结果的波动。按现行 v1.5 规则，庄家优势计入协议费和推荐奖励，不计入 LP 份额。",
-      "descriptionLpShare": "LP 为赌场赔付提供资本，承担游戏结果的波动。按 v1.6 规则，每笔已结算投注的庄家优势有一半留给 LP，另一半用于推荐奖励和协议费。",
+      "description": "LP 为赌场赔付提供资本，承担游戏结果的波动。按 v1.6 规则，每笔已结算投注的庄家优势有一半留给 LP，另一半用于推荐奖励和协议费。",
       "disclosure": "储备、份额价格与累计表现（毛博彩收入、抽水率、周转率）直接读取 Bank 合约，链上可验证；仅每日趋势图与最大回撤来自索引，可能存在延迟。",
       "bankAddress": "Bank 地址"
     },
     "metrics": {
       "sharePrice": {
-        "label": "每千份价值",
-        "detail": "每 1,000 份 LP share 可赎回的资产；单份价格仍在储备账本中显示。"
+        "label": "每千份价值"
       },
       "totalShares": {
-        "label": "总份额",
-        "detail": "当前已发行 LP share 总量。"
-      },
-      "freeReserve": {
-        "label": "可用储备",
-        "detail": "高于未结算负债的未占用金库资本。"
-      },
-      "totalAssets": {
-        "label": "当前金库净值",
-        "detail": "所选 Bank 金库的链上可验证 NAV。"
-      },
-      "minLiquidity": {
-        "label": "最低流动性",
-        "detail": "保护赔付能力的取款流动性下限。"
+        "label": "活跃份额",
+        "detail": "活跃 LP 份额总量；已定价退出份额已销毁。"
       }
     },
     "summary": {
       "capitalPosture": {
         "title": "可验证储备账本",
         "readModel": "链上读取",
-        "totalAssets": "当前金库净值",
+        "totalAssets": "活跃金库净值",
         "loading": "正在拉取最新金库快照…",
-        "detail": "所选 Bank 金库 NAV 直接读取自当前 active 合约。",
-        "totalAssetsDetail": "选中金库净值直接读取自当前 active 合约。"
+        "detail": "支持活跃份额的当前资金，已扣除历史权益备付资金与应付款。",
+        "totalAssetsDetail": "支持活跃份额的当前资金，已扣除历史权益备付资金与应付款。"
       },
       "freeReserve": {
         "label": "可用储备",
-        "detail": "当前未被未结算负债占用的资本。"
+        "detail": "活跃资金中未被未决持仓占用的部分。"
       },
       "sharePrice": {
-        "label": "每份价值",
-        "detail": "ERC4626-like 直接换算：1 份 LP share 对应多少底层资产。"
+        "label": "每份价值"
       },
       "totalShares": {
-        "label": "总份额",
-        "detail": "当前已发行 LP share。金库净值变化会反映到每份价值。"
+        "label": "活跃份额",
+        "detail": "活跃 LP 份额总量；已定价退出份额已销毁。"
       },
       "position": {
         "label": "你的仓位",
         "detail": "已连接钱包对应的资产等价值。"
       },
       "liquidity": {
-        "label": "流动性策略",
-        "detail": "下限 {floor} · Bank {bank}"
+        "label": "风险储备策略",
+        "detail": "风险储备 {floor} · Bank {bank}"
       },
       "reserved": {
-        "label": "已预留负债",
-        "detail": "可用储备 {freeReserve} · 最低流动性 {minLiquidity}"
+        "label": "活跃资金承担的预留负债",
+        "detail": "可用储备 {freeReserve} · 风险储备 {riskReserve}"
       }
     },
     "actions": {
@@ -2850,9 +2839,8 @@
         "statusDialog": "Bank 交易状态"
       },
       "depositsClosed": {
-        "title": "主网暂不开放存入",
-        "body": "按现行 v1.5 规则，LP 承担游戏结果的波动，庄家优势计入协议费和推荐奖励，不计入 LP 份额。在资金池条款调整之前，主网不接受新的存入。已有份额仍可按资金池规则取出。",
-        "bodyLpShare": "在该资金池开放之前，主网不接受新的存入。已有份额仍可按资金池规则取出。"
+        "title": "暂不开放新存入",
+        "body": "此资金池暂不接受新存入，已有 LP 请求和领取仍按资金池规则办理。"
       }
     },
     "flows": {
@@ -2906,8 +2894,8 @@
         "detail": "扣除已预留负债({reserved})后的可用储备。公开开放存款前，应与最大赔付控制一起评估。"
       },
       "liquidityFloor": {
-        "label": "流动性下限",
-        "detail": "{bps} 最低流动性策略，当前约 {amount}。"
+        "label": "提款缓冲",
+        "detail": "协议费和推荐奖励领取需保留 {bps} 缓冲，当前约 {amount}。已定价 LP 领取和玩家欠款领取不受此限制。"
       },
       "release": {
         "label": "Release 摘要",
@@ -2958,8 +2946,7 @@
         "d7": "7天",
         "d30": "30天"
       },
-      "note": "累计毛博彩收入来自 Bank.getPerformance() 链上直读（投注流水减毛派彩）。它不是 LP 的利润：LP 份额价格还反映资金池留存的派彩扣减，以及从中计提的协议费和推荐奖励。资金周转率用累计投注流水除以当前链上金库资产。下方每日曲线来自索引，可能延迟；这不是收益承诺。",
-      "noteLpShare": "累计毛博彩收入来自 Bank.getPerformance() 链上直读（投注流水减毛派彩）。它不是 LP 的利润：LP 份额价格还反映资金池留存的派彩扣减，以及从中计提的推荐奖励和协议费，两者合计最多占每笔投注庄家优势的一半。资金周转率用累计投注流水除以当前链上金库资产。下方每日曲线来自索引，可能延迟；这不是收益承诺。",
+      "note": "累计毛博彩收入来自 Bank.getPerformance() 链上直读（投注流水减毛派彩）。它不是 LP 的利润：LP 份额价格还反映资金池留存的派彩扣减，以及从中计提的推荐奖励和协议费，两者合计最多占每笔投注庄家优势的一半。资金周转率用累计投注流水除以当前链上金库资产。下方每日曲线来自索引，可能延迟；这不是收益承诺。",
       "equityTitle": "累计毛博彩收入",
       "peak": "峰值",
       "trough": "谷值",
@@ -2967,27 +2954,29 @@
     },
     "ledger": {
       "eyebrow": "出资人账本",
-      "title": "存款与取款记录",
-      "readModel": "ERC4626 事件",
+      "title": "入金、退出与恢复款",
+      "readModel": "Bank 现金流事件",
       "connectWallet": "连接钱包后查看你的 Bank 出资记录。",
       "loading": "正在加载出资人账本…",
       "loadingMore": "正在加载更多…",
       "loadMore": "加载更多",
       "loadedRows": "已加载 {count} 条",
       "end": "已到记录末尾",
-      "empty": "当前钱包还没有存款或取款记录。",
-      "note": "每一行从 Bank share 的 mint/burn Transfer 和同一笔交易里的资产 Transfer 还原。份额价格按该笔交易资产数量 / share 数量计算，不使用当前份额价格倒推。",
+      "empty": "此钱包尚无 LP 现金流记录。",
+      "note": "仅实际入金、退出付款和历史恢复付款属于现金流。申请、启动及可领取恢复金额不代表收到现金。捐赠至 Bank 不计为收到款项；仅有份额的事件显示成交份额价格。",
       "block": "区块 {blockNumber}",
       "actions": {
         "deposit": "存入",
-        "withdraw": "取出"
+        "withdraw": "取出",
+        "recovery": "恢复付款",
+        "donation": "捐赠"
       },
       "summary": {
         "deposited": "已加载存入",
         "withdrawn": "已加载取出",
-        "openValue": "当前价值",
+        "openValue": "已知 LP 价值",
         "netPnl": "已加载净盈亏",
-        "shares": "份额"
+        "shares": "钱包份额"
       },
       "columns": {
         "type": "类型",
@@ -2996,13 +2985,86 @@
         "shares": "Share 数量",
         "sharePrice": "Share 价格",
         "tx": "交易"
-      }
+      },
+      "incomplete": "尚未验证现金流水完整覆盖此快照，暂不显示完整回报。"
     },
     "overview": {
       "totalAssets": {
         "label": "当前金库净值",
         "detail": "当前所选 Bank 金库的链上可验证 NAV。"
       }
+    },
+    "async": {
+      "title": "申请并领取赎回款",
+      "requestDetail": "使用钱包份额申请退出。批次启动时立即确定可支付现金，并单独保留历史恢复权；旧投注未解决不会阻止后续批次。",
+      "requestAmount": "申请赎回份额",
+      "wallet": "钱包：{amount} 份额",
+      "pendingRisk": "排队份额仍承担活跃池盈亏。启动时所有原持有人都保留此前投注的相应权益。现金可能为零，恢复金额不确定，也可能稍后到账。",
+      "request": "申请赎回",
+      "cancelDetail": "只要批次尚未启动，即使已过最早启动时间，也可取消并退回全部排队份额。已启动申请不能取消，交易以当时链上状态为准。",
+      "cancel": "取消排队份额",
+      "claimableTitle": "已定价可领取资产",
+      "claimDetail": "这些现金已为你的退出预留。领取全部已定价份额会支付对应现金，并保留全部历史恢复权。",
+      "claimAll": "领取全部赎回款",
+      "clearZero": "清除零价值退出份额",
+      "paused": "池已暂停。仍可申请退出及取消排队；入金、退出现金领取与恢复款支付需等待恢复。",
+      "unknown": "暂时无法读取池状态，请刷新后再操作。",
+      "refresh": "刷新池状态",
+      "depositTerms": "入金立即按活跃资金当前账面价格加入，承担当前未结投注风险，但不获得此前批次启动形成的历史恢复权。",
+      "issuerRisk": "代币发行方限制可能延迟转账和领取。记录了应收权利不代表现金已进入钱包。",
+      "totalEquity": "活跃与已定价 LP 价值（估算）",
+      "totalEquityDetail": "钱包估值＋排队估值＋已定价现金。历史恢复权单独展示，不计入此估算。",
+      "walletEquity": "钱包份额／账面估值",
+      "claimableEquity": "已定价赎回资产",
+      "playerTitle": "尚未到账的玩家款",
+      "playerDetail": "已结算或退款的投注记录了未支付玩家款。这部分独立于 LP 权益，仅能支付至你的玩家地址；池暂停时仍可领取，发行方限制仍可能阻止到账。",
+      "claimPlayer": "领取玩家款",
+      "requested": "赎回申请已确认。排队份额在批次启动前继续属于活跃资金。",
+      "cancelled": "符合条件的份额已退回钱包。",
+      "claimed": "赎回领取已确认。",
+      "playerClaimed": "玩家款支付已确认。",
+      "sharePriceDetail": "每千份 LP 的当前账面价值，不是已定价的退出款。",
+      "shareUnitDetail": "每份活跃 LP 的当前账面价值。历史恢复权独立于活跃份额。",
+      "exitLiabilities": "已预留退出现金与玩家应付款",
+      "exitLiabilitiesDetail": "LP 退出款：{exits}。未支付玩家款：{players}。两者已从净值中扣除。",
+      "inactivePool": "此资金池已停用，不再接受新投注和存入。赎回请求、符合条件的取消和已有债权领取仍按合约规则办理。",
+      "queuedTitle": "排队中的申请",
+      "queuedDetail": "份额在启动前仍属于活跃资金。此前未解决投注不会阻止本批次；启动时确定现金价格，历史恢复权单独保留。 可用备付资金与紧急暂停限制仍适用，不承诺全额现金到账期限。",
+      "eligibleAt": "最早可启动时间：{time}。这不是保证启动或到账的时间。",
+      "remainingHolds": "此前尚未结束的投注：{count}",
+      "queuedEquity": "排队份额／可支付现金估算",
+      "queuedQuoteDetail": "链上报价表示若现在启动可分配的现金，不含历史恢复权，实际启动前可能变化。",
+      "receiver": "现金接收地址：{receiver}"
+    },
+    "pools": {
+      "label": "资金池",
+      "option": "{symbol} · 池 #{poolId} · {bank}",
+      "historyUnavailable": "当前历史图表无法单独区分这个资金池。上方累计数据来自所选池的链上记录。"
+    },
+    "recovery": {
+      "title": "历史恢复权",
+      "detail": "此前投注仍归属于原持有人，包括继续留在池中的 LP。钱包份额归零不会消除这些权益。",
+      "loading": "正在查询历史权益…",
+      "incomplete": "历史权益尚未查全。请加载其余页面后再评估完整持仓。",
+      "error": "暂时无法读取历史恢复权，不会将你的权益视为零。",
+      "empty": "完整查询中未发现历史恢复权。",
+      "epoch": "历史期次 {epoch}",
+      "units": "快照权益单位",
+      "claimable": "可领取恢复现金",
+      "upperBound": "剩余恢复金额上限",
+      "upperBoundDetail": "上限不是当前可提现现金，也不是承诺支付金额。",
+      "remainingHolds": "此前仍未结投注：{count}",
+      "settled": "本期已全部结算，已分配但未领取的现金仍属于你。",
+      "claim": "领取恢复款",
+      "claimed": "恢复款领取已确认。",
+      "loadMore": "加载更多历史权益",
+      "refresh": "刷新历史权益",
+      "receiver": "现金将发送至 {receiver}。此操作不会授予 keeper 代领权限。",
+      "incompleteReturn": "回报尚不完整：历史权益仍未结清，或查询尚未完成。",
+      "backing": "历史权益备付资金",
+      "backingDetail": "已从活跃资金扣除，用于此前债务及未领取的恢复款。",
+      "donationNote": "捐赠至 Bank 的资金不计为持有人实际收到的现金。",
+      "snapshot": "快照：区块 {block}，时间 {time}。刷新可查看新活动。"
     }
   },
   "ops": {
@@ -3782,7 +3844,7 @@
       },
       {
         "q": "什么是庄家优势(house edge)?",
-        "a": "庄家优势是内置在每个游戏派彩中的利润空间。在 Base 主网，按现行 v1.5 规则，它用于协议费和推荐奖励，不分给 LP。每个游戏都会在「玩法说明」里显示当前发布版本的精确数值，不在营销文案里写死估算值。"
+        "a": "庄家优势是游戏派彩中的利润空间。当前 v1.6 设计按实际使用流水计算理论庄家优势，LP 固定保留其中的 50%，协议费和推荐奖励共享另一半。这不保证 LP 收益。项目尚未上线；每个游戏的适用费率显示在「玩法说明」中。"
       },
       {
         "q": "为什么我的下注一直等待中?",

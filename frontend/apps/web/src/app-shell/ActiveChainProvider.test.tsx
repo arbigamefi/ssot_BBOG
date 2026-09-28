@@ -1,3 +1,9 @@
+vi.mock("@ssot/ssot/release", async () => {
+  const actual = await vi.importActual<typeof import("@ssot/ssot/release")>("@ssot/ssot/release");
+  const { createReleaseModuleMock } = await import("../test/current-release");
+  return { ...actual, ...createReleaseModuleMock() };
+});
+
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as React from "react";

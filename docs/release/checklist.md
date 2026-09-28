@@ -1,5 +1,14 @@
-# Release acceptance checklist
+# Release acceptance
 
-The active checklist is [v1.5 deployment and acceptance](../deploy/checklist.md). The [release workflow](../deploy/v15-release.md) defines required configuration and gates; the [implementation record](../deploy/v15/implementation-status.zh-CN.md) records actual evidence and unfinished work.
+- Current source and generated ABIs agree; all contract and frontend package gates pass.
+- Every admitted game has a tested terminal path, including maximum-size inputs and timeout recovery.
+- Async LP requests, activation, historical recovery, batch allocation and claims reconcile with active NAV. Queued requests remain cancellable until actual activation, including after earliest eligibility; funded new bets continue during every ordinary redemption phase.
+- Active reserve (`getSSOT().R` / `activeReserved()`) plus historical remaining reserve equals global `totalReserved()`. New risk cannot spend historical backing; pricing and claims must not double-count liabilities or burn shares again.
+- Player-payable fallback and claims preserve the entitled recipient and debt during pause; the keeper claims payables for their players and backs off on refusals.
+- ADR-0035 holds on the audited source: permanently stuck old positions cannot gate later exits; historical risk/recovery rights survive transfers, full exits and later deposits. Complete external audit before outside LP funding.
+- Deployment addresses, Safe configuration, signer, bytecode and parameters match the signed release.
+- Web and keeper use the same current release; database starts with the current schema.
+- Network acceptance covers VRF, refunds, payout receipts, payable claims, restart/replay, health and alert delivery.
+- Compliance controls are enforced server-side before any real-money service: geo-blocking, sanctions screening and player limits.
 
-A passing code check, successful broadcast, signed metadata bundle and completed business acceptance are distinct results. Record the exact source commit, chain, deployment block, digest, immutable image identity, governance state and validation limits for every release.
+Follow [the deployment workflow](../deploy/v16-release.md).

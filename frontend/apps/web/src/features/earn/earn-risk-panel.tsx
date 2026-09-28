@@ -27,16 +27,12 @@ export function EarnRiskPanel({
   const t = useTranslations();
   const snapshot = data?.snapshot;
   const freeReserve = snapshot
-    ? snapshot.totalAssets > snapshot.totalReserved
-      ? snapshot.totalAssets - snapshot.totalReserved
+    ? snapshot.totalAssets > snapshot.activeReserved
+      ? snapshot.totalAssets - snapshot.activeReserved
       : 0n
     : undefined;
-  const withdrawalBufferBps = snapshot?.withdrawalBufferBps ?? snapshot?.minLiquidityBps;
-  const withdrawalBuffer =
-    snapshot?.withdrawalBuffer ??
-    (snapshot && withdrawalBufferBps != null
-      ? (snapshot.totalAssets * BigInt(withdrawalBufferBps)) / 10_000n
-      : undefined);
+  const withdrawalBufferBps = snapshot?.withdrawalBufferBps;
+  const withdrawalBuffer = snapshot?.withdrawalBuffer;
 
   const rows = (
     <div className="divide-y divide-border-soft">
@@ -51,7 +47,7 @@ export function EarnRiskPanel({
         label={t("earn.risk.buffer.label")}
         title={formatTokenAmount(freeReserve, decimals, symbol, 2)}
         detail={t("earn.risk.buffer.detail", {
-          reserved: formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2)
+          reserved: formatTokenAmount(snapshot?.activeReserved, decimals, symbol, 2)
         })}
       />
       <RiskRow
@@ -77,6 +73,30 @@ export function EarnRiskPanel({
         title={shortHex(releaseDigest)}
         detail={t("earn.risk.release.detail")}
       />
+      {snapshot ? (
+        <RiskRow
+          label={t("earn.recovery.backing")}
+          title={formatTokenAmount(snapshot.recoveryBacking, decimals, symbol, 6)}
+          detail={t("earn.recovery.backingDetail")}
+        />
+      ) : null}
+      {snapshot ? (
+        <RiskRow
+          label={t("earn.async.exitLiabilities")}
+          title={formatTokenAmount(
+            snapshot.exitPayable != null && snapshot.playerPayableTotal != null
+              ? snapshot.exitPayable + snapshot.playerPayableTotal
+              : undefined,
+            decimals,
+            symbol,
+            6
+          )}
+          detail={t("earn.async.exitLiabilitiesDetail", {
+            exits: formatTokenAmount(snapshot.exitPayable, decimals, symbol, 6),
+            players: formatTokenAmount(snapshot.playerPayableTotal, decimals, symbol, 6)
+          })}
+        />
+      ) : null}
     </div>
   );
 

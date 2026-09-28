@@ -5,7 +5,7 @@
 
 ## Context
 
-Legacy refactors provide multi-roll games (Dice/Roulette/Keno) with:
+Multi-roll games (Dice/Roulette/Keno) use:
 - a single VRF word used as a **seed**
 - deterministic per-roll RNG derived from that seed
 - early stopping via `stopGain` / `stopLoss`
@@ -93,5 +93,5 @@ Modules MUST NOT use external state (timestamp, blockhash, etc.) as randomness.
 
 ## Links
 
-- Constitution: `docs/constitution/SSOT.v1.1.md`
-- Executable SSOT: `docs/constitution/ExecutableSSOT.v1.1.md`
+- Constitution: `docs/constitution/SSOT.v1.6.md`
+- Executable SSOT: `docs/constitution/ExecutableSSOT.v1.6.md`

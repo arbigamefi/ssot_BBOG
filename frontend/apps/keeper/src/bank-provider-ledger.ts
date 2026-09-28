@@ -1,20 +1,17 @@
 import {
-  getAddress,
   isAddressEqual,
-  parseAbiItem,
+  getAbiItem,
+  type AbiEvent,
   type Address,
   type Hex,
   type PublicClient
 } from "viem";
-import type { BankProviderLedgerRow } from "@ssot/bet-index";
+import { decodeBankProviderCashEvent, type BankProviderLedgerRow } from "@ssot/bet-index";
+import { BANK_REDEMPTION_KEEPER_ABI } from "./abi.js";
 
-const BANK_DEPOSIT_EVENT = parseAbiItem(
-  "event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)"
+const BANK_PROVIDER_LEDGER_ABI = ["Deposit", "Withdraw", "RecoveryClaimed"].map(
+  (name) => getAbiItem({ abi: BANK_REDEMPTION_KEEPER_ABI, name }) as AbiEvent
 );
-const BANK_WITHDRAW_EVENT = parseAbiItem(
-  "event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)"
-);
-const BANK_PROVIDER_LEDGER_ABI = [BANK_DEPOSIT_EVENT, BANK_WITHDRAW_EVENT] as const;
 
 export type BankProviderLedgerPool = {
   poolId: number;
@@ -26,11 +23,7 @@ export type BankProviderLedgerPool = {
 type TransferLogLike = {
   address: Address;
   eventName: string;
-  args?: {
-    assets?: bigint;
-    owner?: Address;
-    shares?: bigint;
-  };
+  args?: Record<string, unknown>;
   blockNumber?: bigint;
   logIndex?: number;
   transactionHash?: Hex;
@@ -64,6 +57,7 @@ export async function fetchBankProviderLedgerRows({
   publicClient: Pick<PublicClient, "getBlock" | "getLogs">;
   range: { fromBlock: bigint; toBlock: bigint };
 }): Promise<Array<{ pool: BankProviderLedgerPool; rows: BankProviderLedgerRow[] }>> {
+  pools = [...new Map(pools.map((pool) => [pool.bank.toLowerCase(), pool])).values()];
   if (pools.length === 0) return [];
   const logs = (await publicClient.getLogs({
     address: pools.map((pool) => pool.bank),
@@ -105,31 +99,21 @@ async function toLedgerRows(
   logs: readonly TransferLogLike[],
   getTimestamp: (blockNumber: bigint) => Promise<number | undefined>
 ): Promise<BankProviderLedgerRow[]> {
-  const ledgerLogs = logs
-    .map((log) => ({
-      ...log,
-      action: log.eventName === "Deposit" ? ("deposit" as const) : ("withdraw" as const)
-    }))
-    .filter((log): log is TransferLogLike & { action: BankProviderLedgerRow["action"] } =>
-      Boolean(
-        log.args?.owner &&
-        log.args?.assets != null &&
-        log.args?.shares != null &&
-        log.transactionHash &&
-        log.blockNumber != null
-      )
-    );
+  const ledgerLogs = logs.flatMap((log) => {
+    const cash = decodeBankProviderCashEvent(pool.bank, log.eventName, log.args ?? {});
+    return cash && log.transactionHash && log.blockNumber != null && log.logIndex != null
+      ? [{ ...log, cash }]
+      : [];
+  });
 
   const rows = await Promise.all(
     ledgerLogs.map(async (log): Promise<BankProviderLedgerRow> => {
       const txHash = log.transactionHash!.toLowerCase() as Hex;
       const logIndex = log.logIndex ?? 0;
       const timestamp = await getTimestamp(log.blockNumber!);
-      const assets = log.args!.assets!;
-      const shares = log.args!.shares!;
-      const owner = getAddress(log.args!.owner!);
+      const { assets, shares, owner, receiver, caller, epochId } = log.cash;
       return {
-        action: log.action,
+        action: log.cash.action,
         asset: pool.asset,
         assets: assets?.toString(),
         bank: pool.bank,
@@ -139,6 +123,9 @@ async function toLedgerRows(
         logIndex,
         owner: owner.toLowerCase() as Address,
         poolId: String(pool.poolId),
+        receiver,
+        caller,
+        epochId: epochId?.toString(),
         sharePrice: assetPerShare(assets, shares, pool.decimals)?.toString(),
         shares: shares.toString(),
         timestamp,

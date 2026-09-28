@@ -1,31 +1,18 @@
-> Start with the [current release facts](../release/STATUS-v1.5.zh-CN.md) and [v1.5 deployment workflow](../deploy/v15-release.md). Individual runbooks may describe requirements or historical exercises rather than controls already deployed.
+# Operations
 
-# Ops
+The project has not launched. These documents describe the current application's first deployment
+and operating procedures; they are not evidence of a running service. Start with the
+[release facts](../release/README.md), [deployment workflow](../deploy/v16-release.md) and
+[Docker configuration](../../frontend/deploy/docker/README.md).
 
-## Monitoring
+- [Metrics and reconciliation](metrics.md)
+- [Alerts and delivery](alerts.md)
+- [Runbooks](runbooks/README.md)
+- [Casino frontend access](casino-frontend-access.md)
+- [Sports result evidence](sportsbook-provider-evidence-policy.md)
+- [The Odds API integration](sportsbook-provider-the-odds-api.md)
+- [Incident record](incident-templates.md)
 
-- [Monitoring metrics inventory](metrics.md)
-- [Alert rules inventory](alerts.md)
-
-## Runbooks
-
-- [VRF + refundCredit](runbooks/vrf-refundcredit.md)
-- [Bank solvency / reserve anomalies](runbooks/bank-solvency.md)
-- [Pause + config drift + governance safety](runbooks/pause-config-drift.md)
-- [Game finalization stalls / diff anomalies](runbooks/game-finalization-diffs.md)
-- [SportsHub odds, result finality, and exposure caps](runbooks/sportsbook-ops.md)
-- [Sportsbook production controls](sportsbook-production-controls.md)
-- [Casino frontend access policy](casino-frontend-access.md)
-- [Sportsbook key custody and role control](sportsbook-key-custody-roles.md)
-- [Sportsbook provider and evidence policy](sportsbook-provider-evidence-policy.md)
-- [The Odds API provider ingestion](sportsbook-provider-the-odds-api.md)
-- [Sportsbook frontend access policy](sportsbook-frontend-access.md)
-- [Sportsbook bankroll and risk caps](sportsbook-bankroll-risk-caps.md)
-- [Sportsbook monitoring and keeper coverage](sportsbook-ops-coverage.md)
-- [Sportsbook Phase 2 go/no-go packet](sportsbook-phase2-gonogo-2026-05-14.md)
-
-## Incident process
-
-- [Incident + postmortem templates](incident-templates.md)
-
-> Tip: always record the **release digest** from the chain-specific verified release lock (`release-latest-v16.json` for a v1.6 release) in incident notes.
+Use the verified release digest, chain ID and contract addresses in every operational record.
+The release gates in [ADR-0034](../adr/0034-async-lp-redemption-continuous-betting.md) remain prerequisites
+for outside LP capital; a healthy process or a successful local test does not discharge them.

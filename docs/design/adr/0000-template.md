@@ -18,8 +18,7 @@ factual; opinions belong in §3.
 
 A single declarative sentence stating what is being decided.
 
-> Example: We will adopt `next-intl` as the i18n library, replacing the
-> unused custom `i18n` scaffold in `frontend/packages/ui/src/i18n/`.
+> Example: Product UI uses the shared design tokens for colors and spacing.
 
 ## 3. Rationale
 
@@ -47,16 +46,11 @@ Neutral:
 
 - ...
 
-## 6. Migration / Rollout Plan
+## 6. Implementation and Validation
 
-Concrete steps to reach the decided state:
-
-1. ...
-2. ...
-3. ...
-
-If the change is non-trivial, link to the implementation PRs once they
-exist.
+Identify the implementation entry points and the rules each must preserve.
+Describe the relevant checks and their evidence. Distinguish required checks
+from checks that have actually run; do not infer deployment status from an ADR.
 
 ## 7. SSOT Documents Affected
 
@@ -69,7 +63,7 @@ exist.
 - [ ] SSOT documents updated.
 - [ ] Tests cover the new state.
 - [ ] CI rule (if applicable) lands.
-- [ ] Rollback plan documented (for higher-risk changes).
+- [ ] Failure behavior and recovery boundaries documented.
 
 ## 9. References
 

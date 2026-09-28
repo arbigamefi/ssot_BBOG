@@ -1,79 +1,25 @@
-> Historical reference: this document includes pre-v1.5 deployment observations or commands. Those tools/artifacts were retired from the working tree. Use the [current deployment workflow](../deploy/v15-release.md) for operations; retrieve historical files from Git at `a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273`.
+# Casino frontend access
 
-# Casino Frontend Access Policy
+Contract deployment does not open the public application. Before enabling public use, resolve the
+target jurisdictions, applicable access requirements, age and sanctions checks, responsible gaming,
+self-exclusion, terms, privacy and support arrangements. Those are launch decisions; the contract
+and frontend feature flags do not implement or certify them.
 
-This policy defines the approval record required before any public-money casino
-risk-in entrypoint is enabled from a project-controlled frontend.
+For mainnet, the application has independent controls:
 
-The current repo state is **draft only**. It records the required decision
-shape, but it does not approve any jurisdiction, user-access model, or public
-casino launch.
+- `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED` enables the casino betting entrypoint.
+- `NEXT_PUBLIC_LP_DEPOSITS_ENABLED` enables LP deposits. It does not control redemption requests or
+  claims, and enabling betting does not enable deposits.
+- The verified release determines the chain, assets, pools and contract addresses. A build without
+  that release has no connected pools.
 
-## Approval Record
+Testnet access is enabled by the chain environment without those mainnet flags.
+Feature flags are build configuration, not on-chain authorization. Confirm the built application
+rejects disabled actions and reports the actual Bank pause and active-capital state. Closing frontend deposits
+must leave users able to inspect requests, cancellation eligibility, priced claims and player debts.
+A paused Bank can still accept redemption requests, but blocks batch activation and LP cash/recovery claims.
 
-The approval memo must use schema `casino.frontend-access.v1` and start from:
-
-`docs/ops/templates/casino-frontend-access.example.json`
-
-Validate the memo with:
-
-```bash
-make casino-frontend-access-check-v13
-```
-
-Before Base mainnet public traffic, rerun it in approval mode:
-
-```bash
-REQUIRE_APPROVED=1 make casino-frontend-access-check-v13 FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json>
-```
-
-## Required Decisions
-
-The approved memo must record:
-
-- target jurisdictions and restricted jurisdictions;
-- license, exemption, or legal basis for each target jurisdiction;
-- minimum age, KYC posture, sanctions screening, geo-restriction provider, and
-  VPN/proxy policy;
-- cookie-consent policy before analytics or marketing tracking;
-- responsible-gaming controls, self-exclusion policy, and stake-limit policy;
-- frontend enablement behavior for unknown or restricted jurisdictions;
-- the runtime enablement flag `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED`;
-- the separate LP deposit flag `NEXT_PUBLIC_LP_DEPOSITS_ENABLED`, which opening
-  bets does not change;
-- links to terms, privacy policy, risk disclaimer, responsible-gaming page, and
-  support channel;
-- legal, compliance, frontend, and operations approvals with evidence URI.
-
-## Product Boundary
-
-GameHub, VRF, and Bank accounting provide on-chain fairness and settlement
-proof. They do not solve jurisdiction, age, KYC, sanctions, cookie-consent, or
-responsible-gaming requirements. "Pure on-chain" must not be treated as a
-substitute for access-control approval.
-
-For the first Base mainnet casino launch, the default position is:
-
-- unknown jurisdiction blocks risk-in;
-- restricted jurisdiction blocks risk-in;
-- public casino launch is not coupled to contract deployment;
-- Base mainnet risk-in remains disabled unless `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=true`;
-- Base mainnet LP deposits remain closed unless `NEXT_PUBLIC_LP_DEPOSITS_ENABLED=true`.
-  Under v1.5 the house edge is not an LP share, so this stays closed until the
-  pool terms change; withdrawals are not gated by it;
-- any public canary starts with minimal stake, named support owner, and live
-  keeper/bet-index monitoring.
-
-## No-Go Conditions
-
-Do not enable public casino risk-in if any of these are true:
-
-- the approval memo is missing, still `draft`, or fails `REQUIRE_APPROVED=1`;
-- the approved deployment does not explicitly set `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=true`;
-- target and restricted jurisdictions overlap;
-- age, KYC, sanctions, geo-restriction, VPN/proxy, cookie-consent, or
-  responsible-gaming handling is unresolved;
-- the frontend can place bets while jurisdiction or approval state is unknown;
-- terms, privacy policy, risk disclaimer, responsible-gaming page, or support
-  contact cannot be reached from the casino flow;
-- `/api/healthz` is degraded for release, keeper, or bet-index checks.
+Before enabling risk-in, verify the intended release, keeper recovery coverage, database reads and
+alert delivery. The [deployment workflow](../deploy/v16-release.md) and
+[ADR-0034 release gates](../adr/0034-async-lp-redemption-continuous-betting.md) govern network acceptance
+and outside LP admission. There is no separate JSON approval validator in this repository.

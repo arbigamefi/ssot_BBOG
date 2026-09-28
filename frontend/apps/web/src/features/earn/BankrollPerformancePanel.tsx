@@ -9,7 +9,6 @@ import { useCasinoTimeseries } from "../casino/useCasinoStats";
 import { formatTokenAmount } from "../marketing/format";
 import { TrendChart, formatDayLabel, type TrendChartPoint } from "../charts/TrendChart";
 import { formatHoldPercent, formatMultiple } from "./format";
-import { useLpsKeepHouseEdgeShare } from "./terms";
 
 type Translate = ReturnType<typeof useTranslations>;
 
@@ -48,6 +47,7 @@ export function BankrollPerformancePanel({
   assetDecimals = 6,
   assetSymbol = "UNIT",
   chainPerformance,
+  showIndexedHistory = true,
   sharePrice,
   vaultAssets
 }: {
@@ -55,18 +55,23 @@ export function BankrollPerformancePanel({
   assetDecimals?: number;
   assetSymbol?: string;
   chainPerformance?: DomainBankSnapshot;
+  /** Asset-level history cannot identify an inactive or replaced Bank. */
+  showIndexedHistory?: boolean;
   /** Latest chain-read assets redeemable per full LP share. Historical share-price points are not indexed yet. */
   sharePrice?: bigint;
   vaultAssets?: bigint;
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const lpShare = useLpsKeepHouseEdgeShare();
   const [windowDays, setWindowDays] = React.useState<number | undefined>(DEFAULT_WINDOW_DAYS);
 
   // The chart wants daily granularity; cap to the largest supported window when
   // showing all-time (the timeseries service clamps to 90 days regardless).
-  const timeseries = useCasinoTimeseries({ asset: assetAddress, days: windowDays ?? 90 });
+  const timeseries = useCasinoTimeseries({
+    asset: assetAddress,
+    days: windowDays ?? 90,
+    enabled: showIndexedHistory
+  });
 
   const decimals = assetDecimals;
   const symbol = assetSymbol;
@@ -219,20 +224,26 @@ export function BankrollPerformancePanel({
         )}
       </div>
 
-      <VaultEquityChart
-        decimals={decimals}
-        locale={locale}
-        points={points}
-        sharePrice={sharePrice}
-        symbol={symbol}
-        t={t}
-        windowToggle={windowToggle}
-      />
+      {showIndexedHistory ? (
+        <VaultEquityChart
+          decimals={decimals}
+          locale={locale}
+          points={points}
+          sharePrice={sharePrice}
+          symbol={symbol}
+          t={t}
+          windowToggle={windowToggle}
+        />
+      ) : (
+        <p className="border-t border-border-soft px-5 py-4 text-xs text-fg-muted">
+          {t("earn.pools.historyUnavailable")}
+        </p>
+      )}
 
       {/* Honesty note — what this number is and is not. Keeps providers from
           mistaking gross gaming revenue for net yield. */}
       <p className="border-t border-border-soft px-5 py-4 text-[10px] leading-4 text-fg-subtle">
-        {t(lpShare ? "earn.performance.noteLpShare" : "earn.performance.note")}
+        {t("earn.performance.note")}
       </p>
     </section>
   );

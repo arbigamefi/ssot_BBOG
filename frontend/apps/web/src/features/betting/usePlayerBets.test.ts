@@ -7,6 +7,7 @@ function row(overrides: Partial<BetRow>): BetRow {
   return {
     betId: "1",
     chainId: 84532,
+    gameHub: "0x0000000000000000000000000000000000000001",
     id: "84532:1",
     lastEventName: "BetPlaced",
     lastTxHash: "0xaaa",
@@ -53,9 +54,16 @@ describe("mergeBetRows", () => {
           updatedBlock: 100
         })
       ],
-      [row({ betId: "7", id: "84532:7", state: "finalized", updatedBlock: 102 })],
-      10,
-      hub
+      [
+        row({
+          betId: "7",
+          gameHub: hub.toLowerCase() as BetRow["gameHub"],
+          id: "84532:7",
+          state: "finalized",
+          updatedBlock: 102
+        })
+      ],
+      10
     );
 
     expect(rows).toHaveLength(1);
@@ -73,8 +81,7 @@ describe("mergeBetRows", () => {
         row({ betId: "1", gameHub: "0x00000000000000000000000000000000000000a6", updatedBlock: 20 })
       ],
       [],
-      10,
-      "0x00000000000000000000000000000000000000a6"
+      10
     );
 
     expect(rows.map((item) => item.gameHub)).toEqual([

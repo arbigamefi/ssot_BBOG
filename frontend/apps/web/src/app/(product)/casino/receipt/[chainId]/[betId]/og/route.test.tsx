@@ -32,28 +32,8 @@ vi.mock("../../../../../../../server/betting/recent-bets", async () => {
 
 vi.mock("@ssot/ssot/release", async () => {
   const actual = await vi.importActual<typeof import("@ssot/ssot/release")>("@ssot/ssot/release");
-  return {
-    ...actual,
-    loadEmbeddedRelease: vi.fn(() => ({
-      ok: true,
-      release: {
-        assets: [
-          {
-            address: "0x0000000000000000000000000000000000000001",
-            decimals: 6,
-            symbol: "USDC"
-          }
-        ],
-        gamesMeta: [
-          {
-            gameId: "0xgame",
-            label: "Dice",
-            slug: "dice"
-          }
-        ]
-      }
-    }))
-  };
+  const { createReleaseModuleMock } = await import("../../../../../../../test/current-release");
+  return { ...actual, ...createReleaseModuleMock() };
 });
 
 function request(path: string) {

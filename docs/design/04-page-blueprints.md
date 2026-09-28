@@ -3,7 +3,7 @@
 | Owner | Product + Frontend |
 | Status | Active |
 | Last Updated | 2026-05-18 |
-| Depends on | `03-information-architecture.md`, `frontend-implementation-roadmap.md` |
+| Depends on | `03-information-architecture.md`, `../architecture/overview.md` |
 | Supersedes | Draft v1 pre-implementation wireframes |
 
 This file now records the page responsibilities that still matter after the

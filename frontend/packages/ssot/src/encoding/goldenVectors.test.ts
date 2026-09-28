@@ -1,203 +1,66 @@
 import fs from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { dirname } from "node:path";
 import { describe, it, expect } from "vitest";
 import { encodeFunctionData, type Hex } from "viem";
-
 import { encodeStakeSpec } from "./stakeSpec";
-import { getReleaseAbis } from "../abis/release/resolver";
+import { getContractAbis } from "../abis/index.mjs";
 import { requireGameEncoder } from "./registry";
 
-const STRICT_VECTORS = process.env.STRICT_VECTORS === "1";
-
-const THIS_DIR = dirname(fileURLToPath(import.meta.url));
-// packages/ssot/src
-const SRC_ROOT = path.resolve(THIS_DIR, "..");
-const FIXTURES_ROOT = path.resolve(SRC_ROOT, "fixtures", "release-bundles");
-const EMBEDDED_ROOT = path.resolve(SRC_ROOT, "release", "embedded");
-
-// Release lines whose embedded releases must ship exact vectors. Each chain runs one line; mainnet
-// can stay on v1.5 while a testnet runs v1.6.
-const CURRENT_LINES: Record<string, string> = {
-  SSOT_RELEASE_DIGEST_V15: "v1.5-safe-governance",
-  SSOT_RELEASE_DIGEST_V16: "v1.6-house-edge-allocation"
-};
-const FIXTURE_SUFFIXES = ["v16", "v15", "v14", "v13"];
-
-function normalizeHex(x: string): string {
-  const s = String(x).trim();
-  return s.startsWith("0x") ? "0x" + s.slice(2).toLowerCase() : "0x" + s.toLowerCase();
+function normalizeHex(value: string): Hex {
+  return value.toLowerCase() as Hex;
 }
 
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await fs.stat(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function listGoldenVectorFiles(): Promise<string[]> {
-  const files: string[] = [];
-  if (!(await pathExists(FIXTURES_ROOT))) return files;
-
-  const chains = await fs.readdir(FIXTURES_ROOT);
-  for (const c of chains) {
-    if (!c.startsWith("chain-")) continue;
-    const chainDir = path.join(FIXTURES_ROOT, c);
-    const releases = await fs.readdir(chainDir);
-    for (const r of releases) {
-      const relDir = path.join(chainDir, r);
-      for (const name of FIXTURE_SUFFIXES.map((suffix) => `golden-vectors-latest-${suffix}.json`)) {
-        const gv = path.join(relDir, name);
-        if (await pathExists(gv)) files.push(gv);
-      }
-    }
-  }
-  return files;
-}
-
-async function readReleaseLock(dir: string): Promise<any | null> {
-  for (const name of FIXTURE_SUFFIXES.map((suffix) => `release-latest-${suffix}.json`)) {
-    const lockPath = path.join(dir, name);
-    if (await pathExists(lockPath)) return JSON.parse(await fs.readFile(lockPath, "utf8"));
-  }
-  return null;
-}
-
-async function loadEmbedded(chainId: number): Promise<any | null> {
-  const p = path.join(EMBEDDED_ROOT, `chain-${chainId}.json`);
-  if (!(await pathExists(p))) return null;
-  return JSON.parse(await fs.readFile(p, "utf8"));
-}
-
-function getPlaceBetInputTypes(abi: any[]): string[] {
-  const item = abi.find((entry) => entry?.type === "function" && entry?.name === "placeBet");
-  return Array.isArray(item?.inputs) ? item.inputs.map((input: any) => String(input.type)) : [];
-}
-
-describe("golden vectors (exact-hex)", () => {
-  it("stakeSpec + placeBet calldata matches contract-generated vectors", async () => {
-    const files = await listGoldenVectorFiles();
-    const embeddedFiles = (await fs.readdir(EMBEDDED_ROOT)).filter((name) =>
-      name.endsWith(".json")
-    );
-    const expectedCurrent = (
-      await Promise.all(
-        embeddedFiles.map(async (name) =>
-          JSON.parse(await fs.readFile(path.join(EMBEDDED_ROOT, name), "utf8"))
-        )
+describe("current contract golden vectors", () => {
+  it("matches every game encoder, stakeSpec and placeBet calldata exactly", async () => {
+    const raw = JSON.parse(
+      await fs.readFile(
+        new URL("../fixtures/golden-vectors-v16.fixture.json", import.meta.url),
+        "utf8"
       )
-    ).filter((release) => release.meta?.releaseLock?.schema in CURRENT_LINES);
-    const checkedCurrent = new Set<number>();
-    if (files.length === 0) {
-      if (STRICT_VECTORS || expectedCurrent.length > 0) {
-        throw new Error(
-          "No versioned golden-vectors-latest-v*.json found under src/fixtures/release-bundles. Run `pnpm ssot:sync ...` and commit outputs."
-        );
-      }
-      // Dev convenience: allow running tests before syncing a release bundle.
-      return;
+    );
+    const release = JSON.parse(
+      await fs.readFile(new URL("../fixtures/release-v16.fixture.json", import.meta.url), "utf8")
+    );
+    expect(raw.schemaVersion).toBe(2);
+    expect(raw.architectureVersion).toBe("v1.6-house-edge-allocation");
+    expect(raw.chainId).toBe(release.chainId);
+    expect(raw.vectors.length).toBeGreaterThan(0);
+    const { GameHubAbi } = getContractAbis();
+    const checkedGames = new Set<string>();
+    for (const vector of raw.vectors) {
+      expect(normalizeHex(vector.gameHub)).toBe(normalizeHex(release.contracts.gameHub));
+      const game = release.gamesMeta.find(
+        (entry: { gameId: string }) => normalizeHex(entry.gameId) === normalizeHex(vector.gameId)
+      );
+      expect(game).toBeDefined();
+      const encoder = requireGameEncoder(game.slug);
+      expect(normalizeHex(encoder.encode(encoder.decode(vector.params)))).toBe(
+        normalizeHex(vector.params)
+      );
+      checkedGames.add(game.gameId.toLowerCase());
+      const stakeSpec = {
+        amountPerRoll: BigInt(vector.stakeSpec.amountPerRoll),
+        betCount: Number(vector.stakeSpec.betCount),
+        stopGain: BigInt(vector.stakeSpec.stopGain),
+        stopLoss: BigInt(vector.stakeSpec.stopLoss)
+      };
+      expect(normalizeHex(encodeStakeSpec(stakeSpec))).toBe(normalizeHex(vector.stakeSpecEncoded));
+      const calldata = encodeFunctionData({
+        abi: GameHubAbi,
+        functionName: "placeBet",
+        args: [
+          normalizeHex(vector.gameId),
+          BigInt(vector.poolId),
+          normalizeHex(vector.params),
+          stakeSpec,
+          normalizeHex(vector.affiliate),
+          Number(vector.maxHouseEdgeBps)
+        ]
+      });
+      expect(calldata.slice(0, 10)).toBe(normalizeHex(vector.selector));
+      expect(calldata).toBe(normalizeHex(vector.placeBetCalldata));
     }
-
-    for (const file of files) {
-      const dir = path.dirname(file);
-      const raw = JSON.parse(await fs.readFile(file, "utf8")) as any;
-      const vectors = Array.isArray(raw.vectors) ? raw.vectors : [];
-      expect(vectors.length).toBeGreaterThan(0);
-
-      const chainId = Number(raw.chainId);
-      const embedded = await loadEmbedded(chainId);
-
-      // Cross-check: fixture should be coherent with embedded release if present.
-      // Only check the fixture whose block matches the embedded release — older
-      // fixtures from previous syncs are retained for audit and their digests
-      // will naturally differ from the current embedded release.
-      let isCurrentRelease = false;
-      if (embedded) {
-        const lock = await readReleaseLock(dir);
-        if (lock) {
-          isCurrentRelease =
-            typeof lock.blockNumber === "number" && lock.blockNumber === embedded.meta?.blockNumber;
-          if (isCurrentRelease && typeof lock.digest === "string") {
-            expect(String(embedded.releaseDigest)).toBe(String(lock.digest));
-          }
-        }
-      }
-
-      const gameHubAbi = getReleaseAbis(chainId).GameHubAbi;
-      expect(getPlaceBetInputTypes(gameHubAbi as any[])).toEqual([
-        "bytes32",
-        "uint64",
-        "bytes",
-        "tuple",
-        "address",
-        "uint16"
-      ]);
-
-      for (const v of vectors) {
-        // Basic coherence checks
-        expect(Number(chainId)).toBe(Number(raw.chainId));
-        if (isCurrentRelease && embedded?.contracts?.gameHub) {
-          expect(normalizeHex(v.gameHub)).toBe(normalizeHex(embedded.contracts.gameHub));
-        }
-
-        const stakeSpec = v.stakeSpec;
-        const encodedStakeSpec = encodeStakeSpec({
-          amountPerRoll: BigInt(stakeSpec.amountPerRoll),
-          betCount: Number(stakeSpec.betCount),
-          stopGain: BigInt(stakeSpec.stopGain),
-          stopLoss: BigInt(stakeSpec.stopLoss)
-        });
-
-        expect(normalizeHex(encodedStakeSpec)).toBe(normalizeHex(v.stakeSpecEncoded));
-
-        // Current ABI exports support exact calldata checks for the current release.
-        if (!isCurrentRelease) continue;
-
-        if (raw.architectureVersion === CURRENT_LINES[embedded.meta?.releaseLock?.schema]) {
-          checkedCurrent.add(chainId);
-          const game = embedded.gamesMeta.find(
-            (entry: any) => normalizeHex(entry.gameId) === normalizeHex(v.gameId)
-          );
-          expect(game).toBeDefined();
-          const encoder = requireGameEncoder(game.slug);
-          expect(normalizeHex(encoder.encode(encoder.decode(v.params)))).toBe(
-            normalizeHex(v.params)
-          );
-        }
-
-        const placeBetArgs = [
-          normalizeHex(v.gameId) as Hex,
-          Number(v.poolId),
-          normalizeHex(v.params) as Hex,
-          {
-            amountPerRoll: BigInt(stakeSpec.amountPerRoll),
-            betCount: Number(stakeSpec.betCount),
-            stopGain: BigInt(stakeSpec.stopGain),
-            stopLoss: BigInt(stakeSpec.stopLoss)
-          },
-          normalizeHex(v.affiliate) as Hex,
-          Number(v.maxHouseEdgeBps)
-        ];
-
-        const calldata = encodeFunctionData({
-          abi: gameHubAbi,
-          functionName: "placeBet",
-          args: placeBetArgs
-        });
-
-        expect(normalizeHex(calldata).slice(0, 10)).toBe(normalizeHex(v.selector));
-        expect(normalizeHex(calldata)).toBe(normalizeHex(v.placeBetCalldata));
-      }
-    }
-    for (const release of expectedCurrent) {
-      expect(
-        checkedCurrent.has(release.chainId),
-        `missing current ${CURRENT_LINES[release.meta.releaseLock.schema]} vectors for ${release.chainId}`
-      ).toBe(true);
-    }
+    expect(checkedGames).toEqual(
+      new Set(release.gamesMeta.map((game: { gameId: string }) => game.gameId.toLowerCase()))
+    );
   });
 });

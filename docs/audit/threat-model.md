@@ -1,4 +1,4 @@
-# Threat Model (v1.2)
+# Threat model
 
 ## Assets
 

@@ -10,19 +10,19 @@
 
 ## 1. Context
 
-Casino settlement UX currently needs three facts after a bet becomes terminal:
+Casino settlement UX needs distinct facts after a bet becomes terminal:
 
 1. whether the bet settled or refunded;
-2. the final player amount (`payoutNet` or `refundAmount`);
-3. optional proof metadata such as tx hash and event block.
+2. the final economic amount (`payoutNet + refundAmount` for a settlement,
+   `refundAmount` for a full refund);
+3. whether that amount was transferred or recorded as a player payable;
+4. proof metadata such as transaction hash and event block.
 
-`GameHub.getBet(positionId)` exposes lifecycle state, request id, random hash,
+`GameHub.getBet(betId)` exposes lifecycle state, request id, random hash,
 stake, and timestamps, but it does not expose terminal financial outputs.
-Those outputs are only present in `BetFinalized` / `BetRefunded` logs.
-
-This forced the frontend to scan logs after `getBet()` already reported a
-terminal state. On public RPCs this is slow and fragile. It also puts proof
-retrieval on the critical path for showing a player whether they won or lost.
+The separate terminal receipt supplies those economic outputs. Transaction
+receipts establish payment delivery; terminal state alone does not prove that
+assets reached the player's wallet.
 
 ## 2. Decision
 
@@ -30,7 +30,7 @@ retrieval on the critical path for showing a player whether they won or lost.
 and exposes it through:
 
 ```solidity
-function getBetTerminal(uint256 positionId)
+function getBetTerminal(uint256 betId)
     external
     view
     returns (SSOTTypes.BetTerminal memory);
@@ -45,20 +45,37 @@ function getBetTerminal(uint256 positionId)
 - `protocolFeeAccrual`;
 - `refundAmount`.
 
-Frontend result rendering uses this view as the primary source of result
-amounts. Event scans, durable indexes, and explorer links are proof enrichment,
-not the gate for showing the result.
+Frontend result rendering uses this view as the source of terminal amounts.
+The SDK reads it before searching a bounded log window for the terminal
+transaction. Logs locate the transaction for payment evidence and explorer
+links; they do not replace a missing `getBetTerminal` implementation.
+
+For a known successful terminal transaction, payment evidence uses its complete,
+ordered receipt logs and the bet's Bank, asset, and player identity. The shared
+payment parser matches the bet's reserve release and terminal event, then checks
+the intervening asset `Transfer` or `PlayerPayableCreated` event and exact amount:
+
+- `transferred`: the full amount was transferred from that Bank to that player.
+- `payable`: the Bank recorded the full amount as a player payable.
+- `none`: the economic amount is explicitly zero.
+- `unknown`: transaction, identity, ordering, or amount evidence is missing or
+  inconsistent. A current aggregate claim balance cannot establish the historical
+  payment status of one bet.
+
+A nonterminal receipt returns no terminal proof. Missing financial fields remain
+unavailable rather than becoming zero. Failure to enrich an existing terminal
+receipt preserves its economic amounts and leaves payment status `unknown`.
 
 ## 3. Rationale
 
-- **Result reads should be one `eth_call`.** Once a keeper has finalized a bet,
-  the user should not wait on log indexing to see the outcome.
+- **Economic amounts have a direct read.** `getBetTerminal` supplies the recorded
+  outcome without requiring a terminal event scan.
 - **Lifecycle and result are different concerns.** `Bet` remains the lifecycle
   record; `BetTerminal` records final financial outputs.
 - **Events remain useful.** They still power analytics, recent feeds, tx links,
   and audit trails, but they are no longer required for the immediate result UI.
-- **The project is pre-mainnet.** A clean ABI break is acceptable now and cheaper
-  than carrying a log-scan workaround into production.
+- **Payment evidence is explicit.** Economic settlement, a wallet transfer, and
+  a recorded player payable are different facts.
 
 ## 4. Alternatives Considered
 
@@ -73,14 +90,14 @@ not the gate for showing the result.
 
 Positive:
 
-- Result modal can display win/loss as soon as terminal state is readable.
-- Public RPC log range limits no longer block the player outcome.
+- Result amounts remain available when transaction-proof enrichment fails.
+- Public RPC log range limits do not erase the on-chain economic receipt.
 - The UI model becomes simpler: `getBet()` for state, `getBetTerminal()` for
-  outcome, events for proof enrichment.
+  economic outcome, transaction receipts for payment evidence.
 
 Negative:
 
-- Fresh deployments and frontend release bundles must include the new ABI.
+- Contract and SDK ABI must both include `getBetTerminal`.
 - Terminalization writes one additional storage record.
 
 Neutral:
@@ -96,8 +113,15 @@ Neutral:
       `BetRefunded`.
 - [ ] Over-refund fallback in `finalize` writes a full-stake `Refunded`
       terminal receipt.
-- [ ] Frontend SDK tries `getBetTerminal` before any log scan.
-- [ ] Log scanning remains only as backward-compatible fallback for older dev
-      deployments.
+- [ ] Frontend SDK reads `getBetTerminal` before transaction-proof enrichment;
+      missing terminal storage or read errors do not select a compatibility path.
+- [ ] Receipt evidence distinguishes `transferred`, `payable`, `none`, and
+      `unknown`; missing financial amounts are never silently zero-filled.
 - [ ] Contract tests cover normal settle, refund, and fallback refund receipts.
 
+## 7. Implementation References
+
+- [GameHub terminal storage](../../../src/core/GameHub.sol)
+- [SDK terminal proof and receipt enrichment](../../../frontend/packages/ssot/src/sdk/create.ts)
+- [Shared payment evidence parser](../../../frontend/packages/bet-index/src/player-payment.ts)
+- [Casino receipt model](../../../frontend/apps/web/src/features/casino/receipt/view-model.ts)

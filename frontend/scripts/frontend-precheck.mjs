@@ -11,24 +11,13 @@ const report = args.has("--report") || !strict;
 const maxExamples = Number(process.env.FRONTEND_PRECHECK_MAX_EXAMPLES ?? 20);
 
 const sourceRoots = [resolve(root, "apps/web/src"), resolve(root, "packages/ui/src")];
-const releaseBoundaryRoots = [
-  resolve(root, "apps/web/src"),
-  resolve(root, "packages/ssot/src"),
-  resolve(root, "scripts")
-];
-
 const checks = [
   checkTargetStructure(),
   checkForbiddenStyles(),
   checkForbiddenColorLiterals(),
-  checkLegacyShellNames(),
   checkPrototypeRoutes(),
-  checkLegacyRouteAliases(),
-  checkLegacyDocsDirectory(),
-  checkLegacyPlaceholderComponent(),
   checkPageClientSize(),
-  checkForbiddenWeb3Imports(),
-  checkLegacySDKCompatibility()
+  checkForbiddenWeb3Imports()
 ];
 
 console.log(
@@ -109,81 +98,12 @@ function checkForbiddenColorLiterals() {
   });
 }
 
-function checkLegacyShellNames() {
-  const pattern =
-    /SiteChrome|TrustShell|ImmersiveGameLayout|PrototypeGameLayout|ShellSwitcher|RoomHud|LowerRoomTabs|HeroProofRibbon|TrustStatsStrip|TrustTableShell/;
-  return scanLines({
-    id: "legacy-shell",
-    label: "Legacy shell names",
-    roots: sourceRoots,
-    pattern,
-    blocking: true
-  });
-}
-
 function checkPrototypeRoutes() {
   const prototypeRoute = resolve(root, "apps/web/src/app/prototype");
   const examples = existsSync(prototypeRoute) ? [formatPath(prototypeRoute)] : [];
   return {
     id: "prototype-route",
     label: "Prototype routes in production App Router",
-    count: examples.length,
-    blocking: true,
-    examples
-  };
-}
-
-function checkLegacyRouteAliases() {
-  const legacyRouteFiles = [
-    "apps/web/src/app/account/page.tsx",
-    "apps/web/src/app/bets/page.tsx",
-    "apps/web/src/app/bets/[betId]/page.tsx",
-    "apps/web/src/app/claims/page.tsx",
-    "apps/web/src/app/cointoss/page.tsx",
-    "apps/web/src/app/dice/page.tsx",
-    "apps/web/src/app/disclaimer/page.tsx",
-    "apps/web/src/app/games/page.tsx",
-    "apps/web/src/app/games/[slug]/page.tsx",
-    "apps/web/src/app/invest/page.tsx",
-    "apps/web/src/app/keno/page.tsx",
-    "apps/web/src/app/liquidity/page.tsx",
-    "apps/web/src/app/privacy/page.tsx",
-    "apps/web/src/app/referral/page.tsx",
-    "apps/web/src/app/roulette/page.tsx",
-    "apps/web/src/app/terms/page.tsx"
-  ];
-  const examples = legacyRouteFiles
-    .map((path) => resolve(root, path))
-    .filter((path) => existsSync(path))
-    .map(formatPath);
-
-  return {
-    id: "legacy-route-alias",
-    label: "Legacy redirect route aliases",
-    count: examples.length,
-    blocking: true,
-    examples
-  };
-}
-
-function checkLegacyDocsDirectory() {
-  const legacyDocs = resolve(root, "docs/frontend");
-  const examples = existsSync(legacyDocs) ? [formatPath(legacyDocs)] : [];
-  return {
-    id: "legacy-frontend-docs",
-    label: "Pre-clean-room frontend docs directory",
-    count: examples.length,
-    blocking: true,
-    examples
-  };
-}
-
-function checkLegacyPlaceholderComponent() {
-  const legacyComponent = resolve(root, "apps/web/src/components/Placeholder.tsx");
-  const examples = existsSync(legacyComponent) ? [formatPath(legacyComponent)] : [];
-  return {
-    id: "legacy-placeholder",
-    label: "Legacy scaffold Placeholder component",
     count: examples.length,
     blocking: true,
     examples
@@ -223,20 +143,6 @@ function checkForbiddenWeb3Imports() {
       formatPath(file).startsWith("apps/web/src/workers/"),
     roots: [resolve(root, "apps/web/src")],
     pattern,
-    blocking: true
-  });
-}
-
-function checkLegacySDKCompatibility() {
-  const pattern =
-    /\bSSOTHubAPI\b|\bsdk\.hub\b|\brelease\.contracts\.hub\b|\bcontracts\.hub\b|\bHubAbi\b|\bHubEventRow\b|\bhubEvents\b|\bhubIndexer\b|\bbankRegistry\b|["']hub["']\s*:/;
-  return scanLines({
-    id: "legacy-sdk-compat",
-    label: "Legacy hub/bankRegistry SDK compatibility surface",
-    roots: releaseBoundaryRoots,
-    pattern,
-    extensions: /\.(ts|tsx|mjs|json)$/,
-    exclude: (file) => formatPath(file) === "scripts/frontend-precheck.mjs",
     blocking: true
   });
 }

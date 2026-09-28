@@ -1,3 +1,9 @@
+vi.mock("@ssot/ssot/release", async () => {
+  const actual = await vi.importActual<typeof import("@ssot/ssot/release")>("@ssot/ssot/release");
+  const { createReleaseModuleMock } = await import("../../../test/current-release");
+  return { ...actual, ...createReleaseModuleMock() };
+});
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { __resetRateLimitBucketsForTests } from "../../../server/http/rate-limit";
 

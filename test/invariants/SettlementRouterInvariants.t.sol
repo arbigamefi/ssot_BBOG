@@ -35,11 +35,13 @@ contract SettlementRouterHandler is Test {
     uint256 public vBankBypass;
     uint256 public vWrongPoolOpen;
     uint256 public vAllocationAboveCap;
+    uint256 public vCombinedCostAboveReserve;
+    uint256 public rejectedCombinedCostAboveReserve;
     uint256 public vEdgeAboveMax;
-    uint256 public settledWithinCap;
-    // Settlements within the cap that the Router refused. Every claim at or under the cap must be accepted.
-    uint256 public vWithinCapRejected;
-    bytes4 public lastWithinCapRejection;
+    uint256 public settledWithinLimits;
+    // Valid settlements must satisfy both the operator allocation cap and the held reserve.
+    uint256 public vValidSettlementRejected;
+    bytes4 public lastValidSettlementRejection;
 
     struct Mirror {
         address ownerHub;
@@ -132,7 +134,7 @@ contract SettlementRouterHandler is Test {
     }
 
     /// @dev Splits a claimed allocation between protocol fees and one XP award, and sometimes claims more than
-    ///      the operator share of the recorded edge. The Router must accept exactly the claims within the cap.
+    ///      the operator share of the recorded edge. Acceptance also requires the complete cost to fit reserve.
     function action_settlePosition(
         uint256 seed,
         uint256 payoutRaw,
@@ -178,15 +180,20 @@ contract SettlementRouterHandler is Test {
             });
         }
 
+        uint256 combinedCost = payoutNet + refundAmount + allocated;
+        bool valid = allocated <= cap && combinedCost <= m.reserved;
         vm.prank(m.ownerHub);
         try router.settlePosition(positionId, payoutGross, payoutNet, refundAmount, allocated - xp, awards) {
             if (allocated > cap) ++vAllocationAboveCap;
-            else ++settledWithinCap;
+            if (combinedCost > m.reserved) ++vCombinedCostAboveReserve;
+            if (valid) ++settledWithinLimits;
             _terminalize(positionId, SSOTTypes.PositionState.Settled);
         } catch (bytes memory err) {
-            if (allocated <= cap) {
-                ++vWithinCapRejected;
-                lastWithinCapRejection = err.length >= 4 ? bytes4(err) : bytes4(0);
+            if (valid) {
+                ++vValidSettlementRejected;
+                lastValidSettlementRejection = err.length >= 4 ? bytes4(err) : bytes4(0);
+            } else if (allocated <= cap && combinedCost > m.reserved) {
+                ++rejectedCombinedCostAboveReserve;
             }
         }
     }
@@ -315,14 +322,15 @@ contract SettlementRouterHandler is Test {
         Bank rightBank = Bank(m.bank);
         Bank wrongBank = rightBank == casinoBank ? sportsBank : casinoBank;
 
-        (address player, uint256 stake, uint256 reserved, bytes32 snapshotHash, bool open) = rightBank.holds(positionId);
+        (address player, uint256 stake, uint256 reserved, bytes32 snapshotHash, bool open,) =
+            rightBank.holds(positionId);
         assertEq(player, m.player, "right bank player mismatch");
         assertEq(stake, m.stake, "right bank stake mismatch");
         assertEq(reserved, m.reserved, "right bank reserved mismatch");
         assertEq(snapshotHash, m.snapshotHash, "right bank snapshot mismatch");
         assertEq(open, m.state == SSOTTypes.PositionState.Held, "right bank open mismatch");
 
-        (address wrongPlayer,,,, bool wrongOpen) = wrongBank.holds(positionId);
+        (address wrongPlayer,,,, bool wrongOpen,) = wrongBank.holds(positionId);
         assertEq(wrongPlayer, address(0), "wrong bank has position player");
         assertFalse(wrongOpen, "wrong bank has open position");
     }
@@ -445,11 +453,11 @@ contract SettlementRouterInvariants is StdInvariant, Test {
         assertEq(handler.vEdgeAboveMax(), 0, "position opened above the edge cap");
     }
 
-    /// @notice The cap is exact, not merely an upper bound: every claim at or under the operator share, spread over
-    ///         the accrued, locked and holdback buckets, is accepted. Measured over 3,000 driven actions before
-    ///         this was asserted: 954 accepted within the cap, none refused.
-    function invariant_settlement_within_operator_share_is_accepted() external view {
-        assertEq(handler.vWithinCapRejected(), 0, "a settlement within the operator share was refused");
+    /// @notice Allocation must fit the operator share, and player + refund + all allocation must fit reserve.
+    ///         Valid outcomes are accepted; a hub cannot use the allocation cap to add unreserved obligations.
+    function invariant_settlement_obeys_operator_and_combined_reserve_limits() external view {
+        assertEq(handler.vValidSettlementRejected(), 0, "a settlement within both bounds was refused");
+        assertEq(handler.vCombinedCostAboveReserve(), 0, "complete settlement cost exceeded held reserve");
     }
 
     /// @dev Deterministic non-vacuity check for the two cap invariants. A per-run minimum would flake: fuzzed runs
@@ -466,13 +474,33 @@ contract SettlementRouterInvariants is StdInvariant, Test {
         // the rest splits evenly between accrued and holdback, so every bucket is in use. No protocol fee.
         uint256 seed = uint256(2) << 32;
         handler.action_settlePosition(seed, 0, 0, 0, cap, cap);
-        assertEq(handler.settledWithinCap(), 1, "a claim of exactly the cap was not accepted");
+        assertEq(handler.settledWithinLimits(), 1, "a claim of exactly the cap was not accepted");
 
         handler.action_settlePosition(seed, 0, 0, 0, cap + 1, 0);
-        assertEq(handler.settledWithinCap(), 1);
+        assertEq(handler.settledWithinLimits(), 1);
         assertEq(handler.vAllocationAboveCap(), 0, "a claim above the cap was accepted");
-        assertEq(handler.vWithinCapRejected(), 0);
+        assertEq(handler.vValidSettlementRejected(), 0);
         assertEq(handler.positionIdsLength(), 2);
+    }
+
+    function test_handlerRejectsCombinedReserveExcessWithinOperatorShare() external {
+        handler.action_openPosition(0, 1_000e6, 1_000e6, 500);
+        uint256 seed = uint256(2) << 32;
+        // 1000 net payout + 25 allocation fits the allocation cap but exceeds the 1000 held reserve.
+        handler.action_settlePosition(seed, 1_000e6, 0, 0, 25e6, 10e6);
+        assertEq(handler.rejectedCombinedCostAboveReserve(), 1);
+        assertEq(handler.vValidSettlementRejected(), 0);
+        assertEq(handler.vCombinedCostAboveReserve(), 0);
+        assertEq(handler.settledWithinLimits(), 0);
+        assertEq(casinoBank.openHolds(), 1);
+        assertEq(casinoBank.totalReserved(), 1_000e6);
+        assertEq(uint256(router.getPosition(1).state), uint256(SSOTTypes.PositionState.Held));
+        // Retaining a 2.5% fee leaves exactly enough room for the same PF + three XP buckets.
+        handler.action_settlePosition(seed, 1_000e6, 0, 250, 25e6, 10e6);
+        assertEq(handler.settledWithinLimits(), 1);
+        assertEq(handler.vValidSettlementRejected(), 0);
+        assertEq(casinoBank.openHolds(), 0);
+        assertEq(casinoBank.protocolFeesPayable() + casinoBank.externalPayablesTotal(), 25e6);
     }
 
     function invariant_next_position_id_matches_successful_opens() external view {

@@ -18,15 +18,14 @@ cooperation and resource decisions; the
 [technical whitepaper](docs/WHITEPAPER.zh-CN.md) explains mechanisms and trust
 assumptions. The [product roadmap](docs/roadmap.md) presents intended capability.
 
-Internal priorities and design choices are maintained in the
-[project master plan](docs/strategy/project-master-plan.zh-CN.md). For actual
-release scope use the dated [release facts](docs/release/STATUS-v1.5.zh-CN.md)
-and [v1.5 release workflow](docs/deploy/v15-release.md). A selected next-version
-economic design is not a claim that existing pools already use those terms.
+The project has not launched. Only the current v1.6 implementation is supported: instant deposits,
+asynchronous redemptions with independently owned historical recovery, and a fixed 50% LP share of the turnover edge.
+Use the [current release workflow](docs/deploy/v16-release.md). No deployment manifests are embedded
+until a current release is verified and imported.
 
 Its core design follows a **Single Source of Truth (SSOT)** architecture:
 
-- **Per-pool Bank SSOT (Accounting Truth):** for each single-asset Bank, `NAV = B - PF - XP` and `totalAssets() == NAV`
+- **Per-pool Bank SSOT (Accounting Truth):** for each single-asset Bank, `active NAV = B - PF - XP - exitPayable - playerPayableTotal - recoveryBacking` and `totalAssets() == NAV`
 - **PoolRegistry SSOT (Routing Truth):** pool -> asset/bank/domain/hub permissions
 - **SettlementRouter SSOT (Position Truth):** cross-vertical position lifecycle and Bank authority
 - **GameHub SSOT (Casino Lifecycle Truth):** casino `betId` registry + permissionless `finalize()` / `refund()`
@@ -57,7 +56,7 @@ integration, while preserving SSOT liveness and a minimal trust surface.
 
 ### Contracts
 
-- `src/core/Bank.sol` — per-asset ERC4626-like vault + accounting buckets (PF/XP/R) + bet funds API (**only SettlementRouter**)
+- `src/core/Bank.sol` — per-asset ERC-4626 deposits + ERC-7540 redemptions + accounting buckets (PF/XP/R) + bet funds API (**only SettlementRouter**)
 - `src/core/PoolRegistry.sol` — pool registry for asset, Bank, domain, and hub permissions
 - `src/core/SettlementRouter.sol` — shared settlement authority between vertical hubs and Bank pools
 - `src/core/GameHub.sol` — casino bet registry SSOT + VRF orchestration + permissionless `finalize/refund`
@@ -83,15 +82,13 @@ integration, while preserving SSOT liveness and a minimal trust surface.
 
 Choose the entrypoint that matches your decision:
 
-| Document                                                                    | Purpose                                                                                  |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [Project brief](docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)                   | Understand the project and follow a player, capital, business or technical reading path. |
-| [Project and business whitepaper](docs/WHITEPAPER.product.zh-CN.md)         | Assess the market, user proposition, economics, operating and cooperation case.          |
-| [Technical whitepaper](docs/WHITEPAPER.zh-CN.md)                            | Assess design rationale, mechanisms, capital constraints and trust assumptions.          |
-| [Product roadmap](docs/roadmap.md)                                          | Follow intended product capabilities and their sequencing.                               |
-| [Project master plan](docs/strategy/project-master-plan.zh-CN.md)           | Internal choices, resource focus, hypotheses and work packages.                          |
-| [Release facts](docs/release/STATUS-v1.5.zh-CN.md)                          | Check implementation, deployment, availability and acceptance at a stated time.          |
-| [Repository retrospective](docs/audit/RepositoryReview-2026-09-25.zh-CN.md) | Investigate findings and rework from a bounded review.                                   |
+| Document                                                            | Purpose                                                                                  |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [Project brief](docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)           | Understand the project and follow a player, capital, business or technical reading path. |
+| [Project and business whitepaper](docs/WHITEPAPER.product.zh-CN.md) | Assess the market, user proposition, economics, operating and cooperation case.          |
+| [Technical whitepaper](docs/WHITEPAPER.zh-CN.md)                    | Assess design rationale, mechanisms, capital constraints and trust assumptions.          |
+| [Product roadmap](docs/roadmap.md)                                  | Follow intended product capabilities and their sequencing.                               |
+| [Project master plan](docs/strategy/project-master-plan.zh-CN.md)   | Internal choices, resource focus, hypotheses and work packages.                          |
 
 See the [documentation index](docs/README.md) for economic design, GTM,
 reader-specific material roles and the full engineering catalog. Players,
@@ -100,12 +97,11 @@ pool liquidity does not itself create equity or token rights in the project.
 
 Engineering and operations references:
 
-- [Protocol constitution](docs/constitution/SSOT.v1.3.md), [executable invariants](docs/constitution/ExecutableSSOT.v1.3.md), and [architecture overview](docs/architecture/overview.md)
-- [Architecture decisions](docs/adr/README.md) and [implementation action plans](docs/plan/README.md)
+- [Protocol constitution](docs/constitution/SSOT.v1.6.md), [executable invariants](docs/constitution/ExecutableSSOT.v1.6.md), and [architecture overview](docs/architecture/overview.md)
+- [Architecture decisions](docs/adr/README.md)
 - [Release process](docs/release/README.md), [operations runbooks](docs/ops/runbooks/README.md), and [incident templates](docs/ops/incident-templates.md)
 - [Frontend design references](docs/design/README.md) and [frontend engineering index](docs/frontend/INDEX.md)
 - [Threat model](docs/audit/threat-model.md) and [invariant-to-code map](docs/audit/invariants-map.md)
-- [Historical Milestone 4 closeout](docs/closeout/README.md) — historical handoff rather than current deployment instructions
 
 ## Quickstart
 
@@ -150,7 +146,6 @@ Run adapter-mode gates only:
 
 ```bash
 forge test --match-path "test/diff/StatefulSystemDiffAdapter.t.sol" -vvv
-forge test --match-path "test/invariants/InvariantsAdapter.t.sol" -vvv
 ```
 
 ## Frontend release artifacts
@@ -190,8 +185,8 @@ For each Bank and its supported asset `a` (multiple pools may use the same asset
 - `B[a]` = `asset.balanceOf(Bank(a))`
 - `PF[a]` = protocol fees payable (not LP backing)
 - `XP[a]` = external payables total (referral/kickback liabilities; not LP backing)
-- `NAV[a] = B[a] - PF[a] - XP[a]`
-- `R[a]` = `totalReserved` (worst-case pending bet liability)
+- `NAV[a] = B[a] - PF[a] - XP[a] - exitPayable[a] - playerPayableTotal[a] - recoveryBacking[a]`
+- `R[a]` = `activeReserved` (active capital's part of pending risk); `totalReserved` additionally includes historical remaining reserves
 
 And **MUST** satisfy:
 

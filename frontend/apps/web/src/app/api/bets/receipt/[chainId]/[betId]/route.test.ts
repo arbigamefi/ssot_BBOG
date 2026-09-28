@@ -1,4 +1,11 @@
+vi.mock("@ssot/ssot/release", async () => {
+  const actual = await vi.importActual<typeof import("@ssot/ssot/release")>("@ssot/ssot/release");
+  const { createReleaseModuleMock } = await import("../../../../../../test/current-release");
+  return { ...actual, ...createReleaseModuleMock() };
+});
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { embeddedChainIds } from "@ssot/ssot/release";
 import { __resetRateLimitBucketsForTests } from "../../../../../../server/http/rate-limit";
 
 const queryBetReceiptMock = vi.hoisted(() => vi.fn());
@@ -57,6 +64,35 @@ describe("GET /api/bets/receipt/[chainId]/[betId]", () => {
     expect(response.status).toBe(400);
     expect((await json(response)).error.code).toBe("BET_RECEIPT_FAILED");
     expect(queryBetReceiptMock).not.toHaveBeenCalled();
+  });
+
+  it.each(["99999", "31337", "0", "not-a-chain"])(
+    "rejects unregistered or invalid chain %s without querying a receipt",
+    async (chainId) => {
+      const { GET } = await import("./route");
+      const response = await GET(request(`/api/bets/receipt/${chainId}/42`), {
+        params: Promise.resolve({ betId: "42", chainId })
+      });
+      expect(response.status).toBe(400);
+      expect((await json(response)).error.code).toBe("UNSUPPORTED_CHAIN");
+      expect(queryBetReceiptMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it("does not admit a known network when no release is registered", async () => {
+    const previous = [...embeddedChainIds];
+    embeddedChainIds.length = 0;
+    try {
+      const { GET } = await import("./route");
+      const response = await GET(request("/api/bets/receipt/84532/42"), {
+        params: Promise.resolve({ betId: "42", chainId: "84532" })
+      });
+      expect(response.status).toBe(400);
+      expect((await json(response)).error.code).toBe("UNSUPPORTED_CHAIN");
+      expect(queryBetReceiptMock).not.toHaveBeenCalled();
+    } finally {
+      embeddedChainIds.push(...previous);
+    }
   });
 
   it("rate limits public receipt reads", async () => {

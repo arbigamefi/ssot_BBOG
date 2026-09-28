@@ -17,6 +17,7 @@ import type {
   PlaceSportsTicketPlan
 } from "../types";
 import { encodeStakeSpec } from "../../encoding/stakeSpec";
+import { PLAYER_PAYMENT_ABI } from "@ssot/bet-index/player-payment";
 
 const ACCOUNT = "0x1111111111111111111111111111111111111111" as Address;
 const TX_HASH = "0xabc123" as Hex;
@@ -27,15 +28,6 @@ const SPORTS_RISK_HASH =
   "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6" as Hex;
 const ODDS_TICKET_HASH = "0x9999ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea0123037999" as Hex;
 const SPORTS_SIGNATURE = `0x${"11".repeat(65)}` as Hex;
-const TRANSFER_EVENT = {
-  type: "event",
-  name: "Transfer",
-  inputs: [
-    { name: "from", type: "address", indexed: true },
-    { name: "to", type: "address", indexed: true },
-    { name: "amount", type: "uint256", indexed: false }
-  ]
-} as const;
 
 const TEST_RELEASE: SSOTRelease = {
   chainId: 84532,
@@ -183,9 +175,8 @@ describe("createSSOTSDK", () => {
     expect(wal.writeContract).not.toHaveBeenCalled();
   });
 
-  it("returns v1.3 namespaces without the old hub namespace", () => {
+  it("returns the current SDK namespaces", () => {
     expect(sdk).toHaveProperty("gameHub");
-    expect(sdk).not.toHaveProperty("hub");
     expect(sdk).toHaveProperty("bank");
     expect(sdk).toHaveProperty("vrfHub");
     expect(sdk).toHaveProperty("sportsHub");
@@ -219,59 +210,36 @@ describe("createSSOTSDK", () => {
     expect(journal.map((entry) => entry.action)).toContain("DEPOSIT");
   });
 
-  it("derives withdrawable assets from account redeemable shares", async () => {
-    pub.readContract.mockResolvedValueOnce(57_000_000n).mockResolvedValueOnce(56_999_999n);
-
-    const result = await sdk.bank.maxWithdraw(1, ACCOUNT);
-
-    expect(result).toBe(56_999_999n);
-    expect(pub.readContract).toHaveBeenNthCalledWith(
-      1,
+  it("reads the controller's claimable asset limit directly", async () => {
+    pub.readContract.mockResolvedValueOnce(56_999_999n);
+    expect(await sdk.bank.maxWithdraw(1, ACCOUNT)).toBe(56_999_999n);
+    expect(pub.readContract).toHaveBeenCalledTimes(1);
+    expect(pub.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         address: getAddress(BANK),
-        functionName: "maxRedeem",
+        functionName: "maxWithdraw",
         args: [ACCOUNT]
-      })
-    );
-    expect(pub.readContract).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        address: getAddress(BANK),
-        functionName: "convertToAssets",
-        args: [57_000_000n]
       })
     );
   });
 
-  it("reconstructs provider deposits from Bank share mints and matching asset transfers", async () => {
-    const assetTransferLog = {
-      address: getAddress(ASSET),
-      data: encodeAbiParameters([{ type: "uint256" }], [5_000_000n]),
-      topics: encodeEventTopics({
-        abi: [TRANSFER_EVENT],
-        eventName: "Transfer",
-        args: { from: getAddress(ACCOUNT), to: getAddress(BANK) }
-      })
-    };
+  it("reads provider deposits from Bank Deposit cash events", async () => {
     pub.getLogs
       .mockResolvedValueOnce([
         {
+          eventName: "Deposit",
           transactionHash: TX_HASH,
           blockNumber: 120n,
           logIndex: 7,
           args: {
-            from: "0x0000000000000000000000000000000000000000",
-            to: ACCOUNT,
-            amount: 4_000_000n
+            owner: ACCOUNT,
+            sender: ACCOUNT,
+            assets: 5_000_000n,
+            shares: 4_000_000n
           }
         }
       ])
       .mockResolvedValueOnce([]);
-    pub.getTransactionReceipt.mockResolvedValueOnce({
-      blockNumber: 120n,
-      status: "success",
-      logs: [assetTransferLog]
-    });
     pub.getBlock.mockResolvedValueOnce({ timestamp: 1_700_000_123n });
 
     const rows = await sdk.bank.getProviderLedger(1, ACCOUNT, { startBlock: 100, limit: 10 });
@@ -303,7 +271,7 @@ describe("createSSOTSDK", () => {
     }
   });
 
-  it("does not read asset conversion when no shares are redeemable", async () => {
+  it("does not convert shares when the claimable asset limit is zero", async () => {
     pub.readContract.mockResolvedValueOnce(0n);
 
     const result = await sdk.bank.maxWithdraw(1, ACCOUNT);
@@ -313,7 +281,7 @@ describe("createSSOTSDK", () => {
     expect(pub.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         address: getAddress(BANK),
-        functionName: "maxRedeem",
+        functionName: "maxWithdraw",
         args: [ACCOUNT]
       })
     );
@@ -522,53 +490,13 @@ describe("createSSOTSDK", () => {
     }
   );
 
-  it("keeps the settled refund unknown when only BetFinalized logs are available", async () => {
-    pub.readContract.mockRejectedValueOnce(new Error("getBetTerminal unavailable"));
-    const settlementTx =
-      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Hex;
-    pub.getContractEvents
-      .mockResolvedValueOnce([
-        {
-          args: {
-            positionId: 7n,
-            payoutGross: 2_000_000n,
-            payoutNet: 1_960_000n,
-            feeOnPayout: 40_000n,
-            protocolFeeAccrual: 20_000n
-          },
-          transactionHash: settlementTx,
-          blockNumber: 123n,
-          logIndex: 4
-        }
-      ])
-      .mockResolvedValueOnce([]);
-
-    const proof = await sdk.gameHub.getTerminalProof(7n);
-
-    expect(pub.getContractEvents).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(TEST_RELEASE.contracts.gameHub),
-        eventName: "BetFinalized",
-        args: { positionId: 7n },
-        fromBlock: 121n,
-        toBlock: 130n
-      })
-    );
-    expect(proof?.kind === "settled" && proof.settlement.refundAmount).toBeUndefined();
-    expect(proof).toEqual({
-      kind: "settled",
-      settlement: {
-        txHash: settlementTx,
-        blockNumber: 123n,
-        payoutGross: 2_000_000n,
-        payoutNet: 1_960_000n,
-        feeOnPayout: 40_000n,
-        protocolFeeAccrual: 20_000n
-      }
-    });
+  it("propagates failure to read the required terminal record", async () => {
+    pub.readContract.mockRejectedValueOnce(new Error("RPC unavailable"));
+    await expect(sdk.gameHub.getTerminalProof(7n)).rejects.toThrow("RPC unavailable");
+    expect(pub.getContractEvents).not.toHaveBeenCalled();
   });
 
-  it.each([0n, 100_000n, undefined])(
+  it.each([0n, 100_000n])(
     "preserves a settled terminal refund of %s with the transaction hash",
     async (refundAmount) => {
       const settlementTx =
@@ -622,7 +550,11 @@ describe("createSSOTSDK", () => {
           payoutNet: 1_960_000n,
           feeOnPayout: 40_000n,
           protocolFeeAccrual: 20_000n,
-          refundAmount
+          refundAmount,
+          payment:
+            refundAmount == null
+              ? { status: "unknown" }
+              : { status: "unknown", amount: (1_960_000n + refundAmount).toString() }
         }
       });
     }
@@ -646,12 +578,21 @@ describe("createSSOTSDK", () => {
         payoutNet: 196_000n,
         feeOnPayout: 4_000n,
         protocolFeeAccrual: 2_000n,
-        refundAmount: 100_000n
+        refundAmount: 100_000n,
+        payment: { status: "unknown", amount: "296000" }
       }
     });
   });
 
   it("scans recent GameHub terminal proof ranges backwards in RPC-safe chunks", async () => {
+    pub.readContract.mockResolvedValueOnce({
+      state: 4,
+      payoutGross: 1_000_000n,
+      payoutNet: 980_000n,
+      refundAmount: 0n,
+      feeOnPayout: 20_000n,
+      protocolFeeAccrual: 10_000n
+    });
     const settlementTx =
       "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" as Hex;
     pub.getContractEvents
@@ -701,12 +642,110 @@ describe("createSSOTSDK", () => {
         payoutGross: 1_000_000n,
         payoutNet: 980_000n,
         feeOnPayout: 20_000n,
-        protocolFeeAccrual: 10_000n
+        protocolFeeAccrual: 10_000n,
+        refundAmount: 0n,
+        payment: { status: "unknown", amount: "980000" }
       }
     });
   });
 
-  it("reads SportsHub market state through the v1.3 SportsHub address", async () => {
+  it.each([
+    ["settled", "transferred"],
+    ["settled", "payable"],
+    ["refunded", "transferred"],
+    ["refunded", "payable"]
+  ] as const)("proves %s player payment as %s using the terminal receipt", async (kind, status) => {
+    const isSettlement = kind === "settled";
+    pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      if (functionName === "getBet") return { bank: BANK, asset: ASSET, player: ACCOUNT };
+      if (functionName === "getBetTerminal")
+        return {
+          state: isSettlement ? 4 : 5,
+          payoutGross: 20n,
+          payoutNet: 19n,
+          refundAmount: isSettlement ? 5n : 24n,
+          feeOnPayout: 1n,
+          protocolFeeAccrual: 0n
+        };
+      throw new Error(`unexpected ${functionName}`);
+    });
+    pub.getContractEvents.mockImplementation(async ({ eventName }: { eventName: string }) =>
+      eventName === (isSettlement ? "BetFinalized" : "BetRefunded")
+        ? [{ args: { positionId: 7n }, transactionHash: TX_HASH, blockNumber: 123n, logIndex: 4 }]
+        : []
+    );
+    const words = (...amounts: bigint[]) =>
+      encodeAbiParameters(
+        amounts.map(() => ({ type: "uint256" })),
+        amounts
+      );
+    const logs = [
+      {
+        address: BANK,
+        topics: encodeEventTopics({
+          abi: PLAYER_PAYMENT_ABI,
+          eventName: "BetReserveReleased",
+          args: { betId: 7n, player: ACCOUNT }
+        }),
+        data: words(100n)
+      },
+      status === "payable"
+        ? {
+            address: BANK,
+            topics: encodeEventTopics({
+              abi: PLAYER_PAYMENT_ABI,
+              eventName: "PlayerPayableCreated",
+              args: { betId: 7n, player: ACCOUNT }
+            }),
+            data: words(24n)
+          }
+        : {
+            address: ASSET,
+            topics: encodeEventTopics({
+              abi: PLAYER_PAYMENT_ABI,
+              eventName: "Transfer",
+              args: { from: BANK, to: ACCOUNT }
+            }),
+            data: words(24n)
+          },
+      isSettlement
+        ? {
+            address: BANK,
+            topics: encodeEventTopics({
+              abi: PLAYER_PAYMENT_ABI,
+              eventName: "BetSettled",
+              args: { betId: 7n, player: ACCOUNT }
+            }),
+            data: words(20n, 19n, 5n, 1n, 0n, 0n, 0n, 0n)
+          }
+        : {
+            address: BANK,
+            topics: encodeEventTopics({
+              abi: PLAYER_PAYMENT_ABI,
+              eventName: "BetRefunded",
+              args: { betId: 7n, player: ACCOUNT }
+            }),
+            data: words(24n)
+          }
+    ];
+    pub.getTransactionReceipt.mockResolvedValue({ status: "success", blockNumber: 123n, logs });
+    const proof = await sdk.gameHub.getTerminalProof(7n);
+    expect(proof?.kind === "settled" ? proof.settlement.payment : proof?.refund.payment).toEqual({
+      status,
+      amount: "24"
+    });
+    expect(pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "getBet", args: [7n], blockNumber: 123n })
+    );
+    // Subsequent aggregate debt changes are not consulted when presenting historical payment evidence.
+    expect(
+      pub.readContract.mock.calls.some(
+        ([call]: [{ functionName: string }]) => call.functionName === "playerPayable"
+      )
+    ).toBe(false);
+  });
+
+  it("reads SportsHub market state through the current SportsHub address", async () => {
     pub.readContract.mockResolvedValueOnce({
       marketId: 7n,
       eventId: 99n,
@@ -791,7 +830,7 @@ describe("createSSOTSDK", () => {
     expect(result.challengeDecision).toBe("none");
   });
 
-  it("executes SportsHub market and result writes through the v1.3 SportsHub address", async () => {
+  it("executes SportsHub market and result writes through the current SportsHub address", async () => {
     const marketKey = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Hex;
     const rulebookHash =
       "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Hex;
@@ -1049,7 +1088,7 @@ describe("createSSOTSDK", () => {
     expect("error" in result ? result.error.code : undefined).toBe("SPORTSBOOK_DISABLED");
   });
 
-  it("executes GameHub refund through the v1.3 GameHub address", async () => {
+  it("executes GameHub refund through the current GameHub address", async () => {
     const result = await sdk.gameHub.refund(42n);
 
     expect(result.ok).toBe(true);
@@ -1081,9 +1120,6 @@ describe("createSSOTSDK", () => {
       .mockResolvedValueOnce({
         NAV: 1_250_000n,
         R: 250_000n,
-        minLiquidityBps: 1000n,
-        minLiq: 125_000n,
-        free: 875_000n,
         riskReserveBps: 2000n,
         riskInPaused: true,
         riskReserve: 250_000n,
@@ -1108,12 +1144,28 @@ describe("createSSOTSDK", () => {
         2n
       ]);
 
+    pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      if (functionName === "currentEpoch") return 1n;
+      if (functionName === "redeemBatch")
+        return {
+          cutoff: 0n,
+          priced: false,
+          shares: 0n,
+          assets: 0n,
+          assignedShares: 0n,
+          assignedAssets: 0n,
+          activatedAt: 0n,
+          fullExit: false
+        };
+      return 0n;
+    });
+
     const result = await sdk.bank.getSnapshot(1);
 
     expect(result.totalAssets).toBe(1_250_000n);
     expect(result.totalSupply).toBe(1_000_000n);
+    expect(result.activeReserved).toBe(250_000n);
     expect(result.assetsPerShare).toBe(1_250_000n);
-    expect(result.minLiquidityBps).toBe(1000);
     expect(result.riskReserveBps).toBe(2000);
     expect(result.riskInPaused).toBe(true);
     expect(result.riskReserve).toBe(250_000n);

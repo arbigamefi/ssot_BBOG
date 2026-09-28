@@ -36,7 +36,7 @@ const baseConfig: KeeperConfig = {
   sportsTerminalizerScanChunkBlocks: 2_000n,
   sportsTerminalizerMarketIds: [],
   sportsTerminalizerMaxTicketsPerMarket: 200,
-  sportsTicketEnumerationMax: 500,
+
   sportsTicketScanChunkBlocks: 2_000n,
   sportsTicketScanStartBlock: 100n
 };
@@ -367,5 +367,86 @@ describe("KeeperHealthReporter failure recovery", () => {
     await health.recordStopped(0);
 
     expect(health.snapshot().status).toBe("stopped");
+  });
+});
+
+describe("redemption health", () => {
+  it("keeps old pocket alerts across unrelated successes and new batch activations", async () => {
+    const health = new KeeperHealthReporter({ config: baseConfig, keeper });
+    await health.recordRunning(100n, 0);
+    const bank = baseConfig.gameHub;
+    await health.recordPockets(
+      [{ bank, epochId: "3", openedAt: "1100", ageSeconds: 601, remainingHolds: "1" }],
+      [{ bank, caughtUp: true }],
+      0
+    );
+    expect(health.snapshot().degradedBy).toEqual(["pocket"]);
+    expect(health.snapshot().lastError).toContain("opened at 1100");
+    await health.recordFinalizeOutcome({ betId: 5n }, { kind: "raced", state: "settled" }, 0);
+    await health.recordScan(101n, 0);
+    await health.recordRedemptions([{ bank }], 0);
+    expect(health.snapshot().degradedBy).toEqual(["pocket"]);
+    await health.recordPockets(
+      [{ bank, epochId: "3", openedAt: "1100", ageSeconds: 700, remainingHolds: "0" }],
+      [{ bank, caughtUp: true }],
+      0
+    );
+    expect(health.snapshot().status).toBe("running");
+  });
+  it("keeps incomplete pocket discovery degraded independently of casino recovery", async () => {
+    const health = new KeeperHealthReporter({ config: baseConfig, keeper });
+    const bank = baseConfig.gameHub;
+    await health.recordRunning(100n, 0);
+    await health.recordPockets([], [{ bank, caughtUp: false, scannedThrough: "90" }], 0);
+    await health.recordRecoveryScan(100n, 0, true);
+    await health.recordRedemptions([{ bank }], 0);
+    expect(health.snapshot().degradedBy).toEqual(["pocket-recovery"]);
+    await health.recordPockets([], [{ bank, caughtUp: true, scannedThrough: "100" }], 0);
+    expect(health.snapshot().status).toBe("running");
+  });
+  it("does not alert for an overdue queued batch that has not activated", async () => {
+    const health = new KeeperHealthReporter({ config: baseConfig, keeper });
+    await health.recordRunning(100n, 0);
+    await health.recordRedemptions(
+      [
+        {
+          bank: baseConfig.gameHub,
+          batchId: "1",
+          cutoff: "1",
+          activationDue: true,
+          paused: true
+        }
+      ],
+      0
+    );
+    expect(health.snapshot().status).toBe("running");
+    expect(health.snapshot().degradedBy).toBeUndefined();
+  });
+  it("flags Bank read errors and preserves other failure paths", async () => {
+    const health = new KeeperHealthReporter({ config: baseConfig, keeper });
+    await health.recordRunning(100n, 0);
+    await health.recordError("index unavailable", 0, "recovery");
+    await health.recordRedemptions([{ bank: baseConfig.gameHub, error: "RPC unavailable" }], 0);
+    expect(health.snapshot().degradedBy).toEqual(["recovery", "redemption"]);
+    await health.recordRedemptions([{ bank: baseConfig.gameHub }], 0);
+    expect(health.snapshot().degradedBy).toEqual(["recovery"]);
+    await health.recordRecoveryScan(100n, 0, true);
+    expect(health.snapshot().status).toBe("running");
+  });
+  it("alerts if lifecycle reconciliation hangs while the ordinary event scanner progresses", async () => {
+    let timestamp = 0;
+    const health = new KeeperHealthReporter({
+      config: { ...baseConfig, casinoRecoveryStartBlock: 100n },
+      keeper,
+      now: () => new Date(timestamp)
+    });
+    await health.recordRunning(100n, 0);
+    timestamp = 300_001;
+    await health.recordScan(999n, 0);
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["stalled"],
+      lastError: expect.stringContaining("lifecycle")
+    });
   });
 });

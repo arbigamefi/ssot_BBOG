@@ -35,6 +35,8 @@ export type KeeperConfig = {
   scanIndexEventsEnabled: boolean;
   startupScanEnabled: boolean;
   startBlock?: bigint;
+  /** Independent full lifecycle recovery origin. */
+  casinoRecoveryStartBlock?: bigint;
   healthPath?: string;
   betIndexDatabaseUrl?: string;
   betIndexSsl: boolean;
@@ -46,8 +48,6 @@ export type KeeperConfig = {
   sportsTerminalizerScanChunkBlocks: bigint;
   sportsTerminalizerMarketIds: bigint[];
   sportsTerminalizerMaxTicketsPerMarket: number;
-  /** Legacy setting retained for env compatibility; recovery no longer trusts a recent-ID sample. */
-  sportsTicketEnumerationMax: number;
   sportsTicketScanChunkBlocks: bigint;
   /** Maximum history blocks per pass; completed chunks resume from a durable cursor. */
   sportsTicketScanMaxBlocks: bigint;
@@ -58,12 +58,14 @@ export type BetRead = {
   betId: bigint;
   requestId: bigint;
   state: BetStateName;
+  placedAt?: bigint;
 };
 
 export type FinalizeOutcome =
   | { kind: "settled"; txHash: Hex; latencyMs: number }
   | { kind: "raced"; state: BetStateName }
   | { kind: "skipped"; state: BetStateName }
+  | { kind: "deferred"; state: "pendingVrf"; retryAfterMs: number }
   | { kind: "failed"; reason: string; retryable: boolean };
 
 /**

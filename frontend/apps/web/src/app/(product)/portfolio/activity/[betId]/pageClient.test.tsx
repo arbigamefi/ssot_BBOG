@@ -228,7 +228,7 @@ describe("BetDetailPageClient", () => {
     expect(screen.getAllByText("BetPlaced").length).toBeGreaterThan(0);
   });
 
-  it("matches v1.3 positionId events in the lifecycle timeline", async () => {
+  it("matches positionId events in the lifecycle timeline", async () => {
     seedBet();
 
     renderWithQueryClient(<BetDetailPageClient betId="42" />);

@@ -189,20 +189,48 @@ export async function resolveCasinoTerminalProof({
   gameHub: Pick<SSOTGameHubAPI, "getTerminalProof"> | undefined;
 }): Promise<TerminalProof | GameHubTerminalProof | null> {
   const indexedBet = findIndexedBetById(recentBets, terminalBet.betId);
+  let indexedProof: TerminalProof | null = null;
   if (isTerminalIndexedBet(indexedBet)) {
-    const indexedProof = await readTerminalProof({
+    indexedProof = await readTerminalProof({
       db,
       betId: terminalBet.betId,
       txHash: indexedBet?.lastTxHash
     });
-    if (isCompleteTerminalProof(indexedProof)) return indexedProof;
   }
 
   try {
     const directProof = (await gameHub?.getTerminalProof(terminalBet.betId)) ?? null;
+    // Indexed terminal amounts prove settlement, not a cash transfer. Enrich from the full
+    // transaction when possible, while preserving indexed metadata if RPC history is unavailable.
+    if (isCompleteTerminalProof(indexedProof) && indexedProof) {
+      if (indexedProof.kind === "settled" && directProof?.kind === "settled") {
+        if (
+          directProof.settlement.txHash?.toLowerCase() !==
+          indexedProof.settlement.txHash?.toLowerCase()
+        ) {
+          return isCompleteTerminalProof(directProof) ? directProof : indexedProof;
+        }
+        return {
+          kind: "settled",
+          settlement: { ...indexedProof.settlement, payment: directProof.settlement.payment }
+        };
+      }
+      if (indexedProof.kind === "refunded" && directProof?.kind === "refunded") {
+        if (
+          directProof.refund.txHash?.toLowerCase() !== indexedProof.refund.txHash?.toLowerCase()
+        ) {
+          return isCompleteTerminalProof(directProof) ? directProof : indexedProof;
+        }
+        return {
+          kind: "refunded",
+          refund: { ...indexedProof.refund, payment: directProof.refund.payment }
+        };
+      }
+      return indexedProof;
+    }
     return isCompleteTerminalProof(directProof) ? directProof : null;
   } catch {
-    return null;
+    return isCompleteTerminalProof(indexedProof) ? indexedProof : null;
   }
 }
 

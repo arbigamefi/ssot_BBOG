@@ -12,8 +12,8 @@ library AccountingLib {
         }
     }
 
-    function minLiq(uint256 NAV, uint256 minLiquidityBps) internal pure returns (uint256) {
-        if (minLiquidityBps > 10_000) revert Errors.InvalidBps(minLiquidityBps);
-        return (NAV * minLiquidityBps) / 10_000;
+    function buffer(uint256 NAV, uint256 bps) internal pure returns (uint256) {
+        if (bps > 10_000) revert Errors.InvalidBps(bps);
+        return (NAV * bps) / 10_000;
     }
 }

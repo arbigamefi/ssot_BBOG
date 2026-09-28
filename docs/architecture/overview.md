@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This describes component boundaries. For v1.5 publication scope, pinned mechanisms and limitations, use the [technical whitepaper](../WHITEPAPER.zh-CN.md) and [release facts](../release/STATUS-v1.5.zh-CN.md). SportsHub is not deployed in the current releases.
+Current component boundaries for the prelaunch implementation.
 
 ## Goals
 
@@ -13,10 +13,10 @@ This describes component boundaries. For v1.5 publication scope, pinned mechanis
 ### Bank (funds + accounting SSOT)
 
 - Custodies `ASSET`
-- Maintains accounting buckets: PF / XP / R
-- Implements ERC4626-like LP vault with `totalAssets() == NAV`
+- Maintains accounting buckets: PF / XP / active reserve / exitPayable / playerPayableTotal / historical recovery backing
+- Implements ERC-4626 deposits and ERC-7540 asynchronous redemptions with `totalAssets() == NAV`
 - Settlement-router-only bet funds API (`holdBet/settleBet/refundBet`)
-- Optional outflows (LP withdrawals, XP claims, fee withdrawals) are constrained by SSOT domain checks
+- Optional outflows (XP claims and fee withdrawals) are constrained by SSOT domain checks
 
 ### PoolRegistry (pool authority SSOT)
 

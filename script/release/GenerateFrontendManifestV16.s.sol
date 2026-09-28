@@ -74,15 +74,10 @@ contract GenerateFrontendManifestV16 is Script {
             "}\n"
         );
 
-        string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v16");
-        string memory outTagged = string.concat("deployments/release/frontend-manifest-", tag, ".json");
-
         vm.writeFile(OUT_LATEST, json);
-        vm.writeFile(outTagged, json);
 
         console2.log("snapshot:", snapshotPath);
         console2.log("Wrote:", OUT_LATEST);
-        console2.log("Wrote:", outTagged);
     }
 
     function _buildAddressesJson(string memory snap) internal pure returns (string memory) {

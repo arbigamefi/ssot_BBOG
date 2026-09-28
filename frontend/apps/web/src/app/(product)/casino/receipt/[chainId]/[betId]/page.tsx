@@ -144,7 +144,8 @@ export default async function CasinoReceiptPage({
     chainId,
     gameLabel,
     gameSlug: game?.slug,
-    row
+    row,
+    payment: receipt.payment
   });
   const tone = receiptModel.tone;
 
@@ -211,6 +212,16 @@ export default async function CasinoReceiptPage({
               {heroValue}
             </div>
             <p className="mt-1.5 truncate text-xs leading-5 text-fg-muted">{gameLabel}</p>
+            <p
+              className="mt-1.5 text-xs leading-5 text-fg-muted"
+              data-payment-status={receiptModel.payment.status}
+            >
+              {
+                messages.casino.room.payment[
+                  receiptModel.payment.status === "none" ? "noPayment" : receiptModel.payment.status
+                ]
+              }
+            </p>
           </div>
         </div>
 

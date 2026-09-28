@@ -46,24 +46,26 @@ describe("game room presentation helpers", () => {
     expect(
       computePoolFreeLiquidity({
         totalAssets: 1_000_000_000_000n,
-        totalReserved: 100_000_000_000n,
-        minLiquidityBps: 1000
+        activeReserved: 100_000_000_000n,
+        riskReserveBps: 1000
       })
     ).toBe(800_000_000_000n);
     expect(computePoolFreeLiquidity(undefined)).toBeUndefined();
     // Never returns negative.
-    expect(computePoolFreeLiquidity({ totalAssets: 100n, totalReserved: 1_000n })).toBe(0n);
+    expect(computePoolFreeLiquidity({ totalAssets: 100n, activeReserved: 1_000n })).toBe(0n);
   });
 
-  it("prefers riskReserveBps over the legacy minLiquidity alias for new-risk capacity", () => {
-    expect(
-      computePoolFreeLiquidity({
-        totalAssets: 1_000_000_000_000n,
-        totalReserved: 100_000_000_000n,
-        minLiquidityBps: 1000,
-        riskReserveBps: 2000
-      })
-    ).toBe(700_000_000_000n);
+  it("uses active reserves when historical recovery retains most of the Bank reserves", () => {
+    const snapshot = {
+      totalAssets: 100n,
+      totalReserved: 150n,
+      activeReserved: 10n,
+      recoveryBacking: 140n,
+      riskReserveBps: 0
+    };
+    expect(computePoolFreeLiquidity(snapshot)).toBe(90n);
+    expect(canPoolHoldBet({ snapshot, stake: 20n, requiredReserve: 40n })).toBe(true);
+    expect(canPoolHoldBet({ snapshot, stake: 91n, requiredReserve: 182n })).toBe(false);
   });
 
   it("derives live max payout from full free liquidity and max bet for the odds", () => {
@@ -97,7 +99,7 @@ describe("game room presentation helpers", () => {
   it("derives max bet from the actual post-stake Bank solvency condition", () => {
     const snapshot = {
       totalAssets: 1_000_000_000n,
-      totalReserved: 0n,
+      activeReserved: 0n,
       riskReserveBps: 1000
     };
 

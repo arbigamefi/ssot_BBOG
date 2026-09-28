@@ -1,6 +1,6 @@
 # ArbiGameFi Frontend
 
-This package is the clean-room, v1.3-only frontend for ArbiGameFi.
+This package is the current prelaunch frontend for ArbiGameFi.
 
 - **UI stack**: Next.js + Tailwind CSS + `@ssot/ui`
 - **Protocol stack**: embedded release artifact -> `@ssot/ssot` SDK -> feature data layer
@@ -53,5 +53,4 @@ Base mainnet, provide `BASE_MAINNET_RPC_URL`, `BASE_RPC_URL`,
 - Design SSOT: `../docs/design/README.md`
 - Frontend engineering SSOT: `../docs/frontend/INDEX.md`
 - Release artifact contract: `../docs/frontend/README.md`
-- Contract constitution: `../docs/constitution/SSOT.v1.3.md`
-- Frontend implementation roadmap: `../docs/design/frontend-implementation-roadmap.md`
+- Contract constitution: `../docs/constitution/SSOT.v1.6.md`

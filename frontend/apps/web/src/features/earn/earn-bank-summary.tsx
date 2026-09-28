@@ -27,15 +27,11 @@ export function EarnBankSummary({
   const t = useTranslations();
   const snapshot = data?.snapshot;
   const position = data?.position;
-  const riskReserveBps = snapshot?.riskReserveBps ?? snapshot?.minLiquidityBps;
-  const riskReserve =
-    snapshot?.riskReserve ??
-    (snapshot && riskReserveBps != null
-      ? (snapshot.totalAssets * BigInt(riskReserveBps)) / 10_000n
-      : undefined);
+  const riskReserveBps = snapshot?.riskReserveBps;
+  const riskReserve = snapshot?.riskReserve;
   const freeReserve = snapshot
-    ? snapshot.totalAssets > snapshot.totalReserved
-      ? snapshot.totalAssets - snapshot.totalReserved
+    ? snapshot.totalAssets > snapshot.activeReserved
+      ? snapshot.totalAssets - snapshot.activeReserved
       : 0n
     : undefined;
 
@@ -44,7 +40,7 @@ export function EarnBankSummary({
       <LedgerRow
         label={t("earn.summary.sharePrice.label")}
         value={formatTokenAmount(snapshot?.assetsPerShare, decimals, symbol, 4)}
-        detail={t("earn.summary.sharePrice.detail")}
+        detail={t("earn.async.shareUnitDetail")}
       />
       <LedgerRow
         label={t("earn.summary.totalShares.label")}
@@ -70,18 +66,35 @@ export function EarnBankSummary({
       />
       <LedgerRow
         label={t("earn.summary.reserved.label")}
-        value={formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2)}
+        value={formatTokenAmount(snapshot?.activeReserved, decimals, symbol, 2)}
         detail={t("earn.summary.reserved.detail", {
           freeReserve: formatTokenAmount(freeReserve, decimals, symbol, 2),
-          minLiquidity: formatTokenAmount(riskReserve, decimals, symbol, 2)
+          riskReserve: formatTokenAmount(riskReserve, decimals, symbol, 2)
         })}
       />
       <LedgerRow
         icon={<ArrowTrendingUpIcon className="h-5 w-5" />}
-        label={t("earn.summary.position.label")}
-        value={formatTokenAmount(position?.assetsEquivalent, decimals, symbol, 4)}
-        detail={t("earn.summary.position.detail")}
+        label={t("earn.async.totalEquity")}
+        value={formatTokenAmount(position?.activeAndClaimableAssets, decimals, symbol, 6)}
+        detail={t("earn.async.totalEquityDetail")}
       />
+      <>
+        <LedgerRow
+          label={t("earn.async.walletEquity")}
+          value={`${formatTokenAmount(position?.shares, decimals, undefined, 6)} / ${formatTokenAmount(position?.assetsEquivalent, decimals, symbol, 6)}`}
+          detail={t("earn.async.depositTerms")}
+        />
+        <LedgerRow
+          label={t("earn.async.queuedEquity")}
+          value={`${formatTokenAmount(position?.queuedShares, decimals, undefined, 6)} / ${formatTokenAmount(position?.queuedLiquidAssets, decimals, symbol, 6)}`}
+          detail={t("earn.async.queuedDetail")}
+        />
+        <LedgerRow
+          label={t("earn.async.claimableEquity")}
+          value={formatTokenAmount(position?.claimableAssets, decimals, symbol, 6)}
+          detail={t("earn.async.claimDetail")}
+        />
+      </>
       <LedgerRow
         icon={<InformationCircleIcon className="h-5 w-5" />}
         label={t("earn.summary.liquidity.label")}

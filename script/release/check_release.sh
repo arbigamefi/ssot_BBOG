@@ -5,7 +5,6 @@ STRICT="${STRICT:-0}"
 PYTHON="${PYTHON:-python}"
 
 RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v16.json}"
-SNAPSHOT_PATH_EXPLICIT="${SNAPSHOT_PATH+x}"
 SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v16.json}"
 NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v16.md}"
 
@@ -13,32 +12,9 @@ NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v16.md}"
 FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v16.json}"
 GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest-v16.json}"
 ABI_INDEX_PATH="${ABI_INDEX_PATH:-deployments/abis-v16/index.json}"
-FRONTEND_SCHEMA="${FRONTEND_SCHEMA:-2}"
-RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:--v16}"
-VERIFY_SCRIPT="${VERIFY_SCRIPT:-script/release/VerifyReleaseV16.s.sol:VerifyReleaseV16}"
-
-release_snapshot_path() {
-  "$PYTHON" - "$RELEASE_PATH" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-path = Path(sys.argv[1])
-with path.open("r", encoding="utf-8") as f:
-    rel = json.load(f)
-value = rel.get("snapshotPath")
-print(value if isinstance(value, str) and value.strip() else "")
-PY
-}
 
 if [[ "$STRICT" == "1" ]]; then
   [[ -f "$RELEASE_PATH" ]] || { echo "missing release artifact: $RELEASE_PATH"; exit 1; }
-  if [[ -z "$SNAPSHOT_PATH_EXPLICIT" ]]; then
-    SNAPSHOT_FROM_RELEASE="$(release_snapshot_path)"
-    if [[ -n "$SNAPSHOT_FROM_RELEASE" ]]; then
-      SNAPSHOT_PATH="$SNAPSHOT_FROM_RELEASE"
-    fi
-  fi
   [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing snapshot: $SNAPSHOT_PATH"; exit 1; }
   [[ -f "$NOTES_PATH" ]] || { echo "missing release notes: $NOTES_PATH"; exit 1; }
   [[ -f "$FRONTEND_MANIFEST_PATH" ]] || { echo "missing frontend manifest: $FRONTEND_MANIFEST_PATH"; exit 1; }
@@ -49,12 +25,6 @@ else
   if [[ ! -f "$RELEASE_PATH" ]]; then
     echo "release check skipped (artifacts not present)."
     exit 0
-  fi
-  if [[ -z "$SNAPSHOT_PATH_EXPLICIT" ]]; then
-    SNAPSHOT_FROM_RELEASE="$(release_snapshot_path)"
-    if [[ -n "$SNAPSHOT_FROM_RELEASE" ]]; then
-      SNAPSHOT_PATH="$SNAPSHOT_FROM_RELEASE"
-    fi
   fi
   if [[ ! -f "$SNAPSHOT_PATH" ]]; then
     echo "release check skipped (snapshot not present: $SNAPSHOT_PATH)."
@@ -70,10 +40,8 @@ fi
   --notes "$NOTES_PATH" \
   --manifest "$FRONTEND_MANIFEST_PATH" \
   --vectors "$GOLDEN_VECTORS_PATH" \
-  --schema "$FRONTEND_SCHEMA" \
-  --tag-suffix="$RELEASE_TAG_SUFFIX" \
   --abis-index "$ABI_INDEX_PATH"
 
 # Verify digest + signature deterministically (no RPC needed).
 RELEASE_PATH="$RELEASE_PATH" SNAPSHOT_PATH="$SNAPSHOT_PATH" \
-  forge script "$VERIFY_SCRIPT" -vvv
+  forge script script/release/VerifyReleaseV16.s.sol:VerifyReleaseV16 -vvv

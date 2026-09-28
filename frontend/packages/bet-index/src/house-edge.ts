@@ -1,7 +1,7 @@
 import { decodeEventLog, getAddress, parseAbi, type Address, type Hex } from "viem";
 import type { BetIndexEvent } from "./index.js";
 
-/** Emitted by a v1.6 GameHub's finalize, before BetFinalized. v1.5 hubs and refunds never emit it. */
+/** Emitted by GameHub.finalize before BetFinalized; refunds do not emit it. */
 export const HOUSE_EDGE_ALLOCATED_ABI = parseAbi([
   "event HouseEdgeAllocated(uint256 indexed positionId, uint256 usedTurnover, uint16 effectiveHouseEdgeBps, uint256 edge, uint256 operatorShare, uint256 lpRetained, uint256 protocolFee, uint256 r0, uint256 r1, uint256 r2, uint256 markup)"
 ]);

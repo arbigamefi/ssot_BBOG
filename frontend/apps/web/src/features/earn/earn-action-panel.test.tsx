@@ -7,12 +7,6 @@ import { requestWalletConnect } from "../../app-shell/wallet-connect-events";
 
 vi.mock("../../app-shell/wallet-connect-events", () => ({ requestWalletConnect: vi.fn() }));
 
-const release = vi.hoisted(() => ({ schema: undefined as string | undefined }));
-vi.mock("../../ssot/release/ReleaseProvider", () => ({
-  useOptionalRelease: () =>
-    release.schema ? { release: { meta: { releaseLock: { schema: release.schema } } } } : null
-}));
-
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key
 }));
@@ -45,16 +39,9 @@ function renderPanel(
       onTabChange={vi.fn()}
       amountMode="assets"
       onAmountModeChange={vi.fn()}
-      assets={[
-        {
-          address: "0x0000000000000000000000000000000000000001",
-          symbol: "USDC",
-          decimals: 6,
-          label: "USDC"
-        }
-      ]}
-      asset="0x0000000000000000000000000000000000000001"
-      onAssetChange={vi.fn()}
+      pools={[{ key: "1:0x0000000000000000000000000000000000000002", label: "USDC · Pool #1" }]}
+      poolKey="1:0x0000000000000000000000000000000000000002"
+      onPoolChange={vi.fn()}
       amount="1"
       onAmountChange={vi.fn()}
       symbol="USDC"
@@ -68,6 +55,7 @@ function renderPanel(
       flow={flow}
       onSubmit={vi.fn()}
       connected
+      withdrawContent={<p>Request and claim shares</p>}
       {...overrides}
     />
   );
@@ -137,28 +125,10 @@ describe("EarnActionPanel", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("states the v1.5 terms, or the v1.6 LP share, as the closed deposits' reason", () => {
-    renderPanel(baseFlow, { depositsClosed: true });
-    expect(screen.getByRole("status").textContent).toContain("earn.actions.depositsClosed.body");
-    cleanup();
-
-    release.schema = "SSOT_RELEASE_DIGEST_V16";
-    try {
-      renderPanel(baseFlow, { depositsClosed: true });
-      expect(screen.getByRole("status").textContent).toContain(
-        "earn.actions.depositsClosed.bodyLpShare"
-      );
-    } finally {
-      release.schema = undefined;
-    }
-  });
-
-  it("keeps the withdraw form available while deposits are closed", () => {
+  it("keeps redemption controls available while deposits are closed", () => {
     renderPanel(baseFlow, { depositsClosed: true, tab: "withdraw" });
-
-    expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.getByRole("textbox", { name: "earn.actions.amount" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "earn.actions.submit.withdraw" })).toBeDefined();
+    expect(screen.getByText("Request and claim shares")).toBeDefined();
+    expect(screen.queryByRole("textbox", { name: "earn.actions.amount" })).toBeNull();
   });
 
   it("uses the active-pool message when the selected asset cannot be written", () => {

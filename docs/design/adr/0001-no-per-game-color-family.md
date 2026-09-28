@@ -10,21 +10,11 @@
 
 ## 1. Context
 
-The pre-rewrite frontend assigns a distinct brand color family to each casino
-game:
-
-- Dice — purple
-- Roulette — emerald
-- Coin Toss — amber
-- Keno — fuchsia
-
-Subsequent v1.3 additions would extend this pattern (Baccarat, Plinko, Sic
-Bo, Slots — each demanding its own hue). Evidence in
-`apps/web/src/app/games/pageClient_list.tsx:67-100` (`ROOM_THEME_MAP`).
-
-This produces a "rainbow pizza" effect across the casino directory and
-home page, undermining the institutional positioning declared in
-`docs/design/00-charter.md §3 Principle 3 (Restraint)`.
+The casino directory presents eight games within one product. Giving each
+game its own brand color fragments the directory and increases the number
+of contrast and theme combinations to maintain. The
+[charter](../00-charter.md) calls for restraint and a consistent product
+identity across casino, sportsbook, and earn.
 
 ## 2. Decision
 
@@ -57,33 +47,27 @@ icon, shape, and copy — never by color family.
 
 Positive:
 
-- Drops 7 color-token branches (`--game-*-{50,100,...,900}` style families).
+- Avoids per-game color-token branches (`--game-*-{50,100,...,900}` style families).
 - Simplifies focus / CTA / link / hover semantics.
 - Improves a11y audit predictability.
 - Aligns ArbiGameFi with institutional positioning.
 
 Negative:
 
-- The current home page (715 LOC) and `pageClient_list.tsx` need refactor.
 - Brand "personality per game" must come from icon + interaction, not hue.
 
 Neutral:
 
 - Light theme inherits the same constraint.
 
-## 6. Migration Plan
+## 6. Implementation Rules
 
-1. Remove `ROOM_THEME_MAP` from `pageClient_list.tsx`.
-2. Update game cards in `apps/web/src/app/page.tsx` and `casino` directory
-   to use uniform brand styling.
-3. Update icons to geometric primitives per game (see
-   `docs/design/01-brand.md §5`).
-4. Land `docs/design/01-brand.md §3 Brand Palette` with `--brand` and
-   `--accent` only.
-5. Add CI rule scanning for forbidden patterns:
-   ```bash
-   rg -nE "--game-(dice|roulette|coin|keno|slots|sicbo|baccarat|plinko)-" frontend/
-   ```
+1. Use the shared `--brand` and `--accent` tokens in
+   `frontend/packages/ui/src/tokens/arbi-dark.css` and `arbi-light.css`.
+2. Keep game cards and actions on the same brand palette.
+3. Differentiate games with icons and copy, following the
+   [brand specification](../01-brand.md).
+4. Check new game UI for per-game color families and contrast in both themes.
 
 ## 7. SSOT Documents Affected
 
@@ -99,7 +83,7 @@ Neutral:
 - [ ] CI rule installed; `rg` evidence returns 0 matches in product UI.
 - [ ] Storybook stories show all 8 games in the same brand palette.
 - [ ] Visual regression baseline updated.
-- [ ] `pageClient_list.tsx` no longer references `ROOM_THEME_MAP`.
+- [ ] Game cards do not define a per-game brand palette.
 
 ## 9. References
 

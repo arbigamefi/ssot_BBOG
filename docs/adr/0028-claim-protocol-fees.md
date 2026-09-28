@@ -1,65 +1,33 @@
-# ADR-0028: Protocol Fee Withdrawal (`claimProtocolFees`)
+# ADR-0028: Protocol fee claims
 
-## Status
-
-Accepted
-
-## Context
-
-SSOT Constitution v1.1 Section 2.3 defines protocol fee withdrawals/distributions
-of `PF[a]` as **optional outflows** for each asset, subject to the A4 safety domain.
-ExecutableSSOT v1.1 Section A4 (line 55-58) explicitly includes "fee-withdraw" in
-the list of operations that must satisfy:
-
-> NAV_after[a] - R_after[a] >= MinLiq[a](NAV_after[a])
-
-Bank.sol tracks `protocolFeesPayable` (state variable, line 26) and increments it
-during `settleBet()` via `protocolFeeAccrual` (line 524).  However, **no function
-exists to claim or withdraw accumulated fees**.
-
-This means:
-- PF grows unbounded with every settled bet that accrues a protocol fee.
-- `NAV = B - PF - XP` shrinks proportionally, reducing LP share value.
-- Governance has no mechanism to extract earned fees, creating a permanent drag
-  on LP returns with no compensation path.
+Status: Accepted; implemented in `Bank.sol`.
 
 ## Decision
 
-Add `claimProtocolFees(uint256 amount, address receiver)` to `Bank.sol`:
+`claimProtocolFees(amount, receiver)` lets governance claim accrued protocol fees.
+It rejects a zero receiver, paused operation, a positive claim above a nonzero
+fee balance and any outflow that fails the Bank's withdrawal-buffer or solvency checks.
 
-| Aspect | Design |
-|--------|--------|
-| **Access** | `onlyGov` — protocol fees belong to the protocol; only governance may claim |
-| **Pause gate** | Blocked by `riskInPaused` — same as all optional outflows (SSOT v1.1 §2.3) |
-| **A4 domain** | Calls `_checkOptionalOutflowDomain(amount, amount, 0)` — `pfDecrease = amount` |
-| **Accounting** | Decrements `protocolFeesPayable`; B decreases via `safeTransfer` |
-| **Pattern** | Mirrors `claimXPAcrued()` (Bank.sol lines 331-348) with governance auth |
-| **Event** | `ProtocolFeesClaimed(address indexed receiver, uint256 amount)` |
+For an external receiver, a successful claim reduces `protocolFeesPayable` and the Bank's cash by the same
+amount, preserving LP NAV:
 
-The function signature in `IBank.sol`:
-```solidity
-function claimProtocolFees(uint256 amount, address receiver) external returns (uint256 claimed);
+```text
+active NAV = balance − protocolFeesPayable − xpLiabilityTotal − exitPayable − playerPayableTotal − recoveryBacking
 ```
 
-## Consequences
+The claim emits `ProtocolFeesClaimed`. A claim to the Bank itself leaves cash in the Bank and increases NAV instead. A failed token transfer reverts the entire
+operation, preserving the fee liability. The existing reentrancy guard applies.
 
-- Governance can drain accumulated PF without violating SSOT invariants.
-- A4 domain check prevents PF claims that would breach solvency (`NAV >= R`)
-  or minimum liquidity (`NAV - R >= MinLiq`).
-- New invariant action `action_claimProtocolFees` added to the fuzz handler,
-  asserting A4 post-conditions on every successful call.
-- ABI change: new function selector and event topic.
-- No changes to the accounting identity `NAV = B - PF - XP` or existing invariants.
+Protocol fee claims are optional outflows. They cannot consume player payables,
+priced LP exit liabilities, historical recovery backing or active reserves. The withdrawal buffer applies
+to these claims; it does not apply to player-payable, priced LP exit or historical recovery claims.
 
-## Alternatives Considered
+## Rationale and verification
 
-1. **Automatic fee sweep on each settlement** — Rejected. Adds gas overhead to
-   every `settleBet()` call and introduces complexity in determining the sweep
-   destination during settlement.
+Governance selects when and where to collect fees. Automatically transferring fees
+on every settlement would add transfer work and a failure dependency to the bet
+lifecycle. A separate treasury can receive claims without changing the Bank.
 
-2. **Time-locked withdrawal with delay** — Rejected. The existing pause mechanism
-   and A4 domain check provide sufficient safeguards. An additional time-lock
-   would delay legitimate fee collection without meaningful security benefit.
-
-3. **Separate treasury contract** — Rejected for v1.0. Can be layered on top by
-   having governance set `receiver` to a treasury address.
+`test/unit/BankObservability.t.sol` and the Bank invariant handler exercise fee
+claims together with deposits, settlements, reserves and asynchronous redemptions.
+See [SSOT v1.6](../constitution/SSOT.v1.6.md) for the shared accounting rules.

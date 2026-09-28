@@ -1,22 +1,20 @@
-# v1.5 release process
+# Current release
 
-> **Contract sources have moved to v1.6.** The sources now implement the v1.6 house-edge allocation
-> ([ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md)), which is not audited or deployed.
-> The deploy and release scripts keep their V15 names until the v1.6 release renames them, but they now
-> build and verify the v1.6 contracts and configuration. To re-verify or operate the live v1.5 deployment
-> with its own tooling, check out commit `7ee449b88`.
+The project has not launched. The source supports one contract model, v1.6: fixed 50% LP edge,
+instant deposits, asynchronous redemption without a redemption-driven betting pause, and player-payable fallback.
 
-Follow the [v1.5 release workflow](../deploy/v15-release.md), including its live governance, signer and artifact-consistency gates. See [current release facts](STATUS-v1.5.zh-CN.md) for scope and dated verification; the [implementation log](../deploy/v15/implementation-status.zh-CN.md) preserves historical execution evidence.
+Use the [deployment workflow](../deploy/v16-release.md) and
+[contract rules](../constitution/SSOT.v1.6.md). Release artifacts are generated from the current source,
+verified against the configured signer and chain, then imported into the application.
 
-A release binds a deployment snapshot, signed release digest, frontend manifest, ABI index, golden vectors and release notes. The current public bundles are committed under:
+- One generated ABI set: `frontend/packages/ssot/src/abis/contracts/`.
+- Verified deployment manifests: `frontend/packages/ssot/src/release/embedded/`.
+- Test-only manifests and vectors: `frontend/packages/ssot/src/fixtures/`; these are not deployments.
+- Generated deployment and packaging outputs are local build products, not committed history.
 
-- `frontend/packages/ssot/src/fixtures/release-bundles/chain-8453/51692502-cf3f3550/`
-- `frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/47140467-ae662a55/`
+With no imported manifest the application reports that no release is available and offers no contract
+writes. Do not insert old addresses or test fixtures to make the application appear connected.
 
-Active SDK manifests and ABIs live under `frontend/packages/ssot/src/release/embedded/` and `frontend/packages/ssot/src/abis/release/`. Local generated `deployments/` and `dist/` contents are ignored; they are not authoritative merely because their filenames contain `latest`.
-
-After deployment and verified Safe governance acceptance, use `make release-v16` with the chain-specific snapshot, RPC and approved release signer. This runs governance verification, metadata generation, digest verification and guarded packaging. Import a verified package with `pnpm -C frontend ssot:sync -- --from <bundle>` and the trusted signer configuration described in the workflow.
-
-Production application images are built by CI and deployed by immutable digest. Use [the Docker runbook](../../frontend/deploy/docker/README.md); do not compile on the production VPS.
-
-Historical release documents retain their original observations, but old release tools and bundled artifacts have been removed from the working tree. Consult Git history when investigating them. The remaining historical chain obligations are recorded separately from the supported release path.
+Required before launch: final audit scope, external audit, fresh network acceptance, compliance
+readiness (operating entity, jurisdictions, server-side geo-blocking, sanctions screening and player-limit
+enforcement, terms including compensation for bets that can never settle) and operational readiness.

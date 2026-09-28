@@ -5,7 +5,7 @@
 
 ## Context
 
-Some legacy implementations allow `player` (the bettor) to differ from `receiver` (the payout recipient).
+Separating identities would allow `player` (the bettor) to differ from `receiver` (the payout recipient).
 While useful for relayers and delegation, recipient separation increases:
 
 - signature/authorization complexity (EIP-712 domains, replay protection, allowance semantics)
@@ -16,7 +16,7 @@ The protocol’s near-term goal is institution-grade correctness with minimal tr
 
 ## Decision
 
-In v1.1, the protocol fixes:
+The protocol fixes:
 
 - `player == receiver` for all bets and payouts.
 
@@ -33,12 +33,12 @@ Consequently:
 
 ## Alternatives considered
 
-1. Support receiver via signed permit at v1.1:
-   - Rejected: expands proof surface and is unnecessary for parity migration.
+1. Support receiver via signed permit :
+   - Rejected: expands proof surface and adds unnecessary authority.
 
 2. Support receiver only for XP claims:
    - Rejected: still complicates accounting semantics; postpone to a future version if needed.
 
 ## Links
 
-- Constitution: `docs/constitution/SSOT.v1.1.md`
+- Constitution: `docs/constitution/SSOT.v1.6.md`

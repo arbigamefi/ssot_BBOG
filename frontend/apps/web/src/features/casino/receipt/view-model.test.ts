@@ -36,6 +36,7 @@ describe("casino receipt view model", () => {
       assetDecimals: 6,
       assetSymbol: "USDC",
       chainId: 84532,
+
       gameLabel: "Plinko",
       gameSlug: "plinko",
       result
@@ -58,9 +59,11 @@ describe("casino receipt view model", () => {
 
   it("normalizes durable BetRow facts for the public receipt page", () => {
     const row: BetRow = {
+      gameHub: "0x00000000000000000000000000000000000000a6",
       asset: ASSET,
       betId: "42",
       chainId: 84532,
+
       finalizedTxHash: TX,
       gameId: GAME,
       id: "84532:42",
@@ -86,6 +89,7 @@ describe("casino receipt view model", () => {
       assetDecimals: 6,
       assetSymbol: "USDC",
       chainId: 84532,
+
       gameLabel: "Plinko",
       gameSlug: "plinko",
       row
@@ -118,12 +122,19 @@ describe("casino receipt view model", () => {
         assetDecimals: 6,
         assetSymbol: "USDC",
         chainId: 84532,
+
         gameLabel: "Coin Toss"
       };
       const row = {
+        gameHub: "0x00000000000000000000000000000000000000a6",
+        lastEventName: "BetFinalized",
+        lastTxHash: TX,
+        updatedAt: 1,
+        updatedBlock: 1,
         id: "84532:42",
         betId: "42",
         chainId: 84532,
+
         state: "finalized",
         stake: "200000",
         payout,
@@ -159,12 +170,19 @@ describe("casino receipt view model", () => {
       assetDecimals: 6,
       assetSymbol: "USDC",
       chainId: 84532,
+
       gameLabel: "Coin Toss"
     };
     const row = {
+      gameHub: "0x00000000000000000000000000000000000000a6",
+      lastEventName: "BetFinalized",
+      lastTxHash: TX,
+      updatedAt: 1,
+      updatedBlock: 1,
       id: "84532:42",
       betId: "42",
       chainId: 84532,
+
       state: "refunded",
       stake: "200000",
       payout: "200000",
@@ -185,10 +203,10 @@ describe("casino receipt view model", () => {
 
   it("shows where a v1.6 bet's house edge went, keeping small 18-decimal shares visible", () => {
     const row: BetRow = {
+      gameHub: "0x00000000000000000000000000000000000000a6",
       asset: ASSET,
       betId: "9",
       chainId: 84532,
-      gameHub: "0x00000000000000000000000000000000000000a6",
       gameId: GAME,
       id: "84532:0x00000000000000000000000000000000000000a6:9",
       lastEventName: "BetFinalized",
@@ -218,6 +236,7 @@ describe("casino receipt view model", () => {
       assetDecimals: 18,
       assetSymbol: "WETH",
       chainId: 84532,
+
       gameLabel: "Dice",
       row
     });
@@ -236,15 +255,84 @@ describe("casino receipt view model", () => {
     expect(proof).toContain("Kept by LPs: 0.00001 WETH");
     expect(proof).not.toContain("Referrer markup");
 
-    const { houseEdge: _none, ...v15Row } = row;
+    const { houseEdge: _none, ...rowWithoutAllocation } = row;
     expect(
       buildCasinoReceiptFromBetRow({
         assetDecimals: 18,
         assetSymbol: "WETH",
         chainId: 8453,
         gameLabel: "Dice",
-        row: v15Row
+        row: rowWithoutAllocation
       }).houseEdge
     ).toBeUndefined();
+  });
+});
+
+describe("receipt payment truthfulness", () => {
+  const base = { assetDecimals: 6, assetSymbol: "USDC", gameLabel: "Dice", chainId: 84532 };
+  const row: BetRow = {
+    id: "84532:42",
+    chainId: 84532,
+    gameHub: "0x00000000000000000000000000000000000000a6",
+    lastEventName: "BetFinalized",
+    lastTxHash: TX,
+    updatedAt: 1,
+    updatedBlock: 1,
+    betId: "42",
+    state: "finalized",
+    stake: "200000",
+    payout: "196000",
+    refundAmount: "100000"
+  };
+  it.each(["transferred", "payable", "unknown"] as const)(
+    "keeps %s separate from the economic settlement amount",
+    (status) => {
+      const payment = { status, amount: "296000" };
+      const model = buildCasinoReceiptFromBetRow({ ...base, row, payment });
+      expect(model).toMatchObject({ payout: 296000n, net: 96000n, payment });
+      const text = buildCasinoReceiptProofText({ model, lastTx: TX, status: "Settled" });
+      expect(text).toContain("Settlement amount: 0.296 USDC");
+      expect(text).toContain("Transfer evidence:");
+      if (status === "payable")
+        expect(text).toContain("later claims are not attributed to this bet");
+    }
+  );
+  it("leaves cash unknown when absent or inconsistent, even when indexed payout is known", () => {
+    expect(buildCasinoReceiptFromBetRow({ ...base, row }).payment).toEqual({
+      status: "unknown",
+      amount: "296000"
+    });
+    expect(
+      buildCasinoReceiptFromBetRow({
+        ...base,
+        row,
+        payment: { status: "transferred", amount: "196000" }
+      }).payment.status
+    ).toBe("unknown");
+    expect(
+      buildCasinoReceiptFromBetRow({ ...base, row, payment: { status: "unknown" } }).payment.status
+    ).toBe("unknown");
+  });
+  it("carries the full refund's historical payable through a terminal result", () => {
+    const model = buildCasinoReceiptFromTerminalResult({
+      ...base,
+      result: {
+        kind: "refunded",
+        betId: 42n,
+        requestId: 77n,
+        player: PLAYER,
+        randomHash: RANDOM,
+        stake: 200000n,
+        refund: { refundAmount: 200000n, payment: { status: "payable", amount: "200000" } }
+      }
+    });
+    expect(model.payment).toEqual({ status: "payable", amount: "200000" });
+    expect(model.net).toBe(0n);
+  });
+  it("distinguishes a confirmed zero amount from missing transfer evidence", () => {
+    expect(
+      buildCasinoReceiptFromBetRow({ ...base, row: { ...row, payout: "0", refundAmount: "0" } })
+        .payment
+    ).toEqual({ status: "none", amount: "0" });
   });
 });

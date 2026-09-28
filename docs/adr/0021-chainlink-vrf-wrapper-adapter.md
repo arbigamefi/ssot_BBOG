@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-SSOT v1.2 introduces charged VRF fee semantics (native token, overpay refund best-effort, `refundCredit` claimable).
+The protocol charges charged VRF fee semantics (native token, overpay refund best-effort, `refundCredit` claimable).
 To achieve production parity with `bankroll_protocol_refactored_v0.7.8`, we need to integrate a real VRF provider
 (Chainlink VRF v2.5+ Wrapper) without violating SSOT constitution:
 - fulfill MUST NEVER revert

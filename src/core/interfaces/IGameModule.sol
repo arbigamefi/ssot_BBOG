@@ -5,16 +5,19 @@ import {SSOTTypes} from "./SSOTTypes.sol";
 
 /// @notice GameModule = pure semantic module (composition, not inheritance).
 ///
-/// v1.1 rules:
+/// Module rules:
 /// - validate/quote/resolve are deterministic given (params, stakeSpec, RNG seed) + immutable module config.
 /// - maxPayout MUST upper-bound the player's total owed: payoutGross + refundAmount.
-/// - modules MUST follow canonical RNG expansion (see SSOT.v1.1 constitution).
+/// - modules MUST follow canonical RNG expansion (see current SSOT constitution).
 interface IGameModule {
     /// @dev MUST revert if params or stakeSpec invalid.
     function validate(bytes calldata params, SSOTTypes.StakeSpec calldata stakeSpec) external view;
 
     /// @dev MUST return worst-case upper bound for player's total owed (payoutGross + refund).
-    function maxPayout(bytes calldata params, SSOTTypes.StakeSpec calldata stakeSpec) external view returns (uint256 reserved);
+    function maxPayout(bytes calldata params, SSOTTypes.StakeSpec calldata stakeSpec)
+        external
+        view
+        returns (uint256 reserved);
 
     /// @dev Determine payout (gross) and refund amount.
     ///      - payoutGross: sum of gross payouts across executed rolls (includes stake return).

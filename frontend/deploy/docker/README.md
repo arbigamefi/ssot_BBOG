@@ -1,6 +1,7 @@
-# ArbiGameFi v1.5 Docker Production Deploy
+# Docker deployment
 
-The stack was created by the [v1.5 release and cutover workflow](../../../docs/deploy/v15-release.md); its Compose project and database are `arbigamefi-v15` and `arbigamefi_v15`. A later release line switches a chain inside this stack; see the [v1.6 release](../../../docs/deploy/v16-release.md#switching-base-sepolia). The bet index keys bets by GameHub, so it keeps both lines' bets apart.
+Use this for the first deployment of the current application and verified contract release.
+The Compose project and database are `arbigamefi`.
 
 This path runs the production app as normal long-lived processes:
 
@@ -95,9 +96,9 @@ Download the `arbigamefi-docker-deploy-bundle` artifact from the
 `Frontend Docker Images` workflow and unpack it on the VPS, for example:
 
 ```bash
-mkdir -p /opt/arbigamefi-v15/frontend
-tar -xzf arbigamefi-docker-deploy-bundle.tar.gz -C /opt/arbigamefi-v15/frontend
-cd /opt/arbigamefi-v15/frontend
+mkdir -p /opt/arbigamefi/frontend
+tar -xzf arbigamefi-docker-deploy-bundle.tar.gz -C /opt/arbigamefi/frontend
+cd /opt/arbigamefi/frontend
 ```
 
 Keep the real `.env` files and Cloudflare cert files on the host. Updating the
@@ -125,25 +126,23 @@ export KEEPER_IMAGE=ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:<reviewed-keeper-
 export EXPECTED_REVISION=<full-reviewed-40-character-commit>
 ```
 
-Pre-stage images while the old stack remains available:
+Pull and validate the images:
 
 ```bash
 bash deploy/docker/check-production-env.sh
-docker compose -p arbigamefi-v15 -f compose.production.yml pull postgres caddy web keeper-primary keeper-testnet-primary
+docker compose -p arbigamefi -f compose.production.yml pull postgres caddy web keeper-primary keeper-testnet-primary
 python3 deploy/docker/check-release-images.py
 ```
 
-The image guard requires matching releases on both chains, each of the v1.5 or v1.6 line, and matching OCI source revisions. It rejects manifests of retired lines. `IMAGE_TAG`, mutable application image tags and implicit `latest` are no longer deployment inputs.
+The image guard checks matching current v1.6 releases and matching OCI source revisions.
 
-## 4. Cut over
-
-Follow the reviewed handover record: validate the new Postgres and Web internally, drain and stop old keepers, then hand over the old Caddy listener. The wrapper refuses to proceed while old production keepers or Caddy remain running. Avoid two processes using the same keeper key.
+## 4. Start services
 
 ```bash
 bash deploy/docker/deploy-images.sh
 ```
 
-This entrypoint runs all checks before `up --no-build --pull never`. CI builds the application images; the VPS does not compile them. Retain the old database backup and source archive until acceptance and asset disposition are complete.
+The entrypoint runs checks before starting services. Application images are built in CI.
 
 For a local backup keeper drill on the same host:
 
@@ -195,25 +194,8 @@ validation is explicitly disabled because Cloudflare terminates public TLS;
 no Cloudflare API token, manually copied certificate, or additional service is
 needed for this deployment. Do not cache or block `/.well-known/acme-challenge/*`.
 
-A Cloudflare **client-authentication** certificate is not an origin server
-certificate. The previous manually loaded file had clientAuth EKU and no DNS
-SAN; the apex happened to respond, while unconfigured alias SNI failed with 525.
-Do not restore that file or its environment variables. See
-[`docs/ops/runbooks/public-healthz-timeouts.zh-CN.md`](../../../docs/ops/runbooks/public-healthz-timeouts.zh-CN.md)
-for the distinct TLS and intermittent-timeout investigations.
-
-Validate before reload:
-
-```bash
-docker compose --env-file images.env -p arbigamefi-v15 -f compose.production.yml -f compose.staging.yml exec -T caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-```
-
-For migration from the old configuration, keep its apex certificate selection
-active while Caddy prepares the three ACME certificates, then reload the final
-Caddyfile only after all three server certificates have been issued. Verify TLS
-from the VPS loopback with normal CA and hostname checks as well as through the
-public domains; testing only Cloudflare's edge certificate does not validate the
-origin. Application, keeper and database containers need no restart.
+Validate the Caddy configuration before starting or reloading it. Verify origin TLS with normal CA
+and hostname checks as well as through the public hostname.
 
 Cloudflare settings:
 

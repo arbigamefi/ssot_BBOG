@@ -46,12 +46,8 @@ export interface BetHouseEdgeAllocation {
 export interface BetRow {
   id: string; // `${chainId}:${betId}`, unique within one release-scoped DB
   chainId: number;
-  /**
-   * The GameHub that issued the bet. Bet ids restart at 1 in every deployment, so rows from
-   * different releases need it to stay apart. Rows cached before it was recorded lack it; they
-   * belong to the GameHub of their release-scoped DB.
-   */
-  gameHub?: Address;
+  /** The issuing deployment; bet IDs are local to one GameHub. */
+  gameHub: Address;
   betId: string; // bigint string
   state: BetLifecycleState;
   gameId?: Hex;
@@ -73,7 +69,7 @@ export interface BetRow {
   lastTxHash: Hex;
   lastEventName: string;
   updatedAt: number;
-  /** From the server's bet index; absent for v1.5 hubs, refunds and unsettled bets. */
+  /** From the server's bet index; absent for refunds and unsettled bets. */
   houseEdge?: BetHouseEdgeAllocation;
 }
 
@@ -118,6 +114,7 @@ export interface BankEventRow {
 }
 
 export interface XPSnapshotRow {
+  bank: Address;
   id: string; // `${chainId}:${payee}:${blockNumber}:${logIndex}`
   chainId: number;
   payee: Address;
@@ -139,15 +136,9 @@ export class SSOTDb extends Dexie {
   bankEvents!: Table<BankEventRow, string>;
   xpSnapshots!: Table<XPSnapshotRow, string>;
 
-  constructor(name = "ssot_frontend_v2") {
+  constructor(name = "ssot_frontend") {
     super(name);
     this.version(1).stores({
-      gameHubEvents: "id, chainId, gameHub, blockNumber, txHash, logIndex, eventName",
-      bets: "id, chainId, betId, state, updatedBlock",
-      cursors: "id, chainId, source",
-      txJournal: "id, chainId, txHash, createdAt, ok, action"
-    });
-    this.version(2).stores({
       gameHubEvents: "id, chainId, gameHub, blockNumber, txHash, logIndex, eventName",
       bets: "id, chainId, betId, state, updatedBlock",
       cursors: "id, chainId, source",
@@ -166,7 +157,7 @@ const _dbs = new Map<string, SSOTDb>();
  * IMPORTANT: Only call this in the browser (client components).
  */
 export function getSSOTDb(name?: string): SSOTDb {
-  const key = name ?? "ssot_frontend_v2";
+  const key = name ?? "ssot_frontend";
   const existing = _dbs.get(key);
   if (existing) return existing;
   const db = new SSOTDb(key);
@@ -174,10 +165,10 @@ export function getSSOTDb(name?: string): SSOTDb {
   return db;
 }
 
-/** Rebuild refundable financial facts per release without deleting old journals. */
+/** Keep facts and journals scoped to the current deployment identity. */
 export function getReleaseScopedSSOTDb(release: {
   chainId: number;
   releaseDigest: string;
 }): SSOTDb {
-  return getSSOTDb(`ssot_frontend_v3_${release.chainId}_${release.releaseDigest.toLowerCase()}`);
+  return getSSOTDb(`ssot_frontend_${release.chainId}_${release.releaseDigest.toLowerCase()}`);
 }

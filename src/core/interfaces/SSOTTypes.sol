@@ -57,11 +57,8 @@ library SSOTTypes {
         uint256 B; // ASSET.balanceOf(Bank)
         uint256 PF; // protocolFeesPayable
         uint256 XP; // externalPayablesTotal (== xpAccruedTotal + xpLockedTotal + xpHoldbackTotal)
-        uint256 NAV; // B - PF - XP (no-underflow; underflow => violation)
-        uint256 R; // totalReserved
-        uint256 minLiquidityBps; // [0..10_000]
-        uint256 minLiq; // NAV * bps / 10_000
-        uint256 free; // NAV - R - minLiq (clamped at 0)
+        uint256 NAV; // active equity, excluding payables and historical recovery backing (ADR-0035)
+        uint256 R; // activeReserved: only current-epoch open reserve
         uint256 riskReserveBps; // [0..10_000], new-risk reserve buffer
         uint256 riskReserve; // NAV * riskReserveBps / 10_000
         uint256 riskFree; // NAV - R - riskReserve (clamped at 0)

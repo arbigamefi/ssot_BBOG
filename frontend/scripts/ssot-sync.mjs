@@ -1,27 +1,5 @@
 #!/usr/bin/env node
-/**
- * ssot:sync (FINAL SHAPE)
- *
- * Synchronize a **contract release bundle** into this repo.
- *
- * The bundle is the single source of truth and MUST contain, for this checkout's
- * release line (RELEASE_LINE below):
- *   - deployments/frontend-manifest-latest-v16.json
- *   - deployments/golden-vectors-latest-v16.json
- *   - deployments/release-latest-v16.json
- *   - deployments/latest-v16.json (required for verification)
- *   - abis/index.json + abis/*.abi.json
- *   - (optional) MANIFEST.sha256
- *
- * Supported inputs:
- *   - A directory containing the files above, OR
- *   - A .tar.gz / .tgz of such a directory.
- *
- * Output:
- *   - packages/ssot/src/release/embedded/*.json (+ embedded/index.ts)
- *   - packages/ssot/src/abis/release/chain-<id>/* (+ release/index.ts)
- *   - packages/ssot/src/fixtures/release-bundles/... (auditable mirror)
- */
+/** Import authenticated current release metadata; contract ABIs come from the current build. */
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -31,8 +9,7 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-// The bundle is verified with this checkout's release scripts and contracts, so only a bundle of
-// the same release line can be imported here. Import another line from a checkout of that line.
+// Only the current architecture is admitted by this checkout.
 const RELEASE_LINE = {
   name: "v1.6",
   suffix: "v16",
@@ -59,8 +36,6 @@ const ROOT = process.cwd();
 const FROM_INPUT = path.resolve(ROOT, fromArg);
 
 const OUT_EMBEDDED = path.resolve(ROOT, "packages/ssot/src/release/embedded");
-const OUT_ABIS = path.resolve(ROOT, "packages/ssot/src/abis/release");
-const OUT_FIXT = path.resolve(ROOT, "packages/ssot/src/fixtures/release-bundles");
 
 const isTar = (p) => p.endsWith(".tar.gz") || p.endsWith(".tgz");
 const isAppleJunk = (name) => name.startsWith("._") || name === ".DS_Store";
@@ -83,34 +58,6 @@ async function readJson(p) {
   return JSON.parse(raw);
 }
 
-async function firstExistingPath(baseDir, candidates) {
-  for (const candidate of candidates) {
-    const p = path.join(baseDir, candidate);
-    if (await pathExists(p)) return p;
-  }
-  return path.join(baseDir, candidates[0]);
-}
-
-async function copyFile(src, dst) {
-  await ensureDir(path.dirname(dst));
-  await fs.copyFile(src, dst);
-}
-
-async function copyDirFiltered(srcDir, dstDir) {
-  await ensureDir(dstDir);
-  const entries = await fs.readdir(srcDir, { withFileTypes: true });
-  for (const e of entries) {
-    if (isAppleJunk(e.name)) continue;
-    const s = path.join(srcDir, e.name);
-    const d = path.join(dstDir, e.name);
-    if (e.isDirectory()) {
-      await copyDirFiltered(s, d);
-    } else if (e.isFile()) {
-      await copyFile(s, d);
-    }
-  }
-}
-
 function chainName(chainId) {
   switch (Number(chainId)) {
     case 84532:
@@ -124,12 +71,6 @@ function chainName(chainId) {
     default:
       return `Chain ${chainId}`;
   }
-}
-
-function shortDigest(digest) {
-  const s = String(digest ?? "");
-  if (s.startsWith("0x") && s.length >= 10) return s.slice(2, 10);
-  return s.slice(0, 8);
 }
 
 function normalizeAddress(value) {
@@ -155,18 +96,6 @@ function requireNumeric(value, label) {
 }
 
 function buildEmbeddedAssets(manifest) {
-  if (Array.isArray(manifest.assets) && manifest.assets.length > 0) {
-    return manifest.assets.map((a, index) => {
-      const assetAddress = a.asset ?? a.address;
-      return {
-        symbol: requireString(a.symbol, `assets[${index}].symbol`),
-        decimals: requireNumeric(a.decimals, `assets[${index}].decimals`),
-        address: normalizeAddress(requireString(assetAddress, `assets[${index}].asset`)),
-        bank: normalizeAddress(requireString(a.bank, `assets[${index}].bank`))
-      };
-    });
-  }
-
   const pools = Array.isArray(manifest.pools) ? manifest.pools : [];
   const casinoPools = pools.filter(
     (p) => String(p.domain).toLowerCase() === "casino" || Number(p.domainId) === 1
@@ -190,16 +119,8 @@ function buildEmbeddedAssets(manifest) {
 }
 
 function buildEmbeddedGames(manifest) {
-  if (Array.isArray(manifest.games)) {
-    return Object.fromEntries(
-      manifest.games.map((g) => [String(g.gameId).toLowerCase(), normalizeAddress(g.module)])
-    );
-  }
   return Object.fromEntries(
-    Object.entries(manifest.games ?? {}).map(([gameId, module]) => [
-      String(gameId).toLowerCase(),
-      normalizeAddress(module)
-    ])
+    manifest.games.map((g) => [String(g.gameId).toLowerCase(), normalizeAddress(g.module)])
   );
 }
 
@@ -259,21 +180,6 @@ function buildEmbeddedPools(manifest) {
   }));
 }
 
-async function extractTarToTemp(tarPath) {
-  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "ssot-release-"));
-  await execFileAsync("tar", ["-xzf", tarPath, "-C", tmp]);
-  // Some tars contain a single top-level directory, some don't.
-  const entries = await fs.readdir(tmp, { withFileTypes: true });
-  const dirs = entries
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name)
-    .filter((n) => !isAppleJunk(n));
-  if (dirs.length === 1) {
-    return path.join(tmp, dirs[0]);
-  }
-  return tmp;
-}
-
 async function writeEmbeddedIndex(jsonFiles) {
   const indexPath = path.join(OUT_EMBEDDED, "index.ts");
   const imports = [];
@@ -288,63 +194,16 @@ async function writeEmbeddedIndex(jsonFiles) {
   await fs.writeFile(indexPath, content, "utf8");
 }
 
-async function writeAbiReleaseIndex(chainId, abiIndex, contractNames) {
-  const chainDirName = `chain-${chainId}`;
-  const chainDir = path.join(OUT_ABIS, chainDirName);
-  await ensureDir(chainDir);
-
-  // Write chain-level index.ts
-  const imports = [`import abiIndex from "./index.json";`, `export { abiIndex };`];
-  for (const name of contractNames) {
-    const varName = name.replace(/[^a-zA-Z0-9]/g, "_");
-    imports.push(`import ${varName} from "./${name}.abi.json";`);
-    imports.push(`export const ${varName}Abi = ${varName}.abi;`);
-  }
-  const content = `// AUTO-GENERATED by pnpm ssot:sync. DO NOT EDIT.\n${imports.join("\n")}\n`;
-  await fs.writeFile(path.join(chainDir, "index.ts"), content, "utf8");
-
-  // Root release/index.ts is generated separately by scanning all chains.
-
-  // keep abiIndex json for audit
-  await fs.writeFile(
-    path.join(chainDir, "index.json"),
-    `${JSON.stringify(abiIndex, null, 2)}\n`,
-    "utf8"
-  );
-}
-
-async function writeAbiRootIndex() {
-  const rootIndexPath = path.join(OUT_ABIS, "index.ts");
-  if (!(await pathExists(OUT_ABIS))) {
-    await fs.writeFile(
-      rootIndexPath,
-      `// AUTO-GENERATED by pnpm ssot:sync. DO NOT EDIT.\n`,
-      "utf8"
-    );
-    return;
-  }
-  const dirs = (await fs.readdir(OUT_ABIS, { withFileTypes: true }))
-    .filter((e) => e.isDirectory() && e.name.startsWith("chain-"))
-    .map((e) => e.name)
-    .sort();
-  const lines = [`// AUTO-GENERATED by pnpm ssot:sync. DO NOT EDIT.`];
-  for (const d of dirs) {
-    const id = Number(d.replace(/^chain-/, ""));
-    if (!Number.isFinite(id)) continue;
-    lines.push(`export * as chain_${id} from "./${d}/index";`);
-  }
-  lines.push("");
-  await fs.writeFile(rootIndexPath, lines.join("\n"), "utf8");
-}
+let extractedDirectory = null;
 
 async function main() {
   let bundleRoot = FROM_INPUT;
-  let cleanupTmp = null;
 
   if (isTar(bundleRoot)) {
     console.log("\n[ssot:sync] extracting tar:", bundleRoot);
-    bundleRoot = await extractTarToTemp(bundleRoot);
-    cleanupTmp = bundleRoot;
+    extractedDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "ssot-release-"));
+    await execFileAsync("tar", ["-xzf", bundleRoot, "-C", extractedDirectory]);
+    bundleRoot = extractedDirectory;
   }
 
   console.log("\n[ssot:sync] bundle root:", bundleRoot);
@@ -353,16 +212,10 @@ async function main() {
   const abisDir = path.join(bundleRoot, "abis");
 
   const { suffix } = RELEASE_LINE;
-  const manifestPath = await firstExistingPath(deploymentsDir, [
-    `frontend-manifest-latest-${suffix}.json`
-  ]);
-  const vectorsPath = await firstExistingPath(deploymentsDir, [
-    `golden-vectors-latest-${suffix}.json`
-  ]);
-  const releaseLockPath = await firstExistingPath(deploymentsDir, [
-    `release-latest-${suffix}.json`
-  ]);
-  const latestSnapshotPath = await firstExistingPath(deploymentsDir, [`latest-${suffix}.json`]);
+  const manifestPath = path.join(deploymentsDir, `frontend-manifest-latest-${suffix}.json`);
+  const vectorsPath = path.join(deploymentsDir, `golden-vectors-latest-${suffix}.json`);
+  const releaseLockPath = path.join(deploymentsDir, `release-latest-${suffix}.json`);
+  const latestSnapshotPath = path.join(deploymentsDir, `latest-${suffix}.json`);
   const abiIndexPath = path.join(abisDir, "index.json");
 
   for (const p of [
@@ -375,11 +228,9 @@ async function main() {
     abiIndexPath
   ]) {
     if (!(await pathExists(p))) {
-      console.error("\n[ssot:sync] missing required path:", p);
-      console.error(
-        "This command expects a FINAL SHAPE release bundle containing deployments/ and abis/.\n"
+      throw new Error(
+        `Missing required path: ${p}; expected current release bundle with deployments/ and abis/.`
       );
-      process.exit(1);
     }
   }
 
@@ -389,7 +240,7 @@ async function main() {
   const latestSnapshot = await readJson(latestSnapshotPath);
   const abiIndex = await readJson(abiIndexPath);
 
-  // Verify the supplied bundle before changing embedded addresses or deleting a fixture directory.
+  // Verify all inputs before changing active embedded metadata.
   if (
     manifest.architectureVersion !== RELEASE_LINE.architectureVersion ||
     latestSnapshot.architectureVersion !== RELEASE_LINE.architectureVersion ||
@@ -410,6 +261,7 @@ async function main() {
     );
   }
   const repoRoot = path.resolve(ROOT, "..");
+  await ensureDir(path.join(repoRoot, "deployments"));
   const verificationDir = await fs.mkdtemp(
     path.join(repoRoot, "deployments", `.verify-${suffix}-`)
   );
@@ -437,9 +289,6 @@ async function main() {
         manifestPath,
         "--vectors",
         vectorsPath,
-        "--schema",
-        "2",
-        `--tag-suffix=-${suffix}`,
         "--abis-index",
         abiIndexPath
       ],
@@ -481,27 +330,6 @@ async function main() {
   const embeddedSports = buildEmbeddedSports(manifest);
   const embeddedPools = buildEmbeddedPools(manifest);
 
-  const fixtureDir = path.join(
-    OUT_FIXT,
-    `chain-${chainId}`,
-    `${blockNumber}-${shortDigest(digest)}`
-  );
-  await fs.rm(fixtureDir, { recursive: true, force: true });
-  await ensureDir(fixtureDir);
-
-  console.log(`[ssot:sync] chainId=${chainId} block=${blockNumber} digest=${digest}`);
-
-  // Mirror raw inputs for audit
-  await copyFile(manifestPath, path.join(fixtureDir, path.basename(manifestPath)));
-  await copyFile(vectorsPath, path.join(fixtureDir, path.basename(vectorsPath)));
-  await copyFile(releaseLockPath, path.join(fixtureDir, path.basename(releaseLockPath)));
-  if (await pathExists(latestSnapshotPath)) {
-    await copyFile(latestSnapshotPath, path.join(fixtureDir, path.basename(latestSnapshotPath)));
-  }
-  // Mirror ABI index + ABI files
-  await copyFile(abiIndexPath, path.join(fixtureDir, "abi-index.json"));
-  await copyDirFiltered(abisDir, path.join(fixtureDir, "abis"));
-
   // Generate embedded release snapshot consumed by runtime loader
   const embedded = {
     chainId,
@@ -525,9 +353,9 @@ async function main() {
       sportsHub: normalizeAddress(addresses.sportsHub),
       sportsRiskEngine: normalizeAddress(addresses.sportsRiskEngine),
       vrfHub: normalizeAddress(addresses.vrfHub),
-      refRegistry: normalizeAddress(addresses.refRegistry ?? addresses.referralRegistry),
-      refEngine: normalizeAddress(addresses.refEngine ?? addresses.referralEngine),
-      adapter: normalizeAddress(addresses.adapter ?? addresses.adapterChainlinkV2PlusWrapper)
+      refRegistry: normalizeAddress(addresses.refRegistry),
+      refEngine: normalizeAddress(addresses.refEngine),
+      adapter: normalizeAddress(addresses.adapter)
     },
     assets: embeddedAssets,
     games: embeddedGames,
@@ -538,14 +366,7 @@ async function main() {
       blockNumber,
       schemaVersion: manifest.schemaVersion,
       generatedAt: manifest.generatedAt,
-      bundle: {
-        manifestPath: path.posix.join("deployments", path.basename(manifestPath)),
-        vectorsPath: path.posix.join("deployments", path.basename(vectorsPath)),
-        releaseLockPath: path.posix.join("deployments", path.basename(releaseLockPath)),
-        abiIndexPath: "abis/index.json"
-      },
-      releaseLock,
-      abiIndex
+      releaseLock
     }
   };
 
@@ -557,56 +378,21 @@ async function main() {
     "utf8"
   );
 
-  // Generate embedded/index.ts
-  // Final-shape policy: only chain-<id>.json files are supported.
-  // Remove any legacy placeholders to avoid drift.
-  const allEmbedded = (await fs.readdir(OUT_EMBEDDED)).filter(
-    (f) => f.endsWith(".json") && !isAppleJunk(f)
-  );
-  for (const f of allEmbedded) {
-    if (!f.startsWith("chain-")) {
-      await fs.rm(path.join(OUT_EMBEDDED, f), { force: true });
-    }
-  }
   const existing = (await fs.readdir(OUT_EMBEDDED)).filter(
     (f) => f.startsWith("chain-") && f.endsWith(".json") && !isAppleJunk(f)
   );
   existing.sort();
   await writeEmbeddedIndex(existing);
 
-  // Copy ABI files into canonical location
-  const chainAbiDir = path.join(OUT_ABIS, `chain-${chainId}`);
-  await ensureDir(chainAbiDir);
-  // Copy all .abi.json referenced by abiIndex
-  const contractEntries = Array.isArray(abiIndex.contracts) ? abiIndex.contracts : [];
-  const contractNames = [];
-  for (const c of contractEntries) {
-    const abiFile = c.abiFile;
-    if (typeof abiFile !== "string" || !abiFile.endsWith(".abi.json")) continue;
-    const src = path.join(abisDir, abiFile);
-    if (!(await pathExists(src))) continue;
-    await copyFile(src, path.join(chainAbiDir, abiFile));
-    // name without suffix
-    const base = abiFile.replace(/\.abi\.json$/i, "");
-    if (!contractNames.includes(base)) contractNames.push(base);
-  }
-  contractNames.sort();
-  // Write chain-level ABI index + TS exports
-  await writeAbiReleaseIndex(chainId, abiIndex, contractNames);
-
-  // Write root ABI index.ts by scanning all available chain-* directories.
-  await writeAbiRootIndex();
-
   console.log("[ssot:sync] wrote embedded ->", path.join(OUT_EMBEDDED, embeddedFile));
-  console.log("[ssot:sync] wrote abis ->", chainAbiDir);
-  console.log("[ssot:sync] wrote fixtures ->", fixtureDir);
   console.log("[ssot:sync] done\n");
-
-  // Note: cleanupTmp is a path inside os tmp; allow OS to clean up.
-  void cleanupTmp;
 }
 
-main().catch((err) => {
-  console.error("[ssot:sync] failed:", err);
-  process.exit(1);
-});
+await main()
+  .catch((err) => {
+    console.error("[ssot:sync] failed:", err);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    if (extractedDirectory) await fs.rm(extractedDirectory, { recursive: true, force: true });
+  });

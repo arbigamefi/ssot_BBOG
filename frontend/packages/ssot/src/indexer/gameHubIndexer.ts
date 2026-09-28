@@ -2,7 +2,7 @@ import type { PublicClient, Address, Abi, AbiEvent } from "viem";
 import { getAddress } from "viem";
 import { readSettledBetRefund } from "@ssot/bet-index/terminal-refund";
 import type { SSOTRelease } from "../release/schema";
-import { getReleaseAbis } from "../abis/release/resolver";
+import { getContractAbis } from "../abis/index.mjs";
 import type { SSOTDb } from "./store";
 import type { GameHubEventName, GameHubEventNormalized } from "./reduce";
 import { applyGameHubEventToBet } from "./reduce";
@@ -110,7 +110,7 @@ export function createGameHubIndexer(params: {
   }
 
   async function syncRange(fromBlock: number, toBlock: number): Promise<void> {
-    const { GameHubAbi } = getReleaseAbis(release.chainId);
+    const { GameHubAbi } = getContractAbis();
     const gameHubAbi = GameHubAbi as Abi;
 
     const logsAll: GameHubEventNormalized[] = [];
@@ -128,7 +128,7 @@ export function createGameHubIndexer(params: {
         const logIndex = Number(log.logIndex ?? 0);
         const args = { ...(log.args ?? {}) };
         if (eventName === "BetFinalized") {
-          const betId = args.positionId ?? args.betId;
+          const betId = args.positionId;
           if (betId == null) throw new Error("finalized event missing bet ID");
           args.refundAmount = await readSettledBetRefund({
             client: publicClient,

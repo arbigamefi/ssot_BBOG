@@ -27,7 +27,7 @@ export const runtime = "nodejs";
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 let durableBetIndexStore: BetIndexStore | null | undefined;
-let durableBetIndexMigration: Promise<void> | null = null;
+let durableBetIndexInitialization: Promise<void> | null = null;
 
 function clampLimit(value: string | null) {
   const parsed = Number(value ?? "");
@@ -102,8 +102,8 @@ function getDurableBetIndexStore() {
 async function getReadyDurableBetIndexStore() {
   const store = getDurableBetIndexStore();
   if (!store) return null;
-  durableBetIndexMigration ??= store.migrate();
-  await durableBetIndexMigration;
+  durableBetIndexInitialization ??= store.initializeSchema();
+  await durableBetIndexInitialization;
   return store;
 }
 
@@ -134,6 +134,9 @@ function toBankProviderLedgerRow({
     owner: owner.toLowerCase() as Address,
     poolId: String(poolId),
     sharePrice: entry.sharePrice?.toString(),
+    receiver: entry.receiver,
+    caller: entry.caller,
+    epochId: entry.epochId?.toString(),
     shares: entry.shares.toString(),
     timestamp: entry.timestamp,
     txHash: entry.txHash.toLowerCase() as `0x${string}`,
@@ -151,6 +154,9 @@ function rowToJson(row: BankProviderLedgerRow) {
     timestamp: row.timestamp,
     assets: row.assets,
     sharePrice: row.sharePrice,
+    receiver: row.receiver,
+    caller: row.caller,
+    epochId: row.epochId,
     shares: row.shares
   };
 }
@@ -200,6 +206,10 @@ export async function GET(request: Request) {
     const limit = clampLimit(url.searchParams.get("limit"));
     const queryLimit = limit + 1;
     const startBlock = parseStartBlock(url.searchParams.get("startBlock"));
+    const requestedEndBlock = parseOptionalNonNegativeInteger(
+      url.searchParams.get("endBlock"),
+      "endBlock"
+    );
     const beforeBlock = parseOptionalNonNegativeInteger(
       url.searchParams.get("beforeBlock"),
       "beforeBlock"
@@ -216,10 +226,20 @@ export async function GET(request: Request) {
     if (!releaseResult.ok) throw new Error(releaseResult.error);
     const pool = releaseResult.release.pools.find((item) => item.poolId === poolId);
     if (!pool) throw new Error(`No pool found for poolId ${poolId}.`);
+    const requestedBank = url.searchParams.get("bank");
+    if (
+      requestedBank &&
+      normalizeProviderLedgerAddress(requestedBank, "bank").toLowerCase() !==
+        pool.bank.toLowerCase()
+    )
+      throw new Error(
+        "bank does not match the selected release pool; refresh before reading its ledger."
+      );
     const rpcUrl = resolveServerRpcUrl(chainId);
     if (!rpcUrl) throw new Error(`No RPC URL configured for chainId=${chainId}.`);
 
     const publicClient = createProviderLedgerPublicClient(chainId, rpcUrl);
+    const endBlock = requestedEndBlock ?? Number(await publicClient.getBlockNumber());
     const sdk = createSSOTSDK({ release: releaseResult.release, publicClient });
     let store: BetIndexStore | null = null;
     let durableRows: BankProviderLedgerRow[] = [];
@@ -229,25 +249,35 @@ export async function GET(request: Request) {
         store == null
           ? []
           : await store.getBankProviderLedger({
+              bank: normalizeProviderLedgerAddress(pool.bank, "pool bank"),
               beforeBlock,
               beforeLogIndex,
+              endBlock,
               chainId,
               limit: queryLimit,
-              owner,
-              poolId
+              owner
             });
     } catch {
       store = null;
       durableRows = [];
     }
 
-    // Normal product reads should be fast and durable: keeper/backfill owns
-    // Postgres ingestion. RPC scanning remains only for explicit backfill/debug
-    // requests (startBlock) or when no durable store is configured.
+    // Durable ingestion owns canonical range replacement. A read route never appends
+    // partial RPC pages into that ledger or infers complete coverage from a head cursor.
     const shouldScan = store == null || startBlock != null;
-    const scannedEntries = shouldScan
-      ? await sdk.bank.getProviderLedger(poolId, owner, { limit: queryLimit, startBlock })
-      : [];
+    const origin = Math.max(releaseResult.release.meta?.blockNumber ?? 0, startBlock ?? 0);
+    const scanEnd = Math.min(endBlock, beforeBlock ?? endBlock);
+    const scanStart = Math.max(origin, scanEnd - 1_899);
+    const scannedEntries =
+      shouldScan && scanEnd >= origin
+        ? await sdk.bank.getProviderLedger(poolId, owner, {
+            limit: queryLimit,
+            startBlock: scanStart,
+            endBlock: scanEnd,
+            beforeBlock,
+            beforeLogIndex
+          })
+        : [];
     const scannedRows = scannedEntries.map((entry) =>
       toBankProviderLedgerRow({
         asset: normalizeProviderLedgerAddress(pool.asset, "pool asset"),
@@ -258,28 +288,20 @@ export async function GET(request: Request) {
         poolId
       })
     );
-
-    if (store) {
-      const cachedRows = durableRows;
-      try {
-        if (scannedRows.length > 0) {
-          await store.writeBankProviderLedgerRows(scannedRows);
-        }
-        durableRows = await store.getBankProviderLedger({
-          beforeBlock,
-          beforeLogIndex,
-          chainId,
-          limit: queryLimit,
-          owner,
-          poolId
-        });
-      } catch {
-        store = null;
-        durableRows = cachedRows;
-      }
-    }
-    const rows = store ? durableRows : scannedRows.length > 0 ? scannedRows : durableRows;
+    const rows = shouldScan ? scannedRows : durableRows;
     const page = pageFromRows(rows, limit);
+    if (shouldScan && !page.page.hasMore && scanStart > origin) {
+      page.page.hasMore = true;
+      page.page.nextCursor = { beforeBlock: scanStart, beforeLogIndex: 0 };
+    }
+    const coverage = {
+      fromBlock: shouldScan ? scanStart : null,
+      toBlock: endBlock,
+      complete:
+        shouldScan &&
+        scanStart <= (releaseResult.release.meta?.blockNumber ?? 0) &&
+        !page.page.hasMore
+    };
 
     return NextResponse.json(
       {
@@ -288,11 +310,8 @@ export async function GET(request: Request) {
         generatedAt: Date.now(),
         owner,
         poolId,
-        source: store
-          ? scannedRows.length > 0
-            ? "postgres-backfill"
-            : "postgres"
-          : "server-rpc-window",
+        source: shouldScan ? "server-rpc-window" : "postgres",
+        coverage,
         page: page.page,
         rows: page.rows.map(rowToJson)
       },
@@ -302,8 +321,10 @@ export async function GET(request: Request) {
     const message = error instanceof Error ? error.message : "Failed to query provider ledger.";
     const status =
       message.includes("owner") ||
+      message.includes("bank") ||
       message.includes("poolId") ||
       message.includes("startBlock") ||
+      message.includes("endBlock") ||
       message.includes("beforeBlock") ||
       message.includes("beforeLogIndex")
         ? 400

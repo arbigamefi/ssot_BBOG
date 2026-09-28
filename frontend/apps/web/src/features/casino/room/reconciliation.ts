@@ -1,8 +1,10 @@
 import type { BetRow, GameHubEventRow, SSOTDb } from "@ssot/ssot/indexer";
+import type { PlayerPaymentProof } from "@ssot/bet-index/player-payment";
 
 export type IndexedBetSummary = Pick<BetRow, "betId" | "state" | "lastTxHash">;
 
 export type SettlementProof = {
+  payment?: PlayerPaymentProof;
   txHash?: string;
   payoutGross?: bigint;
   payoutNet?: bigint;
@@ -12,6 +14,7 @@ export type SettlementProof = {
 };
 
 export type RefundProof = {
+  payment?: PlayerPaymentProof;
   txHash?: string;
   refundAmount?: bigint;
 };

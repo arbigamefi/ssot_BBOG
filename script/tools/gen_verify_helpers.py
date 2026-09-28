@@ -7,7 +7,6 @@ Why this exists
 
 This tool regenerates versioned helpers such as:
 - deployments/verify-latest-v16.sh
-- deployments/verify/verify-<chainid>-<block>-v16.sh
 
 The scripts default to:
   https://api.etherscan.io/v2/api?chainid=<CHAIN_ID>
@@ -44,12 +43,9 @@ def _verify_line(addr: str, contract_id: str, ctor_args: str) -> str:
     if not addr.startswith("0x") or len(addr) != 42:
         raise ValueError(f"invalid address: {addr}")
 
-    # NOTE: Foundry's CLI historically used --chain, but some older builds also
-    # accepted --chain-id. The generated helper decides which to use at runtime
-    # via $CHAIN_FLAG.
     base = (
         f"forge verify-contract {addr} {contract_id} "
-        f"$CHAIN_FLAG $CHAIN_ID $PROFILE_FLAG --watch --verifier etherscan "
+        f"--chain $CHAIN_ID --compilation-profile default --watch --verifier etherscan "
         f"--verifier-url \"$VERIFIER_URL\" --etherscan-api-key \"$ETHERSCAN_API_KEY\""
     )
 
@@ -69,16 +65,14 @@ def main() -> int:
 
     data = json.loads(in_path.read_text())
     chain_id = int(_must(data, "chainId"))
-    block_number = int(_must(data, "blockNumber"))
     architecture_version = str(data.get("architectureVersion", ""))
     if architecture_version != "v1.6-house-edge-allocation":
         print(f"error: expected a v1.6 snapshot, got architectureVersion={architecture_version!r}", file=sys.stderr)
         return 2
     release_version = "v16"
-    tag = f"{chain_id}-{block_number}-{release_version}"
 
     out_dir = Path("deployments")
-    (out_dir / "verify").mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     default_verifier_url = f"https://api.etherscan.io/v2/api?chainid={chain_id}"
 
@@ -92,11 +86,7 @@ def main() -> int:
         "if [ -z \"$ETHERSCAN_API_KEY\" ]; then echo \"set ETHERSCAN_API_KEY (or ETHERSCAN_V2_API_KEY)\"; exit 1; fi\n"
         f"CHAIN_ID={chain_id}\n"
         f"VERIFIER_URL=\"${{VERIFIER_URL:-{default_verifier_url}}}\"\n\n"
-        "# Foundry uses --chain (docs) but some older builds accepted --chain-id.\n"
-        "CHAIN_FLAG=\"--chain\"\n"
-        "if forge verify-contract --help 2>/dev/null | grep -q -- \"--chain-id\"; then CHAIN_FLAG=\"--chain-id\"; fi\n\n"
-        "PROFILE_FLAG=\"\"\n"
-        "if forge verify-contract --help 2>/dev/null | grep -q -- \"--compilation-profile\"; then PROFILE_FLAG=\"--compilation-profile default\"; fi\n\n"
+
     )
 
     contracts: list[tuple[str, str, str]] = [
@@ -111,8 +101,7 @@ def main() -> int:
         ("sportsHub", "src/core/SportsHub.sol:SportsHub", "ctorArgs_sportsHub"),
     ]
 
-    # Banks: per-pool. V13/V14 snapshots store bank addresses under
-    # poolBank_<i> because banks are pool-owned deployment artifacts.
+    # Each pool owns a Bank deployment.
     n_banks = int(data.get("numPools", 0))
     for i in range(n_banks):
         contracts.append((f"poolBank_{i}", "src/core/Bank.sol:Bank", f"ctorArgs_bank_{i}"))
@@ -133,10 +122,7 @@ def main() -> int:
 
     script = header
     for addr_key, contract_id, ctor_key in contracts:
-        if addr_key not in data:
-            # keep going so partial snapshots still work
-            continue
-        addr = data[addr_key]
+        addr = _must(data, addr_key)
         if _is_zero_addr(addr):
             continue
         ctor_args = data.get(ctor_key, "0x")
@@ -144,20 +130,9 @@ def main() -> int:
 
     # Outputs
     out_latest = out_dir / f"verify-latest-{release_version}.sh"
-    out_convention = out_dir / "verify" / f"verify-{tag}.sh"
-
-    for p in (out_latest, out_convention):
-        p.write_text(script)
-
-    # Make scripts executable (best-effort)
-    for p in (out_latest, out_convention):
-        try:
-            os.chmod(p, 0o755)
-        except Exception:
-            pass
-
+    out_latest.write_text(script)
+    out_latest.chmod(0o755)
     print(f"Wrote verify helper: {out_latest}")
-    print(f"Wrote verify helper: {out_convention}")
     return 0
 
 

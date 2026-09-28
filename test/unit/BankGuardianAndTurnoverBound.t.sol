@@ -8,7 +8,7 @@ import {IBank} from "../../src/core/interfaces/IBank.sol";
 import {Errors} from "../../src/libs/Errors.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
-/// @dev Covers the two V15 governance-surface changes:
+/// @dev Covers the governance authority and turnover bounds:
 ///      - AGF-08: the dead `settlementRouter` pause allowance becomes a real
 ///        `guardian` role that may pause but never unpause.
 ///      - AGF-07: `minPlayerTurnoverForUnlock` gains an upper bound.

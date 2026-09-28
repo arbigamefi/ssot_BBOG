@@ -12,7 +12,6 @@ Design tokens are a code contract. The source files are:
 - `frontend/packages/ui/src/tokens/arbi-light.css`;
 - `frontend/packages/ui/src/styles/globals.css` (the Tailwind v4 `@theme inline`
   block that maps the CSS variables onto Tailwind utility namespaces);
-- `frontend/packages/ui/src/tokens/VERSION.md`.
 
 This document defines the rules. It does not duplicate every token value.
 
@@ -104,18 +103,7 @@ theme-agnostic and should not branch on `dark:` variants for product styling.
 Light theme can lag behind dark theme during MVP development, but the token
 names must stay compatible.
 
-## 7. Token Versioning
-
-Use `frontend/packages/ui/src/tokens/VERSION.md`.
-
-- Patch: tune a value without changing semantic use.
-- Minor: add a token.
-- Major: rename or remove a token.
-
-Major token changes need a short ADR or roadmap entry because they affect many
-routes.
-
-## 8. Do Not Do
+## 7. Do Not Do
 
 - Do not use `bg-[#...]`, `text-[#...]`, `border-[#...]`, or `shadow-[...]`.
 - Do not reintroduce `visual-system.ts`.
@@ -124,12 +112,11 @@ routes.
 - Do not add `rounded-[...]`, `rounded-2xl`, or `rounded-3xl` in product UI.
 - Do not add third-party decorative background URLs.
 
-## 9. Verification
+## 8. Verification
 
 ```bash
 rg -nE "bg-\\[#|text-\\[#|border-\\[#|shadow-\\[" frontend/apps/web/src frontend/packages/ui/src
 rg -nE "visual-system|--ag-" frontend/apps/web/src frontend/packages/ui/src
 rg -nE "rounded-(2xl|3xl|\\[)" frontend/apps/web/src frontend/packages/ui/src
 rg -nE "\\bdark:" frontend/apps/web/src frontend/packages/ui/src
-test -f frontend/packages/ui/src/tokens/VERSION.md
 ```

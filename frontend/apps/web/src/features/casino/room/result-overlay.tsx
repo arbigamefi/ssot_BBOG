@@ -777,6 +777,14 @@ export function GameRoomResultOverlay({
               {receiptModel.signedNetValue}
             </div>
             <p className="mt-1.5 text-xs leading-5 text-fg-muted">{outcome.detail}</p>
+            <p
+              className="mt-1.5 text-xs leading-5 text-fg-muted"
+              data-payment-status={receiptModel.payment.status}
+            >
+              {t(
+                `casino.room.payment.${receiptModel.payment.status === "none" ? "noPayment" : receiptModel.payment.status}`
+              )}
+            </p>
           </div>
         </div>
 

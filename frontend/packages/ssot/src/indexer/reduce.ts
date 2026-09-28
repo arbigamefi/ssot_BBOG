@@ -22,7 +22,7 @@ export function applyGameHubEventToBet(
   prev: BetRow | undefined,
   ev: GameHubEventNormalized
 ): BetRow {
-  const betIdRaw = ev.args.positionId ?? ev.args.betId ?? ev.args.id;
+  const betIdRaw = ev.args.positionId;
   const betId = toBigintString(betIdRaw);
   const id = `${ev.chainId}:${betId}`;
 
@@ -31,6 +31,7 @@ export function applyGameHubEventToBet(
     : {
         id,
         chainId: ev.chainId,
+        gameHub: ev.gameHub,
         betId,
         state: "placed",
         updatedBlock: ev.blockNumber,
@@ -44,7 +45,6 @@ export function applyGameHubEventToBet(
     if (ev.args.gameId) next.gameId = ev.args.gameId as Hex;
     if (ev.args.asset) next.asset = ev.args.asset as Address;
     if (ev.args.player) next.player = ev.args.player as Address;
-    if (ev.args.user && !next.player) next.player = ev.args.user as Address;
     if (ev.args.pricingAffiliate) next.pricingAffiliate = ev.args.pricingAffiliate as Address;
     if (ev.args.stake != null) next.stake = toBigintString(ev.args.stake);
     if (ev.args.requestId != null) next.requestId = toBigintString(ev.args.requestId);
@@ -101,19 +101,9 @@ export function reduceState(
   return prev;
 }
 
-function toBigintString(v: unknown): string {
-  if (typeof v === "bigint") return v.toString();
-  if (typeof v === "number") return BigInt(v).toString();
-  if (typeof v === "string") {
-    if (v.startsWith("0x")) {
-      try {
-        return BigInt(v).toString();
-      } catch {
-        // fallthrough
-      }
-    }
-    if (/^\d+$/.test(v)) return v;
+function toBigintString(value: unknown): string {
+  if (typeof value !== "bigint" && typeof value !== "number" && typeof value !== "string") {
+    throw new Error("Expected an integer event value");
   }
-  // fallback to stringification for unknown shapes
-  return String(v ?? "0");
+  return BigInt(value).toString();
 }

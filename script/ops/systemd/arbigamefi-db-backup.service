@@ -5,4 +5,4 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/opt/arbigamefi-v15/ops/bet-index-backup.sh
+ExecStart=/opt/arbigamefi/ops/bet-index-backup.sh

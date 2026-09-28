@@ -11,7 +11,50 @@ export type KeeperHealthStatus = "starting" | "running" | "degraded" | "stopped"
  * Where a failure came from. Each one clears on the next success of the same path, so one
  * transient RPC error no longer holds the keeper degraded until the next bet settles.
  */
-export type KeeperFailureSource = "scan" | "ledger" | "finalize";
+export type KeeperFailureSource =
+  | "scan"
+  | "ledger"
+  | "finalize"
+  | "recovery"
+  | "redemption"
+  | "pocket-recovery"
+  | "pocket";
+
+export type RedemptionHealth = {
+  bank: Address;
+  batchId?: string;
+  cutoff?: string;
+  activationDue?: boolean;
+  openHolds?: string;
+  paused?: boolean;
+  error?: string;
+};
+
+export type PocketHealth = {
+  bank: Address;
+  epochId: string;
+  openedAt?: string;
+  remainingHolds?: string;
+  remainingReserve?: string;
+  ageSeconds?: number;
+  error?: string;
+};
+
+export type PocketDiscoveryHealth = {
+  bank: Address;
+  scannedThrough?: string;
+  caughtUp: boolean;
+  error?: string;
+};
+
+/** Player payables awaiting a keeper claim. Informational: a refused claim is an owed debt, not a fault. */
+export type PayableHealth = {
+  bank: Address;
+  scannedThrough?: string;
+  caughtUp: boolean;
+  pending: number;
+  error?: string;
+};
 
 /** A running keeper whose event scan has not advanced for this long is reported degraded. */
 export function scanStaleAfterMs(pollIntervalMs: number) {
@@ -52,6 +95,12 @@ export type KeeperHealthSnapshot = {
     retryable: boolean;
   };
   lastError?: string;
+  redemptions?: RedemptionHealth[];
+  lastRedemptionScanAt?: string;
+  pockets?: PocketHealth[];
+  pocketDiscovery?: PocketDiscoveryHealth[];
+  payables?: PayableHealth[];
+  casinoRecoveryScannedThrough?: string;
   degradedBy?: Array<KeeperFailureSource | "stalled">;
   rpc?: {
     errorsLastMinute: Record<string, number>;
@@ -97,6 +146,9 @@ export class KeeperHealthReporter {
     this.scanStaleAfterMs = scanStaleAfterMs(config.pollIntervalMs);
     const startedAt = this.isoNow();
     this.scanProgressMs = Date.parse(startedAt);
+    this.lifecycleProgressMs = Date.parse(startedAt);
+    this.lifecycleEnabled =
+      config.casinoRecoveryStartBlock != null || config.bankProviderLedgerPools.length > 0;
     this.snapshotData = {
       schemaVersion: 1,
       status: "starting",
@@ -119,6 +171,8 @@ export class KeeperHealthReporter {
   private readonly failures = new Map<KeeperFailureSource, string>();
   private phase: "starting" | "running" | "stopped" = "starting";
   private scanProgressMs: number;
+  private lifecycleProgressMs: number;
+  private readonly lifecycleEnabled: boolean;
 
   snapshot() {
     return { ...this.snapshotData };
@@ -180,6 +234,59 @@ export class KeeperHealthReporter {
   async recordLedgerScan(queueDepth: number) {
     if (!this.failures.delete("ledger")) return;
     await this.update({ queueDepth });
+  }
+
+  async recordRecoveryScan(blockNumber: bigint, queueDepth: number, caughtUp = true) {
+    if (caughtUp) this.failures.delete("recovery");
+    else
+      this.fail("recovery", `casino lifecycle recovery is incomplete through block ${blockNumber}`);
+    await this.update({ casinoRecoveryScannedThrough: blockNumber.toString(), queueDepth });
+  }
+
+  async recordRedemptions(redemptions: RedemptionHealth[], queueDepth: number) {
+    this.lifecycleProgressMs = this.now().getTime();
+    const errors = redemptions
+      .filter((item) => item.error)
+      .map((item) => `${item.bank}: ${item.error}`);
+    if (errors.length) this.fail("redemption", errors.join("; "));
+    else this.failures.delete("redemption");
+    await this.update({ redemptions, lastRedemptionScanAt: this.isoNow(), queueDepth });
+  }
+
+  /** Receives the complete retained set, including epochs not polled on this pass. */
+  async recordPockets(
+    pockets: PocketHealth[],
+    pocketDiscovery: PocketDiscoveryHealth[],
+    queueDepth: number
+  ) {
+    const incomplete = pocketDiscovery.filter((item) => !item.caughtUp || item.error);
+    if (incomplete.length)
+      this.fail(
+        "pocket-recovery",
+        incomplete
+          .map(
+            (item) =>
+              `${item.bank}: ${item.error ?? `pocket discovery is incomplete through block ${item.scannedThrough ?? "unknown"}`}`
+          )
+          .join("; ")
+      );
+    else this.failures.delete("pocket-recovery");
+    const errors = pockets.flatMap((item) => {
+      const messages: string[] = [];
+      if (item.error) messages.push(`${item.bank} epoch ${item.epochId}: ${item.error}`);
+      if (item.remainingHolds !== "0" && (item.ageSeconds ?? 0) > 600)
+        messages.push(
+          `${item.bank} epoch ${item.epochId} remains open beyond 10 minutes (opened at ${item.openedAt})`
+        );
+      return messages;
+    });
+    if (errors.length) this.fail("pocket", errors.join("; "));
+    else this.failures.delete("pocket");
+    await this.update({ pockets, pocketDiscovery, queueDepth });
+  }
+
+  async recordPayables(payables: PayableHealth[], queueDepth: number) {
+    await this.update({ payables, queueDepth });
   }
 
   async recordFinalizeOutcome(
@@ -247,10 +354,15 @@ export class KeeperHealthReporter {
 
   private async update(patch: Partial<KeeperHealthSnapshot>) {
     const at = this.now();
-    const stalled =
+    const eventScanStalled =
       this.phase === "running" &&
       this.scanStaleAfterMs > 0 &&
       at.getTime() - this.scanProgressMs > this.scanStaleAfterMs;
+    const lifecycleStalled =
+      this.phase === "running" &&
+      this.lifecycleEnabled &&
+      at.getTime() - this.lifecycleProgressMs > 300_000;
+    const stalled = eventScanStalled || lifecycleStalled;
     const degradedBy: Array<KeeperFailureSource | "stalled"> = [...this.failures.keys()];
     if (stalled) degradedBy.push("stalled");
     const messages = [...this.failures.values()];
@@ -262,7 +374,9 @@ export class KeeperHealthReporter {
       lastError:
         messages[messages.length - 1] ??
         (stalled
-          ? `event scan has not advanced since ${new Date(this.scanProgressMs).toISOString()}`
+          ? lifecycleStalled
+            ? `casino lifecycle reconciliation has not completed since ${new Date(this.lifecycleProgressMs).toISOString()}`
+            : `event scan has not advanced since ${new Date(this.scanProgressMs).toISOString()}`
           : undefined),
       degradedBy: degradedBy.length > 0 ? degradedBy : undefined,
       updatedAt: at.toISOString()

@@ -80,34 +80,6 @@ function createMockPublicClient(opts: { blockNumber?: bigint; logs?: any[] }) {
   } as any;
 }
 
-// ——— Mock ABI resolver ———
-vi.mock("../abis/release/resolver", () => ({
-  getReleaseAbis: () => ({
-    GameHubAbi: [
-      {
-        type: "event",
-        name: "BetPlaced",
-        inputs: [{ name: "betId", type: "uint256", indexed: true }]
-      },
-      {
-        type: "event",
-        name: "BetRandomReady",
-        inputs: [{ name: "betId", type: "uint256", indexed: true }]
-      },
-      {
-        type: "event",
-        name: "BetFinalized",
-        inputs: [{ name: "betId", type: "uint256", indexed: true }]
-      },
-      {
-        type: "event",
-        name: "BetRefunded",
-        inputs: [{ name: "betId", type: "uint256", indexed: true }]
-      }
-    ]
-  })
-}));
-
 let db: SSOTDb;
 let indexer: GameHubIndexer;
 
@@ -279,7 +251,7 @@ describe("gameHubIndexer.syncOnce()", () => {
         blockNumber: 150n,
         logIndex: 0,
         transactionHash: "0xabc1" as Hex,
-        args: { betId: 42n, gameId: "0x01" as Hex, player: "0xdeadbeef" as Address }
+        args: { positionId: 42n, gameId: "0x01" as Hex, player: "0xdeadbeef" as Address }
       }
     ];
 
@@ -375,7 +347,7 @@ describe("gameHubIndexer.syncOnce()", () => {
         blockNumber: 150n,
         logIndex: 0,
         transactionHash: "0xabc1" as Hex,
-        args: { betId: 42n }
+        args: { positionId: 42n }
       }
     ];
 

@@ -1,6 +1,5 @@
 import { decodeAbiParameters, encodeAbiParameters, type Hex } from "viem";
 
-const RouletteRawAbi = [{ name: "mask", type: "uint40" }] as const;
 const RouletteTypedAbi = [
   { name: "kind", type: "uint8" },
   { name: "payload", type: "uint40" }
@@ -60,12 +59,7 @@ function encodeTyped(kind: number, payload: bigint): Hex {
   return encodeAbiParameters(RouletteTypedAbi, [kind, payload as unknown as number]);
 }
 
-export function encodeRouletteParams(input: RouletteParamsInput | bigint): Hex {
-  if (typeof input === "bigint") {
-    assertUint40(input, "mask");
-    return encodeTyped(ROULETTE_KIND.bitmask, input);
-  }
-
+export function encodeRouletteParams(input: RouletteParamsInput): Hex {
   switch (input.kind) {
     case "bitmask":
       assertUint40(input.mask, "mask");
@@ -129,14 +123,6 @@ export function encodeRouletteParams(input: RouletteParamsInput | bigint): Hex {
 }
 
 export function decodeRouletteParams(encoded: Hex): RouletteParamsInput {
-  const byteLength = (encoded.length - 2) / 2;
-  if (byteLength === 32) {
-    // Decode legacy raw-bitmask fixtures and historical payloads, but new
-    // roulette params are always emitted as typed (kind, payload) tuples.
-    const [maskRaw] = decodeAbiParameters(RouletteRawAbi, encoded) as [bigint | number];
-    return { kind: "bitmask", mask: BigInt(maskRaw) };
-  }
-
   const [kindRaw, payloadRaw] = decodeAbiParameters(RouletteTypedAbi, encoded) as [
     number | bigint,
     number | bigint

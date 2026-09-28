@@ -19,7 +19,13 @@ describe("fetchBankProviderLedgerRows", () => {
       {
         address: BANK.toLowerCase(),
         eventName: "Deposit",
-        args: { assets: 2_000_000n, owner: OWNER, shares: 1_000_000n },
+        args: {
+          sender: OWNER,
+          receiver: OWNER,
+          assets: 2_000_000n,
+          owner: OWNER,
+          shares: 1_000_000n
+        },
         blockNumber: 100n,
         logIndex: 3,
         transactionHash: "0xaaa" as Hex
@@ -27,7 +33,7 @@ describe("fetchBankProviderLedgerRows", () => {
       {
         address: OTHER_BANK.toLowerCase(),
         eventName: "Deposit",
-        args: { assets: 900_000n, owner: OWNER, shares: 900_000n },
+        args: { sender: OWNER, receiver: OWNER, assets: 900_000n, owner: OWNER, shares: 900_000n },
         blockNumber: 100n,
         logIndex: 5,
         transactionHash: "0xccc" as Hex
@@ -35,7 +41,13 @@ describe("fetchBankProviderLedgerRows", () => {
       {
         address: BANK.toLowerCase(),
         eventName: "Withdraw",
-        args: { assets: 1_500_000n, owner: OWNER, shares: 500_000n },
+        args: {
+          sender: OWNER,
+          receiver: OWNER,
+          assets: 1_500_000n,
+          owner: OWNER,
+          shares: 500_000n
+        },
         blockNumber: 101n,
         logIndex: 4,
         transactionHash: "0xbbb" as Hex
@@ -58,7 +70,8 @@ describe("fetchBankProviderLedgerRows", () => {
     expect(query).toMatchObject({ address: [BANK, OTHER_BANK], fromBlock: 100n, toBlock: 101n });
     expect(query.events.map((event: { name: string }) => event.name)).toEqual([
       "Deposit",
-      "Withdraw"
+      "Withdraw",
+      "RecoveryClaimed"
     ]);
     // One block lookup per distinct block, shared across pools.
     expect(getBlock).toHaveBeenCalledTimes(2);
@@ -110,5 +123,63 @@ describe("fetchBankProviderLedgerRows", () => {
 
     expect(result).toEqual([]);
     expect(getLogs).not.toHaveBeenCalled();
+  });
+  it("keeps beneficiary, operator and receiver distinct, excludes donation from cash income and deduplicates Bank aliases", async () => {
+    const log = (eventName: string, logIndex: number, args: Record<string, unknown>) => ({
+      address: BANK,
+      eventName,
+      args,
+      blockNumber: 100n,
+      logIndex,
+      transactionHash: "0xaaa"
+    });
+    const getLogs = vi.fn().mockResolvedValue([
+      log("RecoveryClaimed", 1, {
+        epochId: 1n,
+        controller: OWNER,
+        receiver: OTHER_ASSET,
+        caller: OTHER_BANK,
+        assets: 8n
+      }),
+      log("RecoveryClaimed", 2, {
+        epochId: 1n,
+        controller: OWNER,
+        receiver: BANK,
+        caller: OWNER,
+        assets: 2n
+      }),
+      log("RecoverySynced", 3, { epochId: 1n, controller: OWNER, shares: 5n, assets: 10n })
+    ]);
+    const result = await fetchBankProviderLedgerRows({
+      chainId: 84532,
+      pools: [pool, { ...pool, poolId: 9 }],
+      publicClient: {
+        getLogs,
+        getBlock: vi.fn().mockResolvedValue({ timestamp: 100n })
+      } as unknown as PublicClient,
+      range: { fromBlock: 100n, toBlock: 100n }
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]?.rows).toMatchObject([
+      {
+        action: "donation",
+        owner: OWNER,
+        receiver: BANK,
+        caller: OWNER,
+        epochId: "1",
+        assets: "2",
+        shares: "0"
+      },
+      {
+        action: "recovery",
+        owner: OWNER,
+        receiver: OTHER_ASSET,
+        caller: OTHER_BANK,
+        epochId: "1",
+        assets: "8",
+        shares: "0"
+      }
+    ]);
+    expect(result[0]?.rows.every((row) => row.sharePrice === undefined)).toBe(true);
   });
 });

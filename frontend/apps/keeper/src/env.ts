@@ -132,6 +132,17 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
   const sportsTicketScanStartBlock =
     parseOptionalBlock(env.KEEPER_SPORTS_TICKET_SCAN_START_BLOCK) ??
     BigInt(release.meta?.blockNumber ?? 0);
+  const casinoRecoveryStartBlock =
+    parseOptionalBlock(env.KEEPER_CASINO_RECOVERY_START_BLOCK) ??
+    BigInt(release.meta?.blockNumber ?? 0);
+  if (
+    casinoRecoveryStartBlock < 0n ||
+    casinoRecoveryStartBlock > BigInt(release.meta?.blockNumber ?? 0)
+  ) {
+    throw new Error(
+      "KEEPER_CASINO_RECOVERY_START_BLOCK must include the release block; advancing it can omit PendingVRF positions"
+    );
+  }
   if (sportsEnabled) {
     if (
       !parseBool(env.BET_INDEX_WRITE_ENABLED) ||
@@ -190,6 +201,8 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     startupScanEnabled: parseBoolWithDefault(env.KEEPER_STARTUP_SCAN_ENABLED, true),
     startBlock:
       parseOptionalBlock(env.KEEPER_START_BLOCK) ?? BigInt(release.meta?.blockNumber ?? 0),
+    // Full lifecycle recovery starts at the release origin, including its first block.
+    casinoRecoveryStartBlock,
     healthPath: env.KEEPER_HEALTH_PATH?.trim() || undefined,
     betIndexDatabaseUrl: env.BET_INDEX_DATABASE_URL?.trim() || undefined,
     betIndexSsl: parseBool(env.BET_INDEX_SSL),
@@ -214,11 +227,6 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
       env.KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET,
       200,
       "KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET"
-    ),
-    sportsTicketEnumerationMax: parsePositiveInteger(
-      env.KEEPER_SPORTS_TICKET_ENUMERATION_MAX,
-      500,
-      "KEEPER_SPORTS_TICKET_ENUMERATION_MAX"
     ),
     sportsTicketScanChunkBlocks: parseBlockCount(
       env.KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS,

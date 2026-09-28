@@ -18,7 +18,6 @@ describe("isLpDepositEnabledForChain", () => {
     expect(isLpDepositEnabledForChain(BASE_MAINNET)).toBe(true);
   });
 
-  // Under v1.5 the house edge is not an LP share. Opening mainnet bets is a
   // separate decision and must not quietly reopen deposits with it.
   it("does not reopen deposits when mainnet betting is opened", () => {
     process.env.NEXT_PUBLIC_CASINO_RISK_IN_ENABLED = "true";

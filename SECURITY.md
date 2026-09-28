@@ -5,7 +5,6 @@
 Please report security issues **privately**.
 
 - Email: security@bankroll.studio
-- PGP key: see [`keys/security.pub`](keys/security.pub) (when available)
 - Include: impact, reproduction steps, affected commit hash, and any suggested patch.
 
 We aim to respond within 72 hours.
@@ -30,7 +29,7 @@ Out of scope:
 3. Provide fix timeline
 4. Coordinate public disclosure after patch release
 
-## Security objectives (v1.0)
+## Security objectives
 
 - Solvency: `NAV >= R` always
 - Liveness: accepted bets can settle/refund without admin cooperation

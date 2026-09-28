@@ -1,70 +1,17 @@
-import { describe, expect, it } from "vitest";
-import type { SSOTRelease } from "@ssot/ssot/release";
-import { render, screen } from "@testing-library/react";
+vi.mock("@ssot/ssot/release", async () => {
+  const actual = await vi.importActual<typeof import("@ssot/ssot/release")>("@ssot/ssot/release");
+  const { createReleaseModuleMock } = await import("../../test/current-release");
+  return { ...actual, ...createReleaseModuleMock() };
+});
+
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createCurrentRelease } from "../../test/current-release";
+import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 
 import { ReleaseProvider, resolveSportsbookAccess, useRelease } from "./ReleaseProvider";
 
-const BASE_RELEASE: SSOTRelease = {
-  chainId: 84532,
-  name: "Base Sepolia",
-  releaseDigest: "0xdeadbeefcafefeed",
-  isPlaceholder: false,
-  contracts: {
-    gameHub: "0x1111111111111111111111111111111111111111",
-    settlementRouter: "0x2222222222222222222222222222222222222222",
-    poolRegistry: "0x3333333333333333333333333333333333333333",
-    sportsHub: "0x6666666666666666666666666666666666666666",
-    sportsRiskEngine: "0x7777777777777777777777777777777777777777",
-    vrfHub: "0x8888888888888888888888888888888888888888",
-    refRegistry: "0x9999999999999999999999999999999999999999",
-    refEngine: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    adapter: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  },
-  assets: [
-    {
-      symbol: "USDC",
-      decimals: 6,
-      address: "0x4444444444444444444444444444444444444444",
-      bank: "0x5555555555555555555555555555555555555555"
-    }
-  ],
-  games: {},
-  gamesMeta: [
-    {
-      gameId: "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914a8b",
-      slug: "dice",
-      label: "Dice",
-      module: "0xcccccccccccccccccccccccccccccccccccccccc"
-    }
-  ],
-  sports: {
-    enabled: false,
-    riskEngine: "0x7777777777777777777777777777777777777777",
-    sportsHub: "0x6666666666666666666666666666666666666666",
-    oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    resultReporterSetHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    resultReporterThreshold: "1",
-    maxStake: "1000000",
-    maxPayout: "2000000",
-    maxMarketReserved: "3000000",
-    maxOutcomeReserved: "4000000",
-    maxEventReserved: "5000000"
-  },
-  pools: [
-    {
-      poolId: 1,
-      domainId: 1,
-      domain: "Casino",
-      active: true,
-      asset: "0x4444444444444444444444444444444444444444",
-      bank: "0x5555555555555555555555555555555555555555",
-      symbol: "USDC",
-      decimals: 6,
-      sportsRisk: null
-    }
-  ]
-};
+const BASE_RELEASE = createCurrentRelease(84532);
 
 describe("resolveSportsbookAccess", () => {
   it("keeps sportsbook entry disabled by default", () => {
@@ -154,6 +101,21 @@ function ReleaseProbe() {
 }
 
 describe("ReleaseProvider", () => {
+  afterEach(cleanup);
+
+  it("keeps an unregistered chain read-only without claiming a deployment exists", () => {
+    render(
+      <ReleaseProvider chainId={99999}>
+        <ReleaseProbe />
+      </ReleaseProvider>
+    );
+    expect(screen.getByTestId("read-only").textContent).toBe("true");
+    expect(screen.getByTestId("release-read-only").textContent).toBe("true");
+    expect(screen.getByTestId("reason").textContent).toContain(
+      "No embedded release for chainId=99999"
+    );
+  });
+
   it("keeps reads available while blocking writes on wallet chain mismatch", () => {
     render(
       <ReleaseProvider chainId={84532} selectedChainName="Base Sepolia" walletChainId={8453}>

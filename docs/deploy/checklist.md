@@ -11,4 +11,3 @@ Use the [versioned workflow](v16-release.md) and chain-specific public parameter
 - Import verified artifacts into the frontend; validate both chain manifests, ABI consistency and exact golden vectors.
 - Build immutable images in CI and follow the [Docker runbook](../../frontend/deploy/docker/README.md). Verify health, persistent cursors, database receipts and public UI after deployment.
 - Confirm LP amount, betting budget and maximum loss separately before business acceptance. A successful deployment or LP deposit is not completed betting acceptance.
-- Record outstanding historical chain obligations and operational incidents in the [implementation status](v15/implementation-status.zh-CN.md).
