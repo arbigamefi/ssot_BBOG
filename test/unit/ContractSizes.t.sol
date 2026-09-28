@@ -5,9 +5,10 @@ import "forge-std/Test.sol";
 
 /// @notice Every contract `script/DeployV16.s.sol` deploys must fit the EIP-170 runtime limit. Forge's test EVM
 ///         does not enforce it, so a contract that grows past the limit passes every other test and fails only
-///         when it is deployed. Runtime sizes are checked against the current build.
+///         when it is deployed. Each must also keep a 1 KB margin, so an audit fix cannot push it over the limit.
 contract ContractSizesTest is Test {
     uint256 internal constant EIP170_RUNTIME_LIMIT = 24_576;
+    uint256 internal constant SIZE_MARGIN = 1_024;
 
     function test_deployedContractsFitEip170() external view {
         string[18] memory artifacts = [
@@ -31,7 +32,7 @@ contract ContractSizesTest is Test {
             "BaccaratModule.sol:BaccaratModule"
         ];
         for (uint256 i = 0; i < artifacts.length; ++i) {
-            assertLe(vm.getDeployedCode(artifacts[i]).length, EIP170_RUNTIME_LIMIT, artifacts[i]);
+            assertLe(vm.getDeployedCode(artifacts[i]).length, EIP170_RUNTIME_LIMIT - SIZE_MARGIN, artifacts[i]);
         }
     }
 }

@@ -5,7 +5,9 @@ libs = ["lib"]
 test = "test"
 solc_version = "0.8.24"
 optimizer = true
-optimizer_runs = 2000
+# 500 runs leave every deployed contract at least 1 KB under EIP-170 (test/unit/ContractSizes.t.sol) and cost
+# under 1% more runtime gas than 2,000 runs on the casino path.
+optimizer_runs = 500
 via_ir = true
 evm_version = "cancun"
 

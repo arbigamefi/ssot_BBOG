@@ -126,7 +126,7 @@ Solidity authorization, token behavior, gas limits, event indexing, ERC conforma
 Implement in this order:
 
 1. Freeze the arithmetic, residual rules and ownership ledger with independent model counterexamples.
-2. Replace Bank/interface accounting and adapt existing security assertions; add permanent-old-position, second/third exit, mixed-controller, same-block transfer, complete exit/new-deposit, all-zero liquidity, partial recovery, and failed-claim/retry tests. Check runtime size and historical settlement gas with the canonical compiler settings. At 2,000 optimizer runs the Bank runtime is 24,318 bytes, leaving 258 bytes below EIP-170; recheck after every source change.
+2. Replace Bank/interface accounting and adapt existing security assertions; add permanent-old-position, second/third exit, mixed-controller, same-block transfer, complete exit/new-deposit, all-zero liquidity, partial recovery, and failed-claim/retry tests. Check runtime size and historical settlement gas with the canonical compiler settings. At 500 optimizer runs the Bank runtime is 23,118 bytes, and every deployed contract must stay at least 1 KB under EIP-170 (`test/unit/ContractSizes.t.sol`).
 3. Generate the single ABI set and update SDK, cash ledger/indexer, keeper and Earn together. Exercise real local Bank integration with old pockets still open and include replay/reorg and pagination.
 4. Run unit, invariant, mutation and browser gates for the new source identity, then freeze the source/ABI set for external audit and fresh network acceptance.
 
