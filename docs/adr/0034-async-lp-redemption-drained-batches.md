@@ -41,7 +41,7 @@ Exposure on 2026-09-28: the mainnet v1.5 USDC Bank held 6.02 USDC, with every sh
 - `cancelRedeemRequest(controller)` may be called only by that controller or its current operator. It returns all that controller's shares in the batch whose cutoff has not passed to the controller itself. ERC-7540 does not define cancellation; this is our extension. No per-original-owner cancellation ledger is needed.
 - Requested shares remain in `totalSupply` and keep bearing the pool's results until their batch is priced.
 - `redeem(shares, receiver, controller)` and `withdraw(assets, receiver, controller)` only claim priced amounts. `previewRedeem` and `previewWithdraw` revert, as ERC-7540 requires for asynchronous redemption.
-- `setOperator(operator, approved)` follows ERC-7540: an operator can request, cancel and claim for the controller, and may send what it claims to any receiver. The site therefore never asks users to approve a protocol-run operator, and keepers hold no operator approvals; users claim for themselves. The Bank never pushes assets without a claim.
+- `setOperator(operator, approved)` follows ERC-7540: an operator can request, cancel and claim for the controller, and may send what it claims to any receiver. As an operating rule, the site never asks users to approve a protocol-run operator and keepers are never operators; users claim for themselves. Users may still approve any operator they choose, which the protocol cannot prevent. The Bank never pushes assets without a claim.
 - Claim authorization is checked against the controller and its current operators, not against the former owner's ERC-20 allowance. Only an authorized claimant chooses the receiver. Reject zero controller/receiver addresses and zero-share requests.
 - Escrowed shares are protected from every other outflow: `rescueToken` rejects both the underlying asset and the Bank's own share token (`address(this)`). A direct share transfer to the Bank creates no redemption request or claim; batch burns and cancellations use only the recorded escrow amounts.
 
@@ -67,15 +67,13 @@ The order of partial claims therefore cannot change what a controller receives i
 - A batch opens with its first request and takes the first boundary strictly after that request as its cutoff; a request made exactly on a boundary joins the batch after it. If every request is cancelled before that cutoff, the empty batch is retired immediately and frees its slot; it neither blocks betting nor needs pricing. No allocation divides by zero batch shares. A later request opens a batch at the next fixed boundary as usual. Without pending requests there is no batch, and betting is never stopped.
 - **The cutoff takes effect by time, not by a call.** `holdBet` itself rejects new positions while any unpriced batch has reached its cutoff. Requests and cancellations are split by the same timestamp: at or after the cutoff, a request joins the next batch and the draining batch can no longer be cancelled.
 - The Bank holds at most two unpriced batches: the one draining and the next. If the next batch also reaches its cutoff while the first is still draining, a request that would open a third batch reverts. No cutoff is ever extended.
-- Each hold records the pricing epoch in which it opened, the number of batches priced before it, and the Bank keeps each epoch's open-hold count and reserved total. Every hold ends exactly once, through `settleBet` or `refundBet`. This replaces the earlier derived `openHolds = totalBetsHeld − totalBetsSettled − totalBetsRefunded`: a global count cannot tell an old stuck position from a new one.
-- `settleBatch()` can be called by anyone, except while the Bank is paused, and prices batches in order. It requires that the cutoff has passed, the batch is not yet priced, and either that no hold of the current epoch is open or that `cutoff + MAX_DRAIN` has passed. `MAX_DRAIN` is a release constant, proposed 2 days: longer than the one-day maximum refund timeout, so a healthy drain always finishes first. `settleBatch()` then:
-  - snapshots `N = totalAssets() − R_open`, where `R_open` is the reserve of every hold still open, `S = totalSupply` and `Q = batchShares`, with `0 < Q <= S`, and computes `A_b = min(_convertToAssets(Q, Floor), floor(Q * N / S))` using `Math.mulDiv`;
+- `settleBatch()` can be called by anyone, except while the Bank is paused, and prices batches in order. It requires that the cutoff has passed, the batch is not yet priced, and `openHolds == 0`, where `openHolds = totalBetsHeld − totalBetsSettled − totalBetsRefunded`. Every hold ends exactly once, through `settleBet` or `refundBet`, so no new counter is needed; `totalReserved == 0` is not used as the signal. `settleBatch()` then:
+  - snapshots `N = totalAssets()`, `S = totalSupply` and `Q = batchShares`, with `0 < Q <= S`, and computes `A_b = min(_convertToAssets(Q, Floor), floor(Q * N / S))` using `Math.mulDiv`;
   - burns those shares and moves the assets into `exitPayable`;
-  - moves to the next epoch;
   - records the batch as priced. Betting resumes only when no unpriced batch has reached its cutoff. If the next batch has already reached its cutoff, it can be priced at once, because no position was opened after the first cutoff.
-- Deposits stay open while a batch drains, but revert while a hold from an earlier epoch is still open: new LPs would otherwise buy at book value into a pool whose stuck positions exit pricing already treats at their worst case.
+- Deposits stay open while a batch drains.
 
-**Stuck positions.** In a normal drain `R_open` is zero at pricing. A hold still open when a batch is priced, whether stuck by a defect or still running at `cutoff + MAX_DRAIN`, is valued at its full reserve. Settlement consumes at most the reserve (the whitepaper's solvency bound, given reserve ≥ stake), so this is the worst case for LPs: exiting shares never escape the position's possible payout, and the remaining LPs keep its stake and its outcome. The position itself stays open and settles normally once it can; no player right changes. Because later batches wait only for holds of their own epoch, a stuck position delays at most one pricing instead of freezing exits and betting for good. Under synchronous exits the same defect only stranded one reserve; without this rule, batching would turn it into a pool-wide freeze.
+**A position that cannot settle.** Under strict draining, a position that never reaches a terminal state keeps its batch unpriced, so that pool's exits and betting stop until it settles. Synchronous exits only stranded one reserve. Any bounded exit around such a position has to decide who bears its remaining range of outcomes: exiting LPs, staying LPs or both, and whether exiters keep a claim on what it finally releases. That changes LP economic rights and is a separate decision (see Open decisions). Until it is made, such a position is an incident for operations, and admission (section 7) is what keeps it from happening.
 
 **Real-equity ceiling.** The virtual asset offset is not cash. If `N < S`, converting all real shares with the unbounded virtual formula can exceed `N`; the existing optional-outflow check used to reject that payment. For example, with six decimals, `S = 10e6`, `N = 5e6` and `V = 1e6`, the virtual quote is `5_454_545`, although only `5_000_000` asset units belong to LPs. The proportional ceiling above preserves both backing and the remaining LPs' proportionate real equity. Capping only at the whole pool's NAV would allow an early batch to consume the remaining LPs' share of a severely depleted pool. When `N >= S`, the original virtual quote is unchanged; when `N == 0`, the batch prices at zero and its shares can still be burned and cleared. This ceiling is a solvency rule, independent of the withdrawal buffer. All pricing inputs, the burn and the new liability are one atomic operation.
 
@@ -115,7 +113,7 @@ Admission is enforced with the existing PoolRegistry Hub/pool allowlist and depl
 
 ### 8. Operating targets, not guarantees
 
-- A batch should drain within one VRF round, about a minute today. It can be priced by `cutoff + MAX_DRAIN` at the latest, whether or not every position has ended, provided someone calls `settleBatch` and the chain is live. Each position's own settlement still depends on section 5 and on its finalization path.
+- A batch should drain within one VRF round, about a minute today. There is no proven upper bound: the bound depends on section 5 and on every `RandomReady` bet being finalizable.
 - Keepers discover the Bank's batches, finalize `RandomReady` bets, submit eligible `PendingVRF` refunds, and then call `settleBatch` in order. They reconcile missed events and restarts from on-chain state, tolerate another caller winning a race, and alert when a drain runs longer than 10 minutes. A healthy finalizer that simply skips `PendingVRF` does not satisfy this requirement. Drain age is measured from the chain cutoff and survives a keeper restart; alert-delivery state advances only after successful delivery, using the existing health/notification path.
 - Players see betting on the pool pause while it drains. LPs see exits priced within one `batchPeriod` plus the drain.
 
@@ -138,8 +136,7 @@ These become tests.
 13. The Bank's share balance covers every pending escrowed share. Neither rescue nor another controller's allowance/operator can remove them. Cancellation returns shares to the request controller, and claims never burn shares twice.
 14. Cash covers PF, XP, both new payables and remaining reserves. A failed transfer creates exactly one payable without moving assets; a failed claim preserves it; successful external claims do not change NAV or count the payout again. An LP claiming to the Bank itself explicitly donates the amount back to NAV.
 15. `maxWithdraw`, `maxRedeem`, pending/claimable views, SDK balances and events agree on wallet, escrowed, priced and paid amounts. Keeper restart and missed-event recovery reach settlement or eligible refund, then batch pricing, without relying on a player to return.
-16. A batch can be priced once `cutoff + MAX_DRAIN` has passed. Holds still open then, and older holds at any later pricing, are valued at their full reserve against exiting shares, so the remaining LPs keep at least their proportional equity. A stuck hold delays at most one pricing, and deposits revert while a hold from an earlier epoch is open.
-17. No keeper or protocol address holds an operator approval, and no path transfers assets to a controller or player except through a claim.
+16. LP exit assets reach a controller's receiver only through that controller's (or its operator's) claim. Players are still paid directly at settlement, and only a failed payout transfer becomes a claimable payable.
 
 ## Alternatives considered
 
@@ -160,6 +157,9 @@ These become tests.
 ## Open parameters
 
 - `MIN_BATCH_PERIOD`, `MAX_BATCH_PERIOD` and the initial `batchPeriod`.
-- `MAX_DRAIN` (proposed 2 days).
 - The drain alert threshold.
 - Whether deposits should pause when a pool's in-flight share exceeds a limit (not proposed now).
+
+## Open decisions
+
+- **Bounded exit when a position cannot settle.** To be decided in its own ADR before outside LP capital is admitted to these Banks. It must say who bears the unresolved position's outcomes (exiting LPs, staying LPs or both), whether exiters keep a claim on its eventual release, whether an affected request may be withdrawn instead, who may trigger it, and what happens if every LP exits. Pricing the exiting shares at the position's full reserve, as briefly drafted on 2026-09-28, was withdrawn: it imposed a permanent, involuntary haircut on exiting LPs and could leave the released value without an owner.
