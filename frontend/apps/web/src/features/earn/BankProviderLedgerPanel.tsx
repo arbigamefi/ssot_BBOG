@@ -14,11 +14,6 @@ function sumAssets(
   return entries.reduce((acc, row) => (row.action === action ? acc + (row.assets ?? 0n) : acc), 0n);
 }
 
-function formatSignedToken(value: bigint, decimals: number, symbol: string) {
-  if (value < 0n) return `−${formatTokenAmount(-value, decimals, symbol, 2)}`;
-  return formatTokenAmount(value, decimals, symbol, 2);
-}
-
 function formatTime(value: number | undefined, locale: string) {
   if (!value) return "—";
   return new Intl.DateTimeFormat(locale, {
@@ -65,17 +60,6 @@ export function BankProviderLedgerPanel({
 
   const deposited = sumAssets(entries, "deposit");
   const withdrawn = sumAssets(entries, "withdraw") + sumAssets(entries, "recovery");
-  const openValue = positionAssets ?? 0n;
-  const netPnl = withdrawn + openValue - deposited;
-  const hasCompleteAssetRows = entries.every((entry) => entry.assets != null);
-  const canEstimateReturn =
-    hasCompleteAssetRows &&
-    !hasMore &&
-    positionAssets != null &&
-    cashFlowComplete &&
-    recoveryComplete &&
-    !hasUnsettledRecovery;
-
   const summaryVisible = connected && !loading && !error;
   const summary = [
     {
@@ -92,12 +76,6 @@ export function BankProviderLedgerPanel({
       key: "openValue",
       label: t("earn.ledger.summary.openValue"),
       value: formatTokenAmount(positionAssets, decimals, symbol, 2)
-    },
-    {
-      key: "netPnl",
-      label: t("earn.ledger.summary.netPnl"),
-      value: canEstimateReturn ? formatSignedToken(netPnl, decimals, symbol) : "—",
-      tone: canEstimateReturn ? (netPnl >= 0n ? "win" : "loss") : undefined
     },
     {
       key: "shares",
@@ -131,18 +109,14 @@ export function BankProviderLedgerPanel({
         </p>
       ) : null}
 
-      <div className="grid divide-y divide-border-soft border-b border-border-soft sm:grid-cols-5 sm:divide-x sm:divide-y-0">
+      <div className="grid divide-y divide-border-soft border-b border-border-soft sm:grid-cols-4 sm:divide-x sm:divide-y-0">
         {summary.map((item) => (
           <div key={item.key} className="min-w-0 px-4 py-3">
             <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
               {item.label}
             </div>
             <div
-              className={cn(
-                "mt-1 truncate font-mono text-sm font-bold text-fg",
-                summaryVisible && item.tone === "win" && "text-success",
-                summaryVisible && item.tone === "loss" && "text-danger"
-              )}
+              className="mt-1 truncate font-mono text-sm font-bold text-fg"
               title={summaryVisible ? item.value : undefined}
             >
               {summaryVisible ? item.value : "—"}

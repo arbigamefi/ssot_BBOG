@@ -8,21 +8,21 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Checkpoints} from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Governable} from "../access/Governable.sol";
 import {Errors} from "../libs/Errors.sol";
 
 /// @notice Single-asset vault + SSOT accounting + bet funds interface. Deposits are synchronous (ERC-4626);
-///         redemptions are asynchronous Requests (ERC-7540). Activation pays the liquid portion and preserves
-///         all snapshot LPs' recovery rights in a reserve pocket. Old holds never gate later exits (ADR-0035).
+///         redemptions are asynchronous Requests (ERC-7540). Activation prices the liquid portion and preserves
+///         exiting LPs' recovery rights while staying capital continues underwriting. Old holds never gate later exits (ADR-0035).
 ///         - totalAssets() is active NAV, excluding payables and historical recovery backing.
 ///         - hold/settle/refund callable ONLY by immutable SettlementRouter.
 ///         - riskInPaused freezes Risk-In + Optional Outflow, but never blocks settle/refund or player payables.
 contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    using Checkpoints for Checkpoints.Trace256;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     address public override settlementRouter;
     address public immutable override asset;
@@ -76,8 +76,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
     /// @notice Address allowed to pause Risk-In, but never to unpause it.
     /// @dev Exists so pausing does not require assembling a multisig quorum.
-    ///      Pausing is the safe direction -- its worst case is declining new
-    ///      bets, and Debt-Out (settle/refund) is unaffected -- while unpausing
+    ///      Pausing also blocks deposits, batch activation and LP claims;
+    ///      Debt-Out (settle/refund) is unaffected. Unpausing
     ///      re-opens risk and stays governance-only. Zero disables the role.
     address public override guardian;
 
@@ -107,7 +107,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 reserved;
         bytes32 snapshotHash;
         bool open;
-        uint256 epoch;
     }
     mapping(uint256 => Hold) public holds;
 
@@ -124,11 +123,30 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     /// @dev Batch IDs equal risk epochs. Cancellation can empty the current queue without advancing its epoch.
     mapping(uint256 => RedeemBatch) internal _batches;
     uint256 public override currentEpoch = 1;
-    uint256 public override currentOpenHolds;
+    uint256 public constant override MAX_ACTIVE_HOLDS = 128;
+    EnumerableSet.UintSet private _activeHolds;
+
+    // A risk unit is one unit of this hold's ORIGINAL reserve. It never rebases.
+    // Fractions are split only at activation, rounded toward staying capital.
+    struct HoldRisk {
+        uint256 activeUnits;
+        uint256 protocolUnits;
+        uint256 terminalCost;
+        uint256 assignedUnits;
+        uint256 assignedAssets;
+    }
+
+    struct RiskAllocation {
+        uint256 betId;
+        uint256 units;
+    }
+    mapping(uint256 => HoldRisk) private _holdRisk;
+    mapping(uint256 => RiskAllocation[]) private _batchRisk;
+    mapping(uint256 => bool) private _batchRiskAssigned;
+    mapping(uint256 => uint256) private _recoveryPaid;
     uint256 public override activeReserved;
     uint256 public override recoveryBacking;
     mapping(uint256 => RecoveryEpoch) internal _recoveryEpochs;
-    mapping(address => Checkpoints.Trace256) internal _walletHistory;
     // Mutable only in the current epoch; preserved forever after activation, including after liquid claims.
     mapping(uint256 => mapping(address => uint256)) internal _requestShares;
     mapping(uint256 => mapping(address => uint256)) internal _recoveryClaimed;
@@ -331,7 +349,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal + recoveryBacking);
     }
 
-    /// @notice Active capital snapshot. R includes only current-epoch positions.
+    /// @notice Active capital snapshot. R includes remaining active risk in old and new positions.
     function getSSOT() external view override returns (SSOTTypes.SSOT memory s) {
         uint256 B = _assetToken.balanceOf(address(this));
         uint256 PF = protocolFeesPayable;
@@ -421,8 +439,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (bal < amount) revert Errors.InsufficientBalance();
         balanceOf[from] = bal - amount;
         balanceOf[to] += amount;
-        _checkpoint(from);
-        _checkpoint(to);
         emit Transfer(from, to, amount);
     }
 
@@ -430,7 +446,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         _checkShareReceiver(to);
         totalSupply += amount;
         balanceOf[to] += amount;
-        _checkpoint(to);
         emit Transfer(address(0), to, amount);
     }
 
@@ -439,19 +454,12 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (bal < amount) revert Errors.InsufficientBalance();
         balanceOf[from] = bal - amount;
         totalSupply -= amount;
-        _checkpoint(from);
         emit Transfer(from, address(0), amount);
     }
 
     function _checkShareReceiver(address to) internal view {
         if (to == address(0)) revert Errors.ZeroAddress();
         if (to == address(this)) revert Errors.InvalidConfig();
-    }
-
-    /// @dev Writes coalesce within an internally numbered epoch. Advance the epoch before burning at seal, so
-    ///      same-block later transfers cannot alter frozen wallet rights. Escrow is owned by request controllers.
-    function _checkpoint(address account) internal {
-        if (account != address(this)) _walletHistory[account].push(currentEpoch, balanceOf[account]);
     }
 
     // -------- ERC4626-like --------
@@ -567,13 +575,39 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         return totalBetsHeld - totalBetsSettled - totalBetsRefunded;
     }
 
-    function recoveryEpoch(uint256 epochId) external view override returns (RecoveryEpoch memory) {
-        return _recoveryEpochs[epochId];
+    function activeOpenHolds() external view override returns (uint256) {
+        return _activeHolds.length();
     }
 
-    /// @dev Whole real-supply entitlement. The real-equity ceiling also covers loss states below virtual price.
+    function recoveryEpoch(uint256 epochId) public view override returns (RecoveryEpoch memory e) {
+        e = _recoveryEpochs[epochId];
+        RiskAllocation[] storage allocations = _batchRisk[epochId];
+        for (uint256 i; i < allocations.length; ++i) {
+            RiskAllocation storage a = allocations[i];
+            Hold storage h = holds[a.betId];
+            if (h.open) {
+                e.remainingReserve += a.units;
+                ++e.remainingHolds;
+            } else {
+                e.recoveredAssets += Math.mulDiv(a.units, h.reserved - _holdRisk[a.betId].terminalCost, h.reserved);
+            }
+        }
+        e.settledCost = e.initialReserve - e.remainingReserve - e.recoveredAssets;
+        e.backingAssets = e.remainingReserve + e.recoveredAssets - _recoveryPaid[epochId];
+    }
+
     function _realEquity(uint256 supply, uint256 nav_) internal view returns (uint256) {
         return Math.min(Math.mulDiv(supply, nav_ + _virtualOffset, supply + _virtualOffset), nav_);
+    }
+
+    function _queuedQuote() internal view returns (uint256 liquid, uint256 risk, uint256 equity) {
+        uint256 nav_ = totalAssets();
+        if (nav_ == 0) return (0, 0, 0);
+        equity = Math.mulDiv(_batches[currentEpoch].shares, _realEquity(totalSupply, nav_), totalSupply);
+        liquid = Math.mulDiv(equity, nav_ - activeReserved, nav_);
+        for (uint256 i; i < _activeHolds.length(); ++i) {
+            risk += Math.mulDiv(_holdRisk[_activeHolds.at(i)].activeUnits, equity, nav_);
+        }
     }
 
     function quoteQueuedRedeem(address controller)
@@ -584,12 +618,9 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     {
         uint256 q = _requestShares[currentEpoch][controller];
         if (q == 0) return (0, 0);
-        uint256 supply = totalSupply;
-        uint256 nav_ = totalAssets();
-        uint256 base = _realEquity(supply, nav_ - activeReserved);
+        (uint256 liquid, uint256 risk,) = _queuedQuote();
         uint256 queued = _batches[currentEpoch].shares;
-        liquidAssets = Math.mulDiv(q, Math.mulDiv(queued, base, supply), queued);
-        recoveryAssets = Math.mulDiv(q, _realEquity(supply, nav_) - base, supply);
+        return (Math.mulDiv(q, liquid, queued), Math.mulDiv(q, risk, queued));
     }
 
     function getRecovery(uint256 epochId, address controller)
@@ -598,15 +629,14 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         override
         returns (RecoveryPosition memory position)
     {
-        RecoveryEpoch storage e = _recoveryEpochs[epochId];
-        if (e.snapshotSupply == 0 || controller == address(0) || controller == address(this)) return position;
-        position.shares = _walletHistory[controller].upperLookup(epochId) + _requestShares[epochId][controller];
+        uint256 q = _requestShares[epochId][controller];
+        if (q == 0 || epochId >= currentEpoch) return position;
+        RecoveryEpoch memory e = recoveryEpoch(epochId);
+        position.shares = q;
         position.claimedAssets = _recoveryClaimed[epochId][controller];
-        uint256 entitlement = Math.mulDiv(position.shares, e.recoveredAssets, e.snapshotSupply);
+        uint256 entitlement = Math.mulDiv(q, e.recoveredAssets, e.snapshotSupply);
         position.claimableAssets = entitlement - position.claimedAssets;
-        uint256 maximum = _realEquity(e.snapshotSupply, e.snapshotNav - e.settledCost)
-            - _realEquity(e.snapshotSupply, e.snapshotNav - e.initialReserve);
-        position.pendingAssets = Math.mulDiv(position.shares, maximum, e.snapshotSupply) - entitlement;
+        position.pendingAssets = Math.mulDiv(q, e.recoveredAssets + e.remainingReserve, e.snapshotSupply) - entitlement;
         position.finalSynced = _recoverySynced[epochId][controller];
     }
 
@@ -628,17 +658,42 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         assets_ = position.claimableAssets;
         if (assets_ == 0) return 0;
         _recoveryClaimed[epochId][controller] = position.claimedAssets + assets_;
-        _recoveryEpochs[epochId].backingAssets -= assets_;
+        _recoveryPaid[epochId] += assets_;
         recoveryBacking -= assets_;
         _assetToken.safeTransfer(receiver, assets_);
         emit RecoveryClaimed(epochId, controller, receiver, msg.sender, assets_);
     }
 
-    /// @dev Final assignment progress is independent of claims. Unclaimed assigned amounts stay in the pocket;
-    ///      only the exact sum-of-floors remainder can be released after all S snapshot units are accounted for.
+    // A hold can appear in many batches, but settlement never visits those batches.
+    // Each batch lazily assigns its <= MAX_ACTIVE_HOLDS allocations once. Once all
+    // of a hold's exiting units are assigned, its exact sum-of-floors dust is released.
+    function _assignBatchRisk(uint256 epochId) internal {
+        if (_batchRiskAssigned[epochId]) return;
+        _batchRiskAssigned[epochId] = true;
+        RiskAllocation[] storage allocations = _batchRisk[epochId];
+        for (uint256 i; i < allocations.length; ++i) {
+            RiskAllocation storage a = allocations[i];
+            Hold storage h = holds[a.betId];
+            HoldRisk storage r = _holdRisk[a.betId];
+            uint256 released = h.reserved - r.terminalCost;
+            r.assignedUnits += a.units;
+            r.assignedAssets += Math.mulDiv(a.units, released, h.reserved);
+            uint256 exitingUnits = h.reserved - r.activeUnits - r.protocolUnits;
+            if (r.assignedUnits == exitingUnits) {
+                uint256 dust = Math.mulDiv(exitingUnits, released, h.reserved) - r.assignedAssets;
+                recoveryBacking -= dust;
+                _accrueProtocolCapital(0, dust, 4);
+            }
+        }
+    }
+
     function _syncRecovery(uint256 epochId, address controller, RecoveryPosition memory position) internal {
+        if (epochId == 0 || epochId >= currentEpoch) return;
+        RecoveryEpoch memory view_ = recoveryEpoch(epochId);
+        if (view_.remainingHolds != 0) return;
+        _assignBatchRisk(epochId);
+        if (position.shares == 0 || position.finalSynced) return;
         RecoveryEpoch storage e = _recoveryEpochs[epochId];
-        if (e.remainingHolds != 0 || position.shares == 0 || position.finalSynced) return;
         _recoverySynced[epochId][controller] = true;
         uint256 entitlement = position.claimableAssets + position.claimedAssets;
         e.finalizedShares += position.shares;
@@ -646,8 +701,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         emit RecoverySynced(epochId, controller, position.shares, entitlement);
         if (e.finalizedShares == e.snapshotSupply) {
             e.dustReleased = true;
-            uint256 dust = e.recoveredAssets - e.finalizedAssets;
-            e.backingAssets -= dust;
+            uint256 dust = view_.recoveredAssets - e.finalizedAssets;
+            _recoveryPaid[epochId] += dust;
             recoveryBacking -= dust;
             e.protocolAssets += dust;
             _accrueProtocolCapital(epochId, dust, 2);
@@ -729,29 +784,40 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 reserve = activeReserved;
         if (nav_ < reserve) revert SolvencyViolation();
         uint256 supply = totalSupply;
-        uint256 base = _realEquity(supply, nav_ - reserve);
-        uint256 assets_ = Math.mulDiv(b.shares, base, supply);
+        (uint256 liquid,, uint256 equity) = _queuedQuote();
+        b.fullExit = b.shares == supply;
         RecoveryEpoch storage e = _recoveryEpochs[batchId];
         e.snapshotNav = nav_;
-        e.snapshotSupply = supply;
-        e.initialReserve = reserve;
-        e.remainingReserve = reserve;
-        e.remainingHolds = currentOpenHolds;
-        e.backingAssets = reserve;
-        recoveryBacking += reserve;
+        e.snapshotSupply = b.shares;
+        for (uint256 i = _activeHolds.length(); i != 0;) {
+            uint256 betId = _activeHolds.at(--i);
+            HoldRisk storage r = _holdRisk[betId];
+            uint256 units = Math.mulDiv(r.activeUnits, equity, nav_);
+            if (units != 0) {
+                _batchRisk[batchId].push(RiskAllocation(betId, units));
+                e.initialReserve += units;
+                r.activeUnits -= units;
+                activeReserved -= units;
+                recoveryBacking += units;
+            }
+            if (b.fullExit) {
+                // No ownerless old reserve can become a new depositor's windfall.
+                r.protocolUnits += r.activeUnits;
+                recoveryBacking += r.activeUnits;
+                activeReserved -= r.activeUnits;
+                r.activeUnits = 0;
+                _activeHolds.remove(betId);
+            }
+        }
         b.activatedAt = uint64(block.timestamp);
         b.priced = true;
-        b.assets = assets_;
-        b.fullExit = b.shares == supply;
-        exitPayable += assets_;
-        emit RedeemBatchActivated(batchId, b.shares, nav_, supply, reserve, currentOpenHolds);
-        // The new key is installed before any post-seal balance change. Old wallet checkpoints are immutable.
+        b.assets = liquid;
+        exitPayable += liquid;
+        emit RedeemBatchActivated(batchId, b.shares, nav_, supply, e.initialReserve, _batchRisk[batchId].length);
         currentEpoch = batchId + 1;
-        activeReserved = 0;
-        currentOpenHolds = 0;
         _burn(address(this), b.shares);
-        if (b.fullExit) _accrueProtocolCapital(batchId, nav_ - reserve - base, 0);
-        emit RedeemBatchPriced(batchId, b.shares, assets_);
+        if (b.fullExit) _accrueProtocolCapital(batchId, nav_ - reserve - liquid, 0);
+        emit RedeemBatchPriced(batchId, b.shares, liquid);
     }
 
     /// @notice Claim exactly `assets_` of `controller`'s priced redemptions for `receiver`.
@@ -1009,6 +1075,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         nonReentrant
     {
         if (paused()) revert RiskInPaused();
+        if (_activeHolds.length() == MAX_ACTIVE_HOLDS) revert ActiveHoldLimit();
         if (player == address(0) || stake == 0 || reserved == 0) revert Errors.InsufficientBalance();
         if (reserved < stake) revert ReservedTooSmall(betId, reserved, stake);
         Hold storage h = holds[betId];
@@ -1023,17 +1090,11 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
         totalReserved += reserved;
         activeReserved += reserved;
-        currentOpenHolds += 1;
+        _activeHolds.add(betId);
+        _holdRisk[betId].activeUnits = reserved;
         totalBetsHeld += 1;
 
-        holds[betId] = Hold({
-            player: player,
-            stake: stake,
-            reserved: reserved,
-            snapshotHash: snapshotHash,
-            open: true,
-            epoch: currentEpoch
-        });
+        holds[betId] = Hold({player: player, stake: stake, reserved: reserved, snapshotHash: snapshotHash, open: true});
 
         emit BetHeld(betId, player, stake, reserved, snapshotHash);
     }
@@ -1066,7 +1127,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
             cost += a.accrued + a.locked + a.holdback;
         }
         if (cost > reserved) revert ReservedTooSmall(betId, reserved, cost);
-        _chargeEpochHold(h, cost);
+        _chargeHold(h, betId, cost);
 
         // Release reserve first (B3 + avoid transient insolvency window)
         h.open = false;
@@ -1161,7 +1222,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
         if (refundAmount > stake) revert RefundTooLarge(betId, refundAmount, stake);
         if (refundAmount > reserved) revert ReservedTooSmall(betId, reserved, refundAmount);
-        _chargeEpochHold(h, refundAmount);
+        _chargeHold(h, betId, refundAmount);
 
         h.open = false;
         totalReserved -= reserved;
@@ -1175,28 +1236,21 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         emit BetRefunded(betId, h.player, refundAmount);
     }
 
-    /// @dev A terminal cost is charged once, including player/PF/XP payables. Old holds update only their pocket;
-    ///      later cash claims reduce the payable and cash equally and never charge this cost again.
-    function _chargeEpochHold(Hold storage h, uint256 cost) internal {
-        if (h.epoch == currentEpoch) {
-            activeReserved -= h.reserved;
-            currentOpenHolds -= 1;
-            return;
-        }
-        RecoveryEpoch storage e = _recoveryEpochs[h.epoch];
-        e.settledCost += cost;
-        e.remainingReserve -= h.reserved;
-        e.remainingHolds -= 1;
-        uint256 released = e.initialReserve - e.settledCost - e.remainingReserve;
-        uint256 liquid = e.snapshotNav - e.initialReserve;
-        uint256 recovered = _realEquity(e.snapshotSupply, liquid + released) - _realEquity(e.snapshotSupply, liquid);
-        uint256 protocolDelta = released - recovered - e.protocolAssets;
-        e.recoveredAssets = recovered;
-        e.protocolAssets += protocolDelta;
-        e.backingAssets -= cost + protocolDelta;
-        recoveryBacking -= cost + protocolDelta;
-        _accrueProtocolCapital(h.epoch, protocolDelta, 1);
-        emit RecoveryUpdated(h.epoch, e.remainingReserve, e.remainingHolds, e.settledCost, recovered, e.backingAssets);
+    /// @dev Constant work regardless of historical batches. Staying units remain in active NAV;
+    ///      only exited/protocol units are isolated. Debt creation charges the same cost as direct payment.
+    function _chargeHold(Hold storage h, uint256 betId, uint256 cost) internal {
+        HoldRisk storage r = _holdRisk[betId];
+        uint256 inactiveUnits = h.reserved - r.activeUnits;
+        uint256 exitingUnits = inactiveUnits - r.protocolUnits;
+        uint256 released = h.reserved - cost;
+        uint256 historicalRecovery = Math.mulDiv(exitingUnits, released, h.reserved);
+        uint256 protocolRecovery = Math.mulDiv(inactiveUnits, released, h.reserved) - historicalRecovery;
+        recoveryBacking -= inactiveUnits - historicalRecovery;
+        _accrueProtocolCapital(0, protocolRecovery, 1);
+        activeReserved -= r.activeUnits;
+        _activeHolds.remove(betId);
+        r.terminalCost = cost;
+        emit BetRiskSettled(betId, r.activeUnits, exitingUnits, cost, historicalRecovery);
     }
 
     /// @notice Pay `player` its payable. Anyone may call it, also while paused and regardless of any buffer, and it

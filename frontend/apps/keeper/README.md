@@ -58,16 +58,29 @@ that the epoch advanced. A race with another caller or a pause triggers a fresh 
 Historical open positions never gate activation. Activation prices liquid assets immediately
 and retains the old reserve and recovery rights under that epoch.
 
-Historical recovery monitoring discovers `RedeemBatchActivated` events from the release origin,
-rescans the recent overlap for reorgs and polls at most 50 known epochs per turn. Unvisited old
-alerts are retained; incomplete discovery reports degraded health rather than claiming complete
-coverage. This monitor does not gate betting or later exits.
+Historical recovery monitoring discovers `RedeemBatchActivated` events from the release origin
+through finalized blocks and polls at most 50 known epochs per turn at that finalized block.
+Unvisited old alerts are retained; incomplete discovery reports degraded health rather than claiming
+complete coverage. Alerts can lag by chain finality; latest head and the finalized target are exposed
+separately. Finalized terminal epochs can be removed safely. This monitor does not gate betting or
+later exits; batch activation still reconciles the latest numbered block.
 
-Player payables are discovered from `PlayerPayableCreated` events from the release origin, with the
-same reorg overlap. The keeper claims each positive `playerPayable(player)` with `claimPlayerPayable`,
-which always pays the player's own address. A refused claim (a blacklisted player, a paused token)
-leaves the debt owed and is retried with exponential backoff from 5 minutes to 6 hours. Payables are
-reported in health without degrading it, because an owed debt is not a keeper fault.
+Player payables are discovered from `PlayerPayableCreated` events from the release origin through
+finalized blocks, using a monotonic bounded cursor. Small budgets resume the unfinished range; there
+is no moving-head overlap that can age out a replacement event. Health exposes the latest head and
+finalized discovery target; `caughtUp` refers to that finalized target. Newly created debts may wait
+for chain finality before automatic discovery. Players can always trigger their own on-chain claim.
+
+Known debts are read at the latest numbered block and paid with `claimPlayerPayable`, which always
+pays the player's own address. A successful claim or observed zero remains tracked until a zero at a
+finalized block at or beyond that observation confirms it. Until then the keeper retries debt restored
+by a reorg. An unavailable or regressing finality response reports a discovery failure.
+
+Only a recognized refused-transfer result from simulation is treated as an expected refusal. It leaves
+the debt owed and uses exponential backoff from 5 minutes to 6 hours. Unknown reverts, RPC, funding,
+send and receipt failures require attention: they degrade `payables` health and remain visible during
+backoff until a successful reconciliation clears them. An issuer rejection that cannot be identified
+narrowly also remains actionable; the keeper does not suppress arbitrary errors based on their text.
 
 Casino finalization, timeout refunds, batch activation and payable claims share a serialized write
 path. Pausing a Bank does not block settlement/refund debt-out or payable claims. The keeper does
@@ -108,9 +121,12 @@ within a process; it does not coordinate separate workers or the web app.
 
 Bank `Deposit`/`Withdraw`/`RecoveryClaimed` cash-flow indexing runs independently at
 `KEEPER_BANK_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS` (default 60). Set it to zero
-only when provider-ledger indexing is intentionally disabled. Each casino scan
-and each Bank-ledger scan combines its event types into one log request per
-chunk; block timestamps and contract reads add RPC work.
+only when provider-ledger indexing is intentionally disabled. It scans monotonically from the release
+origin through finalized blocks under `bank-provider-ledger-finalized`; an unrelated GameHub cursor
+cannot skip ledger history. Rows are persisted before the cursor advances. An unavailable or regressing
+finalized target fails the scan. Indexed cash flows can therefore lag on-chain claims by finality.
+Each casino scan and each Bank-ledger scan combines its event types into one log request per chunk;
+block timestamps and contract reads add RPC work.
 
 ## Sports recovery
 
@@ -145,15 +161,16 @@ Keep the file outside the web app's public directory.
 
 Each failure is cleared only by success on its own path:
 
-| `degradedBy`      | Meaning                                                                        |
-| ----------------- | ------------------------------------------------------------------------------ |
-| `scan` / `ledger` | Event or provider-ledger scan failed                                           |
-| `finalize`        | Casino terminalization failed                                                  |
-| `recovery`        | Lifecycle coverage is incomplete or persistence/read failed                    |
-| `redemption`      | Bank read or queue-activation reconciliation failed                            |
-| `pocket-recovery` | Historical epoch discovery is incomplete or failed                             |
-| `pocket`          | Historical recovery read failed or unresolved holds exceeded the age threshold |
-| `stalled`         | Scan progress or lifecycle reconciliation stopped advancing                    |
+| `degradedBy`      | Meaning                                                                         |
+| ----------------- | ------------------------------------------------------------------------------- |
+| `scan` / `ledger` | Event or provider-ledger scan failed                                            |
+| `finalize`        | Casino terminalization failed                                                   |
+| `recovery`        | Lifecycle coverage is incomplete or persistence/read failed                     |
+| `redemption`      | Bank read or queue-activation reconciliation failed                             |
+| `pocket-recovery` | Historical epoch discovery is incomplete or failed                              |
+| `pocket`          | Historical recovery read failed or unresolved holds exceeded the age threshold  |
+| `payables`        | Finalized payable discovery incomplete, or state/finality/claim delivery failed |
+| `stalled`         | Scan progress or lifecycle reconciliation stopped advancing                     |
 
 Historical recovery age uses chain timestamp minus activation time, including while
 paused. An overdue unactivated queue is not a historical recovery alert. Restart

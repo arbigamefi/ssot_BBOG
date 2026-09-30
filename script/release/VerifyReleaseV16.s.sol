@@ -209,7 +209,8 @@ contract VerifyReleaseV16 is Script {
                     snap.readUint(string.concat(".poolBankHoldbackVestingSeconds_", suffix)),
                     keccak256(bytes(snap.readString(string.concat(".poolLpName_", suffix)))),
                     keccak256(bytes(snap.readString(string.concat(".poolLpSymbol_", suffix)))),
-                    snap.readUint(string.concat(".poolLpDecimals_", suffix))
+                    snap.readUint(string.concat(".poolLpDecimals_", suffix)),
+                    keccak256(bytes(snap.readString(string.concat(".poolAssetSymbol_", suffix))))
                 )
             );
 

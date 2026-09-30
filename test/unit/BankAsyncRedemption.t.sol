@@ -123,7 +123,7 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(bank.pendingRedeemRequest(0, alice), 0);
         assertEq(bank.claimableRedeemRequest(0, alice), 300e6);
         assertEq(bank.redeemBatch(1).assignedShares, 0, "views do not assign liquid entitlements");
-        assertEq(bank.getRecovery(1, alice).shares, 1_000e6, "all original units own recovery");
+        assertEq(bank.getRecovery(1, alice).shares, 300e6, "only activated request units own recovery");
         _request(alice, 200e6);
         (uint256 id, uint256 shares_) = bank.pendingRedeemBatch(alice);
         assertEq(id, 2);
@@ -135,7 +135,7 @@ contract BankAsyncRedemptionTest is Test {
         (id, shares_) = bank.pendingRedeemBatch(alice);
         assertEq(id + shares_, 0);
         assertEq(bank.balanceOf(alice), 700e6);
-        assertEq(bank.getRecovery(1, alice).shares, 1_000e6);
+        assertEq(bank.getRecovery(1, alice).shares, 300e6);
     }
 
     function test_requestEscrowsSharesThatKeepBearingResults() external {
@@ -233,32 +233,25 @@ contract BankAsyncRedemptionTest is Test {
         _deposit(alice, 1_000e6);
         _request(alice, 100e6);
         vm.warp(101 * DAY - 1);
-        uint256 beforeEligibility = _hold(10e6, 20e6);
+        uint256 first = _hold(10e6, 20e6);
         vm.warp(101 * DAY);
-        uint256 afterEligibility = _hold(10e6, 20e6);
-        assertEq(bank.redeemBatch(1).activatedAt, 0);
+        uint256 second = _hold(10e6, 20e6);
         bank.activateBatch();
+        uint256 units = 1_999_999;
         assertEq(bank.recoveryEpoch(1).remainingHolds, 2);
-        assertEq(bank.recoveryBacking(), 40e6);
-        assertEq(bank.redeemBatch(1).assets, 98e6);
-        assertEq(bank.totalSupply(), 900e6);
-        assertEq(bank.activeReserved(), 0);
+        assertEq(bank.recoveryBacking(), 2 * units);
+        assertEq(bank.activeReserved(), 40e6 - 2 * units);
         uint256 later = _hold(10e6, 20e6);
         _deposit(bob, 100e6);
-        asset.mint(address(bank), 1e6);
         _settle(later, 20e6);
-        assertEq(bank.recoveryEpoch(1).backingAssets, 40e6, "new operations cannot spend old backing");
-        uint256 newest = _hold(10e6, 20e6);
-        uint256 activeBefore = bank.totalAssets();
-        bank.refundBet(beforeEligibility, 10e6);
-        _settle(afterEligibility, 20e6);
-        assertEq(bank.recoveryEpoch(1).remainingHolds, 0);
-        assertEq(bank.recoveryEpoch(1).recoveredAssets, 10e6);
-        assertEq(bank.totalAssets(), activeBefore, "old recovery never enters active NAV");
-        assertEq(bank.openHolds(), 1);
-        assertEq(_claimRecovery(1, alice), 10e6, "wallet and exiting units share their original risk");
+        assertEq(bank.recoveryEpoch(1).backingAssets, 2 * units);
+        uint256 active = bank.totalAssets();
+        bank.refundBet(first, 10e6);
+        _settle(second, 20e6);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, units / 2);
+        assertEq(bank.totalAssets(), active + 2 * units - units / 2 - 30e6);
+        assertEq(_claimRecovery(1, alice), units / 2);
         assertEq(bank.getRecovery(1, bob).shares, 0);
-        _settle(newest, 0);
         _hold(10e6, 20e6);
     }
 
@@ -279,7 +272,7 @@ contract BankAsyncRedemptionTest is Test {
             _settle(later, 0);
             assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
             assertEq(bank.recoveryEpoch(1).settledCost, 0);
-            assertEq(bank.recoveryEpoch(1).remainingReserve, 20e6);
+            assertEq(bank.recoveryEpoch(1).remainingReserve, 1_999_999);
         }
         assertEq(bank.getRecovery(1, bob).shares, 0);
         assertEq(bank.balanceOf(bob), 0);
@@ -378,7 +371,7 @@ contract BankAsyncRedemptionTest is Test {
         bank.setRiskInPaused(false);
         vm.prank(stranger);
         assertEq(bank.activateBatch(), 1);
-        assertEq(bank.maxWithdraw(alice), 99e6);
+        assertEq(bank.maxWithdraw(alice), 98_999_999);
         assertTrue(bank.redeemBatch(1).priced);
         assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
         _request(alice, 100e6);
@@ -457,16 +450,17 @@ contract BankAsyncRedemptionTest is Test {
         _request(alice, 500e6);
         uint256 oldBet = _hold(100e6, 300e6);
         _priceDue();
-        assertEq(bank.redeemBatch(1).assets, 450e6);
+        assertEq(bank.redeemBatch(1).assets, 449_999_988);
         _request(bob, 500e6);
         _priceDue();
-        assertEq(bank.redeemBatch(2).assets, 450e6);
+        assertGt(bank.redeemBatch(2).assets, 0);
         assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
         assertEq(bank.currentEpoch(), 3);
         assertEq(bank.totalSupply(), 1_000e6);
         uint256 active = bank.totalAssets();
+        uint256 remainingRisk = bank.activeReserved();
         _settle(oldBet, 300e6);
-        assertEq(bank.totalAssets(), active);
+        assertEq(bank.totalAssets(), active - remainingRisk);
         assertEq(bank.getRecovery(1, alice).claimableAssets, 0);
         assertEq(bank.getRecovery(1, bob).claimableAssets, 0);
     }
@@ -684,19 +678,19 @@ contract BankAsyncRedemptionTest is Test {
         _deposit(bob, 1_000e6);
         uint256 oldBet = _hold(100e6, 300e6);
         _request(alice, 500e6);
+        (uint256 cash, uint256 units) = bank.quoteQueuedRedeem(alice);
         _priceDue();
-        uint256 active = bank.totalAssets();
         vm.prank(gov);
         bank.setWithdrawalBufferBps(10_000);
         assertEq(bank.getSSOT().withdrawable, 0);
         bank.refundBet(oldBet, 100e6);
-        assertEq(bank.totalAssets(), active);
+        uint256 active = bank.totalAssets();
         vm.prank(alice);
-        assertEq(bank.redeem(500e6, alice, alice), 450e6);
-        assertEq(_claimRecovery(1, alice), 100e6);
-        assertEq(bank.totalAssets(), active, "paying fixed exit debts cannot spend active capital");
-        assertEq(bank.getRecovery(1, bob).claimableAssets, 100e6);
-        assertEq(bank.recoveryBacking(), 100e6);
+        assertEq(bank.redeem(500e6, alice, alice), cash);
+        assertEq(_claimRecovery(1, alice), Math.mulDiv(units, 200e6, 300e6));
+        assertEq(bank.totalAssets(), active, "claims do not consume staying capital");
+        assertEq(bank.getRecovery(1, bob).shares, 0);
+        assertEq(bank.recoveryBacking(), 0);
     }
 
     function test_claimToTheBankItselfDonatesToNav() external {
@@ -947,6 +941,7 @@ contract BankAsyncRedemptionTest is Test {
         _request(alice, 500e6);
         _priceDue();
         uint256 active = bank.totalAssets();
+        uint256 units = bank.recoveryEpoch(1).initialReserve;
         SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](1);
         awards[0] = SSOTTypes.XPAward({
             payee: bob, sourcePlayer: player, accrued: 20e6, locked: 20e6, holdback: 20e6, reason: 0
@@ -961,10 +956,11 @@ contract BankAsyncRedemptionTest is Test {
         awards[0].locked = 6e6;
         awards[0].holdback = 7e6;
         bank.settleBet(oldBet, 120e6, 100e6, 20e6, 10e6, awards);
-        assertEq(bank.recoveryEpoch(1).settledCost, 148e6);
+        uint256 recovery = Math.mulDiv(units, 52e6, 200e6);
+        assertEq(bank.recoveryEpoch(1).settledCost, units - recovery);
         assertEq(bank.recoveryEpoch(1).remainingReserve, 0);
-        assertEq(bank.recoveryEpoch(1).recoveredAssets, 52e6);
-        assertEq(bank.totalAssets(), active);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, recovery);
+        assertEq(bank.totalAssets(), active + units - recovery - 148e6);
         assertEq(bank.totalProtocolFeeAccrued(), 10e6);
         assertEq(bank.protocolFeesPayable(), 10e6);
         assertEq(bank.externalPayablesTotal(), 18e6);
@@ -986,18 +982,19 @@ contract BankAsyncRedemptionTest is Test {
         uint256 second = _hold(1, 1);
         _request(alice, 2);
         _priceDue();
-        assertEq(bank.recoveryBacking(), 2);
-        assertEq(bank.totalAssets(), 0);
-        assertEq(bank.activeReserved(), 0);
+        // Half of each indivisible risk unit rounds to zero; neither reserve is made claimable.
+        assertEq(bank.recoveryBacking(), 0);
+        assertEq(bank.activeReserved(), 2);
+        assertEq(bank.totalAssets(), 2);
         bank.refundBet(first, 1);
-        assertEq(bank.recoveryBacking(), 1);
-        assertEq(bank.recoveryEpoch(1).remainingReserve, 1);
+        assertEq(bank.activeReserved(), 1);
         assertEq(_claimRecovery(1, alice), 0);
         bank.refundBet(second, 1);
         assertEq(bank.recoveryBacking(), 0);
+        assertEq(bank.totalAssets(), 0);
         vm.prank(alice);
         assertEq(bank.redeem(2, alice, alice), 0);
-        assertEq(bank.getRecovery(1, alice).shares, 4, "zero recovery does not rewrite ownership");
+        assertEq(bank.getRecovery(1, alice).shares, 2);
     }
 
     function test_fullExitNeedsActiveCapitalAndNewDepositsDoNotOwnOldRecovery() external {
@@ -1010,14 +1007,14 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(bank.activeReserved(), 0);
         assertEq(bank.recoveryBacking(), 300e6);
         vm.prank(alice);
-        assertEq(bank.redeem(1_000e6, alice, alice), 800e6);
+        assertEq(bank.redeem(1_000e6, alice, alice), 799_999_927);
         vm.expectRevert(IBank.SolvencyViolation.selector);
         bank.holdBet(99, player, 10e6, 20e6, bytes32(0));
         assertEq(_deposit(bob, 100e6), 100e6);
         uint256 newer = _hold(10e6, 20e6);
         uint256 active = bank.totalAssets();
         bank.refundBet(oldBet, 100e6);
-        assertEq(_claimRecovery(1, alice), 200e6);
+        assertEq(_claimRecovery(1, alice), Math.mulDiv(299_999_972, 200e6, 300e6));
         assertEq(bank.getRecovery(1, bob).shares, 0);
         assertEq(bank.totalAssets(), active);
         assertEq(bank.openHolds(), 1);
@@ -1029,22 +1026,24 @@ contract BankAsyncRedemptionTest is Test {
         _request(alice, 500e6);
         uint256 paidLater = _hold(100e6, 300e6);
         uint256 stillOpen = _hold(10e6, 20e6);
+        uint256 equity = Math.mulDiv(500e6, _g(1_110e6, 1_000e6), 1_000e6);
+        uint256 firstUnits = Math.mulDiv(300e6, equity, 1_110e6);
+        uint256 secondUnits = Math.mulDiv(20e6, equity, 1_110e6);
         _priceDue();
         asset.setBlocked(player, true);
         _settle(paidLater, 300e6);
         assertEq(bank.playerPayable(player), 300e6);
-        assertEq(bank.recoveryEpoch(1).settledCost, 300e6);
+        assertEq(bank.recoveryEpoch(1).settledCost, firstUnits);
         uint256 backing = bank.recoveryBacking();
         uint256 active = bank.totalAssets();
         asset.setBlocked(player, false);
         bank.claimPlayerPayable(player);
         assertEq(bank.recoveryBacking(), backing);
         assertEq(bank.totalAssets(), active);
-        assertEq(bank.recoveryEpoch(1).settledCost, 300e6);
+        assertEq(bank.recoveryEpoch(1).settledCost, firstUnits);
         bank.refundBet(stillOpen, 10e6);
-        assertEq(bank.recoveryEpoch(1).settledCost, 310e6);
-        assertEq(bank.recoveryEpoch(1).recoveredAssets, 10e6);
-        assertEq(bank.redeemBatch(1).assets, 395e6);
+        assertEq(bank.recoveryEpoch(1).settledCost, firstUnits + secondUnits - secondUnits / 2);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, secondUnits / 2);
     }
 
     function test_activeRiskChecksCannotBorrowHistoricalCapitalAndSsotUsesActiveReserve() external {
@@ -1053,15 +1052,17 @@ contract BankAsyncRedemptionTest is Test {
         _request(alice, 900e6);
         _priceDue();
         SSOTTypes.SSOT memory s = bank.getSSOT();
-        assertEq(s.NAV, 80e6);
+        assertEq(s.NAV, 110_000_091);
         assertEq(s.R, bank.activeReserved());
-        assertEq(s.R, 0);
+        assertEq(s.R, 30_000_025);
         assertEq(bank.totalReserved(), 300e6);
         assertEq(s.riskFree, s.NAV - s.R);
         vm.expectRevert(IBank.SolvencyViolation.selector);
         bank.holdBet(99, player, 1e6, 200e6, bytes32(0));
         _settle(oldBet, 0);
-        assertEq(bank.totalAssets(), s.NAV, "released old capital is not available for new risk");
+        assertEq(
+            bank.totalAssets(), s.NAV, "zero-cost settlement keeps NAV and releases staying reserve in the same call"
+        );
         assertEq(bank.activeReserved(), 0);
         assertEq(bank.totalReserved(), 0);
         assertGt(bank.recoveryBacking(), 0);
@@ -1101,9 +1102,9 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(bank.recoveryEpoch(1).settledCost, 0);
         bank.refundBet(999, 10e6);
         assertEq(bank.recoveryEpoch(1).remainingHolds, 0);
-        assertEq(bank.recoveryEpoch(1).settledCost, 10e6);
-        assertEq(bank.redeemBatch(1).assets, 99e6);
-        assertEq(bank.getRecovery(1, alice).claimableAssets, 10e6);
+        assertEq(bank.recoveryEpoch(1).settledCost, 1_000_000);
+        assertEq(bank.redeemBatch(1).assets, 98_999_999);
+        assertEq(bank.getRecovery(1, alice).claimableAssets, 999_999);
     }
 
     function testFuzz_oldSettlementOrderPreservesRecoveryAndVirtualResidual(uint64 firstCost, uint64 secondCost)
@@ -1118,7 +1119,10 @@ contract BankAsyncRedemptionTest is Test {
         _priceDue();
         uint256 active = bank.totalAssets();
         uint256 liquid = bank.redeemBatch(1).assets;
-        uint256 expected = _g(1_150e6 - c1 - c2, 1_000e6) - _g(800e6, 1_000e6);
+        uint256 equity = Math.mulDiv(700e6, _g(1_150e6, 1_000e6), 1_000e6);
+        uint256 u1 = Math.mulDiv(200e6, equity, 1_150e6);
+        uint256 u2 = Math.mulDiv(150e6, equity, 1_150e6);
+        uint256 expected = Math.mulDiv(u1, 200e6 - c1, 200e6) + Math.mulDiv(u2, 150e6 - c2, 150e6);
         uint256 snapshot = vm.snapshotState();
         _settle(first, c1);
         assertGe(bank.recoveryBacking(), bank.recoveryEpoch(1).remainingReserve);
@@ -1126,7 +1130,7 @@ contract BankAsyncRedemptionTest is Test {
         _settle(second, c2);
         assertEq(interim + _claimRecovery(1, alice), expected);
         uint256 protocol = bank.protocolFeesPayable();
-        assertEq(protocol, 350e6 - c1 - c2 - expected);
+        assertEq(protocol, 0, "no protocol units in a partial exit with one controller");
         assertTrue(vm.revertToState(snapshot));
         _settle(second, c2);
         assertGe(bank.recoveryBacking(), bank.recoveryEpoch(1).remainingReserve);
@@ -1134,7 +1138,7 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(_claimRecovery(1, alice), expected);
         assertEq(bank.protocolFeesPayable(), protocol);
         assertEq(bank.totalProtocolFeeAccrued(), 0);
-        assertEq(bank.totalAssets(), active);
+        assertEq(bank.totalAssets(), active + u1 + u2 - expected - c1 - c2);
         assertEq(bank.redeemBatch(1).assets, liquid);
     }
 
@@ -1155,28 +1159,33 @@ contract BankAsyncRedemptionTest is Test {
         uint256 held = _hold(1, reserve);
         uint256 requested = bound(requestRaw, 1, supply);
         _request(alice, requested);
+        (uint256 liquid, uint256 risk) = bank.quoteQueuedRedeem(alice);
+        assertLe(liquid + risk, Math.mulDiv(requested, _g(nav + 1, supply), supply));
         _priceDue();
-        uint256 liquidPool = _g(nav + 1 - reserve, supply);
-        uint256 liquid = Math.mulDiv(requested, liquidPool, supply);
         assertEq(bank.redeemBatch(1).assets, liquid);
-        uint256 active = bank.totalAssets();
         _settle(held, cost);
-        uint256 h = _g(nav + 1 - cost, supply) - liquidPool;
-        uint256 u = reserve - cost - h;
-        IBank.RecoveryEpoch memory epoch = bank.recoveryEpoch(1);
-        assertEq(epoch.recoveredAssets, h);
-        assertEq(epoch.protocolAssets, u);
-        assertEq(epoch.backingAssets, h);
-        assertEq(bank.protocolFeesPayable(), u + (requested == supply ? nav + 1 - reserve - liquidPool : 0));
-        assertEq(bank.totalProtocolFeeAccrued(), 0);
+        uint256 recovery = Math.mulDiv(risk, reserve - cost, reserve);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, recovery);
+        assertLe(
+            liquid + recovery,
+            Math.min(
+                Math.mulDiv(requested, nav + 1 - cost + 1e3, supply + 1e3),
+                Math.mulDiv(requested, nav + 1 - cost, supply)
+            ),
+            "cannot exceed the individual real-equity-capped quote after a known cost"
+        );
         vm.prank(alice);
         assertEq(bank.redeem(requested, alice, alice), liquid);
-        assertEq(_claimRecovery(1, alice), h);
+        assertEq(_claimRecovery(1, alice), recovery);
         assertEq(bank.recoveryBacking(), 0);
-        assertEq(bank.totalAssets(), active);
+        assertEq(
+            bank.totalAssets() + bank.protocolFeesPayable() + liquid + recovery,
+            nav + 1 - cost,
+            "all capital has an owner"
+        );
     }
 
-    function test_snapshotIncludesWalletsAndControllersAndIgnoresLaterSameBlockTransfers() external {
+    function test_exitControllersKeepRecoveryAcrossLaterSameBlockTransfers() external {
         _deposit(alice, 60e6);
         _deposit(bob, 40e6);
         uint256 oldBet = _hold(10e6, 20e6);
@@ -1185,49 +1194,41 @@ contract BankAsyncRedemptionTest is Test {
         _request(bob, 10e6);
         uint256 blockBefore = block.number;
         _priceDue();
-        assertEq(bank.getRecovery(1, alice).shares, 40e6);
-        assertEq(bank.getRecovery(1, bob).shares, 40e6);
+        assertEq(bank.getRecovery(1, alice).shares, 0);
+        assertEq(bank.getRecovery(1, bob).shares, 10e6);
         assertEq(bank.getRecovery(1, carol).shares, 20e6);
-        assertEq(bank.getRecovery(1, address(bank)).shares, 0);
         vm.prank(alice);
         bank.transfer(stranger, 40e6);
         _deposit(gov, 10e6);
-        vm.prank(bob);
-        bank.requestRedeem(5e6, carol, bob);
-        vm.prank(carol);
-        bank.cancelRedeemRequest(carol);
-        assertEq(block.number, blockBefore, "the ownership changes really occur in the activation block");
+        assertEq(block.number, blockBefore);
         assertEq(bank.getRecovery(1, stranger).shares, 0);
         assertEq(bank.getRecovery(1, gov).shares, 0);
-        assertEq(bank.getRecovery(1, alice).shares, 40e6);
-        assertEq(bank.getRecovery(1, carol).shares, 20e6);
         bank.refundBet(oldBet, 10e6);
-        assertEq(_claimRecovery(1, alice), 4e6);
-        assertEq(_claimRecovery(1, bob), 4e6);
-        assertEq(_claimRecovery(1, carol), 2e6);
+        uint256 recovered = bank.recoveryEpoch(1).recoveredAssets;
+        assertEq(_claimRecovery(1, alice), 0);
+        assertEq(_claimRecovery(1, bob), recovered / 3);
+        assertEq(_claimRecovery(1, carol), recovered * 2 / 3);
         _request(stranger, 1e6);
         _priceDue();
-        assertEq(bank.getRecovery(2, stranger).shares, 40e6);
+        assertEq(bank.getRecovery(2, stranger).shares, 1e6);
         assertEq(bank.getRecovery(1, stranger).shares, 0);
     }
 
-    function test_queuedQuoteUsesQueuedUnitsWhileSealedRecoveryIncludesTheWholeOwner() external {
+    function test_queuedQuoteAndRecoveryUseOnlyActivatedControllerUnits() external {
         _deposit(alice, 60e6);
         _deposit(bob, 40e6);
         _hold(10e6, 20e6);
         _request(alice, 20e6);
         _request(bob, 10e6);
         (uint256 liquid, uint256 upper) = bank.quoteQueuedRedeem(alice);
-        uint256 wholeRecovery = _g(110e6, 100e6) - _g(90e6, 100e6);
-        assertEq(liquid, 18e6);
-        assertEq(upper, Math.mulDiv(20e6, wholeRecovery, 100e6));
-        assertEq(bank.getRecovery(1, alice).shares, 0, "an unsealed epoch has no historical entitlement");
+        assertLe(liquid + upper, Math.mulDiv(20e6, _g(110e6, 100e6), 100e6));
+        assertEq(bank.getRecovery(1, alice).shares, 0);
         _priceDue();
         IBank.RecoveryPosition memory r = bank.getRecovery(1, alice);
-        assertEq(r.shares, 60e6);
-        assertEq(r.claimableAssets, 0);
-        assertEq(r.claimedAssets, 0);
-        assertEq(r.pendingAssets, Math.mulDiv(60e6, wholeRecovery, 100e6));
+        assertEq(r.shares, 20e6);
+        assertEq(r.claimableAssets + r.claimedAssets, 0);
+        assertEq(r.pendingAssets, upper);
+        assertEq(bank.maxWithdraw(alice), liquid);
         (liquid, upper) = bank.quoteQueuedRedeem(alice);
         assertEq(liquid + upper, 0);
     }
@@ -1239,23 +1240,18 @@ contract BankAsyncRedemptionTest is Test {
         uint256 resolved = _hold(1e6, 20e6);
         _request(alice, 10e6);
         _priceDue();
+        uint256 units = bank.recoveryEpoch(1).initialReserve / 2;
         _settle(resolved, 4e6);
         assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
-        assertEq(bank.recoveryEpoch(1).recoveredAssets, 16e6);
-        uint256 active = bank.totalAssets();
-        assertEq(_claimRecovery(1, alice), 8e6);
-        assertEq(_claimRecovery(1, bob), 8e6);
-        assertEq(bank.recoveryBacking(), 20e6, "remaining reserve cannot be withdrawn");
-        IBank.RecoveryPosition memory r = bank.getRecovery(1, alice);
-        assertEq(r.claimableAssets, 0);
-        assertEq(r.claimedAssets, 8e6);
-        assertEq(r.pendingAssets, Math.mulDiv(50e6, _g(98e6, 100e6) - _g(62e6, 100e6), 100e6) - 8e6);
+        uint256 interim = Math.mulDiv(units, 16e6, 20e6);
+        assertEq(_claimRecovery(1, alice), interim);
+        assertEq(_claimRecovery(1, bob), 0);
+        assertEq(bank.recoveryBacking(), units, "pending reserve stays funded");
         bank.syncRecovery(1, alice);
         assertFalse(bank.getRecovery(1, alice).finalSynced);
         bank.refundBet(stuck, 1e6);
-        assertEq(_claimRecovery(1, alice), 9_500_000);
-        assertEq(_claimRecovery(1, bob), 9_500_000);
-        assertEq(bank.totalAssets(), active);
+        assertEq(_claimRecovery(1, alice), Math.mulDiv(units, 19e6, 20e6));
+        assertEq(_claimRecovery(1, bob), 0);
         assertEq(bank.recoveryBacking(), 0);
     }
 
@@ -1281,7 +1277,7 @@ contract BankAsyncRedemptionTest is Test {
         vm.prank(stranger);
         bank.syncRecovery(1, alice);
         assertTrue(bank.getRecovery(1, alice).finalSynced);
-        assertEq(bank.getRecovery(1, alice).claimableAssets, 50e6, "views retain entitlement during pause");
+        assertEq(bank.getRecovery(1, alice).claimableAssets, 24_999_999, "views retain entitlement during pause");
         _request(alice, 100e6);
         vm.prank(alice);
         bank.cancelRedeemRequest(alice);
@@ -1295,18 +1291,18 @@ contract BankAsyncRedemptionTest is Test {
             vm.expectRevert(bytes("blocked"));
             bank.claimRecovery(1, stranger, alice);
             assertEq(bank.getRecovery(1, alice).claimedAssets, 0);
-            assertEq(bank.getRecovery(1, alice).claimableAssets, 50e6);
+            assertEq(bank.getRecovery(1, alice).claimableAssets, 24_999_999);
             assertEq(bank.recoveryBacking(), backing);
             assertEq(bank.totalAssets(), active);
         }
         asset.setBlocked(stranger, false);
         vm.expectEmit(true, true, true, true, address(bank));
-        emit IBank.RecoveryClaimed(1, alice, stranger, carol, 50e6);
+        emit IBank.RecoveryClaimed(1, alice, stranger, carol, 24_999_999);
         vm.prank(carol);
-        assertEq(bank.claimRecovery(1, stranger, alice), 50e6);
-        assertEq(asset.balanceOf(stranger), 50e6);
+        assertEq(bank.claimRecovery(1, stranger, alice), 24_999_999);
+        assertEq(asset.balanceOf(stranger), 24_999_999);
         assertEq(asset.balanceOf(carol), 0);
-        assertEq(bank.getRecovery(1, alice).shares, 1_000e6);
+        assertEq(bank.getRecovery(1, alice).shares, 500e6);
         assertEq(bank.totalAssets(), active);
         vm.recordLogs();
         assertEq(_claimRecovery(1, alice), 0);
@@ -1326,33 +1322,22 @@ contract BankAsyncRedemptionTest is Test {
         _deposit(bob, 1);
         asset.mint(address(bank), 2);
         uint256 oldBet = _hold(1, 5);
-        _request(alice, 2);
+        _request(alice, 1);
+        _request(bob, 1);
         _priceDue();
         _settle(oldBet, 0);
-        assertEq(bank.recoveryEpoch(1).recoveredAssets, 2);
-        assertEq(bank.recoveryBacking(), 2);
-        assertEq(bank.protocolFeesPayable(), 3);
-        bank.syncRecovery(1, alice);
-        assertEq(bank.recoveryBacking(), 2);
-        vm.prank(stranger);
-        bank.syncRecovery(1, bob);
-        assertEq(bank.recoveryBacking(), 1, "Alice's one assigned but unclaimed unit stays backed");
-        assertEq(bank.protocolFeesPayable(), 4);
-        assertEq(bank.totalProtocolFeeAccrued(), 0);
-        assertEq(bank.getRecovery(1, alice).claimedAssets, 0);
-        bank.syncRecovery(1, alice);
-        bank.syncRecovery(1, bob);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, 1);
         assertEq(bank.recoveryBacking(), 1);
-        assertEq(bank.protocolFeesPayable(), 4);
-        _deposit(stranger, 10);
-        uint256 active = bank.totalAssets();
-        vm.prank(gov);
-        bank.claimProtocolFees(4, gov);
-        assertEq(_claimRecovery(1, alice), 1);
-        assertEq(_claimRecovery(1, bob), 0);
-        assertEq(bank.getRecovery(1, stranger).shares, 0);
-        assertEq(bank.totalAssets(), active);
+        bank.syncRecovery(1, alice);
+        assertEq(bank.recoveryBacking(), 1, "unassigned rounding remains backed");
+        bank.syncRecovery(1, bob);
         assertEq(bank.recoveryBacking(), 0);
+        assertEq(bank.protocolFeesPayable(), 1);
+        bank.syncRecovery(1, alice);
+        bank.syncRecovery(1, bob);
+        assertEq(bank.protocolFeesPayable(), 1, "dust released exactly once");
+        assertEq(_claimRecovery(1, alice), 0);
+        assertEq(_claimRecovery(1, bob), 0);
     }
 
     function test_zeroLiquidFullExitDoesNotBlockALaterFundedFullExit() external {
@@ -1370,15 +1355,15 @@ contract BankAsyncRedemptionTest is Test {
         _request(bob, 20);
         _priceDue();
         vm.prank(bob);
-        assertEq(bank.redeem(20, bob, bob), 19);
+        assertEq(bank.redeem(20, bob, bob), 18);
         assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
-        assertEq(bank.recoveryEpoch(1).remainingReserve, 101);
+        assertEq(bank.recoveryEpoch(1).remainingReserve, 100);
         _settle(newer, 1);
-        assertEq(_claimRecovery(2, bob), 1);
+        assertEq(_claimRecovery(2, bob), 0);
         assertEq(bank.getRecovery(1, bob).shares, 0);
         _settle(oldBet, 0);
         assertEq(_claimRecovery(1, alice), 100);
-        assertEq(bank.protocolFeesPayable(), 1);
+        assertEq(bank.protocolFeesPayable(), 3);
         assertEq(bank.recoveryBacking(), 0);
         assertEq(bank.totalAssets(), 0);
         assertEq(bank.totalSupply(), 0);

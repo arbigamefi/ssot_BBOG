@@ -1,4 +1,6 @@
 import {
+  BaseError,
+  ContractFunctionRevertedError,
   createPublicClient,
   createWalletClient,
   defineChain,
@@ -43,7 +45,6 @@ import type { BetRead, KeeperConfig, KeeperEvent, KeeperLogger } from "./types.j
 import { createSportsRecovery } from "./sports-recovery.js";
 import {
   BANK_REDEMPTION_KEEPER_ABI,
-  BANK_REORG_LOOKBACK,
   createPocketMonitor,
   reconcileRedemptionBank
 } from "./redemption.js";
@@ -78,7 +79,7 @@ const SPORTS_TERMINALIZER_EVENTS: SportsTerminalizerEventName[] = [
   "ResultChallengeResolved"
 ];
 const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
-const BANK_PROVIDER_LEDGER_CURSOR_SOURCE = "bank-provider-ledger";
+const BANK_PROVIDER_LEDGER_CURSOR_SOURCE = "bank-provider-ledger-finalized";
 const CASINO_RECOVERY_PAGE_SIZE = 50;
 /**
  * Indexed-bet recovery re-reads every requeued bet on chain, so after scans it runs
@@ -278,8 +279,9 @@ export function createKeeperRuntime({
   let scanning = false;
   let bankProviderLedgerScanning = false;
   let lastScannedBlock = config.startBlock ?? 0n;
-  let bankProviderLedgerLastScannedBlock = config.startBlock ?? 0n;
-  let bankProviderLedgerNextBlock: bigint | undefined;
+  let bankProviderLedgerLastScannedBlock =
+    (config.casinoRecoveryStartBlock ?? config.startBlock ?? 0n) - 1n;
+  let bankProviderLedgerFinalizedBlock: bigint | undefined;
   let recoveryAfterBetId = 0n;
   let recoveringIndexedBets = false;
   let drainingQueue = false;
@@ -450,7 +452,7 @@ export function createKeeperRuntime({
       hash: txHash,
       pollingInterval: 1_000
     });
-    return { status: receipt.status };
+    return { status: receipt.status, blockNumber: receipt.blockNumber };
   };
 
   const materializeCasinoReceipt = async (event: KeeperEvent, txHash: Hex) => {
@@ -742,15 +744,10 @@ export function createKeeperRuntime({
         config.gameHub
       );
       const resumeBlock = resolveBetIndexResumeBlock(lastScannedBlock, cursor);
-      const bankProviderCursor =
-        (await betIndexStore.getCursor(
-          config.chainId,
-          BANK_PROVIDER_LEDGER_CURSOR_SOURCE,
-          config.gameHub
-        )) ?? cursor;
-      const bankProviderResumeBlock = resolveBetIndexResumeBlock(
-        bankProviderLedgerLastScannedBlock,
-        bankProviderCursor
+      const bankProviderCursor = await betIndexStore.getCursor(
+        config.chainId,
+        BANK_PROVIDER_LEDGER_CURSOR_SOURCE,
+        config.gameHub
       );
       if (resumeBlock > lastScannedBlock) {
         const configuredStartBlock = lastScannedBlock;
@@ -761,12 +758,13 @@ export function createKeeperRuntime({
         });
         writeHealth(health.recordStarted(lastScannedBlock, queue.size));
       }
-      if (bankProviderResumeBlock > bankProviderLedgerLastScannedBlock) {
+      if (bankProviderCursor != null && bankProviderCursor > bankProviderLedgerLastScannedBlock) {
         const configuredStartBlock = bankProviderLedgerLastScannedBlock;
-        bankProviderLedgerLastScannedBlock = bankProviderResumeBlock;
+        bankProviderLedgerLastScannedBlock = bankProviderCursor;
+        bankProviderLedgerFinalizedBlock = bankProviderCursor;
         logger.info("casino.keeper.bank_provider_ledger_cursor_resumed", {
           configuredStartBlock: configuredStartBlock.toString(),
-          cursorBlock: bankProviderResumeBlock.toString()
+          cursorBlock: bankProviderCursor.toString()
         });
       }
       await requeueIndexedBets();
@@ -807,19 +805,19 @@ export function createKeeperRuntime({
   };
 
   /**
-   * A capped pass leaves the cursor short of the head and resumes next tick.
+   * A capped pass leaves the cursor short of its target and resumes next tick.
    * Without this line an operator watching a quiet log has no way to tell a
    * caught-up keeper from one still grinding through a months-old backlog.
    */
-  const reportScanCap = (scanner: string, ranges: BlockRange[], latest: bigint) => {
-    if (!isScanTruncated(ranges, latest)) return;
+  const reportScanCap = (scanner: string, ranges: BlockRange[], target: bigint) => {
+    if (!isScanTruncated(ranges, target)) return;
     const last = ranges[ranges.length - 1]!;
     logger.info("casino.keeper.scan_capped", {
       scanner,
       chunks: ranges.length,
       scannedThrough: last.toBlock.toString(),
-      headBlock: latest.toString(),
-      remainingBlocks: (latest - last.toBlock).toString()
+      targetBlock: target.toString(),
+      remainingBlocks: (target - last.toBlock).toString()
     });
   };
 
@@ -892,33 +890,28 @@ export function createKeeperRuntime({
     ) {
       return;
     }
-    const latest = await publicClient.getBlockNumber();
-    const origin = config.casinoRecoveryStartBlock ?? config.startBlock ?? 0n;
-    bankProviderLedgerNextBlock ??=
-      bankProviderLedgerLastScannedBlock === 0n
-        ? latest
-        : bankProviderLedgerLastScannedBlock >= origin + BANK_REORG_LOOKBACK - 1n
-          ? bankProviderLedgerLastScannedBlock - BANK_REORG_LOOKBACK + 1n
-          : origin;
-    if (bankProviderLedgerNextBlock > latest + 1n)
-      bankProviderLedgerNextBlock =
-        latest >= origin + BANK_REORG_LOOKBACK - 1n ? latest - BANK_REORG_LOOKBACK + 1n : origin;
+    const finalized = await publicClient.getBlock({ blockTag: "finalized" });
+    if (finalized.number == null)
+      throw new Error("Bank provider ledger requires a numbered finalized block");
+    if (
+      bankProviderLedgerFinalizedBlock != null &&
+      finalized.number < bankProviderLedgerFinalizedBlock
+    )
+      throw new Error(
+        `Bank provider ledger finalized block regressed from ${bankProviderLedgerFinalizedBlock} to ${finalized.number}`
+      );
+    bankProviderLedgerFinalizedBlock = finalized.number;
     const ranges = splitBlockRange({
-      fromBlock: bankProviderLedgerNextBlock,
-      toBlock: latest,
+      fromBlock: bankProviderLedgerLastScannedBlock + 1n,
+      toBlock: finalized.number,
       chunkSize: config.scanChunkBlocks,
       maxChunks: config.scanMaxChunksPerPass
     });
-    reportScanCap("bank-provider-ledger", ranges, latest);
+    reportScanCap("bank-provider-ledger", ranges, finalized.number);
     for (const range of ranges) {
       await writeBankProviderLedgerRange(betIndexStore, publicClient, config, range, logger);
       bankProviderLedgerLastScannedBlock = range.toBlock;
-      bankProviderLedgerNextBlock = range.toBlock + 1n;
     }
-    // Resume a partial overlap on the next pass; never restart a too-large rewind indefinitely.
-    if (bankProviderLedgerNextBlock > latest)
-      bankProviderLedgerNextBlock =
-        latest >= origin + BANK_REORG_LOOKBACK - 1n ? latest - BANK_REORG_LOOKBACK + 1n : origin;
   };
 
   const scanUnresolvedHistory = async () => {
@@ -997,7 +990,24 @@ export function createKeeperRuntime({
         functionName: "claimPlayerPayable" as const,
         args: [player] as const
       };
-      await publicClient.simulateContract({ ...request, account: account.address });
+      try {
+        await publicClient.simulateContract({ ...request, account: account.address });
+      } catch (error) {
+        const reverted =
+          error instanceof BaseError
+            ? error.walk((cause) => cause instanceof ContractFunctionRevertedError)
+            : undefined;
+        const token =
+          reverted instanceof ContractFunctionRevertedError ? reverted.data?.args?.[0] : undefined;
+        if (
+          reverted instanceof ContractFunctionRevertedError &&
+          reverted.data?.errorName === "SafeERC20FailedOperation" &&
+          typeof token === "string" &&
+          token.toLowerCase() === banks.get(bank.toLowerCase())?.asset.toLowerCase()
+        )
+          return { status: "refused" as const, reason: describeError(error) };
+        throw error;
+      }
       const txHash = await walletClient.writeContract({ ...request, account, chain });
       const receipt = await waitFinalizeReceipt(txHash);
       logger.info("casino.keeper.player_payable_claimed", {

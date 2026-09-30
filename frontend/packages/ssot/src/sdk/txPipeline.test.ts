@@ -673,3 +673,25 @@ describe("isTransientError", () => {
     expect(isTransientError(new Error("network fail"))).toBe(false);
   });
 });
+
+it("rejects an invalidated context before an unsimulated wallet request without unknown delivery", async () => {
+  const walletClient = mockWalletClient();
+  const publicClient = mockPublicClient();
+  const pipeline = createTxPipeline({
+    config: { minIntervalMs: 0 },
+    beforeWrite: () => {
+      throw Object.assign(new Error("Context changed"), { name: "WalletContextChangedError" });
+    }
+  });
+  const result = await pipeline.writeNoSimulate({ ...BASE_PARAMS, walletClient, publicClient });
+  expect(result).toMatchObject({
+    ok: false,
+    txHash: "0x0",
+    error: {
+      code: "WALLET_CONTEXT_CHANGED",
+      details: { phase: "beforeWrite", transactionSubmitted: false }
+    }
+  });
+  expect(walletClient.writeContract).not.toHaveBeenCalled();
+  expect(publicClient.waitForTransactionReceipt).not.toHaveBeenCalled();
+});

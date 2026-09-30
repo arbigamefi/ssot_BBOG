@@ -18,6 +18,7 @@ export type KeeperFailureSource =
   | "recovery"
   | "redemption"
   | "pocket-recovery"
+  | "payables"
   | "pocket";
 
 export type RedemptionHealth = {
@@ -43,16 +44,24 @@ export type PocketHealth = {
 export type PocketDiscoveryHealth = {
   bank: Address;
   scannedThrough?: string;
+  /** Pocket discovery and state reads cover finalized blocks only. */
+  finalizedBlock?: string;
+  headBlock?: string;
   caughtUp: boolean;
   error?: string;
 };
 
-/** Player payables awaiting a keeper claim. Informational: a refused claim is an owed debt, not a fault. */
+/** Refused transfers remain owed; discovery and RPC failures require operational attention. */
 export type PayableHealth = {
   bank: Address;
   scannedThrough?: string;
+  /** Discovery covers finalized blocks only; recent debts wait for chain finality. */
+  finalizedBlock?: string;
+  headBlock?: string;
   caughtUp: boolean;
   pending: number;
+  readError?: string;
+  claimError?: string;
   error?: string;
 };
 
@@ -286,6 +295,14 @@ export class KeeperHealthReporter {
   }
 
   async recordPayables(payables: PayableHealth[], queueDepth: number) {
+    const failures = payables
+      .filter((item) => !item.caughtUp || item.readError || item.claimError)
+      .map(
+        (item) =>
+          `${item.bank}: ${item.readError ?? item.claimError ?? `payable discovery incomplete through ${item.scannedThrough ?? "unknown"} (finalized target ${item.finalizedBlock ?? "unknown"})`}`
+      );
+    if (failures.length) this.fail("payables", failures.join("; "));
+    else this.failures.delete("payables");
     await this.update({ payables, queueDepth });
   }
 

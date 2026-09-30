@@ -74,10 +74,11 @@ contract GenerateFrontendManifestV16 is Script {
             "}\n"
         );
 
-        vm.writeFile(OUT_LATEST, json);
+        string memory outputPath = vm.envOr("FRONTEND_MANIFEST_OUTPUT_PATH", OUT_LATEST);
+        vm.writeFile(outputPath, json);
 
         console2.log("snapshot:", snapshotPath);
-        console2.log("Wrote:", OUT_LATEST);
+        console2.log("Wrote:", outputPath);
     }
 
     function _buildAddressesJson(string memory snap) internal pure returns (string memory) {
@@ -352,7 +353,7 @@ contract GenerateFrontendManifestV16 is Script {
         sym = jsonReader.readString(snap, string.concat(".poolAssetSymbol_", suffix));
         require(bytes(sym).length != 0, "missing pool asset symbol");
 
-        uint256 d = jsonReader.readUint(snap, string.concat(".poolAssetDecimals_", suffix));
+        uint256 d = jsonReader.readUint(snap, string.concat(".poolLpDecimals_", suffix));
         require(d <= type(uint8).max, "pool asset decimals too large");
         dec = uint8(d);
     }

@@ -49,7 +49,7 @@ const BANK_EVENTS = [
   "RedeemBatchRetired",
   "RedeemBatchPriced",
   "RedeemBatchActivated",
-  "RecoveryUpdated",
+  "BetRiskSettled",
   "RecoverySynced",
   "RecoveryClaimed",
   "ProtocolCapitalAccrued",

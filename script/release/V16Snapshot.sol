@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "forge-std/StdJson.sol";
 import {Governable} from "../../src/access/Governable.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
 import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
@@ -20,7 +21,8 @@ library V16Snapshot {
 
     function targets(string memory snap) internal pure returns (address[] memory list) {
         require(
-            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.6-house-edge-allocation"), "not v1.6"
+            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.6-house-edge-allocation"),
+            "not v1.6"
         );
         uint256 pools = snap.readUint(".numPools");
         require(pools > 0 && pools <= 32, "bad pool count");
@@ -129,6 +131,9 @@ library V16Snapshot {
             require(bank.guardian() == snap.readAddress(".guardian"), "guardian mismatch");
             require(bank.paused(), "risk-in must remain paused until launch");
             require(bank.asset() == snap.readAddress(string.concat(".poolAsset_", vm.toString(i))), "asset mismatch");
+            uint256 decimals = snap.readUint(string.concat(".poolLpDecimals_", suffix));
+            require(bank.decimals() == decimals, "bank precision mismatch");
+            require(IERC20Metadata(bank.asset()).decimals() == decimals, "asset precision mismatch");
             require(bank.settlementRouter() == snap.readAddress(".settlementRouter"), "router mismatch");
             require(
                 bank.riskReserveBps() == snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix))

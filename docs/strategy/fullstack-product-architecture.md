@@ -15,7 +15,7 @@ SettlementRouter
 
 Bank owns asset custody, LP shares, reserves and every payable. Router binds each position to its originating hub and enforces settlement limits. Hubs own their business lifecycle. Casino modules calculate deterministic outcomes from randomness; sports uses independently authorized odds and event evidence. Casino and sports have separate bankrolls and admission requirements.
 
-Casino LPs retain half the turnover house edge; protocol and referral rewards share the other half. Deposits are immediate. Redemption activation prices liquid cash and preserves full historical reserve and recovery rights for all snapshot holders. Old positions charge only their own epoch; later betting and exits use active capital. Both priced liquid claims and historical backing are outside active LP NAV. See the [economic design](economic-design.md).
+Casino LPs retain half the turnover house edge; protocol and referral rewards share the other half. Deposits are immediate. Redemption activation prices liquid cash and preserves only exiting controllers’ historical reserve and recovery rights. Staying shares retain active risk and recover underwriting capital in the settlement transaction. Both priced liquid claims and historical backing are outside active LP NAV. See the [economic design](economic-design.md).
 
 VRF callbacks only record randomness and readiness. Settlement remains a separate public transaction. Transfer failure can create a fixed player payable; receipts must distinguish that debt from cash delivered.
 

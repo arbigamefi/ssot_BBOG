@@ -103,6 +103,8 @@ export interface CreateSSOTSDKParams {
   walletClient?: WalletClient;
   account?: Address;
   journal?: JournalSink;
+  /** Revoke pending writes when the embedding app changes wallet or release context. */
+  assertWalletContext?: () => void;
 }
 
 export interface SSOTSDK {
@@ -117,7 +119,7 @@ export interface SSOTSDK {
 
 export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   const { release, publicClient, walletClient, account } = params;
-  const tx = createTxPipeline({ journal: params.journal });
+  const tx = createTxPipeline({ journal: params.journal, beforeWrite: params.assertWalletContext });
 
   function requireWallet():
     | { walletClient: WalletClient; account: Address }
@@ -1116,7 +1118,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     },
     async getSnapshot(poolId: number, opts): Promise<DomainBankSnapshot> {
       const pool = resolveBankPool(poolId);
-      const blockNumber = opts?.blockNumber ?? (await publicClient.getBlockNumber());
+      const blockNumber =
+        opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
       const block = await publicClient.getBlock({ blockNumber });
       const shareUnit = 10n ** BigInt(pool.decimals);
       const [ssot, totalSupply, assetsPerShare, performance] = (await Promise.all([
@@ -1192,7 +1195,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
 
     async getPosition(poolId: number, user: AddressT, opts): Promise<DomainBankPosition> {
       const pool = resolveBankPool(poolId);
-      const blockNumber = opts?.blockNumber ?? (await publicClient.getBlockNumber());
+      const blockNumber =
+        opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
       const [block, shares] = await Promise.all([
         publicClient.getBlock({ blockNumber }),
         publicClient.readContract({

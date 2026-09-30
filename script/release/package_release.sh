@@ -10,6 +10,13 @@ set -euo pipefail
 #
 # Output: dist/ssot-release-<TAG>-<digestPrefix>.tar.gz
 
+# Provenance must identify committed source, never an unrecorded working tree.
+if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+  echo "release package requires a clean, committed source tree" >&2
+  exit 1
+fi
+SOURCE_REVISION=$(git rev-parse HEAD)
+
 RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v16.json}"
 PYTHON="${PYTHON:-python}"
 SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v16.json}"
@@ -76,6 +83,8 @@ cleanup() { rm -rf "$STAGE"; }
 trap cleanup EXIT
 
 mkdir -p "$STAGE/deployments" "$STAGE/abis"
+
+printf '%s\n' "$SOURCE_REVISION" > "$STAGE/SOURCE_REVISION"
 
 # Core release artifacts
 cp "$SNAPSHOT_PATH" "$STAGE/deployments/$SNAPSHOT_LATEST_NAME"

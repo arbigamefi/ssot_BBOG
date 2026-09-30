@@ -6,13 +6,16 @@ not a display pool ID. Amounts remain raw asset units until formatted with verif
 ## Accounting
 
 Read `getSSOT`, `exitPayable`, `playerPayableTotal`, `recoveryBacking`, `currentEpoch`,
-`currentOpenHolds`, `openHolds`, `activeReserved`, `totalReserved` and `totalSupply`.
+`activeOpenHolds`, `openHolds`, `activeReserved`, `totalReserved` and `totalSupply`.
 
 - `NAV = B - PF - XP - exitPayable - playerPayableTotal - recoveryBacking` is active capital.
-- `getSSOT().R = activeReserved` covers only current-epoch holds. Across the complete historical index,
-  `activeReserved + sum(epoch.remainingReserve) = totalReserved`.
-- Historical `backingAssets` includes remaining risk and released but unclaimed recovery. Its sum is
-  `recoveryBacking`; each pocket must cover its remaining reserve. Do not count this reserve twice.
+- `getSSOT().R = activeReserved` covers active units in both old and new open holds.
+  `totalReserved - activeReserved - sum(epoch.remainingReserve)` is open protocol reserve from full exits.
+  Epochs must be completely discovered at one block before deriving this remainder.
+- Historical `backingAssets` includes each batch's open exiting reserve and released unclaimed recovery.
+  Its sum can be less than `recoveryBacking`: the difference includes open protocol reserve and
+  cross-batch floor remainders not yet finally assigned. It is not free LP NAV. Reconcile terminal
+  `BetRiskSettled`, per-batch final synchronization and `ProtocolCapitalAccrued` before classifying dust.
 - Require `NAV >= activeReserved`, equivalently cash covers PF, XP, fixed exits, player debt,
   all recovery backing and active reserve. Do not clamp a backing deficit away.
 - Risk-in and optional-outflow buffers apply to active NAV. New bets cannot use historical backing.
@@ -27,11 +30,10 @@ can prevent cash delivery even when the accounting remains backed.
 
 Read `redeemBatch(currentEpoch)` for the one waiting queue. A nonempty queue remains cancellable until
 activation, even after its eligible cutoff. While unpaused, anyone may activate an eligible queue.
-Activation segregates only that epoch's reserve, records all original holders, burns requested shares
+Activation segregates only exiting reserve units, records their controllers, burns requested shares
 once and prices its liquid cash. It never waits for an older epoch or for recipients to claim.
 
-Discover sealed epochs through `RedeemBatchActivated`, including epochs in which an account stayed
-in the pool. Read `recoveryEpoch(epochId)` and `getRecovery(epochId, controller)` at the same block.
+Discover sealed epochs through `RedeemBatchActivated`, for activated request controllers, including those with zero remaining shares. Read `recoveryEpoch(epochId)` and `getRecovery(epochId, controller)` at the same block.
 `claimableAssets` is currently released cash; `pendingAssets` is only a future additional upper bound.
 It is not a guaranteed payment or a completion-time promise. Wallet transfers and new deposits do
 not transfer an earlier epoch's rights.
@@ -44,17 +46,26 @@ rounding dust without requiring inactive holders to return; assigned unpaid amou
 ## Incidents and recovery
 
 An unresolved old hold retains its reserve and recovery ownership but cannot gate later queues or
-adequately funded betting. Other holds in that epoch can still release claimable recovery. Diagnose
+new betting subject to capital and the 128 active-risk-hold limit. Other holds in that epoch can still release claimable recovery. Diagnose
 PendingVRF refunds and RandomReady finalization using the [casino runbook](game-finalization-diffs.md).
 Never invalidate a winner or erase a recovery right to clear an alert.
 
 Player transfer failure may become a fully backed payable while the hold terminalizes. Its later
-`claimPlayerPayable(player)` cannot charge the old epoch again and pays only that player.
+`claimPlayerPayable(player)` cannot charge the old epoch again and pays only that player. The keeper discovers
+new debts only after their creation block is finalized; this can delay automatic payment. A player
+can claim earlier. Monitor the finalized discovery target separately from latest head. RPC, funding
+or claim-delivery errors remain degraded through retry backoff until reconciliation succeeds;
+unknown token reverts are actionable too.
 
-Monitor historical age from actual activation using chain time and a restart-safe paginated index.
+Monitor historical age from actual activation using finalized chain time and a restart-safe paginated
+index. Historical-risk alerts and provider cash-flow indexing wait for finality; compare finalized
+coverage with latest head rather than interpreting a caught-up finalized cursor as live coverage.
+Staying capital recovers in each terminal transaction without a claim or keeper reinvestment.
+Monitor `activeOpenHolds / MAX_ACTIVE_HOLDS` separately from capital utilization.
 Ten minutes is an alert threshold, not an exit deadline. Incomplete scanning must remain degraded
 rather than reporting that no historical risk exists. Reconcile `RecoveryClaimed` cash events by
-beneficiary, distinguish explicit Bank donations, and remove orphaned events on reorg.
+beneficiary and distinguish explicit Bank donations. Provider ledger ingestion uses finalized blocks
+only; an unavailable or regressing finalized target must report a scan failure.
 
 Verify `ProtocolCapitalAccrued` separately from gameplay protocol fees. Full-exit virtual residuals
 and historical final dust follow [ADR-0035](../../adr/0035-recovery-rights-without-exit-blocking.md);

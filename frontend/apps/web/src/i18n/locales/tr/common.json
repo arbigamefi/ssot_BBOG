@@ -929,7 +929,6 @@
         "deposited": "Yüklenen yatırmalar",
         "withdrawn": "Yüklenen çekmeler",
         "openValue": "Bilinen LP değeri",
-        "netPnl": "Yüklenen net K/Z",
         "shares": "Paylar"
       },
       "columns": {
@@ -940,7 +939,7 @@
         "sharePrice": "Pay fiyatı",
         "tx": "Tx"
       },
-      "incomplete": "Bu ana kadarki nakit akışı kapsamı doğrulanmadı. Tam getiri gösterilemiyor."
+      "incomplete": "Nakit akışı geçmişi eksik. Toplamlar yalnızca yüklenen kayıtları kapsar."
     },
     "overview": {
       "totalAssets": {
@@ -951,7 +950,7 @@
     "async": {
       "inactivePool": "Bu havuz etkin değil; yeni bahis ve mevduat kabul etmiyor. Çıkış talepleri, uygun iptaller ve mevcut alacakların ödenmesi sözleşme kurallarına göre kullanılabilir.",
       "requestDetail": "Cüzdan paylarıyla çıkış isteyin. Etkinleştirme kullanılabilir nakdi hemen fiyatlar ve geçmiş geri kazanım haklarını ayrı tutar. Çözülmemiş eski bahisler sonraki grupları engellemez.",
-      "pendingRisk": "Sıradaki paylar aktif havuz sonuçlarını taşır. Etkinleştirmede tüm mevcut sahipler eski bahislere ait haklarını korur. Nakit sıfır olabilir; geri kazanım belirsizdir ve daha sonra gelebilir.",
+      "pendingRisk": "Sıradaki paylar aktif havuz riskini taşır. Etkinleştirme yalnız çıkan payların eski riskini ve geri kazanımını ayırır. Kalan paylar bahisleri finanse etmeye devam eder. Nakit sıfır olabilir; geri kazanım belirsizdir.",
       "queuedTitle": "Sıradaki talep",
       "queuedDetail": "Paylar etkinleşmeye kadar aktif kalır. Çözülmemiş eski bahisler bu grubu engellemez. Nakit fiyatı etkinleşmede sabitlenir; geçmiş haklar ayrı kalır. Kullanılabilir teminat ve acil duraklatma kuralları geçerlidir; tam nakit ödeme süresi taahhüt edilmez.",
       "eligibleAt": "En erken etkinleşme: {time}. Bu, kesin etkinleşme veya ödeme zamanı değildir.",
@@ -959,7 +958,7 @@
       "cancelDetail": "Grup etkinleşmeden önce, en erken etkinleşme zamanı geçmiş olsa bile tüm sıradaki payları iptal ederek geri alın. Etkinleşen talepler iptal edilemez. İşlem güncel zincir durumunu kontrol eder.",
       "cancel": "Sıradaki payları iptal et",
       "paused": "Havuz duraklatıldı. Talepler ve sıra iptalleri açık; yatırımlar, çıkış nakdi ve geri kazanım ödemeleri yeniden başlamayı bekler.",
-      "depositTerms": "Yatırımlar güncel defter fiyatıyla hemen aktif sermayeye katılır. Mevcut sonuçlanmamış bahisleri içerir; önceki etkinleşmelerin geri kazanım haklarını içermez.",
+      "depositTerms": "Yatırımlar kalan eski ve yeni açık riskleri içeren tam defter değeriyle aktif sermaye alır. Önceden ayrılmış çıkış hakları dahil değildir.",
       "claimDetail": "Bu nakit çıkışınız için ayrılmıştır. Fiyatlanmış tüm payları almak, atanmış nakdi öder ve geçmiş geri kazanım haklarını korur.",
       "totalEquityDetail": "Cüzdan değeri + sıra tahmini + fiyatlanmış nakit. Geçmiş geri kazanım ayrı gösterilir ve bu tahmine dahil değildir.",
       "queuedEquity": "Sıradaki paylar / nakit tahmini",
@@ -972,13 +971,13 @@
     },
     "recovery": {
       "title": "Geçmiş geri kazanım hakları",
-      "detail": "Eski bahisler havuzda kalanlar dahil ilk hak sahiplerine aittir. Cüzdan payının sıfır olması bu hakları kaldırmaz.",
+      "detail": "Bu haklar etkinleştirilmiş çıkış taleplerine aittir. Kalan payların sermayesi hesaplaşmada otomatik serbest kalır. Sıfır cüzdan bakiyesi çıkış haklarını silmez.",
       "loading": "Geçmiş haklar aranıyor…",
       "incomplete": "Geçmiş hak araması tamamlanmadı. Tüm pozisyonu değerlendirmeden önce kalan sayfaları yükleyin.",
       "error": "Geçmiş haklar yüklenemedi. Haklarınız sıfır kabul edilmez.",
       "empty": "Tam aramada geçmiş hak bulunamadı.",
       "epoch": "Dönem {epoch}",
-      "units": "Anlık görüntü birimleri",
+      "units": "Etkinleştirilmiş çıkış payları",
       "claimable": "Alınabilir geri kazanım nakdi",
       "upperBound": "Kalan geri kazanım üst sınırı",
       "upperBoundDetail": "Üst sınır şu an alınabilir nakit veya ödeme taahhüdü değildir.",
@@ -989,7 +988,7 @@
       "loadMore": "Daha fazla geçmiş hak yükle",
       "refresh": "Geçmiş hakları yenile",
       "receiver": "Nakit {receiver} adresine gönderilir. Bu işlem keeper için sizin adınıza talep yetkisi vermez.",
-      "incompleteReturn": "Getiri eksik: geçmiş haklar sonuçlanmadı veya arama tamamlanmadı.",
+      "incompleteReturn": "Geçmiş haklar henüz sonuçlanmadı veya tarama tamamlanmadı; gösterilen pozisyon eksik.",
       "backing": "Geçmiş hak teminatı",
       "backingDetail": "Aktif sermayeye dahil değildir; eski borçları ve alınmamış geri kazanımı karşılar.",
       "donationNote": "Bank bağışları hak sahibinin aldığı harici nakit sayılmaz.",

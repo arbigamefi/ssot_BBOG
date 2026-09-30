@@ -71,7 +71,7 @@ function fixture(overrides: Record<string, unknown> = {}, timestamp = 100n) {
     getPerformance: [0n, 0n, 0n, 0n, 0n, 0n, 2n, 1n, 0n],
     totalReserved: 13n,
     recoveryBacking: 32n,
-    currentOpenHolds: 1n,
+    activeOpenHolds: 1n,
     currentEpoch: 3n,
     openHolds: 4n,
     exitPayable: 17n,
@@ -131,6 +131,14 @@ function fixture(overrides: Record<string, unknown> = {}, timestamp = 100n) {
 }
 
 describe("asynchronous Bank SDK", () => {
+  it("refreshes the head after a mined action instead of permanently pinning the previous cached height", async () => {
+    const { sdk, pub } = fixture();
+    pub.getBlockNumber.mockImplementation(async (options?: { cacheTime?: number }) =>
+      options?.cacheTime === 0 ? 43n : 42n
+    );
+    expect((await sdk.bank.getSnapshot(1)).updatedAtBlock).toBe(43n);
+    expect((await sdk.bank.getPosition(1, ACCOUNT)).updatedAtBlock).toBe(43n);
+  });
   it("pins active, queued liquid quote and fixed cash to one block without folding in recovery bounds", async () => {
     const { sdk, pub } = fixture();
     expect(await sdk.bank.getPosition(1, ACCOUNT, { blockNumber: 39n })).toMatchObject({
@@ -215,7 +223,7 @@ describe("asynchronous Bank SDK", () => {
       activeReserved: 3n,
       totalReserved: 13n,
       recoveryBacking: 32n,
-      currentOpenHolds: 1n,
+      activeOpenHolds: 1n,
       openHolds: 4n,
       currentEpoch: 3n,
       queuedBatch: { batchId: 3n },

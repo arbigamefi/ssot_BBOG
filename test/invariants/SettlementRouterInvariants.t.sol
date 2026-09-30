@@ -322,15 +322,14 @@ contract SettlementRouterHandler is Test {
         Bank rightBank = Bank(m.bank);
         Bank wrongBank = rightBank == casinoBank ? sportsBank : casinoBank;
 
-        (address player, uint256 stake, uint256 reserved, bytes32 snapshotHash, bool open,) =
-            rightBank.holds(positionId);
+        (address player, uint256 stake, uint256 reserved, bytes32 snapshotHash, bool open) = rightBank.holds(positionId);
         assertEq(player, m.player, "right bank player mismatch");
         assertEq(stake, m.stake, "right bank stake mismatch");
         assertEq(reserved, m.reserved, "right bank reserved mismatch");
         assertEq(snapshotHash, m.snapshotHash, "right bank snapshot mismatch");
         assertEq(open, m.state == SSOTTypes.PositionState.Held, "right bank open mismatch");
 
-        (address wrongPlayer,,,, bool wrongOpen,) = wrongBank.holds(positionId);
+        (address wrongPlayer,,,, bool wrongOpen) = wrongBank.holds(positionId);
         assertEq(wrongPlayer, address(0), "wrong bank has position player");
         assertFalse(wrongOpen, "wrong bank has open position");
     }

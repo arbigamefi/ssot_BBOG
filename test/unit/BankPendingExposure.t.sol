@@ -8,7 +8,7 @@ import {IBank} from "../../src/core/interfaces/IBank.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
-/// @notice The security scan's two counterexamples ("LP exit shifts unsettled risk", 2026-09-28), rewritten as
+/// @notice The local security review's two counterexamples ("LP exit shifts unsettled risk", 2026-09-28), rewritten as
 ///         safety assertions for liquid exits plus historical recovery (ADR-0035). The synchronous Bank of `979be07a6` fails both: there the
 ///         bettor-LP exits with 1,049,975,012 instead of 1,000,000,000, and the result observer takes 99,950,025
 ///         from the remaining LP. Here unresolved reserves keep their original owners after liquid cash is claimed.
@@ -43,21 +43,20 @@ contract BankPendingExposureTest is Test {
         bank.activateBatch();
         vm.prank(alice);
         uint256 liquid = bank.redeem(1_000e6, alice, alice);
-        assertEq(liquid, 950e6, "the open reserve is not withdrawable cash");
+        assertLe(liquid, 950e6, "the open reserve is not withdrawable cash");
         bank.refundBet(1, 100e6);
         vm.prank(alice);
         uint256 recovered = bank.claimRecovery(1, alice, alice);
 
-        assertEq(liquid + recovered, 1_000e6, "liquid exit plus actual recovery returns principal only");
-        assertEq(asset.balanceOf(alice), 1_100e6, "principal and refunded stake, nothing extracted");
-        assertEq(bank.totalAssets(), 950e6);
-        assertEq(bank.getRecovery(1, bob).claimableAssets, 50e6, "the staying owner also keeps old recovery");
-        assertEq(bank.totalAssets() + bank.getRecovery(1, bob).claimableAssets, 1_000e6);
-        assertEq(_exitAll(bob), 950e6);
-        vm.prank(bob);
-        assertEq(bank.claimRecovery(1, bob, bob), 50e6);
-        assertEq(asset.balanceOf(bob), 1_000e6);
-        assertEq(asset.balanceOf(address(bank)), 0);
+        assertLe(liquid + recovered, 1_000e6, "pending own stake cannot create LP profit");
+        assertGe(liquid + recovered, 1_000e6 - 1e3 - 2, "only virtual pricing and integer rounding can reduce value");
+        assertEq(asset.balanceOf(alice), 100e6 + liquid + recovered);
+        assertGe(bank.totalAssets(), 1_000e6, "staying principal remains active in the refund transaction");
+        assertEq(bank.getRecovery(1, bob).shares, 0);
+        uint256 bobPaid = _exitAll(bob);
+        assertGe(bobPaid, 1_000e6);
+        assertEq(liquid + recovered + bobPaid + bank.protocolFeesPayable(), 2_000e6);
+        assertEq(asset.balanceOf(address(bank)), bank.protocolFeesPayable());
         assertEq(bank.totalBetsRefunded(), 1);
     }
 
@@ -84,9 +83,10 @@ contract BankPendingExposureTest is Test {
 
         // 1,900 NAV over 2,000 shares: the real-equity ceiling pays 950, below the 950.024987 virtual quote.
         assertEq(settledFirst, 950e6);
-        assertEq(exitedFirst, settledFirst, "asking to exit first gains nothing");
-        assertEq(bank.totalAssets(), remainingNavSettledFirst, "the remaining LP bears nothing extra");
-        assertEq(bank.totalAssets(), 950e6);
+        assertLe(exitedFirst, settledFirst, "asking to exit first gains nothing");
+        assertLe(settledFirst - exitedFirst, 1e3 + 2, "bounded virtual and integer rounding");
+        assertGe(bank.totalAssets(), remainingNavSettledFirst, "the remaining LP bears nothing extra");
+        assertEq(bank.totalAssets() + exitedFirst, remainingNavSettledFirst + settledFirst);
         assertEq(asset.balanceOf(player), 200e6, "the identical player payout is honored");
         assertEq(bank.totalReserved(), 0);
         assertEq(bank.totalBetsSettled(), 1);

@@ -272,6 +272,7 @@ async function main() {
     SNAPSHOT_PATH: path.join(verificationDir, "snapshot.json"),
     RELEASE_PATH: path.join(verificationDir, "release.json")
   };
+  let verificationStage = "artifact validation";
   try {
     await execFileAsync(
       process.env.PYTHON ?? "python3",
@@ -294,6 +295,7 @@ async function main() {
       ],
       { cwd: repoRoot, env: verificationEnv }
     );
+    verificationStage = "release signature";
     await execFileAsync(
       "forge",
       [
@@ -302,6 +304,7 @@ async function main() {
       ],
       { cwd: repoRoot, env: verificationEnv }
     );
+    verificationStage = "live governance";
     await execFileAsync(
       "forge",
       [
@@ -312,9 +315,12 @@ async function main() {
       ],
       { cwd: repoRoot, env: verificationEnv }
     );
-  } catch {
+  } catch (error) {
+    // Preserve the rejecting stage without echoing commands or RPC credentials.
+    const detail =
+      verificationStage === "artifact validation" ? ` ${String(error.stderr ?? "").trim()}` : "";
     throw new Error(
-      `${RELEASE_LINE.name} bundle or live governance verification failed; active release was not changed.`
+      `${RELEASE_LINE.name} ${verificationStage} failed; active release was not changed.${detail}`
     );
   } finally {
     await fs.rm(verificationDir, { recursive: true, force: true });

@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { encodeAbiParameters, encodeEventTopics } from "viem";
-import { GAME_HUB_KEEPER_ABI } from "./abi.js";
+import {
+  BaseError,
+  ContractFunctionRevertedError,
+  encodeAbiParameters,
+  encodeErrorResult,
+  encodeEventTopics
+} from "viem";
+import { BANK_REDEMPTION_KEEPER_ABI, GAME_HUB_KEEPER_ABI } from "./abi.js";
 import { createMemoryBetIndexStore, type BetIndexStore } from "@ssot/bet-index";
 import { CASINO_TRANSACTION_GAS, createKeeperRuntime, type KeeperRuntime } from "./runtime.js";
 import type { KeeperConfig } from "./types.js";
@@ -27,7 +33,7 @@ const INDEX_EVENTS = [
   "BetRefunded",
   "HouseEdgeAllocated"
 ];
-type LogQuery = { events: Array<{ name: string }>; fromBlock: bigint };
+type LogQuery = { events: Array<{ name: string }>; fromBlock: bigint; toBlock: bigint };
 const eventNames = (query: LogQuery) => query.events.map((event) => event.name);
 const logQueries = () =>
   vi
@@ -98,6 +104,140 @@ describe("runtime recovery composition", () => {
   });
   const make = (config: KeeperConfig = base) =>
     createKeeperRuntime({ config, logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
+
+  function finalizedLedgerFixture() {
+    const bank = "0x0000000000000000000000000000000000000003" as const;
+    const asset = "0x0000000000000000000000000000000000000004" as const;
+    const state = {
+      head: 100n,
+      finalized: 76n,
+      deposit: undefined as bigint | undefined,
+      finalityFailure: ""
+    };
+    mock.client.getBlockNumber = vi.fn(async () => state.head);
+    mock.client.getBlock = vi.fn(async (query?: { blockTag?: string; blockNumber?: bigint }) => {
+      if (query?.blockTag === "finalized") {
+        if (state.finalityFailure === "unavailable") throw new Error("finalized RPC unavailable");
+        if (state.finalityFailure === "unnumbered") return { number: null, timestamp: 1601n };
+      }
+      return {
+        number:
+          query?.blockNumber ?? (query?.blockTag === "finalized" ? state.finalized : state.head),
+        timestamp: 1601n
+      };
+    });
+    mock.client.getContractEvents = vi.fn(async () => []);
+    mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
+      if (functionName === "currentEpoch") return 1n;
+      if (functionName === "redeemBatch") return { priced: false, shares: 0n, cutoff: 0n };
+      throw new Error(`Unexpected read ${functionName}`);
+    });
+    mock.client.getLogs = vi.fn(async (query: LogQuery) =>
+      eventNames(query).includes("Deposit") &&
+      state.deposit != null &&
+      query.fromBlock <= state.deposit &&
+      query.toBlock >= state.deposit
+        ? [
+            {
+              address: bank,
+              eventName: "Deposit",
+              args: { sender: hub, owner: hub, assets: 100n, shares: 100n },
+              blockNumber: state.deposit,
+              transactionHash: hash,
+              logIndex: 0
+            }
+          ]
+        : []
+    );
+    const config = {
+      ...base,
+      startBlock: 1n,
+      casinoRecoveryStartBlock: 1n,
+      scanMaxChunksPerPass: 1,
+      pollIntervalMs: 0,
+      bankProviderLedgerScanIntervalMs: 1000,
+      bankProviderLedgerPools: [{ bank, asset, poolId: 1, decimals: 6 }]
+    };
+    const ranges = () => logQueries().filter((q) => eventNames(q).includes("Deposit"));
+    const query = { chainId: 8453, owner: hub, bank, limit: 10 };
+    return { state, config, ranges, query };
+  }
+
+  it("indexes a replacement behind the old moving overlap once it is finalized", async () => {
+    const f = finalizedLedgerFixture();
+    runtime = make(f.config);
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    for (let i = 0; i < 9; ++i) await vi.advanceTimersByTimeAsync(1000);
+    expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(76n);
+    f.state.head = 101n;
+    f.state.finalized = 77n;
+    await vi.advanceTimersByTimeAsync(1000);
+    // A 16-block reorg replaces block 85 after the old scanner's [77, 86] overlap page.
+    f.state.deposit = 85n;
+    expect(await mock.store!.getBankProviderLedger(f.query)).toEqual([]);
+    for (let i = 0; i < 25; ++i) {
+      f.state.head += 9n;
+      f.state.finalized = f.state.head - 24n;
+      const count = f.ranges().length;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(f.ranges().length - count).toBeLessThanOrEqual(1);
+      expect(f.ranges().at(-1)!.toBlock).toBeLessThanOrEqual(f.state.finalized);
+    }
+    for (let i = 0; i < 100; ++i) await vi.advanceTimersByTimeAsync(1000);
+    expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(302n);
+    expect(await mock.store!.getBankProviderLedger(f.query)).toMatchObject([
+      { action: "deposit", assets: "100", shares: "100", blockNumber: 85 }
+    ]);
+  });
+
+  it("resumes only its own finalized ledger cursor and does not repeat completed pages", async () => {
+    const f = finalizedLedgerFixture();
+    // The unrelated GameHub cursor is ahead of finalized ledger discovery.
+    await mock.store!.setCursor({
+      chainId: 8453,
+      source: "gamehub-events",
+      cursorKey: hub,
+      blockNumber: 100n
+    });
+    f.state.deposit = 5n;
+    runtime = make(f.config);
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.ranges()).toMatchObject([{ fromBlock: 1n, toBlock: 10n }]);
+    expect(await mock.store!.getBankProviderLedger(f.query)).toHaveLength(1);
+    await runtime.stop();
+    vi.mocked(mock.client.getLogs as ReturnType<typeof vi.fn>).mockClear();
+    runtime = make(f.config);
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.ranges()).toMatchObject([{ fromBlock: 11n, toBlock: 20n }]);
+    expect(await mock.store!.getBankProviderLedger(f.query)).toHaveLength(1);
+  });
+
+  it.each(["unavailable", "unnumbered", "regressed"])(
+    "reports %s ledger finality without advancing the cursor",
+    async (failure) => {
+      const f = finalizedLedgerFixture();
+      runtime = make(f.config);
+      await runtime.start();
+      await vi.advanceTimersByTimeAsync(0);
+      const cursor = await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub);
+      const count = f.ranges().length;
+      if (failure === "regressed") f.state.finalized = 75n;
+      else f.state.finalityFailure = failure;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(cursor);
+      expect(f.ranges()).toHaveLength(count);
+      expect(runtime.health.snapshot().degradedBy).toContain("ledger");
+      expect(runtime.health.snapshot().lastError).toMatch(/finalized/);
+      f.state.finalityFailure = "";
+      f.state.finalized = 76n;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("ledger");
+      expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(20n);
+    }
+  );
 
   it("retries missing terminal refunds without checkpointing an incomplete range", async () => {
     const amounts = {
@@ -410,11 +550,10 @@ describe("runtime recovery composition", () => {
     }
   );
 
-  it("replaces canonical ledger ranges, including empty reorg pages, before advancing their cursor", async () => {
+  it("retries the full finalized ledger range before advancing its cursor", async () => {
     const bank = "0x0000000000000000000000000000000000000003" as const;
     const secondBank = "0x0000000000000000000000000000000000000005" as const;
     const asset = "0x0000000000000000000000000000000000000004" as const;
-    let orphanPresent = true;
     let failSecondBank = true;
     mock.client.getBlock = vi.fn(async () => ({ number: 120n, timestamp: 1_601n }));
     mock.client.getContractEvents = vi.fn(async () => []);
@@ -424,7 +563,7 @@ describe("runtime recovery composition", () => {
       throw new Error(`Unexpected read ${functionName}`);
     });
     mock.client.getLogs = vi.fn(async (query: LogQuery) =>
-      eventNames(query).includes("Deposit") && query.fromBlock === 100n && orphanPresent
+      eventNames(query).includes("Deposit") && query.fromBlock === 100n
         ? [
             {
               address: bank,
@@ -456,15 +595,14 @@ describe("runtime recovery composition", () => {
     });
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
-    expect(await mock.store!.getCursor(8453, "bank-provider-ledger", hub)).toBeNull();
+    expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBeNull();
     const query = { chainId: 8453, owner: hub, bank, limit: 10 };
     expect(await mock.store!.getBankProviderLedger(query)).toHaveLength(1);
-    orphanPresent = false;
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(await mock.store!.getBankProviderLedger(query)).toEqual([]);
-    expect(await mock.store!.getCursor(8453, "bank-provider-ledger", hub)).toBe(119n);
+    expect(await mock.store!.getBankProviderLedger(query)).toHaveLength(1);
+    expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(119n);
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(await mock.store!.getCursor(8453, "bank-provider-ledger", hub)).toBe(120n);
+    expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(120n);
     expect(
       logQueries()
         .filter((q) => eventNames(q).includes("Deposit"))
@@ -516,7 +654,8 @@ describe("runtime recovery composition", () => {
     expect(mock.client.waitForTransactionReceipt).toHaveBeenCalled();
     expect(runtime.health.snapshot()).toMatchObject({
       redemptions: [{ bank }],
-      degradedBy: ["pocket-recovery"],
+      degradedBy: ["pocket-recovery", "payables"],
+      payables: [{ bank, caughtUp: false, error: expect.stringContaining("release origin") }],
       pocketDiscovery: [{ bank, caughtUp: false, error: expect.stringContaining("release origin") }]
     });
   });
@@ -658,6 +797,94 @@ describe("runtime recovery composition", () => {
     await vi.advanceTimersByTimeAsync(500);
     expect(runtime.queue.has(1n)).toBe(true);
     expect(mock.client.writeContract).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["simulation", "asset refusal", false],
+    ["simulation", "wrong token refusal", true],
+    ["simulation", "unknown revert", true],
+    ["simulation", "RPC unavailable", true],
+    ["simulation", "SafeERC20FailedOperation text", true],
+    ["send", "asset refusal", true],
+    ["send", "insufficient funds for gas", true],
+    ["receipt", "RPC unavailable", true],
+    ["receipt", "reverted", true]
+  ] as const)("classifies payable %s / %s narrowly", async (stage, failure, actionable) => {
+    const bank = "0x0000000000000000000000000000000000000003" as const;
+    const asset = "0x0000000000000000000000000000000000000004" as const;
+    let debt = 5n;
+    let recovered = false;
+    const fail = () => {
+      if (failure === "asset refusal" || failure === "wrong token refusal") {
+        throw new BaseError("simulation or send failed", {
+          cause: new ContractFunctionRevertedError({
+            abi: BANK_REDEMPTION_KEEPER_ABI,
+            functionName: "claimPlayerPayable",
+            data: encodeErrorResult({
+              abi: BANK_REDEMPTION_KEEPER_ABI,
+              errorName: "SafeERC20FailedOperation",
+              args: [failure === "asset refusal" ? asset : hub]
+            })
+          })
+        });
+      }
+      if (failure === "unknown revert") {
+        throw new ContractFunctionRevertedError({
+          abi: BANK_REDEMPTION_KEEPER_ABI,
+          functionName: "claimPlayerPayable",
+          data: encodeErrorResult({ abi: BANK_REDEMPTION_KEEPER_ABI, errorName: "EnforcedPause" })
+        });
+      }
+      throw new Error(failure);
+    };
+    mock.client.getBlock = vi.fn(async () => ({ number: 120n, timestamp: 1_000n }));
+    mock.client.getLogs = vi.fn(async () => []);
+    mock.client.getContractEvents = vi.fn(async ({ eventName }: { eventName: string }) =>
+      eventName === "PlayerPayableCreated" ? [{ args: { player: hub }, blockNumber: 105n }] : []
+    );
+    mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
+      if (functionName === "currentEpoch") return 1n;
+      if (functionName === "redeemBatch") return { priced: false, shares: 0n, cutoff: 0n };
+      if (functionName === "playerPayable") return debt;
+      throw new Error(`Unexpected ${functionName}`);
+    });
+    mock.client.simulateContract = vi.fn(async () => {
+      if (stage === "simulation" && !recovered) fail();
+    });
+    mock.client.writeContract = vi.fn(async () => {
+      if (stage === "send" && !recovered) fail();
+      return hash;
+    });
+    mock.client.waitForTransactionReceipt = vi.fn(async () => {
+      if (stage === "receipt" && !recovered) {
+        if (failure === "reverted") return { status: "reverted", blockNumber: 120n };
+        fail();
+      }
+      debt = 0n;
+      return { status: "success", blockNumber: 120n };
+    });
+    runtime = make({
+      ...base,
+      casinoRecoveryStartBlock: 100n,
+      scanChunkBlocks: 100n,
+      bankProviderLedgerPools: [{ bank, asset, poolId: 1, decimals: 6 }]
+    });
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    const first = runtime.health.snapshot();
+    expect(first.status).toBe(actionable ? "degraded" : "running");
+    expect(Boolean(first.payables?.[0]?.claimError)).toBe(actionable);
+    expect(debt).toBe(5n);
+    if (stage === "simulation") expect(mock.client.writeContract).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(runtime.health.snapshot().status).toBe(first.status);
+    expect(runtime.health.snapshot().payables?.[0]?.error).toBe(first.payables?.[0]?.error);
+    expect(mock.client.simulateContract).toHaveBeenCalledTimes(1);
+    recovered = true;
+    await vi.advanceTimersByTimeAsync(240_000);
+    expect(runtime.health.snapshot().status).toBe("running");
+    expect(runtime.health.snapshot().payables?.[0]?.claimError).toBeUndefined();
+    expect(debt).toBe(0n);
   });
 
   it("does not advance lifecycle recovery over a failed index write and exposes incomplete recovery", async () => {

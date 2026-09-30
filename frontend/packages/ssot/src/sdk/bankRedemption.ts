@@ -30,7 +30,7 @@ export async function readAsyncBankState(
     DomainBankSnapshot,
     | "totalReserved"
     | "recoveryBacking"
-    | "currentOpenHolds"
+    | "activeOpenHolds"
     | "currentEpoch"
     | "openHolds"
     | "exitPayable"
@@ -43,7 +43,7 @@ export async function readAsyncBankState(
   const [
     totalReserved,
     recoveryBacking,
-    currentOpenHolds,
+    activeOpenHolds,
     currentEpoch,
     openHolds,
     exitPayable,
@@ -52,7 +52,7 @@ export async function readAsyncBankState(
   ] = (await Promise.all([
     read("totalReserved"),
     read("recoveryBacking"),
-    read("currentOpenHolds"),
+    read("activeOpenHolds"),
     read("currentEpoch"),
     read("openHolds"),
     read("exitPayable"),
@@ -65,7 +65,7 @@ export async function readAsyncBankState(
   return {
     totalReserved: totalReserved!,
     recoveryBacking: recoveryBacking!,
-    currentOpenHolds: currentOpenHolds!,
+    activeOpenHolds: activeOpenHolds!,
     currentEpoch: currentEpoch!,
     openHolds: openHolds!,
     exitPayable: exitPayable!,

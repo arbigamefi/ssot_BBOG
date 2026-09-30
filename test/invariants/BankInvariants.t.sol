@@ -46,7 +46,7 @@ contract BankHandler is Test {
         address player;
         uint256 stake;
         uint256 reserved;
-        uint256 epoch;
+        uint256 activeUnits;
     }
 
     struct EpochMirror {
@@ -62,6 +62,11 @@ contract BankHandler is Test {
     mapping(address => uint256) public queuedMirror;
     mapping(uint256 => mapping(address => uint256)) public snapshotUnitsMirror;
     mapping(uint256 => mapping(address => uint256)) public recoveryClaimsMirror;
+    mapping(uint256 => mapping(uint256 => uint256)) public riskUnitsMirror;
+    mapping(uint256 => uint256) public protocolUnitsMirror;
+    mapping(uint256 => uint256) public terminalCostMirror;
+    mapping(uint256 => bool) public terminalMirror;
+    mapping(uint256 => bool) public batchRiskAssignedMirror;
     uint256 public recoveryClaimCount;
     uint256 public recoveryViolations;
 
@@ -157,34 +162,81 @@ contract BankHandler is Test {
         if (queued.cutoff == 0 || block.timestamp < queued.cutoff || bank.riskInPaused()) return;
         uint256 nav = bank.totalAssets();
         uint256 supply = bank.totalSupply();
-        uint256 reserve;
-        uint256 count;
-        for (uint256 i; i < openBetIds.length; ++i) {
-            HeldBet memory h = heldBets[openBetIds[i]];
-            if (h.epoch == id) {
-                reserve += h.reserved;
-                count += 1;
-            }
-        }
+        uint256 reserve = mirrorActiveReserved();
         uint256 q;
-        uint256[3] memory units;
         for (uint256 i; i < 3; ++i) {
             q += queuedMirror[lps[i]];
-            units[i] = bank.balanceOf(lps[i]) + queuedMirror[lps[i]];
         }
-        uint256 expected = Math.mulDiv(q, _realPool(nav - reserve, supply), supply);
+        uint256 equity = Math.mulDiv(q, _realPool(nav, supply), supply);
+        uint256 expected = nav == 0 ? 0 : Math.mulDiv(equity, nav - reserve, nav);
         try bank.activateBatch() returns (uint256 activated) {
             if (activated != id || bank.currentEpoch() != id + 1) pricingViolations += 1;
-            epochs[id] = EpochMirror(nav, supply, reserve, reserve, count, 0);
+            EpochMirror storage m = epochs[id];
+            m.nav = nav;
+            m.supply = q;
+            for (uint256 i; i < openBetIds.length; ++i) {
+                uint256 betId = openBetIds[i];
+                HeldBet storage h = heldBets[betId];
+                uint256 units = nav == 0 ? 0 : Math.mulDiv(h.activeUnits, equity, nav);
+                riskUnitsMirror[id][betId] = units;
+                h.activeUnits -= units;
+                m.initialReserve += units;
+                if (units != 0) ++m.remainingHolds;
+                if (q == supply) {
+                    protocolUnitsMirror[betId] += h.activeUnits;
+                    h.activeUnits = 0;
+                }
+            }
+            m.remainingReserve = m.initialReserve;
             for (uint256 i; i < 3; ++i) {
-                snapshotUnitsMirror[id][lps[i]] = units[i];
+                snapshotUnitsMirror[id][lps[i]] = queuedMirror[lps[i]];
                 queuedMirror[lps[i]] = 0;
             }
             mirrorEpoch += 1;
             pricedBatchCount += 1;
             if (bank.redeemBatch(id).assets != expected || !bank.redeemBatch(id).priced) pricingViolations += 1;
         } catch {
-            pricingViolations += 1; // an eligible queue must not wait for historical holds
+            pricingViolations += 1;
+        }
+    }
+
+    function mirrorActiveReserved() public view returns (uint256 amount) {
+        for (uint256 i; i < openBetIds.length; ++i) {
+            amount += heldBets[openBetIds[i]].activeUnits;
+        }
+    }
+
+    function unassignedRiskBacking() external view returns (uint256 backing) {
+        for (uint256 betId = 1; betId < nextBetId; ++betId) {
+            if (!terminalMirror[betId]) {
+                backing += protocolUnitsMirror[betId];
+                continue;
+            }
+            uint256 assigned;
+            uint256 totalUnits;
+            bool allAssigned = true;
+            uint256 released = heldBets[betId].reserved - terminalCostMirror[betId];
+            for (uint256 epoch = 1; epoch < mirrorEpoch; ++epoch) {
+                uint256 units = riskUnitsMirror[epoch][betId];
+                if (units == 0) continue;
+                totalUnits += units;
+                assigned += Math.mulDiv(units, released, heldBets[betId].reserved);
+                if (!batchRiskAssignedMirror[epoch]) allAssigned = false;
+            }
+            if (!allAssigned) backing += Math.mulDiv(totalUnits, released, heldBets[betId].reserved) - assigned;
+        }
+    }
+
+    function _recordTerminal(uint256 betId, uint256 cost) internal {
+        terminalMirror[betId] = true;
+        terminalCostMirror[betId] = cost;
+        uint256 reserve = heldBets[betId].reserved;
+        for (uint256 epoch = 1; epoch < mirrorEpoch; ++epoch) {
+            uint256 units = riskUnitsMirror[epoch][betId];
+            if (units == 0) continue;
+            epochs[epoch].cost += units - Math.mulDiv(units, reserve - cost, reserve);
+            epochs[epoch].remainingReserve -= units;
+            --epochs[epoch].remainingHolds;
         }
     }
 
@@ -197,8 +249,7 @@ contract BankHandler is Test {
         uint256 epoch = epochRaw % (mirrorEpoch - 1) + 1;
         address owner = lps[seed % lps.length];
         EpochMirror memory m = epochs[epoch];
-        uint256 h =
-            _realPool(m.nav - m.cost - m.remainingReserve, m.supply) - _realPool(m.nav - m.initialReserve, m.supply);
+        uint256 h = m.initialReserve - m.cost - m.remainingReserve;
         uint256 expected =
             Math.mulDiv(snapshotUnitsMirror[epoch][owner], h, m.supply) - recoveryClaimsMirror[epoch][owner];
         uint256 beforeBalance = asset.balanceOf(owner);
@@ -206,6 +257,7 @@ contract BankHandler is Test {
         try bank.claimRecovery(epoch, owner, owner) returns (uint256 paid) {
             if (paid != expected || asset.balanceOf(owner) != beforeBalance + paid) recoveryViolations += 1;
             recoveryClaimsMirror[epoch][owner] += paid;
+            if (m.remainingHolds == 0) batchRiskAssignedMirror[epoch] = true;
             if (paid > 0) recoveryClaimCount += 1;
         } catch {
             if (!bank.riskInPaused()) recoveryViolations += 1;
@@ -214,7 +266,9 @@ contract BankHandler is Test {
 
     function action_syncRecovery(uint256 epochRaw, uint256 seed) external {
         if (mirrorEpoch == 1) return;
-        bank.syncRecovery(epochRaw % (mirrorEpoch - 1) + 1, lps[seed % lps.length]);
+        uint256 epoch = epochRaw % (mirrorEpoch - 1) + 1;
+        bank.syncRecovery(epoch, lps[seed % lps.length]);
+        if (epochs[epoch].remainingHolds == 0) batchRiskAssignedMirror[epoch] = true;
     }
 
     function action_transfer(uint256 seed, uint256 sharesRaw) external {
@@ -281,7 +335,7 @@ contract BankHandler is Test {
         bool historical = bank.recoveryBacking() > 0;
         try bank.holdBet(betId, player, stake, reserved, keccak256(abi.encode(betId))) {
             if (historical) holdsWithHistoricalRisk += 1;
-            heldBets[betId] = HeldBet({player: player, stake: stake, reserved: reserved, epoch: mirrorEpoch});
+            heldBets[betId] = HeldBet({player: player, stake: stake, reserved: reserved, activeUnits: reserved});
             openBetIds.push(betId);
             mirrorReserved += reserved;
             nextBetId = betId + 1;
@@ -311,15 +365,11 @@ contract BankHandler is Test {
 
         try bank.settleBet(betId, payoutGross, payoutNet, refundAmount, pfAccrual, awards) {
             mirrorReserved -= b.reserved;
-            if (b.epoch < mirrorEpoch) {
-                uint256 cost = payoutNet + refundAmount + pfAccrual;
-                for (uint256 i; i < awards.length; ++i) {
-                    cost += awards[i].accrued + awards[i].locked + awards[i].holdback;
-                }
-                epochs[b.epoch].cost += cost;
-                epochs[b.epoch].remainingReserve -= b.reserved;
-                epochs[b.epoch].remainingHolds -= 1;
+            uint256 cost = payoutNet + refundAmount + pfAccrual;
+            for (uint256 i; i < awards.length; ++i) {
+                cost += awards[i].accrued + awards[i].locked + awards[i].holdback;
             }
+            _recordTerminal(betId, cost);
             _removeOpenBet(idx);
             settleCount += 1;
         } catch {
@@ -336,11 +386,7 @@ contract BankHandler is Test {
 
         try bank.refundBet(betId, refundAmount) {
             mirrorReserved -= b.reserved;
-            if (b.epoch < mirrorEpoch) {
-                epochs[b.epoch].cost += refundAmount;
-                epochs[b.epoch].remainingReserve -= b.reserved;
-                epochs[b.epoch].remainingHolds -= 1;
-            }
+            _recordTerminal(betId, refundAmount);
             _removeOpenBet(idx);
             refundCount += 1;
         } catch {
@@ -573,8 +619,9 @@ contract BankInvariants is StdInvariant, Test {
             totalBacking += backing;
             oldReserve += reserve;
         }
-        assertEq(bank.recoveryBacking(), totalBacking);
-        assertEq(bank.activeReserved(), handler.mirrorReserved() - oldReserve);
+        assertEq(bank.recoveryBacking(), totalBacking + handler.unassignedRiskBacking());
+        assertEq(bank.activeReserved(), handler.mirrorActiveReserved());
+        assertLe(bank.activeReserved() + oldReserve, handler.mirrorReserved());
     }
 
     function _assertRecoveryEpoch(uint256 epoch) internal view returns (uint256 backing, uint256 reserve) {
@@ -586,9 +633,8 @@ contract BankInvariants is StdInvariant, Test {
         assertEq(p.remainingReserve, m.remainingReserve);
         assertEq(p.remainingHolds, m.remainingHolds);
         assertEq(p.settledCost, m.cost);
-        uint256 liquid = m.nav - m.initialReserve;
         uint256 released = m.initialReserve - m.cost - m.remainingReserve;
-        uint256 h = _pool(liquid + released, m.supply) - _pool(liquid, m.supply);
+        uint256 h = released;
         assertEq(p.recoveredAssets, h);
         (uint256 paid, uint256 finalizedUnits, uint256 finalAssets) = _assertRecoveryOwners(epoch, m, h);
         assertEq(p.finalizedShares, finalizedUnits);
@@ -599,7 +645,7 @@ contract BankInvariants is StdInvariant, Test {
             assertEq(finalizedUnits, m.supply);
             dust = h - finalAssets;
         }
-        assertEq(p.protocolAssets, released - h + dust);
+        assertEq(p.protocolAssets, dust);
         backing = m.initialReserve - m.cost - (released - h) - paid - dust;
         assertEq(p.backingAssets, backing);
         assertGe(backing, m.remainingReserve);
@@ -611,7 +657,7 @@ contract BankInvariants is StdInvariant, Test {
         view
         returns (uint256 paid, uint256 finalizedUnits, uint256 finalAssets)
     {
-        uint256 maximum = _pool(m.nav - m.cost, m.supply) - _pool(m.nav - m.initialReserve, m.supply);
+        uint256 maximum = h + m.remainingReserve;
         for (uint256 i; i < 3; ++i) {
             address owner = handler.lps(i);
             uint256 units = handler.snapshotUnitsMirror(epoch, owner);
@@ -743,7 +789,7 @@ contract BankInvariants is StdInvariant, Test {
         assertEq(bank.recoveryEpoch(1).remainingHolds, 0);
     }
 
-    function test_handlerCountsOnlyTheSealedEpochEvenWithOlderHolds() external {
+    function test_handlerTracksOldRiskAcrossEveryLaterPartialExit() external {
         handler.action_deposit(0, 40_000e6);
         handler.action_hold(0, 500e6, 2);
         handler.action_requestRedeem(0, 1_000e6 - 1);
@@ -752,8 +798,8 @@ contract BankInvariants is StdInvariant, Test {
         handler.action_requestRedeem(0, 1_000e6 - 1);
         handler.action_warp(2 days - 1);
         handler.action_activateBatch();
-        assertEq(handler.epochMirror(2).remainingHolds, 0);
-        assertEq(bank.recoveryEpoch(2).remainingHolds, 0);
+        assertEq(handler.epochMirror(2).remainingHolds, 1);
+        assertEq(bank.recoveryEpoch(2).remainingHolds, 1);
         handler.action_hold(1, 100e6, 1);
         handler.action_requestRedeem(0, 1_000e6 - 1);
         handler.action_warp(2 days - 1);
@@ -761,9 +807,9 @@ contract BankInvariants is StdInvariant, Test {
         assertEq(bank.currentEpoch(), 4);
         assertEq(bank.openHolds(), 2);
         assertEq(handler.epochMirror(1).remainingHolds, 1);
-        assertEq(handler.epochMirror(3).remainingHolds, 1);
+        assertEq(handler.epochMirror(3).remainingHolds, 2);
         assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
-        assertEq(bank.recoveryEpoch(3).remainingHolds, 1);
+        assertEq(bank.recoveryEpoch(3).remainingHolds, 2);
         this.invariant_historical_epochs_preserve_ownership_backing_and_current_risk();
     }
 

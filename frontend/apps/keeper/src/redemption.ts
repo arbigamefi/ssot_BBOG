@@ -5,7 +5,6 @@ import { describeError } from "./errors.js";
 import type { PocketDiscoveryHealth, PocketHealth, RedemptionHealth } from "./health.js";
 import { splitBlockRange } from "./scan.js";
 
-export const BANK_REORG_LOOKBACK = 24n;
 const POCKET_POLL_LIMIT = 50;
 
 export type RedemptionDeps = {
@@ -77,15 +76,14 @@ export async function reconcileRedemptionBank(
 
 type PocketClient = Pick<PublicClient, "getBlock" | "readContract" | "getContractEvents">;
 type TrackedPocket = {
-  blockNumber: bigint;
-  identity: string;
   health: PocketHealth;
   checked: boolean;
-  terminalAt?: bigint;
 };
 
-/** Memory-only discovery deliberately replays from release origin after every restart.
+/** Memory-only discovery replays finalized blocks from release origin after every restart.
  * A persisted cursor without its full epoch set would silently drop older recovery rights.
+ * State reads and terminal pruning use that same finalized block, so a pre-finality reorg
+ * cannot hide an activation or retire a pocket whose terminal transaction disappears.
  */
 export function createPocketMonitor({
   bank,
@@ -103,6 +101,7 @@ export function createPocketMonitor({
   const epochs = new Map<string, TrackedPocket>();
   let nextBlock = origin ?? 0n;
   let scannedThrough = origin == null ? undefined : origin - 1n;
+  let lastFinalizedBlock: bigint | undefined;
   let afterEpoch = 0n;
   let discovery: PocketDiscoveryHealth = { bank, caughtUp: false };
   const snapshot = () => ({ discovery, pockets: [...epochs.values()].map((item) => item.health) });
@@ -117,21 +116,23 @@ export function createPocketMonitor({
         return snapshot();
       }
       try {
-        const block = await client.getBlock();
-        if (block.number == null)
+        const latest = await client.getBlock();
+        if (latest.number == null)
           throw new Error("Pocket reconciliation requires a numbered chain block");
-        const head = block.number;
+        const block = await client.getBlock({ blockTag: "finalized" });
+        if (block.number == null)
+          throw new Error("Pocket discovery requires a numbered finalized block");
+        const finalizedBlock = block.number;
+        if (lastFinalizedBlock != null && finalizedBlock < lastFinalizedBlock)
+          throw new Error(
+            `Pocket finalized block regressed from ${lastFinalizedBlock} to ${finalizedBlock}`
+          );
+        lastFinalizedBlock = finalizedBlock;
         let scanError: string | undefined;
-        // Preserve progress within an overlap cycle even when its 24 blocks exceed one pass.
-        // Restarting the rewind on every tick would starve forward discovery with small chunks.
-        if (nextBlock > head + 1n)
-          nextBlock = head > BANK_REORG_LOOKBACK ? head - BANK_REORG_LOOKBACK : origin;
-        if (nextBlock < origin) nextBlock = origin;
-        for (const [id, item] of epochs) if (item.blockNumber > head) epochs.delete(id);
         try {
           const ranges = splitBlockRange({
             fromBlock: nextBlock,
-            toBlock: head,
+            toBlock: finalizedBlock,
             chunkSize,
             maxChunks
           });
@@ -143,7 +144,6 @@ export function createPocketMonitor({
               strict: true,
               ...range
             });
-            const canonical = new Map<string, { blockNumber: bigint; identity: string }>();
             for (const log of logs) {
               if (log.removed) continue;
               const args = log.args as { batchId?: bigint };
@@ -154,32 +154,13 @@ export function createPocketMonitor({
                 log.logIndex == null
               )
                 throw new Error("Incomplete RedeemBatchActivated log");
-              canonical.set(args.batchId.toString(), {
-                blockNumber: log.blockNumber,
-                identity: `${log.blockHash}:${log.logIndex}`
-              });
-            }
-            // Replace this canonical range, including empty pages, to remove orphan activations.
-            for (const [id, item] of epochs)
-              if (
-                item.blockNumber >= range.fromBlock &&
-                item.blockNumber <= range.toBlock &&
-                !canonical.has(id)
-              )
-                epochs.delete(id);
-            for (const [id, event] of canonical) {
-              if (epochs.get(id)?.identity === event.identity) continue;
-              epochs.set(id, { ...event, health: { bank, epochId: id }, checked: false });
+              const id = args.batchId.toString();
+              if (!epochs.has(id))
+                epochs.set(id, { health: { bank, epochId: id }, checked: false });
             }
             nextBlock = range.toBlock + 1n;
-            scannedThrough =
-              scannedThrough == null || range.toBlock > scannedThrough
-                ? range.toBlock
-                : scannedThrough;
+            scannedThrough = range.toBlock;
           }
-          if (nextBlock > head)
-            nextBlock =
-              head >= origin + BANK_REORG_LOOKBACK - 1n ? head - BANK_REORG_LOOKBACK + 1n : origin;
         } catch (error) {
           scanError = describeError(error);
         }
@@ -198,7 +179,7 @@ export function createPocketMonitor({
               address: bank,
               abi: BANK_REDEMPTION_KEEPER_ABI,
               args: [epoch],
-              blockNumber: head
+              blockNumber: finalizedBlock
             } as const;
             const batch = (await client.readContract({
               ...request,
@@ -209,12 +190,7 @@ export function createPocketMonitor({
               functionName: "recoveryEpoch"
             })) as { snapshotSupply: bigint; remainingHolds: bigint; remainingReserve: bigint };
             if (!batch.priced || batch.activatedAt === 0n || pocket.snapshotSupply === 0n) {
-              // A fresh canonical read can also expose an orphan outside this pass's log page.
-              epochs.delete(id);
-              nextBlock = nextBlock < item.blockNumber ? nextBlock : item.blockNumber;
-              scannedThrough = item.blockNumber - 1n;
-              scanError = "Pocket activation disappeared; discovery is being replayed";
-              continue;
+              throw new Error("Finalized pocket activation disappeared");
             }
             if (batch.activatedAt > block.timestamp)
               throw new Error("Invalid pocket activation time");
@@ -227,11 +203,7 @@ export function createPocketMonitor({
               ageSeconds: Number(block.timestamp - batch.activatedAt)
             };
             item.checked = true;
-            if (pocket.remainingHolds === 0n) {
-              item.terminalAt ??= head;
-              // Keep recent terminal observations so a shallow reorg can reopen an older pocket.
-              if (head >= item.terminalAt + BANK_REORG_LOOKBACK) epochs.delete(id);
-            } else item.terminalAt = undefined;
+            if (pocket.remainingHolds === 0n) epochs.delete(id);
           } catch (error) {
             item.health = { ...item.health, error: describeError(error) };
           }
@@ -243,10 +215,10 @@ export function createPocketMonitor({
         discovery = {
           bank,
           scannedThrough: scannedThrough?.toString(),
+          finalizedBlock: finalizedBlock.toString(),
+          headBlock: latest.number.toString(),
           caughtUp:
-            scannedThrough != null &&
-            scannedThrough >= head &&
-            [...epochs.values()].every((item) => item.checked),
+            nextBlock > finalizedBlock && [...epochs.values()].every((item) => item.checked),
           error: scanError
         };
       } catch (error) {

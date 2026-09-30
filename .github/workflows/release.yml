@@ -1,10 +1,23 @@
 name: Release Gate
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: GitHub release tag containing the deployment bundle
+        required: true
+        type: string
+      bundle_name:
+        description: Exact tar.gz release asset name
+        required: true
+        type: string
+      bundle_sha256:
+        description: Approved SHA-256 of that exact archive
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   release-gate:
@@ -15,6 +28,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Download explicit release input
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          BUNDLE_NAME: ${{ inputs.bundle_name }}
+          BUNDLE_SHA256: ${{ inputs.bundle_sha256 }}
+        run: |
+          # Use the exact asset name, never a glob which could select several bundles.
+          python3 - <<'PY'
+          import os, re
+          if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.gz", os.environ["BUNDLE_NAME"]):
+              raise SystemExit("invalid bundle name")
+          PY
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$BUNDLE_NAME" --dir "$RUNNER_TEMP/release-download"
+          python3 script/release/import_release_bundle.py \
+            --bundle "$RUNNER_TEMP/release-download/$BUNDLE_NAME" \
+            --sha256 "$BUNDLE_SHA256" --destination "$GITHUB_WORKSPACE/deployments/.release-input"
+          {
+            echo "RELEASE_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/release-latest-v16.json"
+            echo "SNAPSHOT_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/latest-v16.json"
+            echo "NOTES_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/release-notes-latest-v16.md"
+            echo "FRONTEND_MANIFEST_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/frontend-manifest-latest-v16.json"
+            echo "GOLDEN_VECTORS_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/golden-vectors-latest-v16.json"
+            echo "ABI_INDEX_PATH=$GITHUB_WORKSPACE/deployments/.release-input/abis/index.json"
+          } >> "$GITHUB_ENV"
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -51,4 +92,11 @@ jobs:
 
       - name: Build audit handoff bundle
         run: |
-          TAG_NAME=${{ github.ref_name }} make audit-package
+          make audit-package
+
+      - name: Upload source audit bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-audit
+          path: dist/ssot-audit-*.tar.gz
+          if-no-files-found: error

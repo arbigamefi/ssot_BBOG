@@ -43,7 +43,7 @@ contract GenerateReleaseNotesV16 is Script {
             "- Package artifacts: `make release-package`\n"
         );
 
-        string memory outLatest = "deployments/release-notes-latest-v16.md";
+        string memory outLatest = vm.envOr("NOTES_OUTPUT_PATH", string("deployments/release-notes-latest-v16.md"));
         vm.writeFile(outLatest, md);
     }
 

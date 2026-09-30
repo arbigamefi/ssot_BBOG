@@ -10,12 +10,14 @@ const disconnect = vi.fn();
 const openConnectModal = vi.fn();
 const switchChain = vi.fn();
 let isConnected = true;
+let walletChainId = 84532;
 
 vi.mock("wagmi", () => ({
   useAccount: () => ({
     address: walletAddress,
     connector: { name: "Browser Wallet" },
-    isConnected
+    isConnected,
+    chainId: walletChainId
   }),
   useChainId: () => 84532,
   useDisconnect: () => ({ disconnect }),
@@ -73,6 +75,7 @@ describe("WalletHeaderMenu", () => {
     openConnectModal.mockClear();
     switchChain.mockClear();
     isConnected = true;
+    walletChainId = 84532;
   });
 
   it("opens the wallet selector through the application provider when disconnected", () => {
@@ -105,4 +108,13 @@ describe("WalletHeaderMenu", () => {
     expect(screen.getByRole("button", { name: "Base Sepolia" })).toBeDefined();
     expect(screen.getByRole("menuitem", { name: "Disconnect" })).toBeDefined();
   });
+});
+
+it("offers a wallet network correction for a connected unsupported chain", () => {
+  walletChainId = 8453;
+  render(<WalletHeaderMenu />);
+  fireEvent.click(screen.getByRole("button", { name: /0xd662/i }));
+  expect(screen.getByText("Wallet on a different chain")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Switch wallet" }));
+  expect(switchChain).toHaveBeenCalledWith({ chainId: 84532 });
 });

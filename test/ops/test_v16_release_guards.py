@@ -116,6 +116,10 @@ class PackageGuardTests(unittest.TestCase):
             env = {**os.environ, "PATH": str(root / "bin") + os.pathsep + os.environ["PATH"],
                    "RPC_URL": "http://unused.invalid", "RELEASE_SIGNER": "0x" + "2" * 40,
                    **{key: str(artifact) for key in ["RELEASE_PATH", "SNAPSHOT_PATH", "NOTES_PATH", "FRONTEND_MANIFEST_PATH", "GOLDEN_VECTORS_PATH", "ABIS_INDEX_PATH"]}}
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "-c", "user.name=Local test", "-c", "user.email=test@invalid",
+                            "commit", "-qm", "source fixture"], cwd=root, check=True)
             result = subprocess.run(["bash", str(ROOT / "script/release/package_release.sh")], cwd=root, env=env, capture_output=True, timeout=10)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("VerifyGovernanceV16", (root / "forge-call.txt").read_text())

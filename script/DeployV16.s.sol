@@ -674,10 +674,10 @@ contract DeployV16 is Script {
             json = vm.serializeString(obj, string.concat("poolDomainLabel_", suffix), _domainLabel(pools[i].domain));
             json = vm.serializeAddress(obj, string.concat("poolAsset_", suffix), pools[i].asset);
             json = vm.serializeString(obj, string.concat("poolAssetSymbol_", suffix), assetSymbol);
-            json = vm.serializeUint(obj, string.concat("poolAssetDecimals_", suffix), uint256(assetDecimals));
             json = vm.serializeAddress(obj, string.concat("poolBank_", suffix), pools[i].bank);
-            json = vm.serializeUint(
-                obj, string.concat("poolBankDecimals_", suffix), uint256(Bank(pools[i].bank).decimals())
+            require(
+                pools[i].lpDecimals == assetDecimals && pools[i].lpDecimals == Bank(pools[i].bank).decimals(),
+                "pool precision mismatch"
             );
             json = vm.serializeUint(obj, string.concat("poolBankMinLiqBps_", suffix), pools[i].riskReserveBps);
             json = vm.serializeUint(obj, string.concat("poolBankRiskReserveBps_", suffix), pools[i].riskReserveBps);

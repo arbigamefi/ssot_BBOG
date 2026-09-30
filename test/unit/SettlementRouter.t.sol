@@ -335,7 +335,7 @@ contract SettlementRouterTest is Test {
         vm.expectRevert(abi.encodeWithSelector(IBank.ReservedTooSmall.selector, positionId, 250e6, 252e6));
         router.settlePosition(positionId, 250e6, 250e6, 0, 1.2e6, awards);
         assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Held));
-        (,,,, bool open,) = bank.holds(positionId);
+        (,,,, bool open) = bank.holds(positionId);
         assertTrue(open);
         assertEq(bank.totalReserved(), 250e6);
         assertEq(bank.protocolFeesPayable(), 0);

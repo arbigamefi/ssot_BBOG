@@ -96,7 +96,13 @@ describe("queued redemption reconciliation", () => {
 });
 
 function pocketFixture({ count = 1, chunkSize = 10n, maxChunks = 2, pollLimit = 50 } = {}) {
-  const state = { head: 120n, time: 1601n, failEpoch: 0n };
+  const state = {
+    head: 120n,
+    finalizedHead: 120n,
+    time: 1601n,
+    failEpoch: 0n,
+    finalizedHolds: undefined as Map<bigint, bigint> | undefined
+  };
   const events = Array.from({ length: count }, (_, i) => ({
     args: { batchId: BigInt(i + 1) },
     blockNumber: 100n,
@@ -105,22 +111,34 @@ function pocketFixture({ count = 1, chunkSize = 10n, maxChunks = 2, pollLimit = 
     removed: false
   }));
   const holds = new Map(events.map((log) => [log.args.batchId, 1n]));
-  const getBlock = vi.fn(async () => ({ number: state.head, timestamp: state.time }));
+  const getBlock = vi.fn(async (query?: { blockTag?: string }) => ({
+    number: query?.blockTag === "finalized" ? state.finalizedHead : state.head,
+    timestamp: state.time
+  }));
   const getContractEvents = vi.fn(
     async ({ fromBlock, toBlock }: { fromBlock: bigint; toBlock: bigint }) =>
       events.filter((log) => log.blockNumber >= fromBlock && log.blockNumber <= toBlock)
   );
   const readContract = vi.fn(
-    async ({ functionName, args }: { functionName: string; args: readonly bigint[] }) => {
+    async ({
+      functionName,
+      args,
+      blockNumber
+    }: {
+      functionName: string;
+      args: readonly bigint[];
+      blockNumber: bigint;
+    }) => {
       const id = args[0]!;
+      const observed = blockNumber <= state.finalizedHead ? (state.finalizedHolds ?? holds) : holds;
       if (id === state.failEpoch) throw new Error("pocket RPC failed");
       if (functionName === "redeemBatch")
-        return { priced: holds.has(id), activatedAt: holds.has(id) ? 1000n : 0n };
+        return { priced: observed.has(id), activatedAt: observed.has(id) ? 1000n : 0n };
       if (functionName === "recoveryEpoch")
         return {
-          snapshotSupply: holds.has(id) ? 100n : 0n,
-          remainingHolds: holds.get(id) ?? 0n,
-          remainingReserve: (holds.get(id) ?? 0n) * 10n
+          snapshotSupply: observed.has(id) ? 100n : 0n,
+          remainingHolds: observed.get(id) ?? 0n,
+          remainingReserve: (observed.get(id) ?? 0n) * 10n
         };
       throw new Error(`Unexpected ${functionName}`);
     }
@@ -132,6 +150,7 @@ function pocketFixture({ count = 1, chunkSize = 10n, maxChunks = 2, pollLimit = 
     state,
     events,
     holds,
+    getBlock,
     getContractEvents,
     readContract,
     client,
@@ -158,7 +177,7 @@ describe("historical recovery pocket monitoring", () => {
     ]);
     for (const [q] of f.readContract.mock.calls) expect(q).toMatchObject({ blockNumber: 120n });
   });
-  it("progresses when the rewind is larger than one scan budget", async () => {
+  it("progresses within a small finalized scan budget without rescanning completed pages", async () => {
     const f = pocketFixture({ chunkSize: 5n, maxChunks: 1 });
     for (let i = 0; i < 5; i++) await f.monitor.scan(f.client);
     expect(f.getContractEvents.mock.calls.map(([q]) => q.fromBlock)).toEqual([
@@ -169,8 +188,10 @@ describe("historical recovery pocket monitoring", () => {
       120n
     ]);
     f.state.head = 125n;
+    f.state.finalizedHead = 125n;
     for (let i = 0; i < 6; i++) await f.monitor.scan(f.client);
     expect(f.getContractEvents.mock.calls.at(-1)?.[0].toBlock).toBe(125n);
+    expect(f.getContractEvents).toHaveBeenCalledTimes(6);
   });
   it("retains unvisited failures and overdue pockets across bounded polls", async () => {
     const f = pocketFixture({ count: 3, maxChunks: 3, pollLimit: 1 });
@@ -188,33 +209,40 @@ describe("historical recovery pocket monitoring", () => {
     expect(third.discovery.caughtUp).toBe(false);
     expect((await f.monitor.scan(f.client)).discovery.caughtUp).toBe(true);
   });
-  it("removes orphan activations on an empty canonical overlap page", async () => {
+  it("never discovers an activation orphaned before finality", async () => {
     const f = pocketFixture({ maxChunks: 3 });
-    await f.monitor.scan(f.client);
+    f.state.finalizedHead = 99n;
+    expect((await f.monitor.scan(f.client)).pockets).toEqual([]);
+    expect(f.getContractEvents).not.toHaveBeenCalled();
     f.events.length = 0;
+    f.state.finalizedHead = 120n;
     expect((await f.monitor.scan(f.client)).pockets).toEqual([]);
   });
-  it("reopens an old pocket when its recent terminal transaction is reorged", async () => {
+  it("retains a pocket through an unfinalized terminal reorg and retires only finalized zero", async () => {
     const f = pocketFixture({ maxChunks: 3 });
+    f.state.finalizedHead = 100n;
+    f.state.finalizedHolds = new Map(f.holds);
     f.holds.set(1n, 0n);
-    expect((await f.monitor.scan(f.client)).pockets[0]?.remainingHolds).toBe("0");
-    // The activation is older than the overlap; retaining the recent terminal read is essential.
+    expect((await f.monitor.scan(f.client)).pockets[0]?.remainingHolds).toBe("1");
     f.state.head = 140n;
     await f.monitor.scan(f.client);
     f.holds.set(1n, 1n);
     f.state.head = 141n;
     expect((await f.monitor.scan(f.client)).pockets[0]?.remainingHolds).toBe("1");
+    f.holds.set(1n, 0n);
+    f.state.finalizedHead = 141n;
+    f.state.finalizedHolds.set(1n, 0n);
+    expect((await f.monitor.scan(f.client)).pockets).toEqual([]);
   });
-  it("a fresh nonexistent epoch invalidates discovery until the event is replayed", async () => {
+  it("keeps a disappeared finalized epoch visible as an error", async () => {
     const f = pocketFixture({ maxChunks: 3 });
     await f.monitor.scan(f.client);
     f.holds.delete(1n);
     const result = await f.monitor.scan(f.client);
-    expect(result.pockets).toEqual([]);
-    expect(result.discovery).toMatchObject({
-      caughtUp: false,
-      error: expect.stringContaining("disappeared")
-    });
+    expect(result.pockets).toMatchObject([
+      { epochId: "1", error: expect.stringContaining("Finalized pocket activation disappeared") }
+    ]);
+    expect(f.getContractEvents).toHaveBeenCalledTimes(3);
   });
   it("reports missing discovery origin without any RPC or transaction", async () => {
     const f = pocketFixture();
@@ -225,4 +253,70 @@ describe("historical recovery pocket monitoring", () => {
     });
     expect(f.getContractEvents).not.toHaveBeenCalled();
   });
+
+  it("discovers an in-window replacement behind the old overlap cursor once finalized", async () => {
+    const f = pocketFixture({ count: 0, chunkSize: 10n, maxChunks: 1 });
+    const monitor = createPocketMonitor({ bank, origin: 1n, chunkSize: 10n, maxChunks: 1 });
+    f.state.head = 100n;
+    f.state.finalizedHead = 76n;
+    for (let i = 0; i < 10; ++i) await monitor.scan(f.client);
+    f.state.head = 101n;
+    f.state.finalizedHead = 77n;
+    await monitor.scan(f.client);
+    // Block 85 is replaced after the old bounded overlap read [77, 86]. It is not final yet.
+    f.events.push({
+      args: { batchId: 1n },
+      blockNumber: 85n,
+      blockHash: hash,
+      logIndex: 0,
+      removed: false
+    });
+    f.holds.set(1n, 1n);
+    for (let i = 0; i < 25; ++i) {
+      f.state.head += 9n;
+      f.state.finalizedHead = f.state.head - 24n;
+      const calls = f.getContractEvents.mock.calls.length;
+      await monitor.scan(f.client);
+      expect(f.getContractEvents.mock.calls.length - calls).toBeLessThanOrEqual(1);
+      expect(f.getContractEvents.mock.calls.at(-1)?.[0].toBlock).toBeLessThanOrEqual(
+        f.state.finalizedHead
+      );
+    }
+    let actual;
+    for (let i = 0; i < 100; ++i) actual = await monitor.scan(f.client);
+    expect(actual!.discovery).toMatchObject({
+      caughtUp: true,
+      scannedThrough: "302",
+      finalizedBlock: "302",
+      headBlock: "326"
+    });
+    expect(actual!.pockets).toMatchObject([
+      { epochId: "1", remainingHolds: "1", remainingReserve: "10", ageSeconds: 601 }
+    ]);
+  });
+
+  it.each(["unavailable", "unnumbered", "regressed"])(
+    "keeps %s finality actionable without losing known pockets",
+    async (failure) => {
+      const f = pocketFixture({ maxChunks: 3 });
+      await f.monitor.scan(f.client);
+      const queries = f.getContractEvents.mock.calls.length;
+      if (failure === "regressed") f.state.finalizedHead = 119n;
+      else
+        f.getBlock.mockImplementation(async (query) => {
+          if (query?.blockTag === "finalized") {
+            if (failure === "unavailable") throw new Error("finalized RPC unavailable");
+            return { number: null, timestamp: f.state.time } as never;
+          }
+          return { number: f.state.head, timestamp: f.state.time };
+        });
+      const actual = await f.monitor.scan(f.client);
+      expect(actual.discovery).toMatchObject({
+        caughtUp: false,
+        error: expect.stringMatching(/finalized/)
+      });
+      expect(actual.pockets).toMatchObject([{ epochId: "1", remainingHolds: "1" }]);
+      expect(f.getContractEvents).toHaveBeenCalledTimes(queries);
+    }
+  );
 });

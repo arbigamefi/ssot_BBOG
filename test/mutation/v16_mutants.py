@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -123,7 +124,7 @@ MUTANTS = [
      "tests": [DIFF]},
     # ADR-0034/0035: immediate liquid pricing and independently owned historical recovery.
     {"id": "M20", "guarantee": "an unfinished historical epoch never gates a later exit",
-     "patches": [(BANK, "        batchId = currentEpoch;\n", "        if (_recoveryEpochs[1].remainingHolds != 0) revert SolvencyViolation();\n        batchId = currentEpoch;\n")],
+     "patches": [(BANK, "        batchId = currentEpoch;\n", "        if (recoveryEpoch(1).remainingHolds != 0) revert SolvencyViolation();\n        batchId = currentEpoch;\n")],
      "tests": [ASYNC, PENDING]},
     {"id": "M21", "guarantee": "LP exits never independently stop betting",
      "patches": [(BANK, "        if (reserved < stake) revert ReservedTooSmall(betId, reserved, stake);", "        if (recoveryBacking != 0) revert SolvencyViolation();\n        if (reserved < stake) revert ReservedTooSmall(betId, reserved, stake);")],
@@ -177,7 +178,7 @@ MUTANTS = [
      "patches": [(BANK, "        amount = playerPayable[player];\n", "        if (paused()) revert RiskInPaused();\n        amount = playerPayable[player];\n")],
      "tests": [GUARDS, ASYNC]},
     {"id": "M38", "guarantee": "priced assets move to exitPayable",
-     "patches": [(BANK, "        exitPayable += assets_;\n", "")],
+     "patches": [(BANK, "        exitPayable += liquid;\n", "")],
      "tests": [ASYNC, PENDING, BINV]},
     {"id": "M39", "guarantee": "views compute ordinary entitlements as synchronization does",
      "patches": [(BANK, "            claimableAssets += Math.mulDiv(s, b.assets, b.shares);\n", "            claimableAssets += Math.mulDiv(s, b.assets, b.shares, Math.Rounding.Ceil);\n")],
@@ -191,14 +192,14 @@ MUTANTS = [
     {"id": "M42", "guarantee": "active NAV excludes all historical backing",
      "patches": [(BANK, "return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal + recoveryBacking);", "return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal);")],
      "tests": [ASYNC, BINV]},
-    {"id": "M43", "guarantee": "each old hold charges its own epoch, regardless of terminal order",
-     "patches": [(BANK, "        RecoveryEpoch storage e = _recoveryEpochs[h.epoch];", "        RecoveryEpoch storage e = _recoveryEpochs[currentEpoch - 1];")],
+    {"id": "M43", "guarantee": "staying reserve is released in the terminal transaction",
+     "patches": [(BANK, "        activeReserved -= r.activeUnits;\n        _activeHolds.remove(betId);", "        activeReserved -= 0;\n        _activeHolds.remove(betId);")],
      "tests": [ASYNC, BINV]},
     {"id": "M44", "guarantee": "combined settlement cost fits its held reserve",
      "patches": [(BANK, "        if (cost > reserved) revert ReservedTooSmall(betId, reserved, cost);\n", "")],
      "tests": [GUARDS, ASYNC]},
-    {"id": "M45", "guarantee": "stay-in LPs retain their wallet snapshot recovery rights",
-     "patches": [(BANK, "position.shares = _walletHistory[controller].upperLookup(epochId) + _requestShares[epochId][controller];", "position.shares = _requestShares[epochId][controller];")],
+    {"id": "M45", "guarantee": "only activated request units receive frozen recovery rights",
+     "patches": [(BANK, "position.shares = q;", "position.shares = q + balanceOf[controller];")],
      "tests": [ASYNC, BINV]},
     {"id": "M46", "guarantee": "claiming uses a cumulative entitlement rather than per-release rounding",
      "patches": [(BANK, "        position.claimableAssets = entitlement - position.claimedAssets;", "        position.claimableAssets = entitlement;")],
@@ -207,7 +208,7 @@ MUTANTS = [
      "patches": [(BANK, "        uint256 reserve = activeReserved;", "        uint256 reserve = totalReserved;")],
      "tests": [ASYNC, BINV]},
     {"id": "M48", "guarantee": "assigned unpaid recovery remains backed after final synchronization",
-     "patches": [(BANK, "            uint256 dust = e.recoveredAssets - e.finalizedAssets;", "            uint256 dust = e.backingAssets;")],
+     "patches": [(BANK, "            uint256 dust = view_.recoveredAssets - e.finalizedAssets;", "            uint256 dust = view_.backingAssets;")],
      "tests": [ASYNC, BINV]},
     {"id": "M49", "guarantee": "only controller or operator can redirect historical recovery",
      "patches": [(BANK, "        _checkController(controller);\n        RecoveryPosition memory position", "        RecoveryPosition memory position")],
@@ -232,43 +233,72 @@ def check_anchors(mutants):
     return problems
 
 
+def forge_environment(out_dir):
+    # Keep mutant artifacts and failing sequences separate from the canonical build. A later ABI export
+    # or local integration test must never pick up a deliberately broken Bank from out/.
+    return {**os.environ, "FOUNDRY_PROFILE": "pr",
+            "FOUNDRY_FUZZ_SEED": os.environ.get("FOUNDRY_FUZZ_SEED", "0x160035"),
+            "FOUNDRY_OUT": str(out_dir / "build"),
+            "FOUNDRY_CACHE_PATH": str(out_dir / "cache"),
+            "FOUNDRY_FUZZ_FAILURE_PERSIST_DIR": str(out_dir / "fuzz"),
+            "FOUNDRY_INVARIANT_FAILURE_PERSIST_DIR": str(out_dir / "invariant")}
+
+
+def failing_methods(output):
+    # Unit/fuzz failures name their method on the [FAIL] line; an invariant counterexample names its
+    # method on the following indented line. Do not mistake suite/setup failures for a killed mutant.
+    methods = set(re.findall(r"^\[FAIL[^\n]*?\] (\w+)\(", output, re.M))
+    methods |= set(re.findall(r"^\s+(\w+)\(\) \(runs: \d+", output, re.M))
+    return sorted(methods)
+
+
+def classify_mutant(returncode, output):
+    failures = failing_methods(output)
+    tests = [name for name in failures if name.startswith(("test", "invariant_"))]
+    if returncode not in (0, 1) or len(tests) != len(failures):
+        return "error", failures
+    if returncode == 0:
+        # A misspelled --match-path can otherwise produce a false survivor with no test execution.
+        return ("survived" if re.search(r"^\[PASS\] ", output, re.M) else "error"), failures
+    return ("killed" if tests else "error"), failures
+
+
+def run_baseline(mutants, out_dir):
+    paths = sorted({path for mutant in mutants for path in mutant["tests"]})
+    match = paths[0] if len(paths) == 1 else "{" + ",".join(paths) + "}"
+    # Deployment tests change process-wide Foundry environment variables, so serialize the baseline.
+    cmd = ["forge", "test", "--match-path", match, "--threads", "1"]
+    started = time.time()
+    result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=forge_environment(out_dir))
+    output = result.stdout + result.stderr
+    (out_dir / "baseline.log").write_text(output)
+    passed = len(re.findall(r"^\[PASS\] ", output, re.M))
+    return {"command": cmd, "tests": paths, "returncode": result.returncode, "passedTests": passed,
+            "outcome": "passed" if result.returncode == 0 and passed > 0 else "error",
+            "seconds": round(time.time() - started)}
+
+
 def run_mutant(m, out_dir):
     backups = {}
     try:
         for path, old, new in m["patches"]:
             file = ROOT / path
-            backups.setdefault(path, file.read_text())
+            backups.setdefault(path, file.read_bytes())
             file.write_text(file.read_text().replace(old, new, 1))
         paths = m["tests"]
         match = paths[0] if len(paths) == 1 else "{" + ",".join(paths) + "}"
         cmd = ["forge", "test", "--match-path", match] + m.get("args", [])
         started = time.time()
-        # Keep mutant artifacts and failing sequences separate from the canonical build. A later ABI export
-        # or local integration test must never pick up a deliberately broken Bank from out/.
-        env = {**os.environ, "FOUNDRY_PROFILE": "pr",
-               "FOUNDRY_OUT": str(out_dir / "build"),
-               "FOUNDRY_CACHE_PATH": str(out_dir / "cache"),
-               "FOUNDRY_FUZZ_FAILURE_PERSIST_DIR": str(out_dir / "fuzz"),
-               "FOUNDRY_INVARIANT_FAILURE_PERSIST_DIR": str(out_dir / "invariant")}
-        result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=env)
+        result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=forge_environment(out_dir))
         output = result.stdout + result.stderr
         (out_dir / f"{m['id']}.log").write_text(output)
-        # A failed unit or fuzz test names itself on the [FAIL] line; a failed invariant names itself on an
-        # indented line after it, while passing ones print on a [PASS] line.
-        failing = set(re.findall(r"^\[FAIL[^\n]*?\] (\w+)\(", output, re.M))
-        failing |= set(re.findall(r"^\s+(\w+)\(\) \(runs: \d+", output, re.M))
-        failing = sorted(failing)
-        if result.returncode == 0:
-            outcome = "survived"
-        elif failing or "Suite result: FAILED" in output:
-            outcome = "killed"
-        else:
-            outcome = "error"  # no test ran: most often a compile error in the mutant itself
+        outcome, failing = classify_mutant(result.returncode, output)
         return {"id": m["id"], "guarantee": m["guarantee"], "tests": paths, "outcome": outcome,
-                "failingTests": failing, "seconds": round(time.time() - started)}
+                "failingTests": failing, "returncode": result.returncode,
+                "seconds": round(time.time() - started)}
     finally:
         for path, content in backups.items():
-            (ROOT / path).write_text(content)
+            (ROOT / path).write_bytes(content)
 
 
 def main(argv=None):
@@ -296,18 +326,42 @@ def main(argv=None):
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
     # HEAD does not identify uncommitted prelaunch work. Record exact Solidity/test inputs as well.
     inputs = sorted([*ROOT.joinpath("src").rglob("*.sol"), *ROOT.joinpath("test").rglob("*.sol"),
-                     ROOT / "foundry.toml", Path(__file__).resolve()])
+                     *ROOT.joinpath("script").rglob("*.sol"),
+                     ROOT / "foundry.toml", ROOT / "deps.lock", Path(__file__).resolve()])
     input_hashes = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in inputs}
-    results = []
-    for m in selected:
-        result = run_mutant(m, out_dir)
-        results.append(result)
-        print(f"{result['id']} {result['outcome']:8} {len(result['failingTests']):3} failing "
-              f"({result['seconds']}s) {result['guarantee']}", flush=True)
-        (out_dir / "summary.json").write_text(json.dumps({"commit": commit, "inputSha256": input_hashes, "results": results}, indent=2) + "\n")
+    summary = {"commit": commit, "inputSha256": input_hashes,
+               "fuzzSeed": forge_environment(out_dir)["FOUNDRY_FUZZ_SEED"], "baseline": None, "results": []}
+
+    def save_summary():
+        (out_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+
+    save_summary()
+    try:
+        summary["baseline"] = run_baseline(selected, out_dir)
+        save_summary()
+        print(f"baseline {summary['baseline']['outcome']}: {summary['baseline']['passedTests']} tests "
+              f"({summary['baseline']['seconds']}s)", flush=True)
+        if summary["baseline"]["outcome"] != "passed":
+            return 1
+        for m in selected:
+            result = run_mutant(m, out_dir)
+            summary["results"].append(result)
+            print(f"{result['id']} {result['outcome']:8} {len(result['failingTests']):3} failing "
+                  f"({result['seconds']}s) {result['guarantee']}", flush=True)
+            save_summary()
+    finally:
+        summary["restoredSha256"] = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
+                                     for path in inputs}
+        summary["sourceRestored"] = summary["restoredSha256"] == input_hashes
+        save_summary()
     print(f"logs and summary.json in {out_dir}")
-    return 0 if all(r["outcome"] == "killed" for r in results) else 1
+    return 0 if summary["sourceRestored"] and all(r["outcome"] == "killed" for r in summary["results"]) else 1
 
 
 if __name__ == "__main__":
+    # A normal termination must unwind run_mutant's byte restoration as an interrupt does.
+    def terminate(_signum, _frame):
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, terminate)
     sys.exit(main())

@@ -202,7 +202,8 @@ contract BankRedemptionGuardsTest is Test {
         vm.expectRevert(abi.encodeWithSelector(IBank.ReservedTooSmall.selector, betId, 20e6, 21e6));
         bank.settleBet(betId, 15e6, 15e6, 0, 6e6, none);
         bank.settleBet(betId, 15e6, 15e6, 0, 5e6, none);
-        assertEq(bank.recoveryEpoch(1).settledCost, 20e6);
+        assertEq(bank.recoveryEpoch(1).settledCost, bank.recoveryEpoch(1).initialReserve);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, 0);
     }
 
     // M49: nobody but the controller or its operator can send historical recovery to a receiver.

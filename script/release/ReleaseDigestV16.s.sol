@@ -52,12 +52,13 @@ contract ReleaseDigestV16 is Script {
         json = vm.serializeBytes32(obj, "r", r);
         json = vm.serializeBytes32(obj, "s", s);
 
-        vm.writeJson(json, "deployments/release-latest-v16.json");
+        string memory outputPath = vm.envOr("RELEASE_OUTPUT_PATH", string("deployments/release-latest-v16.json"));
+        vm.writeJson(json, outputPath);
 
         console2.log("snapshot:", snapshotPath);
         console2.log("digest:", vm.toString(digest));
         console2.log("signer:", signer);
-        console2.log("wrote:", "deployments/release-latest-v16.json");
+        console2.log("wrote:", outputPath);
     }
 
     function _digestStatic(string memory snap) internal pure returns (bytes32 digest) {
@@ -219,7 +220,8 @@ contract ReleaseDigestV16 is Script {
                     snap.readUint(string.concat(".poolBankHoldbackVestingSeconds_", suffix)),
                     keccak256(bytes(snap.readString(string.concat(".poolLpName_", suffix)))),
                     keccak256(bytes(snap.readString(string.concat(".poolLpSymbol_", suffix)))),
-                    snap.readUint(string.concat(".poolLpDecimals_", suffix))
+                    snap.readUint(string.concat(".poolLpDecimals_", suffix)),
+                    keccak256(bytes(snap.readString(string.concat(".poolAssetSymbol_", suffix))))
                 )
             );
 

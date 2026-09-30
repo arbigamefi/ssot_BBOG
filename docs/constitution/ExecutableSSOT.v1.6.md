@@ -90,33 +90,33 @@ Each terminal position's net player payout, refund and all new PF/XP together mu
 
 ### L1. Continuous betting and later exits
 
-One waiting queue remains cancellable until actual activation, including after eligibility. Activation
-prices available cash immediately, burns the queued shares once, freezes all original recovery holders
-and advances the epoch. A permanently open old hold cannot gate a later batch, adequate new betting or
-payment of already available cash. The all-reserve case may produce zero liquid cash; rights persist.
+One waiting queue remains cancellable until activation, including after eligibility. Activation prices
+liquid cash, burns requested shares once and isolates only exiting rights. Old holds do not gate later
+batches. Zero liquid cash preserves recovery rights. No LP phase pauses betting; ordinary capital,
+emergency-pause and the 128 active-risk hold limit remain explicit constraints.
 
-### L2. Complete reserve segregation
+### L2. Reserve ownership and atomic capital recovery
 
-Only the current epoch's R0 is segregated. Historical reserve is never segregated again. Active NAV
-excludes the entire `recoveryBacking`, not just remaining reserves. Released but unpaid recovery stays
-outside active NAV. Every hold terminalizes once against its immutable epoch; costs include all player,
-refund, PF and XP amounts when booked. Paying existing debt does not charge the epoch twice.
+Every original reserve unit belongs once to active capital, exiting batches or the protocol. Active NAV
+excludes historical backing. Settlement frees the staying units in the same transaction and updates one
+hold plus totals, without scanning batches or holders. Terminal cost includes payout, refund, PF and XP,
+including player debt. A later debt claim cannot charge risk twice.
 
 ### L3. Pricing and recovery
 
-`G(x)=min(floor(S*(x+V)/(S+V)),x)`, `L=N-R0`. The liquid batch gets `floor(Q*G(L)/S)`.
-`D=R0-C-R`, `H=G(L+D)-G(L)` and `U=D-H` are cumulative. A snapshot holder gets
-`floor(units*H/S)-alreadyClaimed`; do not floor successive release increments independently.
-The model `test/model/recovery_pocket_model.py` is an independent finite-domain oracle. Solidity
-unit, invariant and real Hub/Router/Bank tests must prove the corresponding implementation paths.
+`E=floor(Q*min(floor(S*(N+V)/(S+V)),N)/S)`. Liquid is `floor(E*(N-R)/N)` and each hold
+allocates `floor(activeUnits*E/N)` exiting units. At zero NAV both are zero. A batch recovers
+`floor(units*(originalReserve-cost)/originalReserve)` per completed hold. Its controllers receive
+proportional floors of cumulative recovery, less prior claims. Test conservation, the direct individual
+terminal-price cap and the explicit one-base-unit double-floor bound in the independent integer model.
 
-### L4. Historical ownership
+### L4. Historical ownership and bounded work
 
-Snapshot wallet balances and that epoch's controller requests sum to S exactly once. Bank escrow is
-not a second owner. After activation, same-block transfers, deposits, claims, cancellation in later
-queues and zero active supply cannot overwrite old weights. Ordinary Bank share destinations and
-Bank/zero controllers are rejected. Checkpoint lookup is bounded; no global epoch or holder loop
-is permitted in settlement, activation, transfer or standard redemption views.
+Only activated request controllers receive frozen rights. Staying wallet shares carry active exposure
+through transfers and deposits. Same-block transfers, subsequent requests, zero active supply and new
+LPs cannot modify exited weights. No wallet checkpoint ledger remains. Original reserve denominators
+never rebase. Activation and one-batch recovery operations visit at most 128 holds; settlement does
+not grow with historical batches. Full exits remove all active-risk slots without erasing old rights.
 
 ### L5. Claims, synchronization and residuals
 
@@ -135,8 +135,8 @@ player, and a failed claim retains the debt. Admission enforces exact-transfer t
 
 ### L7. Consumers
 
-SDK quotes and history pages share a block identity. Historical discovery includes staying holders,
-not only request submitters. Recovery cash is attributed once to its holder, independently of caller
+SDK quotes and history pages share a block identity. Historical discovery includes every activated
+request controller, including a controller with zero remaining wallet shares. Recovery cash is attributed once to its holder, independently of caller
 and receiver, with explicit Bank donations distinguished. Reorg replacement removes orphaned cash
 facts. Wallet-zero and incomplete-history cases retain visible historical rights and uncertainty.
 
@@ -200,7 +200,7 @@ accounting; PR CI runs the same target. Asset/provider and network acceptance ar
 | B1 NAV identity, B2 solvency   | checked after every settlement in `HouseEdgeAllocationV16`; `BankInvariants`                                                                                                                                                                                                                                                                                                                                                                                            |
 | L1 Old-risk ownership          | `BankPendingExposure`; `BankAsyncRedemption`; real Hub/Router continuity test in `GameHubE2E`                                                                                                                                                                                                                                                                                                                                                                           |
 | L2 Continuous betting          | `GameHubE2E.test_asyncExitKeepsBettingLiveAndHistoricalRecoveriesSeparate`; `BankInvariants.invariant_historical_epochs_preserve_ownership_backing_and_current_risk`                                                                                                                                                                                                                                                                                                    |
-| L3 Frozen pricing              | `BankAsyncRedemption`: all-holder recovery, full exits, deposits and reserve allocation; `test/model/recovery_pocket_model.py`; `BankInvariants`                                                                                                                                                                                                                                                                                                                        |
+| L3 Frozen pricing              | `BankAsyncRedemption`: exit-only recovery and atomic staying capital, full exits, deposits and reserve allocation; `test/model/recovery_pocket_model.py`; `BankInvariants`                                                                                                                                                                                                                                                                                              |
 | L4 Claims                      | `test_partialClaimOrderDoesNotChangeTheTotal`, `test_withdrawCannotConsumeEveryShareAndLeaveAssets`, `test_onlyTheControllerOrItsOperatorClaimsAndPicksTheReceiver`, `test_pauseStopsClaimsButNotRequestsSyncOrCancellation`, `test_exitsAreExemptFromTheWithdrawalBuffer`                                                                                                                                                                                              |
 | L5 Assignment                  | `test_remainderReturnsToNavOnceEveryShareIsAssigned`, `test_viewsAgreeWithStoredStateAfterSync`; `BankInvariants.invariant_priced_exits_are_conserved`                                                                                                                                                                                                                                                                                                                  |
 | L6 Queued escrow               | `BankAsyncRedemption`: cancellation before activation, allowances and rescue; `BankInvariants.invariant_escrow_matches_pending_requests`                                                                                                                                                                                                                                                                                                                                |

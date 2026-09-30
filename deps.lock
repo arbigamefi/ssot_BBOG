@@ -4,7 +4,7 @@
 #
 # Tooling
 FOUNDRY_CHANNEL=stable
-SOLC_VERSION=0.8.20
+SOLC_VERSION=0.8.24
 EVM_VERSION=cancun
 VIA_IR=true
 

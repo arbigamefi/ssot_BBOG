@@ -1,6 +1,6 @@
 # ADR-0034: Asynchronous LP redemption and player payables
 
-- **Status:** Accepted and implemented together with [ADR-0035](0035-recovery-rights-without-exit-blocking.md). Local integration validation is complete; external audit and fresh network acceptance remain required. See the [candidate evidence](../audit/v1.6-audit-scope.md).
+- **Status:** Accepted; accounting implementation is being revised together with [ADR-0035](0035-recovery-rights-without-exit-blocking.md). Current-source validation is in progress; external audit and fresh network acceptance remain required. See the [candidate evidence](../audit/v1.6-audit-scope.md).
 - **Applies to:** the single current prelaunch Bank and its SDK, keeper and application.
 - **Standards:** synchronous deposits follow [ERC-4626](https://eips.ethereum.org/EIPS/eip-4626); asynchronous redemption follows [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540), with ERC-7575/ERC-165 interfaces. Historical recovery is a separate extension.
 
@@ -8,11 +8,11 @@
 
 Pending stakes are already in the Bank's cash balance before their outcomes are booked. Immediate redemption at that book value would let a player-LP withdraw against their own stake or an informed LP exit before a revealed payout is booked. A reserve-based limit cannot make that price final.
 
-LP operations must not stop adequately funded betting. A permanently unresolved position must not gate later LP exits. [ADR-0035](0035-recovery-rights-without-exit-blocking.md) defines the complete reserve segregation, frozen ownership, liquid valuation, historical recovery and residual accounting that meet these requirements. There is one waiting request queue; completed activation does not wait for any older epoch.
+LP operations must not stop adequately funded betting. A permanently unresolved position must not gate later LP exits. [ADR-0035](0035-recovery-rights-without-exit-blocking.md) defines the exit-only reserve segregation, frozen controller ownership, liquid valuation, historical recovery and residual accounting that meet these requirements. There is one waiting request queue; completed activation does not wait for any older epoch.
 
 ## Deposits and ownership
 
-`deposit` and `mint` are synchronous at the active Bank's virtual-offset book price. Before the next epoch boundary, new LPs participate in current active positions. They do not acquire rights to previously segregated recovery epochs. The application states both facts and does not describe the book quote as guaranteed realizable cash.
+`deposit` and `mint` are synchronous at the active Bank's virtual-offset book price. New LPs participate in all remaining active risk, including older unresolved positions. They do not acquire rights to previously segregated recovery epochs. The application states both facts and does not describe the book quote as guaranteed realizable cash.
 
 Share transfers change active ownership only. Historical rights remain with each epoch's frozen holder. Ordinary transfers and mint/deposit receivers cannot be the Bank; only internal request escrow may put Bank shares in its custody. The zero address and Bank itself are invalid request controllers. `rescueToken` rejects both the underlying asset and Bank share token.
 
@@ -23,7 +23,7 @@ Share transfers change active ownership only. Historical rights remain with each
 - `requestId = 0`; standard pending and claimable views aggregate the controller's ordinary redemption state. Historical recovery is exposed separately and is never silently included in ordinary max/pending values.
 - Governance chooses a batch period from one hour to seven days, initially one day. A queue becomes eligible at the first Unix-time multiple strictly after its first request. Parameter changes affect only new queues.
 - Requests continue joining the unactivated queue after eligibility. Cancellation remains available until actual activation, including while paused. Empty queues retire without leaving an activation blocker.
-- Anyone may activate an eligible queue when the Bank is unpaused. The transaction fixes the risk/ownership boundary, segregates only the current epoch's old reserve, prices available liquid cash, burns queued shares once and advances the epoch. Old recovery epochs and unclaimed cash never gate it.
+- Anyone may activate an eligible queue when the Bank is unpaused. The transaction fixes the risk/ownership boundary, segregates only the exiting requests’ reserve units, prices available liquid cash, burns queued shares once and advances the epoch. Old recovery epochs and unclaimed cash never gate it.
 
 Activation does not transfer assets to LPs. Cash and later recoveries are pulled by their entitled holders. No normal redemption phase invokes an emergency pause or adds a new-bet rejection condition.
 
@@ -58,7 +58,7 @@ Every share quote, SSOT view, new-risk check and optional-outflow check uses the
 active NAV = cash - PF - XP - fixed LP exits - player payables - historical recovery backing
 ```
 
-Current-epoch reserves protect active risk; historical reserves are protected inside their own recovery backing. No new bet or optional outflow can spend historical backing or fixed claims. Combined terminal cost includes player net payout, refund, PF and all XP buckets and must not exceed the held reserve. Reserve must cover the original stake for full refunds.
+Active reserve units protect remaining active risk; historical reserves are protected inside their own recovery backing. No new bet or optional outflow can spend historical backing or fixed claims. Combined terminal cost includes player net payout, refund, PF and all XP buckets and must not exceed the held reserve. Reserve must cover the original stake for full refunds.
 
 Paying fixed liabilities to an external receiver reduces cash and the corresponding liability equally. The historical epoch is charged when a terminal obligation is booked, not when the recipient later claims it. Historical protocol residuals are distinct from gameplay fee counters and metrics.
 
@@ -74,6 +74,6 @@ Casino Hub/module admission still requires public terminal paths, bounded inputs
 
 Keeper activation and historical monitoring are independent. Keeper continues finalization and eligible refunds, claims player payables for their players (with backoff while the asset refuses the transfer), tolerates transaction races and reconciles missed events/restarts. Alert state advances only after notification succeeds. Delayed historical recovery never becomes a scheduled betting shutdown.
 
-Earn distinguishes waiting shares, priced liquid cash and historical recovery. Cash-flow/PnL indexing includes actual ordinary withdrawals and recovery payments with correct beneficiaries; segregation and share burns are not cash receipts. Incomplete discovery or uncertain recovery must remain visible rather than being silently valued at zero.
+Earn distinguishes waiting shares, priced liquid cash and historical recovery. Cash-flow indexing includes actual ordinary withdrawals and recovery payments with correct beneficiaries; segregation and share burns are not cash receipts. Incomplete discovery or uncertain recovery must remain visible rather than being silently valued at zero.
 
-[ADR-0035](0035-recovery-rights-without-exit-blocking.md) owns the frozen-curve model and its proof boundaries. Solidity, actual Bank/SDK integration, permissions, token failure, checkpoint timing, gas/runtime size, keeper, indexer, replay and UI must all be validated on the final source/ABI identity. Mathematical models and earlier-source test counts are not release acceptance. Freeze only after integration, then complete external audit and a fresh network acceptance.
+[ADR-0035](0035-recovery-rights-without-exit-blocking.md) owns the original-reserve-unit model and its proof boundaries. Solidity, actual Bank/SDK integration, permissions, token failure, same-block ownership, gas/runtime size, keeper, indexer, replay and UI must all be validated on the final source/ABI identity. Mathematical models and earlier-source test counts are not release acceptance. Freeze only after integration, then complete external audit and a fresh network acceptance.

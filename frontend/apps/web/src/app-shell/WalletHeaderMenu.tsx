@@ -4,14 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { useConnectModal } from "./wallet-entry-context";
 import { mainnet } from "wagmi/chains";
-import {
-  useAccount,
-  useChainId,
-  useDisconnect,
-  useEnsAvatar,
-  useEnsName,
-  useSwitchChain
-} from "wagmi";
+import { useAccount, useDisconnect, useEnsAvatar, useEnsName, useSwitchChain } from "wagmi";
 import { normalize } from "viem/ens";
 import { cn } from "@ssot/ui";
 import {
@@ -54,11 +47,10 @@ export function WalletHeaderMenu({
 }) {
   const t = useTranslations("app");
   const rootT = useTranslations();
-  const { address, isConnected, connector } = useAccount();
+  const { address, isConnected, connector, chainId: walletChainId } = useAccount();
   const { disconnect } = useDisconnect();
   const { openConnectModal } = useConnectModal();
   const { selectedChainId, selectedChain } = useActiveChain();
-  const walletChainId = useChainId();
   const { switchChain, isPending: isSwitchingWalletChain } = useSwitchChain();
 
   // ENS reverse resolution is nice-to-have identity chrome, not a product

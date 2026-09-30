@@ -38,6 +38,19 @@
     },
     {
       "inputs": [],
+      "name": "MAX_ACTIVE_HOLDS",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "MAX_BATCH_PERIOD",
       "outputs": [
         {
@@ -93,6 +106,19 @@
         }
       ],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "activeOpenHolds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -381,19 +407,6 @@
     {
       "inputs": [],
       "name": "currentEpoch",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "currentOpenHolds",
       "outputs": [
         {
           "internalType": "uint256",
@@ -796,11 +809,6 @@
           "internalType": "bool",
           "name": "open",
           "type": "bool"
-        },
-        {
-          "internalType": "uint256",
-          "name": "epoch",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -1294,7 +1302,7 @@
             }
           ],
           "internalType": "struct IBank.RecoveryEpoch",
-          "name": "",
+          "name": "e",
           "type": "tuple"
         }
       ],
@@ -2384,6 +2392,43 @@
           "type": "uint256"
         },
         {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "activeUnits",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "exitingUnits",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "cost",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "historicalRecovery",
+          "type": "uint256"
+        }
+      ],
+      "name": "BetRiskSettled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "betId",
+          "type": "uint256"
+        },
+        {
           "indexed": true,
           "internalType": "address",
           "name": "player",
@@ -2721,49 +2766,6 @@
         }
       ],
       "name": "RecoverySynced",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "epochId",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "remainingReserve",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "remainingHolds",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "settledCost",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "recoveredAssets",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "backingAssets",
-          "type": "uint256"
-        }
-      ],
-      "name": "RecoveryUpdated",
       "type": "event"
     },
     {
@@ -3224,6 +3226,11 @@
     },
     {
       "inputs": [],
+      "name": "ActiveHoldLimit",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "AsyncRedemption",
       "type": "error"
     },
@@ -3247,11 +3254,6 @@
         }
       ],
       "name": "BetNotOpen",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "CheckpointUnorderedInsertion",
       "type": "error"
     },
     {
