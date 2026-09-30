@@ -329,3 +329,20 @@ The source remains uncommitted on `codex/review-remediation` at base HEAD
 the source audit bundle or requesting external-auditor acceptance. Target-network deployment,
 real-wallet/Safe operation, keeper-with-PostgreSQL end-to-end acceptance, and external audit remain
 outside this local evidence. No push, deployment or production-data operation occurred.
+
+### Committed candidate and freeze — 2026-09-30
+
+Following the Owner's explicit commit instruction, the complete implementation was committed as
+`0120367068a0b0d0921255a47010c4d55b76dbc5`, tree
+`d5f1807fad7bdb089a208e818255eff757e70a1a`, on `codex/review-remediation`.
+All 1,012 gate inputs and both reports were rechecked immediately before staging. The normal commit
+hook formatted only the ABI index's trailing comma and function layout. The original hook snapshot
+matches the recorded gate hash; formatting it with repository Prettier reproduces the committed
+bytes exactly, and all 19 actual ABI exports load. Every other gate input is unchanged.
+`committed-candidate-verification.json` records this binding without rewriting the gate manifest.
+
+The renewed [audit scope](v1.6-audit-scope.md) identifies all implementation subtrees and remaining
+acceptance. Later freeze-document commits leave these implementation inputs unchanged. The source
+bundle identifies its own complete commit/tree, while raw gate logs and receipts remain separate
+evidence. Earlier uncommitted observations above retain their original time and scope. This local
+source freeze is not external-auditor acceptance, a production release or native scan completion.
