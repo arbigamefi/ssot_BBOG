@@ -76,9 +76,26 @@ class ReleaseBundleTests(unittest.TestCase):
             bundle = next((root / 'dist').glob('*.tar.gz'))
             with tarfile.open(bundle) as out:
                 prefix = f'ssot-audit-{git("rev-parse", "HEAD")}/'
+                members = out.getmembers()
+                self.assertEqual(len(members), len({entry.name for entry in members}))
+                for entry in members:
+                    self.assertTrue(entry.name == prefix.rstrip('/') or entry.name.startswith(prefix), entry.name)
+                    self.assertTrue(entry.isfile() or entry.isdir(), entry.name)
+                files = {entry.name[len(prefix):] for entry in members if entry.isfile()}
+                self.assertEqual(files, set(contents) | {
+                    'SOURCE_REVISION', 'SOURCE_TREE', 'AUDIT_VERIFY.md', 'MANIFEST.sha256'})
+                manifest = {}
+                for line in out.extractfile(prefix + 'MANIFEST.sha256').read().decode().splitlines():
+                    digest, name = line.split('  ', 1)
+                    self.assertNotIn(name, manifest)
+                    manifest[name] = digest
+                self.assertEqual(set(manifest), files - {'MANIFEST.sha256'})
+                for name, digest in manifest.items():
+                    self.assertEqual(hashlib.sha256(out.extractfile(prefix + name).read()).hexdigest(), digest)
                 for name, data in contents.items():
                     self.assertEqual(out.extractfile(prefix + name).read().decode(), data)
                 self.assertEqual(out.extractfile(prefix + 'SOURCE_REVISION').read().decode().strip(), git('rev-parse', 'HEAD'))
+                self.assertEqual(out.extractfile(prefix + 'SOURCE_TREE').read().decode().strip(), git('rev-parse', 'HEAD^{tree}'))
             (root / 'src/core/Bank.sol').write_text('uncommitted')
             result = subprocess.run(['bash', 'script/release/package_audit.sh'], cwd=root, capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)

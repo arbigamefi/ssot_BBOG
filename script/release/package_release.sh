@@ -115,5 +115,6 @@ for p in sorted(root.rglob("*")):
 (root/"MANIFEST.sha256").write_text("\n".join(out)+"\n",encoding="utf-8")
 PY
 
-tar -czf "$ARCHIVE" -C "$STAGE" .
+# Integrity manifests cover payload files, not macOS AppleDouble/xattr metadata.
+COPYFILE_DISABLE=1 tar -czf "$ARCHIVE" -C "$STAGE" .
 echo "wrote: $ARCHIVE"

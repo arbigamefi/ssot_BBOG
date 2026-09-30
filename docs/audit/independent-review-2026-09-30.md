@@ -346,3 +346,19 @@ acceptance. Later freeze-document commits leave these implementation inputs unch
 bundle identifies its own complete commit/tree, while raw gate logs and receipts remain separate
 evidence. Earlier uncommitted observations above retain their original time and scope. This local
 source freeze is not external-auditor acceptance, a production release or native scan completion.
+
+### Actual archive rejection and packaging correction
+
+Freeze-document commit `84363a3f069882f92950f64d3c46759146ac8cb6` changed only the three audit
+documents. Its first actual source archive failed independent verification: macOS tar inserted
+1,245 AppleDouble metadata members, including one outside the declared root, not covered by the
+manifest. All 1,014 tracked file bytes/modes and the generated payload identities were otherwise
+correct. This was an archive-integrity rejection, not a new contract defect.
+
+The source and release tar commands now disable this metadata with `COPYFILE_DISABLE=1`.
+The existing source archive test adds exact membership, duplicate-path, checksum-coverage and tree
+checks. It fails on the original tar command and passes with the correction; all 3 bundle and 7
+release guard tests passed. The amendment affects two packaging scripts and one operations test,
+with no change to contract source, Solidity tests, consumers, compiler configuration or ABI payloads.
+The first failure receipt remains evidence; the rejected archive is not delivered. The replacement
+archive requires a new complete independent inventory check, and identifies its own commit/tree.

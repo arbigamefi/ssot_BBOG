@@ -47,5 +47,6 @@ for path in sorted(root.rglob('*')):
         lines.append(f'{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(root)}')
 (root / 'MANIFEST.sha256').write_text('\n'.join(lines) + '\n')
 PY
-tar -czf "dist/$NAME.tar.gz" -C "$STAGE" "$NAME"
+# Keep macOS AppleDouble/xattr metadata out of the declared source inventory.
+COPYFILE_DISABLE=1 tar -czf "dist/$NAME.tar.gz" -C "$STAGE" "$NAME"
 echo "wrote: dist/$NAME.tar.gz"
