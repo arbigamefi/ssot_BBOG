@@ -68,7 +68,7 @@ contract SportsHubHandler is Test {
             players.push(player);
             asset.mint(player, 250_000e6);
             vm.prank(player);
-            asset.approve(address(bank), type(uint256).max);
+            asset.approve(address(sportsHub), type(uint256).max);
         }
     }
 
@@ -275,7 +275,7 @@ contract SportsHubInvariants is StdInvariant, Test {
         oddsSigner = vm.addr(oddsSignerKey);
 
         asset = new MockERC20("USD Coin", "USDC", 6);
-        bank = new Bank(address(asset), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6);
+        bank = new Bank(address(asset), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
         riskEngine = new SportsRiskEngine(gov, 1_000e6, 2_000e6, 20_000e6, 20_000e6, 20_000e6);

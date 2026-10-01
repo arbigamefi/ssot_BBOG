@@ -1,4 +1,5 @@
 "use client";
+import { getMinBetAmountRaw } from "../../../../features/casino/room/bet-amount";
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
@@ -465,6 +466,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       maxPayoutIsHint={maxPayoutState !== "value"}
       betAmount={betAmount}
       maxBetRaw={maxBetRawPerRoll}
+      minBetRaw={getMinBetAmountRaw(poolRead.snapshot?.minStake ?? 0n, betCount)}
       onBetAmountChange={setBetAmount}
       betCount={betCount}
       onBetCountChange={setBetCount}
@@ -500,6 +502,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       assetDecimals={assetDecimals}
       betAmount={betAmount}
       maxBetRaw={maxBetRawPerRoll}
+      minBetRaw={getMinBetAmountRaw(poolRead.snapshot?.minStake ?? 0n, betCount)}
       walletBalanceRaw={walletBalance?.raw ?? null}
       onBetAmountChange={setBetAmount}
       hasAccount={Boolean(sdk?.account)}

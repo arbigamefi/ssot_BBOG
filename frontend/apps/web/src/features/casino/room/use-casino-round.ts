@@ -16,7 +16,7 @@ import { useCasinoRoundWatcher, useCasinoVrfQuote, type CasinoRoundPhase } from 
 
 export type UseCasinoRoundArgs = {
   sdk: SSOTSDK | undefined;
-  release: (GameRoomRelease & { refundTimeoutSeconds?: number }) | undefined;
+  release: GameRoomRelease | undefined;
   game: GameMeta | null;
   winChance: number;
   openConnectModal: (() => void) | undefined;
@@ -114,7 +114,6 @@ export function useCasinoRound({
     sdk,
     betId: state.betId,
     active: state.status === "reconciled",
-    refundTimeoutSeconds: release?.refundTimeoutSeconds,
     onTerminal: onRoundTerminal,
     readErrorMessage: t("casino.room.errors.readRoundFailed"),
     betNotFoundErrorMessage: t("casino.room.errors.roundNotFound"),

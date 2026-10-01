@@ -17,7 +17,7 @@ interface IVRFHub {
     function getRequest(uint256 requestId) external view returns (RequestInfo memory);
 
     /// @notice Deterministic quote for a VRF request in native token.
-    function quote(uint32 callbackGasLimit, uint16 requestConfirmations, uint32 numWords)
+    function quote(uint32 callbackGasLimit, uint16 requestConfirmations, uint32 numWords, uint256 gasPriceBudget)
         external
         view
         returns (uint256 fee);

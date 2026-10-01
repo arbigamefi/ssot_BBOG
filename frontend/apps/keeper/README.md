@@ -44,9 +44,9 @@ Before every transaction, the keeper reads `GameHub.getBet`:
   simulation and send: the admitted 3,000,000 execution budget plus intrinsic
   gas/calldata allowance. Additional modules, assets or referral configurations
   require their own gas qualification.
-- `PendingVRF` stays queued until the current on-chain
-  `placedAt + refundTimeoutSeconds` is reached, then calls public `refund`.
-  The timeout and chain timestamp are reread on retries. A callback racing a
+- `PendingVRF` stays queued until its stored `refundDeadline` is reached by chain time,
+  then calls public `refund`. Its deadline and the chain timestamp are reread on retries;
+  later global timeout changes do not affect it. A callback racing a
   refund triggers another state read; a known result goes through finalization.
 - Terminal bets need no new transaction. Retryable errors use bounded backoff
   without an attempt-count cutoff.
@@ -202,3 +202,8 @@ Without the explicit URL, SQL integration tests are skipped.
 For local durable indexing, `pnpm -C frontend bet-index:db:up` starts the local
 Compose database. `pnpm -C frontend keeper:backfill --help` describes the bounded
 historical event ingestion command; this is event recovery, not a schema upgrade.
+
+Local real-process integration: `bash script/ci/keeper_integration.sh` runs the keeper
+against disposable Anvil and PostgreSQL, covers offline callbacks, restart recovery and
+fixed-deadline refunds while paused, then checks the durable receipt. It owns and removes
+its test processes/container and never uses deployment wallets or an existing database.

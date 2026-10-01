@@ -105,7 +105,7 @@ MUTANTS = [
                   "function activateEdgeChange(EdgeParam param) external override onlyGov {")],
      "tests": [V16]},
     {"id": "M16", "guarantee": "the one-day refund timeout bound (audit O-06)",
-     "patches": [(GH, "if (seconds_ > MAX_REFUND_TIMEOUT_SECONDS) revert InvalidRefundTimeout(seconds_);", "")],
+     "patches": [(GH, "seconds_ > MAX_REFUND_TIMEOUT_SECONDS", "false")],
      "tests": [V16]},
     # Caught only by the Router invariant suite on purpose: before its hardening (audit O-03) the handler
     # swallowed refused settlements, so a Router that refused a claim of exactly the cap passed.
@@ -220,6 +220,25 @@ MUTANTS = [
      "patches": [(BANK, "_virtualOffset = decimals_ > 3 ? 10 ** uint256(decimals_ - 3) : 1;",
                   "_virtualOffset = 10 ** uint256(decimals_);")],
      "tests": [ASYNC, "test/unit/SecurityFixes.t.sol"]},
+
+    {"id": "M52", "guarantee": "Bank pulls only the authenticated hub's stake, not a player's deposit approval",
+     "patches": [(BANK, "_assetToken.safeTransferFrom(fundingHub, address(this), stake);",
+                  "_assetToken.safeTransferFrom(player, address(this), stake);")],
+     "tests": [RT, "test/unit/GameHubRouter.t.sol"]},
+    {"id": "M53", "guarantee": "accepted refund rights do not change with governance timeout updates",
+     "patches": [(GH, "uint256 readyAt = b.refundDeadline;",
+                  "uint256 readyAt = uint256(b.placedAt) + refundTimeoutSeconds;")],
+     "tests": ["test/unit/GameHubRouter.t.sol"]},
+    {"id": "M54", "guarantee": "minimum total stake is enforced on-chain before accepting a position",
+     "patches": [(BANK, "if (stake < minStake) revert StakeBelowMinimum(stake, minStake);", "")],
+     "tests": ["test/unit/GameHubRouter.t.sol"]},
+
+    {"id": "M55", "guarantee": "VRF execution uses the wrapper's actual transaction price, not a fixed-price estimate",
+     "patches": [("src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol",
+                  "return wrapper.calculateRequestPriceNative(callbackGasLimit, numWords);",
+                  "return wrapper.estimateRequestPriceNative(callbackGasLimit, numWords, 0);")],
+     "tests": ["test/unit/ChainlinkAdapter.t.sol"]},
+
 ]
 
 

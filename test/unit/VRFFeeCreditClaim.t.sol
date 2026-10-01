@@ -27,7 +27,7 @@ contract VRFFeeCreditClaim is Test {
         uint16 conf = 3;
         uint32 words = 1;
 
-        uint256 required = vrf.quote(cbGas, conf, words);
+        uint256 required = vrf.quote(cbGas, conf, words, tx.gasprice);
         uint256 overpay = 123_456;
 
         // Call request directly to isolate VRFHub refund-credit behavior.
@@ -53,7 +53,7 @@ contract VRFFeeCreditClaim is Test {
         uint16 conf = 3;
         uint32 words = 1;
 
-        uint256 required = vrf.quote(cbGas, conf, words);
+        uint256 required = vrf.quote(cbGas, conf, words, tx.gasprice);
         uint256 overpay = 777;
 
         vrf.requestRandomWords{value: required + overpay}(address(0xBEEF), 1, cbGas, conf, words, address(t));

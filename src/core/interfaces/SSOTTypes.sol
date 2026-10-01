@@ -156,6 +156,7 @@ library SSOTTypes {
         bytes32 randomHash;
 
         uint64 placedAt;
+        uint64 refundDeadline;
         uint64 vrfRequestedAt;
         uint64 resolvedAt;
 

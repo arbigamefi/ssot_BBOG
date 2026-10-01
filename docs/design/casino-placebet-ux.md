@@ -60,15 +60,15 @@ stateDiagram-v2
 
 ## 3. Timing Contract
 
-| Elapsed state | UI copy | User action |
-| --- | --- | --- |
-| page load | `Estimating VRF fee` | none |
-| `placeBet` signed/mined | `Rolling with verifiable randomness` | none |
-| `PendingVRF` 8-30s | `Waiting for Chainlink VRF` | none |
-| `RandomReady` < 30s | `Result ready. Settling automatically` | none |
-| `RandomReady` >= 30s | `Keeper delay. You can manually settle` | optional `Settle result` |
-| `PendingVRF` >= 60s | `VRF is taking longer than usual` | none |
-| `PendingVRF` >= refund timeout | `VRF did not fulfill in time` | `Refund stake` |
+| Elapsed state                  | UI copy                                 | User action              |
+| ------------------------------ | --------------------------------------- | ------------------------ |
+| page load                      | `Estimating VRF fee`                    | none                     |
+| `placeBet` signed/mined        | `Rolling with verifiable randomness`    | none                     |
+| `PendingVRF` 8-30s             | `Waiting for Chainlink VRF`             | none                     |
+| `RandomReady` < 30s            | `Result ready. Settling automatically`  | none                     |
+| `RandomReady` >= 30s           | `Keeper delay. You can manually settle` | optional `Settle result` |
+| `PendingVRF` >= 60s            | `VRF is taking longer than usual`       | none                     |
+| `PendingVRF` >= refund timeout | `VRF did not fulfill in time`           | `Refund stake`           |
 
 The thresholds are product defaults. They may be tuned per chain by config, but
 they must remain centralized.
@@ -94,25 +94,25 @@ The keeper listens to:
 
 ### 5.2 Redundancy
 
-| Instance | Delay | Purpose |
-| --- | --- | --- |
-| primary | 0s | first finalize attempt |
-| backup | 5s | separate region and RPC provider |
-| public fallback | 30s | permissionless manual or future bounty-driven actors |
+| Instance        | Delay | Purpose                                              |
+| --------------- | ----- | ---------------------------------------------------- |
+| primary         | 0s    | first finalize attempt                               |
+| backup          | 5s    | separate region and RPC provider                     |
+| public fallback | 30s   | permissionless manual or future bounty-driven actors |
 
 Duplicate finalization is harmless because `finalize` rejects non-`RandomReady`
 state. Keepers must still avoid waste by reading `getBet` before broadcasting.
 
 ### 5.3 Failure Handling
 
-| Failure | Response |
-| --- | --- |
-| `finalize` mined success | record `randomReady -> settled` latency |
-| estimate gas fails because already settled | mark as raced success |
-| estimate gas fails for other reason | retry once, then alert |
-| tx reverted | classify revert, alert if still `RandomReady` |
-| RPC timeout | switch RPC, backoff retry |
-| nonce conflict | replace with bumped gas |
+| Failure                                    | Response                                      |
+| ------------------------------------------ | --------------------------------------------- |
+| `finalize` mined success                   | record `randomReady -> settled` latency       |
+| estimate gas fails because already settled | mark as raced success                         |
+| estimate gas fails for other reason        | retry once, then alert                        |
+| tx reverted                                | classify revert, alert if still `RandomReady` |
+| RPC timeout                                | switch RPC, backoff retry                     |
+| nonce conflict                             | replace with bumped gas                       |
 
 ## 6. Frontend Implementation Contract
 
@@ -140,7 +140,7 @@ stage animation, or imply funds are lost. It simply changes the copy from
 
 `refundable` is a signing state. It appears only when the latest direct
 `getBet` read is still `PendingVRF`/`placed` and
-`now >= placedAt + refundTimeoutSeconds`. The button copy is `Refund stake`.
+`now >= refundDeadline` from that bet (seconds, never the current release timeout). The button copy is `Refund stake`.
 `Refund stake` sends `GameHub.refund(betId)` only after the user explicitly
 clicks it. The frontend must never auto-refund a player round.
 

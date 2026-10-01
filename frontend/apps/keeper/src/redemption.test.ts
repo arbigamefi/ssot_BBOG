@@ -21,6 +21,12 @@ function fixture() {
         return state.epoch;
       case "redeemBatch":
         return { cutoff: state.cutoff, priced: false, shares: state.shares };
+      case "activeOpenHolds":
+        return 0n;
+      case "MAX_ACTIVE_HOLDS":
+        return 128n;
+      case "minStake":
+        return 1_000_000n;
       case "openHolds":
         return state.holds;
       case "riskInPaused":
@@ -44,11 +50,16 @@ function fixture() {
 describe("queued redemption reconciliation", () => {
   it("activates with old holds and verifies immediate pricing at a fresh numbered block", async () => {
     const f = fixture();
-    expect(await reconcileRedemptionBank(bank, f.deps)).toEqual({ bank });
+    expect(await reconcileRedemptionBank(bank, f.deps)).toMatchObject({
+      bank,
+      activeOpenHolds: "0",
+      maxActiveHolds: "128",
+      capacityHeadroom: "128"
+    });
     expect(f.deps.activate).toHaveBeenCalledOnce();
     expect(
       f.readContract.mock.calls.map(([query]) => (query as { blockNumber?: bigint }).blockNumber)
-    ).toEqual([10n, 10n, 10n, 10n, 11n, 11n]);
+    ).toEqual([10n, 10n, 10n, 10n, 10n, 10n, 10n, 11n, 11n, 11n, 11n, 11n]);
   });
   it.each(["paused", "early", "empty"])("skips a %s queue", async (kind) => {
     const f = fixture();

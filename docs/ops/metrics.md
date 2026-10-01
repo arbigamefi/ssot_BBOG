@@ -34,7 +34,7 @@ Track PendingVRF and RandomReady counts, oldest placement/random-ready timestamp
 refunds, module fallback refunds and failed finalization errors. Measure queue and lifecycle recovery
 coverage independently: an empty live-event queue may still leave historical bets unresolved.
 
-For PendingVRF, derive refund readiness from `placedAt + current refundTimeoutSeconds`, using chain
+For PendingVRF, derive refund readiness from the stored `refundDeadline`, using chain
 time. RandomReady age is a finalization concern, not timeout-refund eligibility. Record the actual
 simulation/send gas and admission configuration when investigating failures.
 
@@ -64,3 +64,10 @@ If Sports is admitted, monitor market state, lock/finality/challenge timestamps,
 reporter quorum, outstanding tickets and pool/event exposure. Track keeper history coverage and
 pending ticket pages through terminalization. Missing reports and repeated reopenings require an
 owner; they have no universal finite timeout. See [Sports operations](runbooks/sportsbook-ops.md).
+
+Per-Bank keeper health includes `activeOpenHolds`, `maxActiveHolds`, `capacityHeadroom`,
+`minStake` and `observedBlock`, including when no LP batch is queued. Global `openHolds`
+also includes segregated historical positions and must not be used as current admission capacity.
+`casino.finalize.broadcast` logs event-received-to-broadcast and attempt-to-broadcast time;
+these are local observer durations, not on-chain callback-to-terminal latency percentiles.
+Business load, tail-latency and denial-cost acceptance remain separate measured release gates.

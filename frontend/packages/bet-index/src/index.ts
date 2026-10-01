@@ -78,6 +78,8 @@ export type BetRow = {
   refundedTxHash?: Hex;
   placedBlock?: number;
   placedAt?: number;
+  /** Immutable on-chain refund eligibility, in milliseconds. */
+  refundDeadline?: number;
   updatedBlock: number;
   lastTxHash: Hex;
   lastEventName: string;
@@ -456,6 +458,7 @@ create table if not exists bets (
   refunded_tx_hash text,
   placed_block bigint,
   placed_at timestamptz,
+  refund_deadline timestamptz,
   updated_block bigint not null,
   last_tx_hash text not null,
   last_event_name text not null,
@@ -901,7 +904,7 @@ async function upsertBetRow(sql: SqlTag, row: BetRow) {
     insert into bets (
       chain_id, game_hub, bet_id, state, game_id, asset, player, pricing_affiliate, stake, payout,
       payout_gross, refund_amount, request_id, random_hash, terminal_tx_hash,
-      finalized_tx_hash, refunded_tx_hash, placed_block, placed_at,
+      finalized_tx_hash, refunded_tx_hash, placed_block, placed_at, refund_deadline,
       updated_block, last_tx_hash, last_event_name, updated_at
     ) values (
       ${normalized.chainId},
@@ -923,6 +926,7 @@ async function upsertBetRow(sql: SqlTag, row: BetRow) {
       ${normalized.refundedTxHash ?? null},
       ${normalized.placedBlock ?? null},
       ${normalized.placedAt == null ? null : new Date(normalized.placedAt)},
+      ${normalized.refundDeadline == null ? null : new Date(normalized.refundDeadline)},
       ${normalized.updatedBlock},
       ${normalized.lastTxHash},
       ${normalized.lastEventName},
@@ -948,6 +952,7 @@ async function upsertBetRow(sql: SqlTag, row: BetRow) {
       refunded_tx_hash = coalesce(excluded.refunded_tx_hash, bets.refunded_tx_hash),
       placed_block = coalesce(bets.placed_block, excluded.placed_block),
       placed_at = coalesce(bets.placed_at, excluded.placed_at),
+      refund_deadline = coalesce(bets.refund_deadline, excluded.refund_deadline),
       updated_block = greatest(bets.updated_block, excluded.updated_block),
       last_tx_hash = case
         when excluded.updated_block >= bets.updated_block then excluded.last_tx_hash
@@ -1980,6 +1985,8 @@ function applyEventToBet(prev: BetRow | undefined, event: BetLifecycleEvent): Be
     if (event.args.requestId != null) next.requestId = toBigintString(event.args.requestId);
     next.placedBlock = Number(event.blockNumber);
     next.placedAt = timestamp;
+    if (event.args.refundDeadline != null)
+      next.refundDeadline = Number(event.args.refundDeadline) * 1000;
   }
 
   if (event.eventName === "BetRandomReady") {
@@ -2112,6 +2119,7 @@ function rowFromDatabase(row: Record<string, unknown>): BetRow {
     payout: optionalString(row.payout),
     payoutGross: optionalString(row.payoutGross),
     placedAt: optionalDateMs(row.placedAt),
+    refundDeadline: optionalDateMs(row.refundDeadline),
     placedBlock: optionalNumber(row.placedBlock),
     player: optionalAddress(row.player),
     pricingAffiliate: optionalAddress(row.pricingAffiliate),

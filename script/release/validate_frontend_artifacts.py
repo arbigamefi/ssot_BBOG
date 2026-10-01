@@ -91,6 +91,8 @@ def _validate_execution(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, m
         if actual != expected:
             raise SystemExit(f"{manifest_path}: addresses.{key} does not match authenticated snapshot")
     timeout = _as_int(manifest.get("refundTimeoutSeconds"), field="refundTimeoutSeconds", path=manifest_path)
+    if not 60 <= timeout <= 86400:
+        raise SystemExit(f"{manifest_path}: refundTimeoutSeconds outside [60, 86400]")
     if timeout != _as_int(snapshot.get("refundTimeoutSeconds"), field="refundTimeoutSeconds", path=snapshot_path):
         raise SystemExit(f"{manifest_path}: refundTimeoutSeconds does not match authenticated snapshot")
     games = manifest.get("games")

@@ -50,6 +50,7 @@ export function isPlaceBetButtonDisabled({
   amountUnavailable = false,
   riskInDisabled = false,
   poolAvailability = "ready",
+  amountBelowMin = false,
   amountExceedsMax = false
 }: {
   gameSlug: string;
@@ -62,6 +63,7 @@ export function isPlaceBetButtonDisabled({
   amountUnavailable?: boolean;
   riskInDisabled?: boolean;
   poolAvailability?: PoolAvailability;
+  amountBelowMin?: boolean;
   amountExceedsMax?: boolean;
 }) {
   // With no wallet the button reads "connect wallet" and its click handler
@@ -76,9 +78,15 @@ export function isPlaceBetButtonDisabled({
   if (isBetSubmissionUnconfirmed(state.error)) return true;
   if (!hasAccount) return false;
   if (state.status === "failed")
-    return amountUnavailable || amountExceedsMax || isSelectionMissing(gameSlug, winChance);
+    return (
+      amountUnavailable ||
+      amountBelowMin ||
+      amountExceedsMax ||
+      isSelectionMissing(gameSlug, winChance)
+    );
   return (
     amountUnavailable ||
+    amountBelowMin ||
     amountExceedsMax ||
     isPending ||
     state.status === "planning" ||
@@ -102,6 +110,7 @@ function getPlaceBetButtonLabelKey({
   manualSettleAvailable,
   manualRefundAvailable,
   amountUnavailable,
+  amountBelowMin,
   amountExceedsMax,
   riskInDisabled,
   poolAvailability
@@ -117,6 +126,7 @@ function getPlaceBetButtonLabelKey({
   amountUnavailable?: boolean;
   riskInDisabled?: boolean;
   poolAvailability?: PoolAvailability;
+  amountBelowMin?: boolean;
   amountExceedsMax?: boolean;
 }) {
   if (riskInDisabled && !manualSettleAvailable && !manualRefundAvailable)
@@ -133,6 +143,7 @@ function getPlaceBetButtonLabelKey({
     return `casino.room.poolStatus.${poolAvailability}Label`;
   if (!hasAccount) return "casino.room.betPanel.placeBet.connectWallet";
   if (state.status === "failed") {
+    if (amountBelowMin) return "casino.room.betPanel.placeBet.increaseAmount";
     if (amountExceedsMax) return "casino.room.betPanel.placeBet.reduceAmount";
     if (amountUnavailable) return "casino.room.shell.noCapacity";
     if (isSelectionMissing(gameSlug, winChance)) return "casino.room.betPanel.placeBet.selectToBet";
@@ -159,6 +170,7 @@ function getPlaceBetButtonLabelKey({
   if (isPending || state.status === "reconciled")
     return "casino.room.betPanel.placeBet.roundInProgress";
   if (amountUnavailable) return "casino.room.shell.noCapacity";
+  if (amountBelowMin) return "casino.room.betPanel.placeBet.increaseAmount";
   if (amountExceedsMax) return "casino.room.betPanel.placeBet.reduceAmount";
   if (isSelectionMissing(gameSlug, winChance)) return "casino.room.betPanel.placeBet.selectToBet";
   if (state.plan)
@@ -180,6 +192,7 @@ export function PlaceBetButton({
   amountUnavailable = false,
   riskInDisabled = false,
   poolAvailability = "ready",
+  amountBelowMin = false,
   amountExceedsMax = false,
   onClick,
   density = "normal"
@@ -195,6 +208,7 @@ export function PlaceBetButton({
   amountUnavailable?: boolean;
   riskInDisabled?: boolean;
   poolAvailability?: PoolAvailability;
+  amountBelowMin?: boolean;
   amountExceedsMax?: boolean;
   onClick: () => void;
   density?: "normal" | "compact";
@@ -209,6 +223,7 @@ export function PlaceBetButton({
     manualSettleAvailable,
     manualRefundAvailable,
     amountUnavailable,
+    amountBelowMin,
     amountExceedsMax,
     riskInDisabled,
     poolAvailability
@@ -230,6 +245,7 @@ export function PlaceBetButton({
         state.status === "mined" ||
         state.status === "planning" ||
         amountUnavailable ||
+        amountBelowMin ||
         amountExceedsMax ||
         selectionMissing));
 
@@ -259,6 +275,7 @@ export function PlaceBetButton({
           manualSettleAvailable,
           manualRefundAvailable,
           amountUnavailable,
+          amountBelowMin,
           amountExceedsMax,
           riskInDisabled,
           poolAvailability

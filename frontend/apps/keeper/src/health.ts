@@ -27,6 +27,11 @@ export type RedemptionHealth = {
   cutoff?: string;
   activationDue?: boolean;
   openHolds?: string;
+  activeOpenHolds?: string;
+  maxActiveHolds?: string;
+  capacityHeadroom?: string;
+  minStake?: string;
+  observedBlock?: string;
   paused?: boolean;
   error?: string;
 };

@@ -15,7 +15,7 @@ ArbiGameFi 是钱包原生的 casino 与 sportsbook 项目。每个资金池（B
 - **每笔投注在接受时锁定规则与最大赔付。** 结算只能在这笔准备金以内完成，所有负债在形成时就从资金池净值中扣除。
 - **LP 固定获得每笔流水 house edge 的一半。** 份额是合约常量，推荐奖励与协议费用只能从另一半里支付，由结算路由器独立限额。
 - **LP 退出不会暂停下注。** 退出在激活时只隔离申请者对应的旧风险和回收权，留存份额继续承保，结算同笔恢复可用资本。一笔永远无法结算的旧投注只锁住它自己的准备金，不阻塞后续退出。
-- **合约不可升级。** 治理可以暂停新风险、准入玩法与资金池，并在合约上限内调参，但不能提取 LP 资金，已接受投注的模块、有效 edge 与推荐比例版本固定；退款超时使用治理当前配置，上限为 1 天。
+- **合约不可升级。** 治理可以暂停新风险、准入玩法与资金池，并在合约上限内调参，但不能提取 LP 资金，已接受投注的模块、有效 edge 与推荐比例版本固定；退款截止时间在接受投注时固定；治理调整仅影响新投注，默认 1 小时、范围 1 分钟至 1 天。
 
 ## 1. 设计问题与目标
 
@@ -45,13 +45,17 @@ LP 共同承保的链上 casino 同时面对四个相互牵连的问题。
 | SettlementRouter                    | 把头寸绑定到原始 hub、资金池、Bank 与玩家；校验终态身份、次数与金额；执行分配上限 | 无治理函数，装配后不可更改                   |
 | PoolRegistry                        | 定义资金池与业务域，授予 hub 使用指定资金池的准入                                 | 治理控制                                     |
 | GameHub                             | 固定投注输入，请求随机数，调用游戏模块计算结果，按规则分配 house edge             | 治理可登记游戏模块、调整参数（有上限与延迟） |
-| VRFHub 与 Chainlink VRF v2.5 适配器 | 请求并保存随机数；多付的随机数费用作为可领取的退款额度                            | 依赖 Chainlink VRF                           |
+| VRFHub 与 Chainlink VRF v2.5 适配器 | 请求并保存随机数；多付的随机数费用直接退还，失败时记为可领取退款额度              | 依赖 Chainlink VRF                           |
 | 游戏模块（8 种）                    | 确定性规则：Dice、Coin Toss、Roulette、Keno、Plinko、Sic Bo、Slots、Baccarat      | 模块正确性属于安全假设                       |
 | ReferralRegistry 与分配引擎         | 首次绑定的推荐关系；把运营预算分配给返水、推荐与协议                              | 推荐关系在接受投注时固定                     |
 | SportsHub 与 SportsRiskEngine       | 体育固定赔率票据、敞口、结果证据与争议                                            | **当前不准入异步 Bank**                      |
 | Keeper（链下）                      | 推进结算与退款、激活到期赎回、监控回收池、代玩家领取应付款                        | 所调用的函数任何人都能调用；不托管资金       |
 
 合约没有代理、`delegatecall` 或升级机制，部署后的规则即为最终规则。Bank 不判断开奖结果：已准入的 hub 与模块可以在每笔投注的准备金范围内提交任意结果。因此随机数链路、模块代码和准入流程都是资金安全模型的一部分（§8）。不同资产、casino 与体育分别承保，互不赔付。
+
+下注授权的 spender 是对应的 GameHub 或 SportsHub；LP 申购授权的 spender 仍是 Bank。Hub 只从调用玩家收款，Router 将认证后的 Hub 作为 Bank 的付款方，两段转账均校验精确到账，失败全笔回滚。玩家给 Bank 的申购授权不能被已准入 Hub 用来扣下注本金。这不限制已准入 Hub 在自身仓位准备金范围内提交结算，准入治理风险仍然存在。
+
+每个 Bank 按资产最小单位配置最低单仓总本金。USDC 的业务值为 1 USDC（1,000,000 单位）；单仓最多 100 轮，因此每轮至少 0.01 USDC。其他资产须在部署时显式确认其最低额。容量上限按 `activeOpenHolds` 判断；历史退出风险不占用新仓位名额。最低下注和及时结算降低容量占用成本，但不保证任何网络负载下都能接单。
 
 Casino 投注的状态流转如下：
 
@@ -132,7 +136,7 @@ PF_new + XP_new ≤ O
 
 ### 5.1 存入
 
-`deposit` / `mint` 按活跃池账面价即时执行（ERC-4626）。新 LP 参与当前期尚未结算的风险，但不取得已经隔离的历史期的回收权。账面价值不等于随时可提取的现金。
+`deposit` / `mint` 按活跃池账面价即时执行（ERC-4626）。新 LP 参与当前期尚未结算的风险，但不取得已经隔离的历史期的回收权。账面价值不等于随时可提取的现金。账面 NAV 包含未结投注本金；即使随机数已公开，只要尚未执行终态结算，已知的派彩仍可能未从该报价中扣除。新 LP 可能买入这部分已知损失，页面报价也可能因区块更新而过时。
 
 ### 5.2 请求、取消与授权
 
@@ -201,9 +205,9 @@ E = floor(Q × G / S)
 ## 6. 投注结算与支付
 
 - **接受**：规则参数最多 64 字节，最多 100 局。准备金取模块给出的最大赔付，且不低于本金；新风险须通过活跃资本检查。
-- **随机数**：通过 Chainlink VRF v2.5 wrapper 请求。玩家以链的原生资产预付随机数费用，多付部分记为可领取的退款额度。这是独立于 Bank 的原生资产账本。回调只写入随机数，不结算资金。
+- **随机数**：通过 Chainlink VRF v2.5 wrapper 请求。玩家以链的原生资产预付随机数费用，执行费用由 wrapper 按交易实际 gas 价格计算；多付部分先尝试退还玩家，失败时记为可领取的退款额度。这是独立于 Bank 的原生资产账本。回调只写入随机数，不结算资金。
 - **结算**：`finalize` 任何人都可调用。模块计算失败或结果超出准备金时，自动全额退款。随后依次计算派彩手续费、按 §4 分配，再由路由器与 Bank 校验。
-- **超时退款**：等待随机数超过超时时间（治理可调，合约上限 1 天）后，任何人都可为玩家退回本金。
+- **超时退款**：到达接受投注时固定的退款截止时间（默认 1 小时，治理配置只影响新投注）后，任何人都可为玩家退回本金。
 - **支付与玩家应付款**：Bank 先尝试直接转账给玩家。若代币拒绝转账（例如地址被发行方冻结），或转账因调用方给的 gas 不足而失败，全额记为该玩家的应付款，释放准备金，仓位照常终结。`claimPlayerPayable` 任何人都能触发，暂停期间也可执行，但总是支付给玩家本人；领取失败时债务保留。Keeper 会在下一轮自动代领，遇到仍被冻结的地址则退避重试。成功支付与新增应付款互斥，终结时计入的成本不会在领取时重复扣账。
 - **暂停**：阻止新风险、存入、批次激活、LP 现金与回收领取，以及协议费用与推荐奖励的领取。不阻止结算、退款、玩家应付款领取、取消请求与账目同步。
 - **收据**：分别证明终态金额与支付方式（已转账、已记应付款或证据不足）。终结时记下的应付款是历史事实，不能据此推断当前是否仍未领取。
@@ -225,17 +229,19 @@ E = floor(Q × G / S)
 
 ## 8. 治理与信任假设
 
-| 合约           | 治理可以                                                                                        | 限制                                                                                          |
-| -------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Bank           | 暂停／恢复新风险；设置风险与出金缓冲、holdback 周期、解锁门槛、批次周期、guardian；领取协议费用 | 缓冲不超过 100%；批次周期 1 小时至 7 天；不能动用资产与份额                                   |
-| GameHub        | 登记游戏模块；排队或取消 edge 调整；切换推荐比例版本；设置超时退款时间                          | 每个游戏 ID 只能登记一次，不能更换或注销；edge ≤ 5%，调整 7 天后生效；超时 ≤ 1 天；推荐 ≤ 35% |
-| PoolRegistry   | 登记资金池；启停资金池；登记 hub 并授予资金池准入                                               | 停用不影响已有投注的结算                                                                      |
-| VRFHub／适配器 | 设置适配器与请求 gas 价格                                                                       | 回调不能修改已结算的投注                                                                      |
+| 合约           | 治理可以                                                                                        | 限制                                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Bank           | 暂停／恢复新风险；设置风险与出金缓冲、holdback 周期、解锁门槛、批次周期、guardian；领取协议费用 | 缓冲不超过 100%；批次周期 1 小时至 7 天；不能动用资产与份额                                                           |
+| GameHub        | 登记游戏模块；排队或取消 edge 调整；切换推荐比例版本；设置超时退款时间                          | 每个游戏 ID 只能登记一次，不能更换或注销；edge ≤ 5%，调整 7 天后生效；新单超时 1 分钟至 1 天，默认 1 小时；推荐 ≤ 35% |
+| PoolRegistry   | 登记资金池；启停资金池；登记 hub 并授予资金池准入                                               | 停用不影响已有投注的结算                                                                                              |
+| VRFHub／适配器 | 设置适配器与请求 gas 价格                                                                       | 回调不能修改已结算的投注                                                                                              |
 
 - **guardian**：可以触发 Bank 暂停（包括新风险、存入、批次激活及 LP 领取，具体见 §6），不能恢复，也不能移动资金或修改其他参数；恢复只能由治理执行。
 - **治理不能做的事**：升级合约、提取 LP 资金、修改 LP 的 50% 份额、改写已接受投注的模块、有效 edge 与推荐比例版本、没收或转移回收权。
 - **退款超时即时生效**：`GameHub.setRefundTimeout` 修改全局超时，已有未终结投注也使用当前值，并非开仓时固定；上限为 1 天。
 - **准入即时生效**：登记游戏模块、hub 与资金池没有时间锁。这是 LP 需要信任的核心治理权限，上线前应评估为准入增加延迟。
+- **外部 LP 准入前待决**：明确模块、hub 和池准入变更是否采用时间锁及其紧急禁用权限；收款权限隔离不能代替准入治理。Guardian 应采用与治理独立的多签，并实测发现到暂停、治理撤换 guardian 到解除暂停的耗时及旧 guardian 失权。
+- **代币发行方风险**：发行方可能冻结、没收或销毁 Bank 的底层资产，使资产不足以覆盖账面负债。应付款记录不保证有足够现金，也不绕开发行方限制；收费转账及 rebasing 资产不受支持。
 - **外部依赖**：代币发行方、Chainlink VRF、链与 RPC 的可用性，以及有人愿意支付推进交易的 gas。
 - **Keeper**：只推进公开状态，不决定结果，不持有用户授权，也不托管资金。
 
@@ -284,6 +290,6 @@ ArbiGameFi is an unlaunched, wallet-native casino and sportsbook. Each Bank unde
 
 **Payments.** A refused or gas-starved payout becomes a payable that anyone may trigger but only the player can receive; the keeper claims it on the player's behalf.
 
-**Governance and trust.** Governance can pause, admit modules, hubs and pools, and tune bounded parameters, but cannot upgrade contracts, move LP funds or rewrite the module, effective edge or referral version of accepted bets. The global refund timeout can affect existing bets. Guardian pause also blocks deposits, batch activation and LP claims; settlement, refunds and player-payable claims remain live. Admission has no timelock and is the key trust assumption.
+**Governance and trust.** Governance can pause, admit modules, hubs and pools, and tune bounded parameters, but cannot upgrade contracts, move LP funds or rewrite the module, effective edge or referral version of accepted bets. Each accepted bet fixes its refund deadline; timeout changes affect only later bets. Guardian pause also blocks deposits, batch activation and LP claims; settlement, refunds and player-payable claims remain live. Admission has no timelock and is the key trust assumption.
 
 **Status.** Sports pools are not admitted. The implementation is tested locally but not yet deployed or externally audited.

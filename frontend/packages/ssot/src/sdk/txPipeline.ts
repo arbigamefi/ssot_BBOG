@@ -59,6 +59,7 @@ export interface TxPipeline {
     functionName: string;
     args: readonly unknown[];
     value?: bigint;
+    gasPrice?: bigint;
     /** Final synchronous intent check immediately before the wallet request. */
     beforeWrite?: () => void;
   }): Promise<TxResult>;
@@ -73,6 +74,7 @@ export interface TxPipeline {
     functionName: string;
     args: readonly unknown[];
     value?: bigint;
+    gasPrice?: bigint;
   }): Promise<TxResult>;
   extractEventArgs<T extends { eventName: string }>(params: {
     abi: Abi;
@@ -178,6 +180,7 @@ export function createTxPipeline(opts?: {
     functionName: string;
     args: readonly unknown[];
     value?: bigint;
+    gasPrice?: bigint;
     beforeWrite?: () => void;
   }): Promise<TxResult> {
     // Simulate with retry on transient errors
@@ -192,7 +195,8 @@ export function createTxPipeline(opts?: {
           abi: params.abi,
           functionName: params.functionName as any,
           args: params.args as any,
-          value: params.value
+          value: params.value,
+          ...(params.gasPrice == null ? {} : { gasPrice: params.gasPrice })
         });
         break; // success
       } catch (e) {
@@ -341,6 +345,7 @@ export function createTxPipeline(opts?: {
     functionName: string;
     args: readonly unknown[];
     value?: bigint;
+    gasPrice?: bigint;
   }): Promise<TxResult> {
     let txHash = "0x0" as Hex;
     let walletRequested = false;
@@ -355,7 +360,8 @@ export function createTxPipeline(opts?: {
         abi: params.abi,
         functionName: params.functionName as any,
         args: params.args as any,
-        value: params.value
+        value: params.value,
+        ...(params.gasPrice == null ? {} : { gasPrice: params.gasPrice })
       });
       journal?.({
         chainId: params.chainId,

@@ -31,7 +31,7 @@ contract VRFFee is Test {
         asset = new MockERC20("Asset", "AST", 18);
         vrf = new VRFHub(address(this), gov);
 
-        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18);
+        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
 
@@ -63,7 +63,7 @@ contract VRFFee is Test {
 
         asset.mint(alice, 100 ether);
         vm.prank(alice);
-        asset.approve(address(bank), type(uint256).max);
+        asset.approve(address(hub), type(uint256).max);
 
         vm.deal(alice, 10 ether);
         vm.txGasPrice(0);
@@ -72,7 +72,7 @@ contract VRFFee is Test {
     function test_vrf_fee_overpay_refunds_best_effort() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1);
+        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
 
         uint256 ethBefore = alice.balance;
 
@@ -86,7 +86,7 @@ contract VRFFee is Test {
     function test_vrf_fee_underpay_reverts() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1);
+        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(IVRFHub.InsufficientVRFFee.selector, fee - 1, fee));

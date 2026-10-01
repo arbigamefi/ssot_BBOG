@@ -69,8 +69,8 @@ contract GameHubE2E is Test {
         assetA = new MockERC20("AssetA", "ASTA", 18);
         assetB = new MockERC20("AssetB", "ASTB", 18);
 
-        bankA = new Bank(address(assetA), gov, 1000, "LP Share ASTA", "LPA", 18);
-        bankB = new Bank(address(assetB), gov, 1000, "LP Share ASTB", "LPB", 18);
+        bankA = new Bank(address(assetA), gov, 1000, "LP Share ASTA", "LPA", 18, 1);
+        bankB = new Bank(address(assetB), gov, 1000, "LP Share ASTB", "LPB", 18, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
         vrf = new VRFHub(address(this), gov);
@@ -137,8 +137,8 @@ contract GameHubE2E is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        assetA.approve(address(bankA), type(uint256).max);
-        assetB.approve(address(bankB), type(uint256).max);
+        assetA.approve(address(gameHub), type(uint256).max);
+        assetB.approve(address(gameHub), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -1029,7 +1029,7 @@ contract GameHubE2E is Test {
 
     function test_admissionRejectsOversizedParamsBeforeHoldAndVrf() external {
         SSOTTypes.StakeSpec memory spec = _admissionSpec();
-        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount);
+        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount, tx.gasprice);
         for (uint256 i; i < 2; ++i) {
             // abi.decode accepts both payloads: canonical Dice fields followed by surplus bytes.
             bytes memory params = bytes.concat(abi.encode(true, uint8(50)), new bytes(i == 0 ? 1 : 49_152));
@@ -1186,7 +1186,7 @@ contract GameHubE2E is Test {
         vm.prank(gov);
         bankA.setMinPlayerTurnoverForUnlock(2 ether);
         vm.prank(bob);
-        assetA.approve(address(bankA), type(uint256).max);
+        assetA.approve(address(gameHub), type(uint256).max);
         uint256 baseline = vm.snapshotState();
         uint256 maximumGas;
         for (uint8 index; index < 8; ++index) {
@@ -1386,7 +1386,7 @@ contract GameHubE2E is Test {
         // Add only a token/Bank pair; reuse the fixture's real Hub, Router, VRF and registered modules.
         token = new BlacklistToken();
         if (useProxy) token = BlacklistToken(address(new ERC1967Proxy(address(token), "")));
-        bank = new Bank(address(token), gov, 1000, "Payable LP", "PLP", 6);
+        bank = new Bank(address(token), gov, 1000, "Payable LP", "PLP", 6, 1);
         vm.startPrank(gov);
         poolRegistry.registerPool(3, address(token), address(bank), SSOTTypes.PoolDomain.Casino);
         poolRegistry.setHubAllowedForPool(3, address(gameHub), true);
@@ -1397,7 +1397,7 @@ contract GameHubE2E is Test {
         vm.stopPrank();
         token.mint(alice, 100e6);
         vm.prank(alice);
-        token.approve(address(bank), type(uint256).max);
+        token.approve(address(gameHub), type(uint256).max);
     }
 
     function _requestGovExit(Bank target) internal returns (uint256 cutoff) {
@@ -1415,7 +1415,7 @@ contract GameHubE2E is Test {
         SSOTTypes.StakeSpec memory spec,
         address affiliate
     ) internal returns (uint256 positionId) {
-        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount);
+        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount, tx.gasprice);
         vm.prank(player);
         positionId = gameHub.placeBet{value: fee}(gameId, poolId, params, spec, affiliate, 10_000);
     }

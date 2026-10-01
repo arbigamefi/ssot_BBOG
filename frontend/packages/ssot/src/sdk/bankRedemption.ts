@@ -31,6 +31,8 @@ export async function readAsyncBankState(
     | "totalReserved"
     | "recoveryBacking"
     | "activeOpenHolds"
+    | "maxActiveHolds"
+    | "minStake"
     | "currentEpoch"
     | "openHolds"
     | "exitPayable"
@@ -44,6 +46,8 @@ export async function readAsyncBankState(
     totalReserved,
     recoveryBacking,
     activeOpenHolds,
+    maxActiveHolds,
+    minStake,
     currentEpoch,
     openHolds,
     exitPayable,
@@ -53,6 +57,8 @@ export async function readAsyncBankState(
     read("totalReserved"),
     read("recoveryBacking"),
     read("activeOpenHolds"),
+    read("MAX_ACTIVE_HOLDS"),
+    read("minStake"),
     read("currentEpoch"),
     read("openHolds"),
     read("exitPayable"),
@@ -66,6 +72,8 @@ export async function readAsyncBankState(
     totalReserved: totalReserved!,
     recoveryBacking: recoveryBacking!,
     activeOpenHolds: activeOpenHolds!,
+    maxActiveHolds: maxActiveHolds!,
+    minStake: minStake!,
     currentEpoch: currentEpoch!,
     openHolds: openHolds!,
     exitPayable: exitPayable!,

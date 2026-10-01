@@ -92,7 +92,12 @@ describe("runtime recovery composition", () => {
             logIndex: 0
           }));
       }),
-      readContract: vi.fn(async () => ({ betId: 1n, requestId: 1n, state: 4 })),
+      readContract: vi.fn(async () => ({
+        betId: 1n,
+        requestId: 1n,
+        refundDeadline: 3600n,
+        state: 4
+      })),
       writeContract: vi.fn(),
       simulateContract: vi.fn()
     };
@@ -128,6 +133,9 @@ describe("runtime recovery composition", () => {
     });
     mock.client.getContractEvents = vi.fn(async () => []);
     mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
+      if (functionName === "activeOpenHolds") return 0n;
+      if (functionName === "MAX_ACTIVE_HOLDS") return 128n;
+      if (functionName === "minStake") return 1_000_000n;
       if (functionName === "currentEpoch") return 1n;
       if (functionName === "redeemBatch") return { priced: false, shares: 0n, cutoff: 0n };
       throw new Error(`Unexpected read ${functionName}`);
@@ -446,7 +454,12 @@ describe("runtime recovery composition", () => {
 
   it("uses the qualified execution envelope plus intrinsic headroom for both simulation and send", async () => {
     let state = 3;
-    mock.client.readContract = vi.fn(async () => ({ betId: 1n, requestId: 1n, state }));
+    mock.client.readContract = vi.fn(async () => ({
+      betId: 1n,
+      requestId: 1n,
+      refundDeadline: 3600n,
+      state
+    }));
     mock.client.writeContract = vi.fn(async () => {
       state = 4;
       return hash;
@@ -487,6 +500,7 @@ describe("runtime recovery composition", () => {
               gameId: hash,
               pricingAffiliate: hub,
               placedAt: 900n,
+              refundDeadline: 1000n,
               randomHash: hash,
               stake: 100n
             }
@@ -558,6 +572,9 @@ describe("runtime recovery composition", () => {
     mock.client.getBlock = vi.fn(async () => ({ number: 120n, timestamp: 1_601n }));
     mock.client.getContractEvents = vi.fn(async () => []);
     mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
+      if (functionName === "activeOpenHolds") return 0n;
+      if (functionName === "MAX_ACTIVE_HOLDS") return 128n;
+      if (functionName === "minStake") return 1_000_000n;
       if (functionName === "currentEpoch") return 1n;
       if (functionName === "redeemBatch") return { priced: false, shares: 0n, cutoff: 0n };
       throw new Error(`Unexpected read ${functionName}`);
@@ -625,6 +642,12 @@ describe("runtime recovery composition", () => {
             priced: false,
             shares: epoch === 1n ? 10n : 0n
           };
+        case "activeOpenHolds":
+          return 0n;
+        case "MAX_ACTIVE_HOLDS":
+          return 128n;
+        case "minStake":
+          return 1_000_000n;
         case "openHolds":
           return 3n;
         case "riskInPaused":
@@ -690,9 +713,13 @@ describe("runtime recovery composition", () => {
       async ({ functionName, args }: { functionName: string; args?: bigint[] }) => {
         switch (functionName) {
           case "getBet":
-            return { betId: 9n, requestId: 9n, placedAt: 900n, state: betState };
-          case "refundTimeoutSeconds":
-            return 100n;
+            return {
+              betId: 9n,
+              requestId: 9n,
+              placedAt: 900n,
+              refundDeadline: 1000n,
+              state: betState
+            };
           case "currentEpoch":
             return epoch;
           case "redeemBatch":
@@ -705,6 +732,12 @@ describe("runtime recovery composition", () => {
                 };
           case "recoveryEpoch":
             return { snapshotSupply: 100n, remainingHolds: 1n, remainingReserve: 100n };
+          case "activeOpenHolds":
+            return 0n;
+          case "MAX_ACTIVE_HOLDS":
+            return 128n;
+          case "minStake":
+            return 1_000_000n;
           case "openHolds":
             return betState === 2 ? 8n : 7n;
           case "riskInPaused":
@@ -754,7 +787,9 @@ describe("runtime recovery composition", () => {
       expect.objectContaining({ functionName: "activateBatch", address: bank })
     );
     expect(runtime.health.snapshot().degradedBy).toEqual(["pocket"]);
-    expect(runtime.health.snapshot().redemptions).toEqual([{ bank }]);
+    expect(runtime.health.snapshot().redemptions).toMatchObject([
+      { bank, activeOpenHolds: "0", maxActiveHolds: "128", capacityHeadroom: "128" }
+    ]);
     expect(
       vi
         .mocked(mock.client.writeContract as ReturnType<typeof vi.fn>)
@@ -766,7 +801,7 @@ describe("runtime recovery composition", () => {
     mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) =>
       functionName === "refundTimeoutSeconds"
         ? 86_400n
-        : { betId: 1n, requestId: 1n, placedAt: 999n, state: 2 }
+        : { betId: 1n, requestId: 1n, placedAt: 999n, refundDeadline: 1099n, state: 2 }
     );
     mock.client.getBlock = vi.fn(async () => ({ number: 120n, timestamp: 1_000n }));
     await mock.store!.writeGameHubEvents([
@@ -843,6 +878,9 @@ describe("runtime recovery composition", () => {
       eventName === "PlayerPayableCreated" ? [{ args: { player: hub }, blockNumber: 105n }] : []
     );
     mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
+      if (functionName === "activeOpenHolds") return 0n;
+      if (functionName === "MAX_ACTIVE_HOLDS") return 128n;
+      if (functionName === "minStake") return 1_000_000n;
       if (functionName === "currentEpoch") return 1n;
       if (functionName === "redeemBatch") return { priced: false, shares: 0n, cutoff: 0n };
       if (functionName === "playerPayable") return debt;
@@ -935,7 +973,7 @@ describe("runtime recovery composition", () => {
     mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) =>
       functionName === "refundTimeoutSeconds"
         ? 86_400n
-        : { betId: 1n, requestId: 1n, placedAt: 999n, state: 2 }
+        : { betId: 1n, requestId: 1n, placedAt: 999n, refundDeadline: 1099n, state: 2 }
     );
     const config = {
       ...base,
@@ -989,7 +1027,12 @@ describe("runtime recovery composition", () => {
   it("joins an in-flight terminal transaction before closing the store", async () => {
     let receipt!: (value: { status: "success" }) => void;
     let state = 3;
-    mock.client.readContract = vi.fn(async () => ({ betId: 1n, requestId: 1n, state }));
+    mock.client.readContract = vi.fn(async () => ({
+      betId: 1n,
+      requestId: 1n,
+      refundDeadline: 3600n,
+      state
+    }));
     mock.client.writeContract = vi.fn(async () => hash);
     mock.client.waitForTransactionReceipt = vi.fn(
       () =>

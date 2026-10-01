@@ -14,6 +14,7 @@ import {
   multiplyBetAmountInput,
   isBetAmountAboveMax,
   isBetAmountUnavailable,
+  betAmountInputToRaw,
   resolveBetMaxRaw
 } from "./bet-amount";
 import type { GameMeta } from "./model";
@@ -43,6 +44,7 @@ export function GameRoomBetPanel({
   maxPayoutIsHint = false,
   betAmount,
   maxBetRaw,
+  minBetRaw,
   onBetAmountChange,
   betCount,
   onBetCountChange,
@@ -92,6 +94,7 @@ export function GameRoomBetPanel({
   betAmount: string;
   /** Per-roll amount cap derived from wallet balance and current pool liquidity. */
   maxBetRaw?: bigint;
+  minBetRaw: bigint;
   onBetAmountChange: (amount: string) => void;
   betCount: number;
   onBetCountChange: (count: number) => void;
@@ -141,8 +144,13 @@ export function GameRoomBetPanel({
   const walletBalanceRaw =
     walletBalance == null ? null : walletBalance.raw / BigInt(Math.max(1, Math.floor(betCount)));
   const effectiveMaxRaw = resolveBetMaxRaw(walletBalanceRaw, maxBetRaw);
-  const amountUnavailable = isBetAmountUnavailable(assetDecimals, effectiveMaxRaw);
-  const amountExceedsMax = isBetAmountAboveMax(betAmount, assetDecimals, effectiveMaxRaw);
+  const amountUnavailable = isBetAmountUnavailable(minBetRaw, effectiveMaxRaw);
+  const amountExceedsMax = isBetAmountAboveMax(
+    betAmount,
+    assetDecimals,
+    effectiveMaxRaw,
+    minBetRaw
+  );
   const controlsLocked = isPending && state.status !== "failed";
   const limitValueClass = (isHint: boolean) =>
     cn("mt-0.5 truncate text-xs font-bold", isHint ? "text-fg-muted" : "font-mono text-fg");
@@ -237,6 +245,7 @@ export function GameRoomBetPanel({
           <BetAmountSection
             betAmount={betAmount}
             maxBetRaw={maxBetRaw}
+            minBetRaw={minBetRaw}
             walletBalanceRaw={walletBalanceRaw}
             assetDecimals={assetDecimals}
             assetSymbol={assetSymbol}
@@ -331,6 +340,7 @@ export function GameRoomBetPanel({
           manualRefundAvailable={manualRefundAvailable}
           amountUnavailable={amountUnavailable}
           amountExceedsMax={amountExceedsMax}
+          amountBelowMin={betAmountInputToRaw(betAmount, assetDecimals) < minBetRaw}
           onClick={primaryAction}
         />
         {riskInDisabled && !isPending && !manualSettleAvailable && !manualRefundAvailable ? (

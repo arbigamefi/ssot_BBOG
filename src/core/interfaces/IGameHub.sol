@@ -19,6 +19,7 @@ interface IGameHub {
     function riskInPaused(uint64 poolId) external view returns (bool);
     function refundTimeoutSeconds() external view returns (uint256);
     function MAX_REFUND_TIMEOUT_SECONDS() external view returns (uint256);
+    function MIN_REFUND_TIMEOUT_SECONDS() external view returns (uint256);
 
     // --- house-edge allocation constants (SSOT v1.6); no setters exist ---
     function LP_SHARE_BPS() external view returns (uint16);
@@ -73,7 +74,10 @@ interface IGameHub {
     /// @notice Referral payees snapshotted when the bet was accepted. Zero means none.
     function getBetReferralPayees(uint256 positionId) external view returns (address l1, address l2);
 
-    function quoteVRFFee(uint32 betCount) external view returns (uint256 fee, uint32 callbackGasLimit);
+    function quoteVRFFee(uint32 betCount, uint256 gasPriceBudget)
+        external
+        view
+        returns (uint256 fee, uint32 callbackGasLimit);
 
     function placeBet(
         bytes32 gameId,
@@ -124,7 +128,8 @@ interface IGameHub {
         uint16 effectiveHouseEdgeBps,
         uint16 maxHouseEdgeBps,
         uint32 referralConfigId,
-        bytes32 deltaSkylineHash
+        bytes32 deltaSkylineHash,
+        uint64 refundDeadline
     );
 
     event BetRandomReady(uint256 indexed positionId, uint256 indexed requestId, bytes32 randomHash);

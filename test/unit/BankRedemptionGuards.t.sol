@@ -29,7 +29,7 @@ contract BankRedemptionGuardsTest is Test {
     function setUp() external {
         vm.warp(200 days + 3 hours);
         asset = new BlacklistToken();
-        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6);
+        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6, 1);
         vm.prank(gov);
         bank.setSettlementRouterOnce(address(this));
         asset.mint(player, 1_000_000_000e6);
@@ -266,7 +266,7 @@ contract BankRedemptionGuardsTest is Test {
 
     function _hold(uint256 stake, uint256 reserved) internal returns (uint256 betId) {
         betId = nextBetId++;
-        bank.holdBet(betId, player, stake, reserved, bytes32(betId));
+        bank.holdBet(betId, player, stake, reserved, bytes32(betId), player);
     }
 
     /// @dev A player bet of `amount` that loses: the pool's NAV rises by `amount`.

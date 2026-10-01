@@ -9,6 +9,7 @@ import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
+import {IBank} from "../../src/core/interfaces/IBank.sol";
 import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
@@ -52,8 +53,8 @@ contract GameHubRouterTest is Test {
 
     function setUp() external {
         asset = new MockERC20("USD Coin", "USDC", 6);
-        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6);
-        sportsBank = new Bank(address(asset), gov, 0, "Sports LP USDC", "slpUSDC", 6);
+        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6, 1);
+        sportsBank = new Bank(address(asset), gov, 0, "Sports LP USDC", "slpUSDC", 6, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
         vrf = new VRFHub(address(this), gov);
@@ -86,13 +87,13 @@ contract GameHubRouterTest is Test {
         vm.stopPrank();
 
         vm.prank(player);
-        asset.approve(address(bank), type(uint256).max);
+        asset.approve(address(gameHub), type(uint256).max);
     }
 
     function test_placeFinalizeCasinoBetThroughSettlementRouter() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount);
+        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount, tx.gasprice);
 
         vm.prank(player);
         uint256 positionId = gameHub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, address(0), 10_000);
@@ -132,12 +133,84 @@ contract GameHubRouterTest is Test {
         assertEq(bank.totalReserved(), 0);
         assertEq(bank.protocolFeesPayable(), 100_000);
         assertEq(asset.balanceOf(player), 99_800_000);
+        assertEq(asset.balanceOf(address(gameHub)), 0);
+        assertEq(asset.allowance(address(gameHub), address(bank)), 0);
+        assertEq(asset.allowance(player, address(bank)), 0);
+    }
+
+    function test_stakeFundingPreservesDonationsAndRollsBackWhenVrfBudgetFails() external {
+        asset.mint(address(gameHub), 123);
+        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec(10e6, 1, 0, 0);
+        (uint256 fee,) = gameHub.quoteVRFFee(1, tx.gasprice);
+        vm.prank(player);
+        asset.approve(address(gameHub), 10e6);
+        uint256 bankBefore = asset.balanceOf(address(bank));
+        vm.prank(player);
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.InsufficientVRFFee.selector, fee - 1, fee));
+        gameHub.placeBet{value: fee - 1}(GAME_STAKE, 1, "", spec, address(0), 10_000);
+        assertEq(asset.balanceOf(player), 100e6);
+        assertEq(asset.balanceOf(address(bank)), bankBefore);
+        assertEq(asset.balanceOf(address(gameHub)), 123);
+        assertEq(asset.allowance(player, address(gameHub)), 10e6);
+        assertEq(asset.allowance(address(gameHub), address(bank)), 0);
+        assertEq(router.nextPositionId(), 1);
+        assertEq(bank.openHolds(), 0);
+        vm.prank(player);
+        gameHub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, address(0), 10_000);
+        assertEq(asset.balanceOf(address(gameHub)), 123);
+        assertEq(asset.allowance(address(gameHub), address(bank)), 0);
+        assertEq(asset.allowance(player, address(gameHub)), 0);
+    }
+
+    function test_refundDeadlineIsFixedAtAcceptanceAcrossGovernanceChanges() external {
+        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec(1e6, 1, 0, 0);
+        (uint256 fee,) = gameHub.quoteVRFFee(1, tx.gasprice);
+        vm.prank(player);
+        uint256 first = gameHub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, address(0), 10_000);
+        uint256 deadline = gameHub.getBet(first).refundDeadline;
+        assertEq(deadline, block.timestamp + 1 hours);
+        vm.prank(gov);
+        gameHub.setRefundTimeout(60);
+        vm.prank(player);
+        uint256 second = gameHub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, address(0), 10_000);
+        assertEq(gameHub.getBet(second).refundDeadline, block.timestamp + 60);
+        vm.prank(gov);
+        gameHub.setRefundTimeout(1 days);
+        vm.warp(gameHub.getBet(second).refundDeadline);
+        gameHub.refund(second);
+        vm.warp(deadline - 1);
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.RefundNotReady.selector, first, deadline - 1, deadline));
+        gameHub.refund(first);
+        vm.warp(deadline);
+        gameHub.refund(first);
+        vm.prank(gov);
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.InvalidRefundTimeout.selector, uint256(0)));
+        gameHub.setRefundTimeout(0);
+    }
+
+    function test_minimumAppliesToTotalStakeAndChangesOnlyNewPositions() external {
+        vm.prank(gov);
+        bank.setMinStake(1e6);
+        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec(10_000, 99, 0, 0);
+        (uint256 fee,) = gameHub.quoteVRFFee(100, tx.gasprice);
+        vm.prank(player);
+        vm.expectRevert(abi.encodeWithSelector(IBank.StakeBelowMinimum.selector, uint256(990_000), uint256(1e6)));
+        gameHub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, address(0), 10_000);
+        assertEq(asset.balanceOf(player), 100e6);
+        spec.betCount = 100;
+        vm.prank(player);
+        uint256 id = gameHub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, address(0), 10_000);
+        vm.prank(gov);
+        bank.setMinStake(2e6);
+        vm.warp(gameHub.getBet(id).refundDeadline);
+        gameHub.refund(id);
+        assertEq(asset.balanceOf(player), 100e6);
     }
 
     function test_refundCasinoBetThroughSettlementRouterAfterTimeout() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount);
+        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount, tx.gasprice);
 
         vm.prank(player);
         uint256 positionId = gameHub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, address(0), 10_000);
@@ -168,7 +241,7 @@ contract GameHubRouterTest is Test {
 
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount);
+        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount, tx.gasprice);
 
         vm.prank(player);
         vm.expectRevert(abi.encodeWithSelector(IGameHub.RiskInPaused.selector, uint64(1)));
@@ -178,7 +251,7 @@ contract GameHubRouterTest is Test {
     function test_nonCasinoPoolRejectedEvenIfAllowedForGameHub() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount);
+        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount, tx.gasprice);
 
         vm.prank(player);
         vm.expectRevert(

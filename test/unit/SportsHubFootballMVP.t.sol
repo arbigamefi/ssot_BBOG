@@ -48,7 +48,7 @@ contract SportsHubFootballMVPTest is Test {
         oddsSigner = vm.addr(oddsSignerKey);
 
         usdc = new MockERC20("USD Coin", "USDC", 6);
-        sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6);
+        sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
         riskEngine = new SportsRiskEngine(gov, 1_000e6, 2_000e6, 10_000e6, 5_000e6, 20_000e6);
@@ -71,7 +71,7 @@ contract SportsHubFootballMVPTest is Test {
 
         usdc.mint(player, 10_000e6);
         vm.prank(player);
-        usdc.approve(address(sportsBank), type(uint256).max);
+        usdc.approve(address(sportsHub), type(uint256).max);
     }
 
     function test_worldCupOpeningMatch_football1X2MvpClosesThroughReporterOracle() external {
@@ -155,7 +155,9 @@ contract SportsHubFootballMVPTest is Test {
         vm.warp(market.startsAt);
 
         vm.prank(reporter);
-        sportsHub.proposeResult(marketId, winningOutcomeId, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp));
+        sportsHub.proposeResult(
+            marketId, winningOutcomeId, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
+        );
 
         SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
         vm.warp(result.finalizesAt);

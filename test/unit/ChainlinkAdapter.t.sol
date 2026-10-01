@@ -7,6 +7,7 @@ import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
+import {IVRFHub} from "../../src/core/interfaces/IVRFHub.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
@@ -42,13 +43,12 @@ contract ChainlinkAdapter is Test {
 
         vm.startPrank(gov);
         adapter.setVRFHub(address(vrf));
-        adapter.setRequestGasPriceWei(0);
         // deterministic pricing: flat base fee, no overhead or per-word fee
         wrapper.setPricing(1e14, 0, 0);
         vrf.setAdapter(address(adapter));
         vm.stopPrank();
 
-        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18);
+        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
 
@@ -80,7 +80,7 @@ contract ChainlinkAdapter is Test {
 
         asset.mint(alice, 100 ether);
         vm.prank(alice);
-        asset.approve(address(bank), type(uint256).max);
+        asset.approve(address(hub), type(uint256).max);
 
         vm.deal(alice, 10 ether);
         vm.deal(gov, 10 ether);
@@ -90,7 +90,7 @@ contract ChainlinkAdapter is Test {
     function test_chainlink_adapter_end_to_end_single_bet() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1);
+        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
 
         vm.prank(alice);
         uint256 betId = hub.placeBet{value: fee}(GAME_COIN, 1, abi.encode(true), spec, address(0), 10_000);
@@ -106,12 +106,43 @@ contract ChainlinkAdapter is Test {
         hub.finalize(betId);
 
         assertEq(uint8(hub.getBet(betId).state), uint8(SSOTTypes.BetState.Settled));
+        assertTrue(vrf.seenRequestId(requestId), "detaching a fulfilled request must retain its lifetime marker");
+    }
+
+    function test_quoteBudgetAndActualWrapperPriceUseTheirOwnGasPrices() external {
+        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec(1 ether, 1, 0, 0);
+        (uint256 budget, uint32 cb) = hub.quoteVRFFee(1, 2 gwei);
+        for (uint256 price = 1 gwei; price <= 2 gwei; price += 1 gwei) {
+            vm.txGasPrice(price);
+            uint256 actual = wrapper.calculateRequestPriceNative(cb, 1);
+            uint256 playerBefore = alice.balance;
+            uint256 wrapperBefore = address(wrapper).balance;
+            vm.prank(alice);
+            uint256 id = hub.placeBet{value: budget}(GAME_COIN, 1, abi.encode(true), spec, address(0), 10_000);
+            assertEq(hub.getBet(id).vrfFeeCharged, actual);
+            assertEq(playerBefore - alice.balance, actual);
+            assertEq(address(wrapper).balance - wrapperBefore, actual);
+            assertEq(address(adapter).balance, 0);
+        }
+        vm.txGasPrice(3 gwei);
+        uint256 playerTokens = asset.balanceOf(alice);
+        uint256 oldHolds = bank.openHolds();
+        uint256 nextId = router.nextPositionId();
+        uint256 required = wrapper.calculateRequestPriceNative(cb, 1);
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(IVRFHub.InsufficientVRFFee.selector, budget, required));
+        hub.placeBet{value: budget}(GAME_COIN, 1, abi.encode(true), spec, address(0), 10_000);
+        assertEq(asset.balanceOf(alice), playerTokens);
+        assertEq(bank.openHolds(), oldHolds);
+        assertEq(router.nextPositionId(), nextId);
+        assertEq(asset.balanceOf(address(hub)), 0);
+        assertEq(asset.allowance(address(hub), address(bank)), 0);
     }
 
     function test_chainlink_adapter_overpay_refund_still_works() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1);
+        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
 
         uint256 ethBefore = alice.balance;
 

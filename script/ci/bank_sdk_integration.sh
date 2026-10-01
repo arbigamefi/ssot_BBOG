@@ -2,7 +2,7 @@
 set -euo pipefail
 # Always build the current source; never reuse an unrelated node or live chain.
 cd "$(dirname "$0")/../.."
-forge build src/core/Bank.sol test/mocks/MockERC20.sol test/mocks/BlacklistToken.sol
+forge build src test/mocks/MockERC20.sol test/mocks/BlacklistToken.sol
 PORT="${BANK_TEST_PORT:-18549}"
 LOG=$(mktemp)
 anvil --host 127.0.0.1 --port "$PORT" --chain-id 84532 --silent >"$LOG" 2>&1 &

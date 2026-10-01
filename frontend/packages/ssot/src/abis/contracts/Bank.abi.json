@@ -31,6 +31,11 @@
           "internalType": "uint8",
           "name": "decimals_",
           "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "minStake_",
+          "type": "uint256"
         }
       ],
       "stateMutability": "nonpayable",
@@ -736,6 +741,11 @@
           "internalType": "bytes32",
           "name": "snapshotHash",
           "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "fundingHub",
+          "type": "address"
         }
       ],
       "name": "holdBet",
@@ -917,6 +927,19 @@
     {
       "inputs": [],
       "name": "minPlayerTurnoverForUnlock",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "minStake",
       "outputs": [
         {
           "internalType": "uint256",
@@ -1572,6 +1595,19 @@
         }
       ],
       "name": "setMinPlayerTurnoverForUnlock",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "setMinStake",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -2572,6 +2608,45 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "secondsValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "HoldbackVestingSecondsSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "turnover",
+          "type": "uint256"
+        }
+      ],
+      "name": "MinPlayerTurnoverForUnlockSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "minStake",
+          "type": "uint256"
+        }
+      ],
+      "name": "MinStakeSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": true,
           "internalType": "address",
           "name": "controller",
@@ -3024,6 +3099,19 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "router",
+          "type": "address"
+        }
+      ],
+      "name": "SettlementRouterSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
           "name": "from",
           "type": "address"
         },
@@ -3388,6 +3476,27 @@
     {
       "inputs": [],
       "name": "SolvencyViolation",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "stake",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "minimum",
+          "type": "uint256"
+        }
+      ],
+      "name": "StakeBelowMinimum",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "TransferFailed",
       "type": "error"
     },
     {

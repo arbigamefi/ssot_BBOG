@@ -1220,6 +1220,7 @@
           "betMined": "СТАВКА В БЛОКЕ...",
           "signing": "ПОДПИСЬ / СТАВКА...",
           "reduceAmount": "УМЕНЬШИТЕ СУММУ",
+          "increaseAmount": "Increase bet amount",
           "selectToBet": "ВЫБЕРИТЕ СТАВКУ",
           "approveThenPlace": "ОДОБРИТЬ, ЗАТЕМ СТАВКА",
           "preparing": "ПОДГОТОВКА РАУНДА...",

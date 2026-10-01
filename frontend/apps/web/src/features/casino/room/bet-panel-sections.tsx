@@ -29,6 +29,7 @@ function parseWholeUnitInput(input: string, { min, max }: { min: number; max?: n
 export function BetAmountSection({
   betAmount,
   maxBetRaw,
+  minBetRaw,
   walletBalanceRaw,
   assetDecimals,
   assetSymbol,
@@ -37,6 +38,7 @@ export function BetAmountSection({
 }: {
   betAmount: string;
   maxBetRaw?: bigint;
+  minBetRaw: bigint;
   walletBalanceRaw: bigint | null;
   assetDecimals: number;
   assetSymbol: string;
@@ -45,10 +47,10 @@ export function BetAmountSection({
 }) {
   const t = useTranslations();
   const maxRaw = resolveBetMaxRaw(walletBalanceRaw, maxBetRaw);
-  const amountUnavailable = isBetAmountUnavailable(assetDecimals, maxRaw);
+  const amountUnavailable = isBetAmountUnavailable(minBetRaw, maxRaw);
   const maxShortcutUnavailable = maxRaw == null;
   const setBetAmount = (value: string) =>
-    onBetAmountChange(clampBetAmountInput(value, assetDecimals, maxRaw));
+    onBetAmountChange(clampBetAmountInput(value, assetDecimals, maxRaw, minBetRaw));
   const controlsDisabled = isPending || amountUnavailable;
 
   return (
@@ -83,7 +85,7 @@ export function BetAmountSection({
         <div className="flex gap-1 rounded-lg border border-border-soft bg-surface-1 p-1">
           <button
             type="button"
-            onClick={() => setBetAmount(getMinBetAmountInput(assetDecimals))}
+            onClick={() => setBetAmount(getMinBetAmountInput(assetDecimals, minBetRaw))}
             disabled={controlsDisabled}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
@@ -96,6 +98,7 @@ export function BetAmountSection({
                 scaleBetAmountInput({
                   input: betAmount,
                   decimals: assetDecimals,
+                  minRaw: minBetRaw,
                   numerator: 1n,
                   denominator: 2n,
                   maxRaw
@@ -114,6 +117,7 @@ export function BetAmountSection({
                 scaleBetAmountInput({
                   input: betAmount,
                   decimals: assetDecimals,
+                  minRaw: minBetRaw,
                   numerator: 2n,
                   maxRaw
                 })

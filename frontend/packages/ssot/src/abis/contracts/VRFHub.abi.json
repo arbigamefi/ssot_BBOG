@@ -242,6 +242,11 @@
           "internalType": "uint32",
           "name": "numWords",
           "type": "uint32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "gasPriceBudget",
+          "type": "uint256"
         }
       ],
       "name": "quote",
@@ -339,6 +344,25 @@
         }
       ],
       "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "seenRequestId",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -444,6 +468,37 @@
         }
       ],
       "name": "Detached",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "baseFeeWei",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "gasPriceWei",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "wordFeeWei",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "confirmationsFeeWei",
+          "type": "uint256"
+        }
+      ],
+      "name": "FeeParamsSet",
       "type": "event"
     },
     {
@@ -656,8 +711,24 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "requestId",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidRequestId",
+      "type": "error"
+    },
+    {
       "inputs": [],
       "name": "NotOwningHub",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ReentrancyGuardReentrantCall",
       "type": "error"
     },
     {

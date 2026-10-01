@@ -3,15 +3,19 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   defineChain,
+  encodeAbiParameters,
   createPublicClient,
   createTestClient,
   createWalletClient,
   http,
+  keccak256,
+  toHex,
   type Abi,
   type Address,
   type Hex
 } from "viem";
 import { createSSOTSDK } from "../create";
+import { encodeStakeSpec } from "../../encoding/stakeSpec";
 import { getContractAbis } from "../../abis/index.mjs";
 const { BankAbi } = getContractAbis();
 import type { SSOTRelease } from "../../release/schema";
@@ -69,7 +73,7 @@ async function fixture(tokenName: "MockERC20" | "BlacklistToken" = "MockERC20") 
     tokenName,
     tokenName === "MockERC20" ? ["Local test asset", "LOCAL", 6] : []
   );
-  const bank = await deploy("Bank", [token.address, owner, 0n, "Local Bank share", "LBS", 6]);
+  const bank = await deploy("Bank", [token.address, owner, 0n, "Local Bank share", "LBS", 6, 1n]);
   const makeRelease = (bankAddress: Address) =>
     ({
       chainId: localChain.id,
@@ -124,10 +128,133 @@ async function fixture(tokenName: "MockERC20" | "BlacklistToken" = "MockERC20") 
     expect(receipt.status).toBe("success");
     return receipt;
   }
-  return { client, wallet, evm, owner, player, depositor, token, bank, sdk, sdkFor, write };
+  return {
+    client,
+    wallet,
+    evm,
+    owner,
+    player,
+    depositor,
+    token,
+    bank,
+    sdk,
+    sdkFor,
+    write,
+    deploy,
+    makeRelease
+  };
 }
 
 describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
+  it("plans and executes a real casino bet after full exit segregates unresolved risk", async () => {
+    const {
+      client,
+      evm,
+      wallet,
+      owner,
+      player,
+      depositor,
+      token,
+      bank,
+      sdk,
+      sdkFor,
+      write,
+      deploy,
+      makeRelease
+    } = await fixture();
+    const registry = await deploy("PoolRegistry", [owner]);
+    const router = await deploy("SettlementRouter", [registry.address]);
+    const vrf = await deploy("VRFHub", [owner, owner]);
+    const referrals = await deploy("ReferralRegistry", [owner]);
+    const engine = await deploy("DefaultReferralEngine", []);
+    const hub = await deploy("GameHub", [
+      router.address,
+      vrf.address,
+      referrals.address,
+      engine.address,
+      owner,
+      3600n,
+      200,
+      0,
+      0,
+      0,
+      0
+    ]);
+    const module = await deploy("CoinTossModule", []);
+    const gameId = keccak256(toHex("SDK_CAPITAL_CONTINUITY"));
+    await write(registry, "registerPool", [1n, token.address, bank.address, 1]);
+    await write(registry, "setHubRegistered", [hub.address, true]);
+    await write(registry, "setHubAllowedForPool", [1n, hub.address, true]);
+    await write(bank, "setSettlementRouterOnce", [router.address]);
+    await write(referrals, "setBinderOnce", [hub.address]);
+    await write(hub, "registerGame", [gameId, module.address]);
+    await write(token, "mint", [player, 200_000_000n]);
+    await write(token, "mint", [depositor, 20_000_000n]);
+    await write(token, "approve", [hub.address, 200_000_000n], player);
+    expect((await sdk.bank.deposit(1, 100_000_000n, owner)).ok).toBe(true);
+    const release = makeRelease(bank.address);
+    release.contracts.gameHub = hub.address;
+    release.contracts.vrfHub = vrf.address;
+    release.contracts.refRegistry = referrals.address;
+    release.games[gameId] = module.address;
+    const casino = createSSOTSDK({
+      release,
+      publicClient: client,
+      walletClient: wallet,
+      account: player
+    });
+    const input = (stake: bigint) => ({
+      chainId: 84532,
+      gameId,
+      poolId: 1,
+      betCount: 1,
+      stake,
+      params: encodeAbiParameters([{ type: "bool" }], [false]),
+      stakeSpec: encodeStakeSpec({ amountPerRoll: stake, betCount: 1, stopGain: 0n, stopLoss: 0n }),
+      maxHouseEdgeBps: 200
+    });
+    const first = await casino.gameHub.planPlaceBet(input(50_000_000n));
+    if ("error" in first) throw new Error(first.error.message);
+    expect((await casino.gameHub.executePlan(first)).placeBetTx.ok).toBe(true);
+    expect((await sdk.bank.requestRedeem(1, 100_000_000n)).ok).toBe(true);
+    const cutoff = (await sdk.bank.getPosition(1, owner)).queuedBatch!.cutoff;
+    await evm.setNextBlockTimestamp({ timestamp: cutoff });
+    await write(bank, "activateBatch");
+    expect((await sdkFor(depositor).bank.deposit(1, 20_000_000n, depositor)).ok).toBe(true);
+    expect(await client.readContract({ ...bank, functionName: "totalReserved" })).toBe(
+      100_000_000n
+    );
+    expect(await client.readContract({ ...bank, functionName: "activeReserved" })).toBe(0n);
+    expect(await client.readContract({ ...bank, functionName: "activeOpenHolds" })).toBe(0n);
+    // The contract's successful simulation is the control: SDK must permit the same bet.
+    await client.simulateContract({
+      ...hub,
+      account: player,
+      functionName: "placeBet",
+      args: [
+        gameId,
+        1n,
+        encodeAbiParameters([{ type: "bool" }], [false]),
+        { amountPerRoll: 1_000_000n, betCount: 1, stopGain: 0n, stopLoss: 0n },
+        "0x0000000000000000000000000000000000000000",
+        200
+      ],
+      value: await casino.gameHub.quoteVRFFee(1)
+    });
+    const next = await casino.gameHub.planPlaceBet(input(1_000_000n));
+    if ("error" in next) throw new Error(`${next.error.code}: ${next.error.message}`);
+    await write(bank, "setMinStake", [2_000_000n]);
+    const staleMinimum = await casino.gameHub.executePlan(next);
+    expect(staleMinimum.placeBetTx).toMatchObject({
+      ok: false,
+      error: { code: "STAKE_BELOW_MINIMUM" }
+    });
+    expect(await client.readContract({ ...bank, functionName: "activeOpenHolds" })).toBe(0n);
+    await write(bank, "setMinStake", [1_000_000n]);
+    expect((await casino.gameHub.executePlan(next)).placeBetTx.ok).toBe(true);
+    expect(await client.readContract({ ...bank, functionName: "activeOpenHolds" })).toBe(1n);
+    expect(await client.readContract({ ...bank, functionName: "openHolds" })).toBe(2n);
+  }, 90_000);
   it("deposits, cancels, prices and claims with actual ABI and cash-event ledger", async () => {
     const { client, wallet, evm, owner, token, bank, sdk } = await fixture();
 
@@ -241,7 +368,7 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
       await write(token, "approve", [bank.address, 100_000_000n], player);
       expect((await sdk.bank.deposit(1, 100_000_000n, owner)).ok).toBe(true);
       const hash = `0x${"11".repeat(32)}` as Hex;
-      await write(bank, "holdBet", [1n, player, 10_000_000n, 30_000_000n, hash]);
+      await write(bank, "holdBet", [1n, player, 10_000_000n, 30_000_000n, hash, player]);
       expect((await sdk.bank.requestRedeem(1, 40_000_000n)).ok).toBe(true);
       // Independent original-reserve unit allocation, with the deposit virtual offset.
       const equity = (40_000_000n * ((100_000_000n * 110_001_000n) / 100_001_000n)) / 100_000_000n;
@@ -281,7 +408,7 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
       const ownerBefore = await sdk.bank.getAssetBalance(token.address, owner);
       expect((await sdk.bank.redeem(1, 40_000_000n)).ok).toBe(true);
       expect(await sdk.bank.getAssetBalance(token.address, owner)).toBe(ownerBefore + liquid);
-      await write(bank, "holdBet", [2n, player, 5_000_000n, 15_000_000n, hash]);
+      await write(bank, "holdBet", [2n, player, 5_000_000n, 15_000_000n, hash, player]);
       expect((await sdkFor(depositor).bank.deposit(1, 20_000_000n, depositor)).ok).toBe(true);
       // New capital buys the full remaining book risk at the current virtual-offset price.
       const virtualOffset = 1_000n;
@@ -397,7 +524,7 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
     await write(token, "mint", [depositor, 100_000_000n]);
     expect((await sdk.bank.deposit(1, 100_000_000n, owner)).ok).toBe(true);
     const hash = `0x${"22".repeat(32)}` as Hex;
-    await write(bank, "holdBet", [1n, player, 1_000_000n, 20_000_000n, hash]);
+    await write(bank, "holdBet", [1n, player, 1_000_000n, 20_000_000n, hash, player]);
     const seal = async (account: Address, shares: bigint) => {
       const accountSDK = sdkFor(account);
       expect((await accountSDK.bank.requestRedeem(1, shares)).ok).toBe(true);
@@ -465,7 +592,7 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
     expect((await sdk.bank.deposit(1, 1_000_000_000n, owner)).ok).toBe(true);
     const snapshotHash = `0x${"33".repeat(32)}` as Hex;
     for (let id = 1n; id <= 128n; id++) {
-      await write(bank, "holdBet", [id, player, 1_000_000n, 2_000_000n, snapshotHash]);
+      await write(bank, "holdBet", [id, player, 1_000_000n, 2_000_000n, snapshotHash, player]);
     }
     await expect(
       client.simulateContract({
@@ -473,7 +600,7 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
         abi: BankAbi,
         account: owner,
         functionName: "holdBet",
-        args: [129n, player, 1n, 2n, snapshotHash]
+        args: [129n, player, 1n, 2n, snapshotHash, player]
       })
     ).rejects.toThrow();
     expect((await sdk.bank.requestRedeem(1, 1_000_000_000n)).ok).toBe(true);

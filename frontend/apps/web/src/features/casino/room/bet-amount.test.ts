@@ -4,6 +4,7 @@ import {
   betAmountInputToRaw,
   clampBetAmountInput,
   getMinBetAmountInput,
+  getMinBetAmountRaw,
   normalizeBetAmountInput,
   resolveBetMaxRaw
 } from "./bet-amount";
@@ -21,15 +22,27 @@ describe("bet amount helpers", () => {
   });
 
   it("derives a valid minimum input for low-decimal assets", () => {
-    expect(getMinBetAmountInput(0)).toBe("1");
-    expect(getMinBetAmountInput(1)).toBe("0.1");
-    expect(getMinBetAmountInput(6)).toBe("0.01");
+    expect(getMinBetAmountInput(0, getMinBetAmountRaw(1n, 100))).toBe("1");
+    expect(getMinBetAmountInput(1, getMinBetAmountRaw(10n, 100))).toBe("0.1");
+    expect(getMinBetAmountInput(6, getMinBetAmountRaw(1_000_000n, 100))).toBe("0.01");
+  });
+
+  it("uses total-stake minimum with ceiling rounding at every roll count", () => {
+    expect(getMinBetAmountRaw(1_000_000n, 1)).toBe(1_000_000n);
+    expect(getMinBetAmountRaw(1_000_000n, 3)).toBe(333_334n);
+    expect(getMinBetAmountRaw(1_000_000n, 100)).toBe(10_000n);
+    expect(getMinBetAmountRaw(0n, 1)).toBe(0n);
+  });
+
+  it("preserves entered stake while the pool minimum is unavailable", () => {
+    expect(clampBetAmountInput("0.12", 6, 100_000_000n, 0n)).toBe("0.12");
+    expect(clampBetAmountInput("0.12", 6, undefined, 0n)).toBe("0.12");
   });
 
   it("clamps the amount to the lower of wallet balance and pool cap", () => {
     const maxRaw = resolveBetMaxRaw(25_000_000n, 10_000_000n);
 
     expect(maxRaw).toBe(10_000_000n);
-    expect(clampBetAmountInput("999", 6, maxRaw)).toBe("10");
+    expect(clampBetAmountInput("999", 6, maxRaw, 1_000_000n)).toBe("10");
   });
 });

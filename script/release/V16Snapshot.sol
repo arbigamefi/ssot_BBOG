@@ -139,6 +139,7 @@ library V16Snapshot {
                 bank.riskReserveBps() == snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix))
                     && bank.withdrawalBufferBps()
                         == snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix))
+                    && bank.minStake() == snap.readUint(string.concat(".poolBankMinStake_", suffix))
                     && bank.minPlayerTurnoverForUnlock()
                         == snap.readUint(string.concat(".poolBankMinTurnoverForUnlock_", suffix))
                     && bank.holdbackVestingSeconds()
@@ -191,7 +192,6 @@ library V16Snapshot {
         ChainlinkV2PlusWrapperAdapter adapter = ChainlinkV2PlusWrapperAdapter(payable(snap.readAddress(".adapter")));
         require(
             adapter.vrfHub() == snap.readAddress(".vrfHub")
-                && adapter.requestGasPriceWei() == snap.readUint(".requestGasPriceWei")
                 && address(VRFHub(payable(snap.readAddress(".vrfHub"))).adapter()) == address(adapter),
             "VRF configuration mismatch"
         );

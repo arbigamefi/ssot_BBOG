@@ -31,6 +31,7 @@ const baseBet: DomainBet = {
   requestId: 88n,
   randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   state: "finalized" as const,
+  refundDeadline: 3601,
   placedAt: 1,
   resolvedAt: 2
 };

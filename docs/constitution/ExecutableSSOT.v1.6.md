@@ -168,9 +168,7 @@ The guardian can pause and cannot change any allocation parameter.
 
 ### G5. Refund timeout bound
 
-No refund timeout above `MAX_REFUND_TIMEOUT_SECONDS` can be set, at deployment or later. A bet still pending
-VRF is therefore refundable at most one day after placement, and `placedAt + refundTimeoutSeconds` cannot
-overflow.
+Timeouts must lie within `MIN_REFUND_TIMEOUT_SECONDS` and `MAX_REFUND_TIMEOUT_SECONDS`, at deployment and in governance updates; the default remains 3600 seconds. Each accepted bet snapshots `refundDeadline = placedAt + refundTimeoutSeconds`. Later parameter changes cannot shorten or extend that deadline. A bet still PendingVRF becomes refund-eligible no later than one day after placement; transaction inclusion and payment are separate availability constraints.
 
 ## Test mapping
 

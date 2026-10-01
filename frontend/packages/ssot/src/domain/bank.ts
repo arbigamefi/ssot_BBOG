@@ -67,6 +67,8 @@ export interface DomainBankSnapshot {
   activeReserved: bigint;
   recoveryBacking: bigint;
   activeOpenHolds: bigint;
+  maxActiveHolds: bigint;
+  minStake: bigint;
   currentEpoch: bigint;
   openHolds: bigint;
   /** Liabilities already excluded from totalAssets; do not subtract them again. */

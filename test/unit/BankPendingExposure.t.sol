@@ -25,7 +25,7 @@ contract BankPendingExposureTest is Test {
 
     function setUp() external {
         asset = new MockERC20("USD Coin", "USDC", 6);
-        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6);
+        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6, 1);
         vm.startPrank(gov);
         bank.setSettlementRouterOnce(address(this));
         bank.setWithdrawalBufferBps(1000);
@@ -104,7 +104,7 @@ contract BankPendingExposureTest is Test {
         asset.mint(bettor, 100e6);
         vm.prank(bettor);
         asset.approve(address(bank), type(uint256).max);
-        bank.holdBet(1, bettor, 100e6, 200e6, bytes32(uint256(1)));
+        bank.holdBet(1, bettor, 100e6, 200e6, bytes32(uint256(1)), bettor);
     }
 
     function _settleWinningWager() internal {

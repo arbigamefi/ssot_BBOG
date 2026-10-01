@@ -72,8 +72,10 @@ export interface PlaceBetPlan {
   };
   preview: {
     vrfFee: bigint;
+    gasPrice: bigint;
+    quoteBlockNumber: bigint;
     stake: bigint;
-    /** Current allowance (player -> bank) observed during planning. */
+    /** Current allowance (player -> betting hub) observed during planning. */
     allowance: bigint;
     /** Whether an approve transaction is required before placeBet. */
     needsApproval: boolean;

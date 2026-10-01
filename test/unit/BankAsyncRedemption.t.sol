@@ -31,7 +31,7 @@ contract BankAsyncRedemptionTest is Test {
     function setUp() external {
         vm.warp(100 * DAY + 5 hours);
         asset = new BlacklistToken();
-        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6);
+        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6, 1);
         vm.prank(gov);
         bank.setSettlementRouterOnce(address(this));
 
@@ -416,7 +416,7 @@ contract BankAsyncRedemptionTest is Test {
         _depositTo(second, alice, 4e6);
         _depositTo(second, bob, 6e6);
         uint256 betId = nextBetId++;
-        second.holdBet(betId, player, 1e6, 6e6, bytes32(betId));
+        second.holdBet(betId, player, 1e6, 6e6, bytes32(betId), player);
         _settleOn(second, betId, 6e6);
         vm.prank(alice);
         second.requestRedeem(4e6, alice, alice);
@@ -882,7 +882,7 @@ contract BankAsyncRedemptionTest is Test {
         // The risk-in check sees the same NAV: a reserve above it is refused.
         asset.setBlocked(player, false);
         vm.expectRevert(IBank.SolvencyViolation.selector);
-        bank.holdBet(50, player, 1, s.NAV + 2, bytes32(0));
+        bank.holdBet(50, player, 1, s.NAV + 2, bytes32(0), player);
     }
 
     // ------------------------------------------------------------ helpers
@@ -970,7 +970,7 @@ contract BankAsyncRedemptionTest is Test {
     function test_holdMustReserveAtLeastItsFullRefund() external {
         _deposit(alice, 1_000e6);
         vm.expectRevert(abi.encodeWithSelector(IBank.ReservedTooSmall.selector, 99, 9e6, 10e6));
-        bank.holdBet(99, player, 10e6, 9e6, bytes32(0));
+        bank.holdBet(99, player, 10e6, 9e6, bytes32(0), player);
         assertEq(bank.totalBetsHeld(), 0);
         assertEq(bank.totalReserved(), 0);
     }
@@ -1009,7 +1009,7 @@ contract BankAsyncRedemptionTest is Test {
         vm.prank(alice);
         assertEq(bank.redeem(1_000e6, alice, alice), 799_999_927);
         vm.expectRevert(IBank.SolvencyViolation.selector);
-        bank.holdBet(99, player, 10e6, 20e6, bytes32(0));
+        bank.holdBet(99, player, 10e6, 20e6, bytes32(0), player);
         assertEq(_deposit(bob, 100e6), 100e6);
         uint256 newer = _hold(10e6, 20e6);
         uint256 active = bank.totalAssets();
@@ -1058,7 +1058,7 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(bank.totalReserved(), 300e6);
         assertEq(s.riskFree, s.NAV - s.R);
         vm.expectRevert(IBank.SolvencyViolation.selector);
-        bank.holdBet(99, player, 1e6, 200e6, bytes32(0));
+        bank.holdBet(99, player, 1e6, 200e6, bytes32(0), player);
         _settle(oldBet, 0);
         assertEq(
             bank.totalAssets(), s.NAV, "zero-cost settlement keeps NAV and releases staying reserve in the same call"
@@ -1093,10 +1093,10 @@ contract BankAsyncRedemptionTest is Test {
 
     function test_holdOwnershipUsesItsAcceptanceEpochNotBetId() external {
         _deposit(alice, 1_000e6);
-        bank.holdBet(999, player, 10e6, 20e6, bytes32(0));
+        bank.holdBet(999, player, 10e6, 20e6, bytes32(0), player);
         _request(alice, 100e6);
         _priceDue();
-        bank.holdBet(1, player, 10e6, 20e6, bytes32(0));
+        bank.holdBet(1, player, 10e6, 20e6, bytes32(0), player);
         bank.refundBet(1, 10e6);
         assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
         assertEq(bank.recoveryEpoch(1).settledCost, 0);
@@ -1419,7 +1419,7 @@ contract BankAsyncRedemptionTest is Test {
 
     function _hold(uint256 stake, uint256 reserved) internal returns (uint256 betId) {
         betId = nextBetId++;
-        bank.holdBet(betId, player, stake, reserved, bytes32(betId));
+        bank.holdBet(betId, player, stake, reserved, bytes32(betId), player);
     }
 
     function _settle(uint256 betId, uint256 payout) internal {
@@ -1442,7 +1442,7 @@ contract BankAsyncRedemptionTest is Test {
     }
 
     function _freshBank() internal returns (Bank fresh) {
-        fresh = new Bank(address(asset), gov, 0, "LP USDC 2", "lpUSDC2", 6);
+        fresh = new Bank(address(asset), gov, 0, "LP USDC 2", "lpUSDC2", 6, 1);
         vm.prank(gov);
         fresh.setSettlementRouterOnce(address(this));
         vm.prank(player);

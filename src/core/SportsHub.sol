@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Governable} from "../access/Governable.sol";
 import {Errors} from "../libs/Errors.sol";
+import {StakeFunding} from "../libs/StakeFunding.sol";
 import {IPoolRegistry} from "./interfaces/IPoolRegistry.sol";
 import {ISettlementRouter} from "./interfaces/ISettlementRouter.sol";
 import {ISportsRiskEngine} from "./interfaces/ISportsRiskEngine.sol";
@@ -276,7 +277,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     ) external override nonReentrant returns (uint256 ticketId) {
         SSOTTypes.SportsMarket storage market = _requireMarket(marketId);
         _requireTicketAcceptingMarket(market);
-        _sportsPool(market.poolId);
+        SSOTTypes.Pool memory fundingPool = _sportsPool(market.poolId);
 
         if (stake == 0) revert Errors.InsufficientBalance();
         if (
@@ -311,8 +312,10 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         }
 
         // Sports tickets carry no house-edge allocation (SSOT v1.6 section 8): edge 0 caps PF + XP at zero.
+        uint256 fundingBalance = StakeFunding.collect(fundingPool.asset, fundingPool.bank, stake);
         uint256 positionId = ISettlementRouter(settlementRouter)
             .openPosition(market.poolId, msg.sender, stake, decision.reserved, oddsTicketHash, 0);
+        StakeFunding.finish(fundingPool.asset, fundingPool.bank, fundingBalance);
 
         ticketId = nextTicketId;
         nextTicketId = ticketId + 1;

@@ -21,6 +21,7 @@ export interface DomainBet {
   randomHash: `0x${string}`;
   state: BetState;
   placedAt: number;
+  refundDeadline: number;
   vrfRequestedAt?: number;
   resolvedAt?: number;
   settledAt?: number;

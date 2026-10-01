@@ -384,12 +384,12 @@ export function createKeeperRuntime({
       abi: GAME_HUB_KEEPER_ABI,
       functionName: "getBet",
       args: [betId]
-    })) as unknown as { betId: bigint; requestId: bigint; state: number; placedAt?: bigint };
+    })) as unknown as { betId: bigint; requestId: bigint; state: number; refundDeadline: bigint };
     return {
       betId: BigInt(bet.betId),
       requestId: BigInt(bet.requestId),
       state: mapBetState(Number(bet.state)),
-      placedAt: bet.placedAt == null ? undefined : BigInt(bet.placedAt)
+      refundDeadline: BigInt(bet.refundDeadline)
     };
   };
 
@@ -417,13 +417,7 @@ export function createKeeperRuntime({
 
   const readRefundClock = async () => {
     const block = await publicClient.getBlock();
-    const timeoutSeconds = await publicClient.readContract({
-      address: config.gameHub,
-      abi: GAME_HUB_KEEPER_ABI,
-      functionName: "refundTimeoutSeconds",
-      blockNumber: block.number
-    });
-    return { timestamp: block.timestamp, timeoutSeconds: timeoutSeconds as bigint };
+    return { timestamp: block.timestamp };
   };
   const simulateRefund = async (betId: bigint) => {
     await publicClient.simulateContract({
@@ -655,6 +649,9 @@ export function createKeeperRuntime({
       blockNumber: log.blockNumber,
       txHash: log.transactionHash,
       receivedAt: Date.now()
+    });
+    void trackOperation(drainQueue()).catch((error) => {
+      logger.error("casino.keeper.ready_drain_failed", { error: describeError(error) });
     });
   };
 
@@ -1474,6 +1471,7 @@ type TerminalBetRead = {
   betId: bigint;
   gameId: Hex;
   placedAt: bigint | number;
+  refundDeadline: bigint | number;
   player: Address;
   pricingAffiliate: Address;
   randomHash: Hex;
@@ -1527,6 +1525,7 @@ async function buildTerminalBetRow({
     lastEventName: terminal.eventName,
     lastTxHash: txHash,
     placedAt: secondsToMs(bet.placedAt),
+    refundDeadline: secondsToMs(bet.refundDeadline),
     player: getAddress(bet.player) as Address,
     pricingAffiliate: getAddress(bet.pricingAffiliate) as Address,
     randomHash: bet.randomHash,

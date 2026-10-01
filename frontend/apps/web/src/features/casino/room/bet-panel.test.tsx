@@ -146,6 +146,7 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
     game: diceGame,
     walletBalance: { label: "1,450.00 USDC", raw: 1_450_000_000n },
     assetDecimals: 6,
+    minBetRaw: 10_000n,
     assetSymbol: "USDC",
     maxBetLabel: "200 USDC",
     maxPayoutLabel: "500 USDC",

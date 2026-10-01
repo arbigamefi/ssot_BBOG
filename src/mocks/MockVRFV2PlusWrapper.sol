@@ -36,9 +36,8 @@ contract MockVRFV2PlusWrapper is IVRFV2PlusWrapper {
         override
         returns (uint256)
     {
-        return baseFeeWei
-            + (uint256(callbackGasLimit) + overheadGas) * requestGasPriceWei
-            + uint256(numWords) * wordFeeWei;
+        return baseFeeWei + (uint256(callbackGasLimit) + overheadGas) * requestGasPriceWei + uint256(numWords)
+            * wordFeeWei;
     }
 
     function requestRandomWordsInNative(
@@ -47,7 +46,7 @@ contract MockVRFV2PlusWrapper is IVRFV2PlusWrapper {
         uint32 numWords,
         bytes calldata /*extraArgs*/
     ) external payable override returns (uint256 requestId) {
-        // In this mock, we accept any msg.value; the adapter is responsible for enforcing exact charge.
+        require(msg.value == calculateRequestPriceNative(callbackGasLimit, numWords), "native fee");
         requestId = ++lastRequestId;
         reqs[requestId] = Req({
             consumer: msg.sender,
@@ -59,15 +58,23 @@ contract MockVRFV2PlusWrapper is IVRFV2PlusWrapper {
         emit WrapperRequested(requestId, msg.sender, msg.value);
     }
 
+    function calculateRequestPriceNative(uint32 callbackGasLimit, uint32 numWords)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return baseFeeWei + (uint256(callbackGasLimit) + overheadGas) * tx.gasprice + uint256(numWords) * wordFeeWei;
+    }
+
     /// @notice Test helper to simulate a wrapper callback.
     function fulfillTo(address consumer, uint256 requestId, uint256[] calldata randomWords) external {
         Req storage r = reqs[requestId];
         if (!r.active) return;
         r.active = false;
         // Wrapper calls consumer.rawFulfillRandomWords(...)
-        (bool ok, ) = consumer.call(
-            abi.encodeWithSignature("rawFulfillRandomWords(uint256,uint256[])", requestId, randomWords)
-        );
+        (bool ok,) =
+            consumer.call(abi.encodeWithSignature("rawFulfillRandomWords(uint256,uint256[])", requestId, randomWords));
         ok; // ignore
     }
 

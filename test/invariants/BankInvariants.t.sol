@@ -333,7 +333,7 @@ contract BankHandler is Test {
 
         uint256 betId = nextBetId;
         bool historical = bank.recoveryBacking() > 0;
-        try bank.holdBet(betId, player, stake, reserved, keccak256(abi.encode(betId))) {
+        try bank.holdBet(betId, player, stake, reserved, keccak256(abi.encode(betId)), player) {
             if (historical) holdsWithHistoricalRisk += 1;
             heldBets[betId] = HeldBet({player: player, stake: stake, reserved: reserved, activeUnits: reserved});
             openBetIds.push(betId);
@@ -495,7 +495,7 @@ contract BankInvariants is StdInvariant, Test {
 
     function setUp() external {
         asset = new BlacklistToken();
-        bank = new Bank(address(asset), gov, 1_000, "LP USDC", "lpUSDC", 6);
+        bank = new Bank(address(asset), gov, 1_000, "LP USDC", "lpUSDC", 6, 1);
 
         handler = new BankHandler(bank, asset, gov);
 

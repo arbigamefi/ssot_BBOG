@@ -135,6 +135,8 @@ contract DeploymentV16Test is Test {
         vm.setEnv("SAFE_OWNERS_HASH", vm.toString(keccak256(abi.encode(safe.getOwners(), uint256(2)))));
         vm.setEnv("VRF_WRAPPER", vm.toString(address(asset)));
         vm.setEnv("NUM_POOLS", "2");
+        vm.setEnv("BANK_MIN_STAKE_0", "1000000");
+        vm.setEnv("BANK_MIN_STAKE_1", "1000000");
         vm.setEnv("POOL_ASSET_0", vm.toString(address(asset)));
         vm.setEnv("POOL_ASSET_1", vm.toString(address(asset)));
         vm.setEnv("POOL_DOMAIN_0", "1");

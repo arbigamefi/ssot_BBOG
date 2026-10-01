@@ -1220,6 +1220,7 @@
           "betMined": "APOSTA MINERADA...",
           "signing": "ASSINANDO / APOSTANDO...",
           "reduceAmount": "REDUZIR VALOR",
+          "increaseAmount": "Increase bet amount",
           "selectToBet": "ESCOLHA UMA APOSTA",
           "approveThenPlace": "APROVAR E DEPOIS APOSTAR",
           "preparing": "PREPARANDO RODADA...",

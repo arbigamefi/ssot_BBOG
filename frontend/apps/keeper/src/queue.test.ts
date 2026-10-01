@@ -6,6 +6,18 @@ function event(betId: bigint, receivedAt = 1_000) {
 }
 
 describe("FinalizeQueue", () => {
+  it("does not let an in-flight pending retry overwrite a newly received ready event", () => {
+    const queue = new FinalizeQueue(() => 1_000);
+    queue.enqueue({ source: "scan", betId: 1n, receivedAt: 900 });
+    const pending = queue.nextReady()!;
+    queue.enqueue({ ...event(1n), requestId: 42n, blockNumber: 99n });
+    expect(queue.nextReady()).toBeUndefined(); // A single bet never has two writers.
+    queue.retry(pending, 60_000);
+    const ready = queue.nextReady();
+    expect(ready).toMatchObject({ betId: 1n, requestId: 42n, blockNumber: 99n, attempts: 1 });
+    expect(queue.nextReady()).toBeUndefined();
+  });
+
   it("deduplicates bet ids and keeps the earliest availability", () => {
     let now = 1_000;
     const queue = new FinalizeQueue(() => now);

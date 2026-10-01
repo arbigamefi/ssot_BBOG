@@ -107,11 +107,7 @@ contract VerifyReleaseV16 is Script {
 
         digest = keccak256(
             abi.encode(
-                digest,
-                snap.readAddress(".vrfWrapper"),
-                snap.readAddress(".adapter"),
-                snap.readAddress(".vrfHub"),
-                snap.readUint(".requestGasPriceWei")
+                digest, snap.readAddress(".vrfWrapper"), snap.readAddress(".adapter"), snap.readAddress(".vrfHub")
             )
         );
 
@@ -204,6 +200,7 @@ contract VerifyReleaseV16 is Script {
                     digest,
                     snap.readUint(string.concat(".poolBankMinLiqBps_", suffix)),
                     snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix)),
+                    snap.readUint(string.concat(".poolBankMinStake_", suffix)),
                     snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix)),
                     snap.readUint(string.concat(".poolBankMinTurnoverForUnlock_", suffix)),
                     snap.readUint(string.concat(".poolBankHoldbackVestingSeconds_", suffix)),

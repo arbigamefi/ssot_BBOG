@@ -20,7 +20,7 @@ export async function readRedemptionBank(
 ): Promise<RedemptionHealth> {
   const block = await publicClient.getBlock();
   if (block.number == null) throw new Error("Bank reconciliation requires a numbered chain block");
-  const read = (functionName: "currentEpoch" | "openHolds" | "riskInPaused") =>
+  const read = (functionName: string) =>
     publicClient.readContract({
       address: bank,
       abi: BANK_REDEMPTION_KEEPER_ABI,
@@ -37,9 +37,22 @@ export async function readRedemptionBank(
     blockNumber: block.number
   })) as { cutoff: bigint; priced: boolean; shares: bigint };
   if (batch.priced) throw new Error("Current Bank epoch is already priced");
-  if (batch.shares === 0n || batch.cutoff === 0n) return { bank };
-  return {
+  const [activeHolds, maxHolds, minStake] = (await Promise.all([
+    read("activeOpenHolds"),
+    read("MAX_ACTIVE_HOLDS"),
+    read("minStake")
+  ])) as bigint[];
+  const capacity = {
     bank,
+    activeOpenHolds: activeHolds!.toString(),
+    maxActiveHolds: maxHolds!.toString(),
+    capacityHeadroom: (maxHolds! - activeHolds!).toString(),
+    minStake: minStake!.toString(),
+    observedBlock: block.number.toString()
+  };
+  if (batch.shares === 0n || batch.cutoff === 0n) return capacity;
+  return {
+    ...capacity,
     batchId: current.toString(),
     cutoff: batch.cutoff.toString(),
     activationDue: block.timestamp >= batch.cutoff,

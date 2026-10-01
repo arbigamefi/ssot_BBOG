@@ -274,6 +274,13 @@ function mapRevert(errorName: string, args?: unknown[]): DomainError {
         severity: "error"
       };
     // Bank errors
+    case "StakeBelowMinimum":
+      return {
+        code: "STAKE_BELOW_MINIMUM",
+        message: "Total stake is below this pool’s minimum.",
+        severity: "warning",
+        details: { stake: args?.[0], minimum: args?.[1] }
+      };
     case "ActiveHoldLimit":
       return {
         code: "ACTIVE_HOLD_LIMIT",

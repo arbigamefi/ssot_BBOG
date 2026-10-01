@@ -434,6 +434,7 @@
           "betMined": "BET MINED...",
           "signing": "SIGNING / PLACING...",
           "reduceAmount": "REDUCE AMOUNT",
+          "increaseAmount": "Increase bet amount",
           "selectToBet": "SELECT A BET",
           "approveThenPlace": "APPROVE, THEN PLACE BET",
           "preparing": "PREPARING ROUND...",
@@ -975,7 +976,9 @@
         "approving": "Approving tokens · waiting for confirmation",
         "placing": "Placing bet · waiting for confirmation",
         "cost": "Total {total} {symbol} · Randomness fee budget ≈ {fee}; gas extra.",
-        "contextChanged": "Your wallet, network or bet settings changed. The next step was stopped; review the current settings before continuing."
+        "contextChanged": "Your wallet, network or bet settings changed. The next step was stopped; review the current settings before continuing.",
+        "capacity": "This pool is temporarily full. Try again after an open bet settles.",
+        "minimumStake": "Total stake is below the pool minimum. Refresh pool state and adjust the amount or roll count."
       },
       "poolStatus": {
         "loading": "Checking the {symbol} pool before new bets…",
@@ -3009,8 +3012,8 @@
       "paused": "The pool is paused. Requests and queued cancellations remain available; deposits, exit cash claims and recovery payments wait until it resumes.",
       "unknown": "Pool status is temporarily unavailable. Refresh before trying again.",
       "refresh": "Refresh pool state",
-      "depositTerms": "Deposits immediately buy active capital at full book value, including its remaining old and new unsettled risk. Already segregated exit recovery rights are excluded.",
-      "issuerRisk": "Token issuer restrictions can delay transfers and claims. A recorded entitlement does not mean cash has reached your wallet.",
+      "depositTerms": "Deposits immediately buy active capital at full book value, including its remaining old and new unsettled risk. Already segregated exit recovery rights are excluded. New deposits also bear revealed but unsettled payouts. Displayed data may lag and does not prove there is no pending risk.",
+      "issuerRisk": "Issuer freezes, confiscation or destruction of pool assets can prevent payment and cause insolvency. Recorded claims do not guarantee full payment.",
       "totalEquity": "Active and priced LP value (estimate)",
       "totalEquityDetail": "Wallet value + queued estimate + priced cash. Historical recovery is shown separately and is not included in this estimate.",
       "walletEquity": "Wallet shares / book value",

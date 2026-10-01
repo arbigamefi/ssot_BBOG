@@ -159,11 +159,11 @@ describe("retryDelayMs", () => {
 });
 
 describe("PendingVRF terminalization", () => {
-  const pending = () => ({ ...bet("pendingVrf"), placedAt: 100n });
+  const pending = () => ({ ...bet("pendingVrf"), refundDeadline: 200n });
   function deps() {
     return {
       readBet: vi.fn().mockResolvedValue(pending()),
-      readRefundClock: vi.fn().mockResolvedValue({ timestamp: 199n, timeoutSeconds: 100n }),
+      readRefundClock: vi.fn().mockResolvedValue({ timestamp: 199n }),
       simulateRefund: vi.fn().mockResolvedValue(undefined),
       writeRefund: vi.fn().mockResolvedValue("0xabc"),
       simulateFinalize: vi.fn().mockResolvedValue(undefined),
@@ -172,7 +172,7 @@ describe("PendingVRF terminalization", () => {
       verifyAttempts: 1
     };
   }
-  it("keeps an ineligible bet scheduled and honors a shortened current timeout", async () => {
+  it("keeps an ineligible bet scheduled until its fixed deadline", async () => {
     const d = deps();
     expect(await finalizeIfReady(baseEvent, d)).toEqual({
       kind: "deferred",
@@ -180,19 +180,16 @@ describe("PendingVRF terminalization", () => {
       retryAfterMs: 1000
     });
     expect(d.writeRefund).not.toHaveBeenCalled();
-    d.readRefundClock.mockResolvedValue({ timestamp: 199n, timeoutSeconds: 99n });
+    d.readRefundClock.mockResolvedValue({ timestamp: 200n });
     d.readBet.mockResolvedValueOnce(pending()).mockResolvedValueOnce(bet("refunded"));
     expect(await finalizeIfReady(baseEvent, d)).toMatchObject({ kind: "settled", txHash: "0xabc" });
     expect(d.simulateRefund).toHaveBeenCalledWith(12n);
     expect(d.writeFinalize).not.toHaveBeenCalled();
   });
-  it("does not reuse a stale timeout when governance lengthens it", async () => {
+  it("fails closed when a pending bet has no valid stored deadline", async () => {
     const d = deps();
-    d.readRefundClock.mockResolvedValue({ timestamp: 200n, timeoutSeconds: 86_400n });
-    expect(await finalizeIfReady(baseEvent, d)).toMatchObject({
-      kind: "deferred",
-      retryAfterMs: 60_000
-    });
+    d.readBet.mockResolvedValue({ ...pending(), refundDeadline: 0n });
+    expect(await finalizeIfReady(baseEvent, d)).toMatchObject({ kind: "failed", retryable: true });
     expect(d.writeRefund).not.toHaveBeenCalled();
   });
   it("never sends a timeout refund for RandomReady even long after placement", async () => {
@@ -204,7 +201,7 @@ describe("PendingVRF terminalization", () => {
   });
   it("reconciles another caller's successful refund as a race", async () => {
     const d = deps();
-    d.readRefundClock.mockResolvedValue({ timestamp: 200n, timeoutSeconds: 100n });
+    d.readRefundClock.mockResolvedValue({ timestamp: 200n });
     d.readBet.mockResolvedValueOnce(pending()).mockResolvedValueOnce(bet("refunded"));
     d.simulateRefund.mockRejectedValue(new Error("BadState"));
     expect(await finalizeIfReady(baseEvent, d)).toEqual({ kind: "raced", state: "refunded" });
@@ -212,7 +209,7 @@ describe("PendingVRF terminalization", () => {
   });
   it("retries a callback racing the refund, then finalizes its actual result", async () => {
     const d = deps();
-    d.readRefundClock.mockResolvedValue({ timestamp: 200n, timeoutSeconds: 100n });
+    d.readRefundClock.mockResolvedValue({ timestamp: 200n });
     d.readBet.mockResolvedValueOnce(pending()).mockResolvedValueOnce(bet("randomReady"));
     d.simulateRefund.mockRejectedValue(new Error("BadState"));
     expect(await finalizeIfReady(baseEvent, d)).toMatchObject({ kind: "failed", retryable: true });

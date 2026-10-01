@@ -49,7 +49,7 @@ contract SportsHubLifecycleTest is Test {
         oddsSigner = vm.addr(oddsSignerKey);
 
         usdc = new MockERC20("USD Coin", "USDC", 6);
-        sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6);
+        sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
         riskEngine = new SportsRiskEngine(gov, 1_000e6, 2_000e6, 10_000e6, 5_000e6, 20_000e6);
@@ -72,7 +72,7 @@ contract SportsHubLifecycleTest is Test {
 
         usdc.mint(player, 10_000e6);
         vm.prank(player);
-        usdc.approve(address(sportsBank), type(uint256).max);
+        usdc.approve(address(sportsHub), type(uint256).max);
     }
 
     function test_phase0MockEventLifecycle_resolveAndVoidMarkets() external {

@@ -52,6 +52,7 @@ function renderActionBar(
     game: diceGame,
     assetSymbol: "USDC",
     assetDecimals: 6,
+    minBetRaw: 10_000n,
     betAmount: "10",
     walletBalanceRaw: 100_000_000n,
     maxBetRaw: 200_000_000n,

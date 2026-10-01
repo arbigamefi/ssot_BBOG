@@ -8,10 +8,12 @@ interface IVRFAdapter {
     function coordinator() external view returns (address);
 
     /// @notice Quote request price in native token.
-    function quoteNative(uint32 callbackGasLimit, uint16 requestConfirmations, uint32 numWords)
+    function quoteNative(uint32 callbackGasLimit, uint16 requestConfirmations, uint32 numWords, uint256 gasPriceBudget)
         external
         view
         returns (uint256 feeWei);
+
+    function requestPriceNative(uint32 callbackGasLimit, uint32 numWords) external view returns (uint256);
 
     /// @notice Perform request and charge fee in native token.
     /// @return requestId provider request id

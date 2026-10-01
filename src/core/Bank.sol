@@ -71,6 +71,11 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     uint256 public override minPlayerTurnoverForUnlock;
 
     uint256 public override riskReserveBps; // [0..10000], gates new risk-in.
+    uint256 public override minStake;
+    event MinStakeSet(uint256 minStake);
+    event SettlementRouterSet(address indexed router);
+    event HoldbackVestingSecondsSet(uint256 secondsValue);
+    event MinPlayerTurnoverForUnlockSet(uint256 turnover);
     uint256 public override withdrawalBufferBps; // [0..10000], gates optional outflows.
     // pause state comes from OZ Pausable (maps to SSOT "riskInPaused")
 
@@ -177,12 +182,15 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 initialBufferBps_,
         string memory name_,
         string memory symbol_,
-        uint8 decimals_
+        uint8 decimals_,
+        uint256 minStake_
     ) Governable(gov_) {
         if (asset_ == address(0)) revert Errors.ZeroAddress();
         if (decimals_ > 77) revert Errors.InvalidConfig();
         if (decimals_ != IERC20Metadata(asset_).decimals()) revert Errors.InvalidConfig();
         if (initialBufferBps_ > 10_000) revert Errors.InvalidBps(initialBufferBps_);
+        if (minStake_ == 0) revert Errors.InvalidConfig();
+        minStake = minStake_;
         asset = asset_;
         _assetToken = IERC20(asset_);
         riskReserveBps = initialBufferBps_;
@@ -200,6 +208,11 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     }
 
     // -------- governance controls --------
+    function setMinStake(uint256 value) external onlyGov {
+        if (value == 0) revert Errors.InvalidConfig();
+        minStake = value;
+        emit MinStakeSet(value);
+    }
 
     /// @notice Freeze Risk-In + Optional outflows, while keeping Debt-Out (settle/refund) live.
     /// @dev Asymmetric by design: governance or the guardian may pause, only
@@ -224,6 +237,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (settlementRouter != address(0)) revert Errors.InvalidConfig();
         if (router_ == address(0)) revert Errors.ZeroAddress();
         settlementRouter = router_;
+        emit SettlementRouterSet(router_);
     }
 
     function setRiskReserveBps(uint256 bps) external onlyGov {
@@ -246,6 +260,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         // bound to keep arithmetic safe and semantics reasonable
         if (seconds_ == 0 || seconds_ > 365 days) revert Errors.InvalidConfig();
         holdbackVestingSeconds = seconds_;
+        emit HoldbackVestingSecondsSet(seconds_);
     }
 
     function setMinPlayerTurnoverForUnlock(uint256 turnover_) external onlyGov {
@@ -256,6 +271,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
             revert Errors.InvalidConfig();
         }
         minPlayerTurnoverForUnlock = turnover_;
+        emit MinPlayerTurnoverForUnlockSet(turnover_);
     }
 
     /// @notice Set the address allowed to pause Risk-In (zero disables the role).
@@ -1068,20 +1084,26 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         _;
     }
 
-    function holdBet(uint256 betId, address player, uint256 stake, uint256 reserved, bytes32 snapshotHash)
-        external
-        override
-        onlySettlementRouter
-        nonReentrant
-    {
+    function holdBet(
+        uint256 betId,
+        address player,
+        uint256 stake,
+        uint256 reserved,
+        bytes32 snapshotHash,
+        address fundingHub
+    ) external override onlySettlementRouter nonReentrant {
         if (paused()) revert RiskInPaused();
         if (_activeHolds.length() == MAX_ACTIVE_HOLDS) revert ActiveHoldLimit();
+        if (stake < minStake) revert StakeBelowMinimum(stake, minStake);
         if (player == address(0) || stake == 0 || reserved == 0) revert Errors.InsufficientBalance();
         if (reserved < stake) revert ReservedTooSmall(betId, reserved, stake);
         Hold storage h = holds[betId];
         if (h.open || h.player != address(0)) revert BetAlreadyExists(betId);
 
-        _assetToken.safeTransferFrom(player, address(this), stake);
+        if (fundingHub == address(0)) revert Errors.ZeroAddress();
+        uint256 balanceBefore = _assetToken.balanceOf(address(this));
+        _assetToken.safeTransferFrom(fundingHub, address(this), stake);
+        if (_assetToken.balanceOf(address(this)) != balanceBefore + stake) revert Errors.TransferFailed();
 
         uint256 NAV = totalAssets();
         uint256 Rafter = activeReserved + reserved;

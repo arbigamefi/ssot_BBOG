@@ -82,6 +82,11 @@
           "internalType": "uint32",
           "name": "numWords",
           "type": "uint32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "gasPriceBudget",
+          "type": "uint256"
         }
       ],
       "name": "quoteNative",
@@ -114,8 +119,19 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "requestGasPriceWei",
+      "inputs": [
+        {
+          "internalType": "uint32",
+          "name": "callbackGasLimit",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "numWords",
+          "type": "uint32"
+        }
+      ],
+      "name": "requestPriceNative",
       "outputs": [
         {
           "internalType": "uint256",
@@ -158,19 +174,6 @@
         }
       ],
       "stateMutability": "payable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "weiPerGas",
-          "type": "uint256"
-        }
-      ],
-      "name": "setRequestGasPriceWei",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -290,6 +293,11 @@
         }
       ],
       "name": "InsufficientFee",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidConfig",
       "type": "error"
     },
     {

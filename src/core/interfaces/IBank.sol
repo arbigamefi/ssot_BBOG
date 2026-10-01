@@ -73,6 +73,9 @@ interface IBankVault {
 ///         - riskInPaused freezes Risk-In + Optional Outflow, but never blocks settle/refund or player payables
 ///         - LP exits receive liquid cash and keep historical recovery rights (ADR-0035)
 interface IBank is IBankVault {
+    function minStake() external view returns (uint256);
+    error StakeBelowMinimum(uint256 stake, uint256 minimum);
+
     /// @notice One queued batch per current epoch. Activation fixes liquid assets and burns shares once.
     struct RedeemBatch {
         uint64 cutoff; // first multiple of batchPeriod strictly after the batch's first request
@@ -193,7 +196,15 @@ interface IBank is IBankVault {
     function holdbackReleasable(address payee) external view returns (uint256);
 
     // -------- bet funds interface (only SettlementRouter) --------
-    function holdBet(uint256 betId, address player, uint256 stake, uint256 reserved, bytes32 snapshotHash) external;
+    /// @notice Router supplies the authenticated calling hub as fundingHub; player is the beneficiary.
+    function holdBet(
+        uint256 betId,
+        address player,
+        uint256 stake,
+        uint256 reserved,
+        bytes32 snapshotHash,
+        address fundingHub
+    ) external;
 
     /// @dev accrue XP awards (E-class) in the same call; must NOT transfer to payees during settlement.
     /// @dev payoutNet is owed to the player (excludes fee-on-payout); failed transfers become player payables.

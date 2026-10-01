@@ -28,7 +28,7 @@ async function deploy(name, args) {
   return { address: receipt.contractAddress, abi: a.abi };
 }
 const token = await deploy("MockERC20", ["Local asset", "LOCAL", 6]);
-const bank = await deploy("Bank", [token.address, owner, 0n, "Local share", "LBS", 6]);
+const bank = await deploy("Bank", [token.address, owner, 0n, "Local share", "LBS", 6, 1n]);
 const hash = await wallet.writeContract({
   ...token,
   account: owner,

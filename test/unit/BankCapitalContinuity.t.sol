@@ -14,7 +14,7 @@ contract BankCapitalContinuityTest is Test {
         address exiter = address(0xB0B);
         address player = address(0xBEEF);
         BlacklistToken asset = new BlacklistToken();
-        Bank bank = new Bank(address(asset), address(this), 1_000, "LP", "LP", 6);
+        Bank bank = new Bank(address(asset), address(this), 1_000, "LP", "LP", 6, 1);
         bank.setSettlementRouterOnce(address(this));
         asset.mint(stayer, 100e6);
         asset.mint(exiter, 4);
@@ -34,7 +34,7 @@ contract BankCapitalContinuityTest is Test {
             vm.startPrank(exiter);
             bank.requestRedeem(1, exiter, exiter);
             vm.stopPrank();
-            bank.holdBet(id, player, 20e6, 40e6, bytes32(id));
+            bank.holdBet(id, player, 20e6, 40e6, bytes32(id), player);
             vm.warp(bank.redeemBatch(bank.currentEpoch()).cutoff);
             bank.activateBatch();
             bank.refundBet(id, 20e6);
@@ -43,21 +43,21 @@ contract BankCapitalContinuityTest is Test {
             assertGe(bank.totalAssets(), 100e6 - id * 4, "staying capital must remain active on refund");
             assertEq(bank.openHolds(), 0);
         }
-        bank.holdBet(5, player, 20e6, 40e6, bytes32(uint256(5)));
+        bank.holdBet(5, player, 20e6, 40e6, bytes32(uint256(5)), player);
     }
 
     function test_fullActiveBookHasBoundedActivationAndClaimGasAndFullExitFreesSlots() external {
         BlacklistToken token = new BlacklistToken();
-        Bank pool = new Bank(address(token), address(this), 0, "LP", "LP", 6);
+        Bank pool = new Bank(address(token), address(this), 0, "LP", "LP", 6, 1);
         pool.setSettlementRouterOnce(address(this));
         token.mint(address(this), 10_000e6);
         token.approve(address(pool), type(uint256).max);
         pool.deposit(1_000e6, address(this));
         for (uint256 id = 1; id <= pool.MAX_ACTIVE_HOLDS(); ++id) {
-            pool.holdBet(id, address(this), 1e6, 2e6, bytes32(id));
+            pool.holdBet(id, address(this), 1e6, 2e6, bytes32(id), address(this));
         }
         vm.expectRevert(IBank.ActiveHoldLimit.selector);
-        pool.holdBet(1000, address(this), 1e6, 2e6, bytes32(0));
+        pool.holdBet(1000, address(this), 1e6, 2e6, bytes32(0), address(this));
         pool.requestRedeem(1_000e6, address(this), address(this));
         vm.warp(pool.redeemBatch(1).cutoff);
         vm.cool(address(pool));
@@ -69,7 +69,7 @@ contract BankCapitalContinuityTest is Test {
         assertLt(activateGas, 12_000_000);
         assertEq(pool.activeOpenHolds(), 0, "old protocol and exiting risk does not occupy new slots");
         pool.deposit(100e6, address(this));
-        pool.holdBet(1000, address(this), 1e6, 2e6, bytes32(0));
+        pool.holdBet(1000, address(this), 1e6, 2e6, bytes32(0), address(this));
         uint256 nav = pool.totalAssets();
         for (uint256 id = 1; id <= pool.MAX_ACTIVE_HOLDS(); ++id) {
             pool.refundBet(id, 1e6);
