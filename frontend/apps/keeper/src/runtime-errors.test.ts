@@ -104,6 +104,9 @@ describe("runtime error reporting", () => {
     mock.store = createMemoryBetIndexStore();
     mock.client = {
       getBlockNumber: vi.fn(async () => 100n),
+      transport: {
+        getRpcClient: vi.fn(async () => ({ close: vi.fn(), socket: new EventTarget() }))
+      },
       watchContractEvent: vi.fn((watcher: Watcher) => {
         watchers.push(watcher);
         return () => undefined;

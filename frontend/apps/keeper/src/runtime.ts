@@ -1,4 +1,6 @@
 import {
+  BaseError,
+  ContractFunctionRevertedError,
   createPublicClient,
   createWalletClient,
   defineChain,
@@ -43,7 +45,6 @@ import type { BetRead, KeeperConfig, KeeperEvent, KeeperLogger } from "./types.j
 import { createSportsRecovery } from "./sports-recovery.js";
 import {
   BANK_REDEMPTION_KEEPER_ABI,
-  BANK_REORG_LOOKBACK,
   createPocketMonitor,
   reconcileRedemptionBank
 } from "./redemption.js";
@@ -78,7 +79,7 @@ const SPORTS_TERMINALIZER_EVENTS: SportsTerminalizerEventName[] = [
   "ResultChallengeResolved"
 ];
 const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
-const BANK_PROVIDER_LEDGER_CURSOR_SOURCE = "bank-provider-ledger";
+const BANK_PROVIDER_LEDGER_CURSOR_SOURCE = "bank-provider-ledger-finalized";
 const CASINO_RECOVERY_PAGE_SIZE = 50;
 /**
  * Indexed-bet recovery re-reads every requeued bet on chain, so after scans it runs
@@ -263,7 +264,8 @@ export function createKeeperRuntime({
       ? undefined
       : createPublicClient({
           chain,
-          transport: webSocket(config.wsRpcUrl)
+          // One runtime supervisor owns reconnects and subscriptions, including initial failures.
+          transport: webSocket(config.wsRpcUrl, { reconnect: false })
         });
 
   const queue = new FinalizeQueue();
@@ -274,12 +276,16 @@ export function createKeeperRuntime({
   });
   const timers: Array<ReturnType<typeof setInterval>> = [];
   const unwatchers: Array<() => void> = [];
+  let wsRetryTimer: ReturnType<typeof setTimeout> | undefined;
+  let closeWebSocket: (() => void) | undefined;
+  let resettingWebSocket = false;
   let stopped = false;
   let scanning = false;
   let bankProviderLedgerScanning = false;
   let lastScannedBlock = config.startBlock ?? 0n;
-  let bankProviderLedgerLastScannedBlock = config.startBlock ?? 0n;
-  let bankProviderLedgerNextBlock: bigint | undefined;
+  let bankProviderLedgerLastScannedBlock =
+    (config.casinoRecoveryStartBlock ?? config.startBlock ?? 0n) - 1n;
+  let bankProviderLedgerFinalizedBlock: bigint | undefined;
   let recoveryAfterBetId = 0n;
   let recoveringIndexedBets = false;
   let drainingQueue = false;
@@ -382,12 +388,12 @@ export function createKeeperRuntime({
       abi: GAME_HUB_KEEPER_ABI,
       functionName: "getBet",
       args: [betId]
-    })) as unknown as { betId: bigint; requestId: bigint; state: number; placedAt?: bigint };
+    })) as unknown as { betId: bigint; requestId: bigint; state: number; refundDeadline: bigint };
     return {
       betId: BigInt(bet.betId),
       requestId: BigInt(bet.requestId),
       state: mapBetState(Number(bet.state)),
-      placedAt: bet.placedAt == null ? undefined : BigInt(bet.placedAt)
+      refundDeadline: BigInt(bet.refundDeadline)
     };
   };
 
@@ -415,13 +421,7 @@ export function createKeeperRuntime({
 
   const readRefundClock = async () => {
     const block = await publicClient.getBlock();
-    const timeoutSeconds = await publicClient.readContract({
-      address: config.gameHub,
-      abi: GAME_HUB_KEEPER_ABI,
-      functionName: "refundTimeoutSeconds",
-      blockNumber: block.number
-    });
-    return { timestamp: block.timestamp, timeoutSeconds: timeoutSeconds as bigint };
+    return { timestamp: block.timestamp };
   };
   const simulateRefund = async (betId: bigint) => {
     await publicClient.simulateContract({
@@ -450,7 +450,7 @@ export function createKeeperRuntime({
       hash: txHash,
       pollingInterval: 1_000
     });
-    return { status: receipt.status };
+    return { status: receipt.status, blockNumber: receipt.blockNumber };
   };
 
   const materializeCasinoReceipt = async (event: KeeperEvent, txHash: Hex) => {
@@ -639,11 +639,11 @@ export function createKeeperRuntime({
   };
 
   const enqueueBetRandomReadyLog = (log: {
-    args?: { betId?: bigint; requestId?: bigint; randomHash?: Hex };
+    args?: { positionId?: bigint; requestId?: bigint; randomHash?: Hex };
     blockNumber?: bigint;
     transactionHash?: Hex;
   }) => {
-    const betId = log.args?.betId;
+    const betId = log.args?.positionId;
     if (betId == null) return;
     enqueue({
       source: "gameHub",
@@ -653,6 +653,9 @@ export function createKeeperRuntime({
       blockNumber: log.blockNumber,
       txHash: log.transactionHash,
       receivedAt: Date.now()
+    });
+    void trackOperation(drainQueue()).catch((error) => {
+      logger.error("casino.keeper.ready_drain_failed", { error: describeError(error) });
     });
   };
 
@@ -742,15 +745,10 @@ export function createKeeperRuntime({
         config.gameHub
       );
       const resumeBlock = resolveBetIndexResumeBlock(lastScannedBlock, cursor);
-      const bankProviderCursor =
-        (await betIndexStore.getCursor(
-          config.chainId,
-          BANK_PROVIDER_LEDGER_CURSOR_SOURCE,
-          config.gameHub
-        )) ?? cursor;
-      const bankProviderResumeBlock = resolveBetIndexResumeBlock(
-        bankProviderLedgerLastScannedBlock,
-        bankProviderCursor
+      const bankProviderCursor = await betIndexStore.getCursor(
+        config.chainId,
+        BANK_PROVIDER_LEDGER_CURSOR_SOURCE,
+        config.gameHub
       );
       if (resumeBlock > lastScannedBlock) {
         const configuredStartBlock = lastScannedBlock;
@@ -761,12 +759,13 @@ export function createKeeperRuntime({
         });
         writeHealth(health.recordStarted(lastScannedBlock, queue.size));
       }
-      if (bankProviderResumeBlock > bankProviderLedgerLastScannedBlock) {
+      if (bankProviderCursor != null && bankProviderCursor > bankProviderLedgerLastScannedBlock) {
         const configuredStartBlock = bankProviderLedgerLastScannedBlock;
-        bankProviderLedgerLastScannedBlock = bankProviderResumeBlock;
+        bankProviderLedgerLastScannedBlock = bankProviderCursor;
+        bankProviderLedgerFinalizedBlock = bankProviderCursor;
         logger.info("casino.keeper.bank_provider_ledger_cursor_resumed", {
           configuredStartBlock: configuredStartBlock.toString(),
-          cursorBlock: bankProviderResumeBlock.toString()
+          cursorBlock: bankProviderCursor.toString()
         });
       }
       await requeueIndexedBets();
@@ -804,22 +803,25 @@ export function createKeeperRuntime({
       txHash: log.transactionHash,
       receivedAt: Date.now()
     });
+    void trackOperation(drainQueue()).catch((error) => {
+      logger.error("casino.keeper.ready_drain_failed", { error: describeError(error) });
+    });
   };
 
   /**
-   * A capped pass leaves the cursor short of the head and resumes next tick.
+   * A capped pass leaves the cursor short of its target and resumes next tick.
    * Without this line an operator watching a quiet log has no way to tell a
    * caught-up keeper from one still grinding through a months-old backlog.
    */
-  const reportScanCap = (scanner: string, ranges: BlockRange[], latest: bigint) => {
-    if (!isScanTruncated(ranges, latest)) return;
+  const reportScanCap = (scanner: string, ranges: BlockRange[], target: bigint) => {
+    if (!isScanTruncated(ranges, target)) return;
     const last = ranges[ranges.length - 1]!;
     logger.info("casino.keeper.scan_capped", {
       scanner,
       chunks: ranges.length,
       scannedThrough: last.toBlock.toString(),
-      headBlock: latest.toString(),
-      remainingBlocks: (latest - last.toBlock).toString()
+      targetBlock: target.toString(),
+      remainingBlocks: (target - last.toBlock).toString()
     });
   };
 
@@ -852,12 +854,12 @@ export function createKeeperRuntime({
       }
       for (const log of readyLogs) {
         const args = log.args as
-          | { betId?: bigint; requestId?: bigint; randomHash?: Hex }
+          | { positionId?: bigint; requestId?: bigint; randomHash?: Hex }
           | undefined;
-        if (args?.betId == null) continue;
+        if (args?.positionId == null) continue;
         enqueue({
           source: "scan",
-          betId: BigInt(args.betId),
+          betId: BigInt(args.positionId),
           requestId: args.requestId == null ? undefined : BigInt(args.requestId),
           randomHash: args.randomHash,
           blockNumber: log.blockNumber,
@@ -892,33 +894,28 @@ export function createKeeperRuntime({
     ) {
       return;
     }
-    const latest = await publicClient.getBlockNumber();
-    const origin = config.casinoRecoveryStartBlock ?? config.startBlock ?? 0n;
-    bankProviderLedgerNextBlock ??=
-      bankProviderLedgerLastScannedBlock === 0n
-        ? latest
-        : bankProviderLedgerLastScannedBlock >= origin + BANK_REORG_LOOKBACK - 1n
-          ? bankProviderLedgerLastScannedBlock - BANK_REORG_LOOKBACK + 1n
-          : origin;
-    if (bankProviderLedgerNextBlock > latest + 1n)
-      bankProviderLedgerNextBlock =
-        latest >= origin + BANK_REORG_LOOKBACK - 1n ? latest - BANK_REORG_LOOKBACK + 1n : origin;
+    const finalized = await publicClient.getBlock({ blockTag: "finalized" });
+    if (finalized.number == null)
+      throw new Error("Bank provider ledger requires a numbered finalized block");
+    if (
+      bankProviderLedgerFinalizedBlock != null &&
+      finalized.number < bankProviderLedgerFinalizedBlock
+    )
+      throw new Error(
+        `Bank provider ledger finalized block regressed from ${bankProviderLedgerFinalizedBlock} to ${finalized.number}`
+      );
+    bankProviderLedgerFinalizedBlock = finalized.number;
     const ranges = splitBlockRange({
-      fromBlock: bankProviderLedgerNextBlock,
-      toBlock: latest,
+      fromBlock: bankProviderLedgerLastScannedBlock + 1n,
+      toBlock: finalized.number,
       chunkSize: config.scanChunkBlocks,
       maxChunks: config.scanMaxChunksPerPass
     });
-    reportScanCap("bank-provider-ledger", ranges, latest);
+    reportScanCap("bank-provider-ledger", ranges, finalized.number);
     for (const range of ranges) {
       await writeBankProviderLedgerRange(betIndexStore, publicClient, config, range, logger);
       bankProviderLedgerLastScannedBlock = range.toBlock;
-      bankProviderLedgerNextBlock = range.toBlock + 1n;
     }
-    // Resume a partial overlap on the next pass; never restart a too-large rewind indefinitely.
-    if (bankProviderLedgerNextBlock > latest)
-      bankProviderLedgerNextBlock =
-        latest >= origin + BANK_REORG_LOOKBACK - 1n ? latest - BANK_REORG_LOOKBACK + 1n : origin;
   };
 
   const scanUnresolvedHistory = async () => {
@@ -997,7 +994,24 @@ export function createKeeperRuntime({
         functionName: "claimPlayerPayable" as const,
         args: [player] as const
       };
-      await publicClient.simulateContract({ ...request, account: account.address });
+      try {
+        await publicClient.simulateContract({ ...request, account: account.address });
+      } catch (error) {
+        const reverted =
+          error instanceof BaseError
+            ? error.walk((cause) => cause instanceof ContractFunctionRevertedError)
+            : undefined;
+        const token =
+          reverted instanceof ContractFunctionRevertedError ? reverted.data?.args?.[0] : undefined;
+        if (
+          reverted instanceof ContractFunctionRevertedError &&
+          reverted.data?.errorName === "SafeERC20FailedOperation" &&
+          typeof token === "string" &&
+          token.toLowerCase() === banks.get(bank.toLowerCase())?.asset.toLowerCase()
+        )
+          return { status: "refused" as const, reason: describeError(error) };
+        throw error;
+      }
       const txHash = await walletClient.writeContract({ ...request, account, chain });
       const receipt = await waitFinalizeReceipt(txHash);
       logger.info("casino.keeper.player_payable_claimed", {
@@ -1092,8 +1106,153 @@ export function createKeeperRuntime({
    * (HTTP 401/429) or dropped connection as an ErrorEvent whose message is empty, and viem's
    * own socket errors put the RPC URL in theirs, so neither is logged as-is.
    */
-  const logWatchError = (event: string, error: unknown, eventName?: string) =>
+  const stopWebSocketWatchers = () => {
+    resettingWebSocket = true;
+    try {
+      for (const unwatch of unwatchers.splice(0)) unwatch();
+      const close = closeWebSocket;
+      closeWebSocket = undefined;
+      close?.();
+    } finally {
+      resettingWebSocket = false;
+    }
+  };
+
+  const logWatchError = (event: string, error: unknown, eventName?: string) => {
     logger.error(event, { eventName, transport: "websocket", error: describeError(error) });
+    if (stopped || resettingWebSocket || wsRetryTimer != null) return;
+    // One bounded timer for all watchers. Closing the old socket also discards
+    // failed subscriptions before the next attempt; HTTP catch-up stays live.
+    wsRetryTimer = setTimeout(() => {
+      stopWebSocketWatchers();
+      wsRetryTimer = undefined;
+      void startWebSocketWatchers();
+    }, 2_000);
+  };
+
+  const startWebSocketWatchers = async () => {
+    if (!wsClient || stopped) return;
+    try {
+      const rpcClient = await wsClient.transport.getRpcClient();
+      if (stopped) {
+        rpcClient.close();
+        return;
+      }
+      const onClose = () =>
+        logWatchError("casino.keeper.websocket_closed", new Error("WebSocket connection closed"));
+      rpcClient.socket.addEventListener("close", onClose);
+      closeWebSocket = () => {
+        rpcClient.socket.removeEventListener("close", onClose);
+        rpcClient.close();
+      };
+      unwatchers.push(
+        wsClient.watchContractEvent({
+          poll: false,
+          address: config.gameHub,
+          abi: GAME_HUB_KEEPER_ABI,
+          eventName: "BetRandomReady",
+          onLogs: (logs) => {
+            (logs as unknown as Parameters<typeof enqueueBetRandomReadyLog>[0][]).forEach(
+              enqueueBetRandomReadyLog
+            );
+            void trackOperation(
+              writeBetIndexLogs("BetRandomReady", logs as unknown as GameHubLog[])
+            ).catch(() => undefined);
+          },
+          onError: (error) => logWatchError("casino.keeper.gamehub_watch_error", error)
+        })
+      );
+      unwatchers.push(
+        wsClient.watchContractEvent({
+          poll: false,
+          address: config.gameHub,
+          abi: GAME_HUB_KEEPER_ABI,
+          eventName: "BetPlaced",
+          onLogs: (logs) => {
+            for (const log of logs as unknown as GameHubLog[])
+              if (log.args?.positionId != null)
+                enqueue({
+                  source: "gameHub",
+                  betId: BigInt(log.args.positionId as bigint),
+                  receivedAt: Date.now(),
+                  blockNumber: log.blockNumber
+                });
+            void trackOperation(
+              writeBetIndexLogs("BetPlaced", logs as unknown as GameHubLog[])
+            ).catch(() => undefined);
+          },
+          onError: (error) =>
+            logWatchError("casino.keeper.gamehub_index_watch_error", error, "BetPlaced")
+        })
+      );
+      if (betIndexStore) {
+        for (const eventName of ["BetFinalized", "BetRefunded"] as const) {
+          unwatchers.push(
+            wsClient.watchContractEvent({
+              poll: false,
+              address: config.gameHub,
+              abi: GAME_HUB_KEEPER_ABI,
+              eventName,
+              onLogs: (logs) =>
+                void trackOperation(
+                  writeBetIndexLogs(eventName, logs as unknown as GameHubLog[])
+                ).catch(() => undefined),
+              onError: (error) =>
+                logWatchError("casino.keeper.gamehub_index_watch_error", error, eventName)
+            })
+          );
+        }
+        if (config.sportsTicketIndexEnabled && config.sportsHub) {
+          for (const eventName of SPORTS_TICKET_EVENTS) {
+            unwatchers.push(
+              wsClient.watchContractEvent({
+                poll: false,
+                address: config.sportsHub,
+                abi: SPORTS_HUB_KEEPER_ABI,
+                eventName,
+                onLogs: (logs) =>
+                  void trackOperation(
+                    writeSportsTicketIndexLogs(eventName, logs as unknown as GameHubLog[])
+                  ),
+                onError: (error) =>
+                  logWatchError("casino.keeper.sports_ticket_index_watch_error", error, eventName)
+              })
+            );
+          }
+        }
+      }
+      if (config.sportsTerminalizerEnabled && config.sportsHub) {
+        for (const eventName of SPORTS_TERMINALIZER_EVENTS) {
+          unwatchers.push(
+            wsClient.watchContractEvent({
+              poll: false,
+              address: config.sportsHub,
+              abi: SPORTS_HUB_KEEPER_ABI,
+              eventName,
+              onLogs: (logs) => scheduleSportsTerminalizerLogs(eventName, logs),
+              onError: (error) => logWatchError("sports.terminalizer.watch_error", error, eventName)
+            })
+          );
+        }
+      }
+      unwatchers.push(
+        wsClient.watchContractEvent({
+          poll: false,
+          address: config.vrfHub,
+          abi: VRF_HUB_KEEPER_ABI,
+          eventName: "Fulfilled",
+          onLogs: (logs) =>
+            (logs as unknown as Parameters<typeof enqueueFulfilledLog>[0][]).forEach(
+              enqueueFulfilledLog
+            ),
+          onError: (error) => logWatchError("casino.keeper.vrfhub_watch_error", error)
+        })
+      );
+      logger.info("casino.keeper.websocket_watchers_registered", { watchers: unwatchers.length });
+    } catch (error) {
+      logWatchError("casino.keeper.websocket_connect_failed", error);
+    }
+  };
 
   const start = async () => {
     logger.info("casino.keeper.starting", {
@@ -1126,105 +1285,9 @@ export function createKeeperRuntime({
     await initializeBetIndex();
     await sportsRecovery?.prepare();
 
-    if (wsClient) {
-      unwatchers.push(
-        wsClient.watchContractEvent({
-          address: config.gameHub,
-          abi: GAME_HUB_KEEPER_ABI,
-          eventName: "BetRandomReady",
-          onLogs: (logs) => {
-            (logs as unknown as Parameters<typeof enqueueBetRandomReadyLog>[0][]).forEach(
-              enqueueBetRandomReadyLog
-            );
-            void trackOperation(
-              writeBetIndexLogs("BetRandomReady", logs as unknown as GameHubLog[])
-            ).catch(() => undefined);
-          },
-          onError: (error) => logWatchError("casino.keeper.gamehub_watch_error", error)
-        })
-      );
-      unwatchers.push(
-        wsClient.watchContractEvent({
-          address: config.gameHub,
-          abi: GAME_HUB_KEEPER_ABI,
-          eventName: "BetPlaced",
-          onLogs: (logs) => {
-            for (const log of logs as unknown as GameHubLog[])
-              if (log.args?.positionId != null)
-                enqueue({
-                  source: "gameHub",
-                  betId: BigInt(log.args.positionId as bigint),
-                  receivedAt: Date.now(),
-                  blockNumber: log.blockNumber
-                });
-            void trackOperation(
-              writeBetIndexLogs("BetPlaced", logs as unknown as GameHubLog[])
-            ).catch(() => undefined);
-          },
-          onError: (error) =>
-            logWatchError("casino.keeper.gamehub_index_watch_error", error, "BetPlaced")
-        })
-      );
-      if (betIndexStore) {
-        for (const eventName of ["BetFinalized", "BetRefunded"] as const) {
-          unwatchers.push(
-            wsClient.watchContractEvent({
-              address: config.gameHub,
-              abi: GAME_HUB_KEEPER_ABI,
-              eventName,
-              onLogs: (logs) =>
-                void trackOperation(
-                  writeBetIndexLogs(eventName, logs as unknown as GameHubLog[])
-                ).catch(() => undefined),
-              onError: (error) =>
-                logWatchError("casino.keeper.gamehub_index_watch_error", error, eventName)
-            })
-          );
-        }
-        if (config.sportsTicketIndexEnabled && config.sportsHub) {
-          for (const eventName of SPORTS_TICKET_EVENTS) {
-            unwatchers.push(
-              wsClient.watchContractEvent({
-                address: config.sportsHub,
-                abi: SPORTS_HUB_KEEPER_ABI,
-                eventName,
-                onLogs: (logs) =>
-                  void trackOperation(
-                    writeSportsTicketIndexLogs(eventName, logs as unknown as GameHubLog[])
-                  ),
-                onError: (error) =>
-                  logWatchError("casino.keeper.sports_ticket_index_watch_error", error, eventName)
-              })
-            );
-          }
-        }
-      }
-      if (config.sportsTerminalizerEnabled && config.sportsHub) {
-        for (const eventName of SPORTS_TERMINALIZER_EVENTS) {
-          unwatchers.push(
-            wsClient.watchContractEvent({
-              address: config.sportsHub,
-              abi: SPORTS_HUB_KEEPER_ABI,
-              eventName,
-              onLogs: (logs) => scheduleSportsTerminalizerLogs(eventName, logs),
-              onError: (error) => logWatchError("sports.terminalizer.watch_error", error, eventName)
-            })
-          );
-        }
-      }
-      unwatchers.push(
-        wsClient.watchContractEvent({
-          address: config.vrfHub,
-          abi: VRF_HUB_KEEPER_ABI,
-          eventName: "Fulfilled",
-          onLogs: (logs) =>
-            (logs as unknown as Parameters<typeof enqueueFulfilledLog>[0][]).forEach(
-              enqueueFulfilledLog
-            ),
-          onError: (error) => logWatchError("casino.keeper.vrfhub_watch_error", error)
-        })
-      );
-    }
+    // Connecting cannot access the store or submit writes. Do not join a stalled
+    // handshake on shutdown; the stopped check closes any socket that arrives later.
+    void startWebSocketWatchers();
 
     timers.push(setInterval(() => void trackOperation(drainQueue()), 500));
     if (config.pollIntervalMs > 0) {
@@ -1287,7 +1350,8 @@ export function createKeeperRuntime({
   const stop = async () => {
     stopped = true;
     timers.forEach(clearInterval);
-    unwatchers.forEach((unwatch) => unwatch());
+    if (wsRetryTimer != null) clearTimeout(wsRetryTimer);
+    stopWebSocketWatchers();
     await sportsRecovery?.stop();
     // In-flight work can enqueue a final health write while it finishes, so join until empty.
     while (activeOperations.size > 0) await Promise.allSettled([...activeOperations]);
@@ -1464,6 +1528,7 @@ type TerminalBetRead = {
   betId: bigint;
   gameId: Hex;
   placedAt: bigint | number;
+  refundDeadline: bigint | number;
   player: Address;
   pricingAffiliate: Address;
   randomHash: Hex;
@@ -1517,6 +1582,7 @@ async function buildTerminalBetRow({
     lastEventName: terminal.eventName,
     lastTxHash: txHash,
     placedAt: secondsToMs(bet.placedAt),
+    refundDeadline: secondsToMs(bet.refundDeadline),
     player: getAddress(bet.player) as Address,
     pricingAffiliate: getAddress(bet.pricingAffiliate) as Address,
     randomHash: bet.randomHash,

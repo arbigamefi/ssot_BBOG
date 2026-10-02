@@ -10,6 +10,9 @@ describe("game room feedback", () => {
     "INSUFFICIENT_BALANCE",
     "INSUFFICIENT_NATIVE_BALANCE",
     "INSUFFICIENT_LIQUIDITY",
+    "POOL_CAPACITY_FULL",
+    "ACTIVE_HOLD_LIMIT",
+    "STAKE_BELOW_MINIMUM",
     "CHAIN_MISMATCH",
     "RPC_ERROR",
     "TX_TIMEOUT",
@@ -22,6 +25,11 @@ describe("game room feedback", () => {
     );
     expect(message).not.toBe("fallback");
     expect(message).not.toContain("secret");
+  });
+  it("explains capacity and minimum stake failures before or during simulation", () => {
+    expect(getStepperErrorMessage({ code: "POOL_CAPACITY_FULL" }, undefined, t)).toContain("满额");
+    expect(getStepperErrorMessage({ code: "ACTIVE_HOLD_LIMIT" }, undefined, t)).toContain("满额");
+    expect(getStepperErrorMessage({ code: "STAKE_BELOW_MINIMUM" }, undefined, t)).toContain("最低");
   });
   it("distinguishes rejection from an unconfirmed transaction", () => {
     expect(isBetSubmissionUnconfirmed({ code: "USER_REJECTED" })).toBe(false);

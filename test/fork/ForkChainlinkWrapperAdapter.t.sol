@@ -74,12 +74,11 @@ contract ForkChainlinkWrapperAdapter is Test {
 
         vm.startPrank(gov);
         adapter.setVRFHub(address(vrf));
-        adapter.setRequestGasPriceWei(vm.envOr("FORK_REQUEST_GAS_PRICE_WEI", uint256(0)));
         vrf.setAdapter(address(adapter));
         vm.stopPrank();
 
         asset = new MockERC20("ForkAsset", "FAST", 18);
-        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18);
+        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18, 1);
 
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
@@ -112,7 +111,7 @@ contract ForkChainlinkWrapperAdapter is Test {
 
         asset.mint(alice, 100 ether);
         vm.prank(alice);
-        asset.approve(address(bank), type(uint256).max);
+        asset.approve(address(hub), type(uint256).max);
 
         vm.deal(alice, 10 ether);
         vm.txGasPrice(0);
@@ -121,7 +120,7 @@ contract ForkChainlinkWrapperAdapter is Test {
     function test_fork_placeBet_requests_wrapper() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1);
+        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
 
         vm.prank(alice);
         uint256 betId = hub.placeBet{value: fee}(GAME_COIN, 1, abi.encode(true), spec, address(0), 10_000);

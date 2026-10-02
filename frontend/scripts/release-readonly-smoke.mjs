@@ -179,7 +179,7 @@ await check("GameHub quoteVRFFee(1)", async () => {
     address: getAddress(release.contracts.gameHub),
     abi: GameHubAbi,
     functionName: "quoteVRFFee",
-    args: [1]
+    args: [1, await client.getGasPrice()]
   });
   return `fee=${fee.toString()} gasLimit=${gasLimit.toString()}`;
 });

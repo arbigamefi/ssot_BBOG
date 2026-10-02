@@ -3,15 +3,19 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   defineChain,
+  encodeAbiParameters,
   createPublicClient,
   createTestClient,
   createWalletClient,
   http,
+  keccak256,
+  toHex,
   type Abi,
   type Address,
   type Hex
 } from "viem";
 import { createSSOTSDK } from "../create";
+import { encodeStakeSpec } from "../../encoding/stakeSpec";
 import { getContractAbis } from "../../abis/index.mjs";
 const { BankAbi } = getContractAbis();
 import type { SSOTRelease } from "../../release/schema";
@@ -69,7 +73,7 @@ async function fixture(tokenName: "MockERC20" | "BlacklistToken" = "MockERC20") 
     tokenName,
     tokenName === "MockERC20" ? ["Local test asset", "LOCAL", 6] : []
   );
-  const bank = await deploy("Bank", [token.address, owner, 0n, "Local Bank share", "LBS", 6]);
+  const bank = await deploy("Bank", [token.address, owner, 0n, "Local Bank share", "LBS", 6, 1n]);
   const makeRelease = (bankAddress: Address) =>
     ({
       chainId: localChain.id,
@@ -84,7 +88,7 @@ async function fixture(tokenName: "MockERC20" | "BlacklistToken" = "MockERC20") 
       pools: [
         {
           poolId: 1,
-          domainId: 0,
+          domainId: 1,
           domain: "casino",
           active: true,
           asset: token.address,
@@ -124,10 +128,133 @@ async function fixture(tokenName: "MockERC20" | "BlacklistToken" = "MockERC20") 
     expect(receipt.status).toBe("success");
     return receipt;
   }
-  return { client, wallet, evm, owner, player, depositor, token, bank, sdk, sdkFor, write };
+  return {
+    client,
+    wallet,
+    evm,
+    owner,
+    player,
+    depositor,
+    token,
+    bank,
+    sdk,
+    sdkFor,
+    write,
+    deploy,
+    makeRelease
+  };
 }
 
 describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
+  it("plans and executes a real casino bet after full exit segregates unresolved risk", async () => {
+    const {
+      client,
+      evm,
+      wallet,
+      owner,
+      player,
+      depositor,
+      token,
+      bank,
+      sdk,
+      sdkFor,
+      write,
+      deploy,
+      makeRelease
+    } = await fixture();
+    const registry = await deploy("PoolRegistry", [owner]);
+    const router = await deploy("SettlementRouter", [registry.address]);
+    const vrf = await deploy("VRFHub", [owner, owner]);
+    const referrals = await deploy("ReferralRegistry", [owner]);
+    const engine = await deploy("DefaultReferralEngine", []);
+    const hub = await deploy("GameHub", [
+      router.address,
+      vrf.address,
+      referrals.address,
+      engine.address,
+      owner,
+      3600n,
+      200,
+      0,
+      0,
+      0,
+      0
+    ]);
+    const module = await deploy("CoinTossModule", []);
+    const gameId = keccak256(toHex("SDK_CAPITAL_CONTINUITY"));
+    await write(registry, "registerPool", [1n, token.address, bank.address, 1]);
+    await write(registry, "setHubRegistered", [hub.address, true]);
+    await write(registry, "setHubAllowedForPool", [1n, hub.address, true]);
+    await write(bank, "setSettlementRouterOnce", [router.address]);
+    await write(referrals, "setBinderOnce", [hub.address]);
+    await write(hub, "registerGame", [gameId, module.address]);
+    await write(token, "mint", [player, 200_000_000n]);
+    await write(token, "mint", [depositor, 20_000_000n]);
+    await write(token, "approve", [hub.address, 200_000_000n], player);
+    expect((await sdk.bank.deposit(1, 100_000_000n, owner)).ok).toBe(true);
+    const release = makeRelease(bank.address);
+    release.contracts.gameHub = hub.address;
+    release.contracts.vrfHub = vrf.address;
+    release.contracts.refRegistry = referrals.address;
+    release.games[gameId] = module.address;
+    const casino = createSSOTSDK({
+      release,
+      publicClient: client,
+      walletClient: wallet,
+      account: player
+    });
+    const input = (stake: bigint) => ({
+      chainId: 84532,
+      gameId,
+      poolId: 1,
+      betCount: 1,
+      stake,
+      params: encodeAbiParameters([{ type: "bool" }], [false]),
+      stakeSpec: encodeStakeSpec({ amountPerRoll: stake, betCount: 1, stopGain: 0n, stopLoss: 0n }),
+      maxHouseEdgeBps: 200
+    });
+    const first = await casino.gameHub.planPlaceBet(input(50_000_000n));
+    if ("error" in first) throw new Error(first.error.message);
+    expect((await casino.gameHub.executePlan(first)).placeBetTx.ok).toBe(true);
+    expect((await sdk.bank.requestRedeem(1, 100_000_000n)).ok).toBe(true);
+    const cutoff = (await sdk.bank.getPosition(1, owner)).queuedBatch!.cutoff;
+    await evm.setNextBlockTimestamp({ timestamp: cutoff });
+    await write(bank, "activateBatch");
+    expect((await sdkFor(depositor).bank.deposit(1, 20_000_000n, depositor)).ok).toBe(true);
+    expect(await client.readContract({ ...bank, functionName: "totalReserved" })).toBe(
+      100_000_000n
+    );
+    expect(await client.readContract({ ...bank, functionName: "activeReserved" })).toBe(0n);
+    expect(await client.readContract({ ...bank, functionName: "activeOpenHolds" })).toBe(0n);
+    // The contract's successful simulation is the control: SDK must permit the same bet.
+    await client.simulateContract({
+      ...hub,
+      account: player,
+      functionName: "placeBet",
+      args: [
+        gameId,
+        1n,
+        encodeAbiParameters([{ type: "bool" }], [false]),
+        { amountPerRoll: 1_000_000n, betCount: 1, stopGain: 0n, stopLoss: 0n },
+        "0x0000000000000000000000000000000000000000",
+        200
+      ],
+      value: await casino.gameHub.quoteVRFFee(1)
+    });
+    const next = await casino.gameHub.planPlaceBet(input(1_000_000n));
+    if ("error" in next) throw new Error(`${next.error.code}: ${next.error.message}`);
+    await write(bank, "setMinStake", [2_000_000n]);
+    const staleMinimum = await casino.gameHub.executePlan(next);
+    expect(staleMinimum.placeBetTx).toMatchObject({
+      ok: false,
+      error: { code: "STAKE_BELOW_MINIMUM" }
+    });
+    expect(await client.readContract({ ...bank, functionName: "activeOpenHolds" })).toBe(0n);
+    await write(bank, "setMinStake", [1_000_000n]);
+    expect((await casino.gameHub.executePlan(next)).placeBetTx.ok).toBe(true);
+    expect(await client.readContract({ ...bank, functionName: "activeOpenHolds" })).toBe(1n);
+    expect(await client.readContract({ ...bank, functionName: "openHolds" })).toBe(2n);
+  }, 90_000);
   it("deposits, cancels, prices and claims with actual ABI and cash-event ledger", async () => {
     const { client, wallet, evm, owner, token, bank, sdk } = await fixture();
 
@@ -229,7 +356,7 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
     expect((await sdk.bank.getPosition(1, owner)).shares).toBe(60_000_001n);
   }, 60_000);
   it.each([false, true])(
-    "prices liquid exit immediately and preserves all snapshot recovery rights (player payable: %s)",
+    "prices liquid exit immediately and preserves exiting rights while staying capital settles atomically (player payable: %s)",
     async (deferred) => {
       const { evm, owner, player, depositor, token, bank, sdk, sdkFor, write } = await fixture(
         deferred ? "BlacklistToken" : "MockERC20"
@@ -241,44 +368,52 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
       await write(token, "approve", [bank.address, 100_000_000n], player);
       expect((await sdk.bank.deposit(1, 100_000_000n, owner)).ok).toBe(true);
       const hash = `0x${"11".repeat(32)}` as Hex;
-      await write(bank, "holdBet", [1n, player, 10_000_000n, 30_000_000n, hash]);
+      await write(bank, "holdBet", [1n, player, 10_000_000n, 30_000_000n, hash, player]);
       expect((await sdk.bank.requestRedeem(1, 40_000_000n)).ok).toBe(true);
+      // Independent original-reserve unit allocation, with the deposit virtual offset.
+      const equity = (40_000_000n * ((100_000_000n * 110_001_000n) / 100_001_000n)) / 100_000_000n;
+      const liquid = (equity * 80_000_000n) / 110_000_000n;
+      const risk = (equity * 30_000_000n) / 110_000_000n;
+      const active = 110_000_000n - liquid - risk;
+      const recovered = (risk * 6_000_000n) / 30_000_000n;
+      const finalActive = active + 25_000_000n - 24_000_000n + risk - recovered;
+      const finalCash = 135_000_000n - liquid - 20_000_000n - recovered;
       const queued = await sdk.bank.getPosition(1, owner);
-      expect(queued).toMatchObject({ queuedLiquidAssets: 32_000_000n });
+      expect(queued).toMatchObject({ queuedLiquidAssets: liquid });
       await evm.setNextBlockTimestamp({ timestamp: queued.queuedBatch!.cutoff });
       await evm.mine({ blocks: 1 });
       await write(bank, "activateBatch");
       expect(await sdk.bank.getSnapshot(1)).toMatchObject({
-        totalAssets: 48_000_000n,
+        totalAssets: active,
         totalSupply: 60_000_000n,
-        recoveryBacking: 30_000_000n,
-        activeReserved: 0n,
+        recoveryBacking: risk,
+        activeReserved: 30_000_000n - risk,
         totalReserved: 30_000_000n,
         openHolds: 1n,
-        exitPayable: 32_000_000n
+        exitPayable: liquid
       });
       expect(await sdk.bank.getPosition(1, owner)).toMatchObject({
         queuedShares: 0n,
         claimableShares: 40_000_000n,
-        claimableAssets: 32_000_000n
+        claimableAssets: liquid
       });
       const rightsBefore = await sdk.bank.getRecovery(1, 1n, owner);
-      // Both the 40m request and the 60m wallet balance belong to the snapshot owner.
+      // Only the exiting request gets a frozen right; wallet shares retain active risk.
       expect(rightsBefore).toMatchObject({
-        shares: 100_000_000n,
+        shares: 40_000_000n,
         claimableAssets: 0n,
         remainingHolds: 1n,
-        remainingReserve: 30_000_000n
+        remainingReserve: risk
       });
       const ownerBefore = await sdk.bank.getAssetBalance(token.address, owner);
       expect((await sdk.bank.redeem(1, 40_000_000n)).ok).toBe(true);
-      expect(await sdk.bank.getAssetBalance(token.address, owner)).toBe(ownerBefore + 32_000_000n);
-      await write(bank, "holdBet", [2n, player, 5_000_000n, 15_000_000n, hash]);
+      expect(await sdk.bank.getAssetBalance(token.address, owner)).toBe(ownerBefore + liquid);
+      await write(bank, "holdBet", [2n, player, 5_000_000n, 15_000_000n, hash, player]);
       expect((await sdkFor(depositor).bank.deposit(1, 20_000_000n, depositor)).ok).toBe(true);
-      // floor(20 × (60 + V) / (53 + V)) with the Bank's virtual offset V of 0.001 USDC (1,000 base units).
+      // New capital buys the full remaining book risk at the current virtual-offset price.
       const virtualOffset = 1_000n;
       expect((await sdkFor(depositor).bank.getPosition(1, depositor)).shares).toBe(
-        (20_000_000n * (60_000_000n + virtualOffset)) / (53_000_000n + virtualOffset)
+        (20_000_000n * (60_000_000n + virtualOffset)) / (active + 5_000_000n + virtualOffset)
       );
       expect(await sdk.bank.getRecovery(1, 1n, owner)).toMatchObject({
         shares: rightsBefore.shares,
@@ -313,10 +448,10 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
       ]);
       const debt = deferred ? 20_000_000n : 0n;
       expect(await sdk.bank.getSnapshot(1)).toMatchObject({
-        totalAssets: 73_000_000n,
+        totalAssets: finalActive,
         totalReserved: 15_000_000n,
         activeReserved: 15_000_000n,
-        recoveryBacking: 6_000_000n,
+        recoveryBacking: recovered,
         openHolds: 1n,
         exitPayable: 0n,
         playerPayableTotal: debt,
@@ -324,8 +459,8 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
         externalPayablesTotal: 3_000_000n
       });
       expect(await sdk.bank.getRecovery(1, 1n, owner)).toMatchObject({
-        shares: 100_000_000n,
-        claimableAssets: 6_000_000n,
+        shares: 40_000_000n,
+        claimableAssets: recovered,
         pendingAssets: 0n,
         remainingHolds: 0n
       });
@@ -334,10 +469,12 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
       );
       expect((await sdk.bank.syncRecovery(1, 1n)).ok).toBe(true);
       expect((await sdk.bank.claimRecovery(1, 1n)).ok).toBe(true);
-      expect(await sdk.bank.getAssetBalance(token.address, owner)).toBe(ownerBefore + 38_000_000n);
-      expect(await sdk.bank.getAssetBalance(token.address, bank.address)).toBe(77_000_000n + debt);
+      expect(await sdk.bank.getAssetBalance(token.address, owner)).toBe(
+        ownerBefore + liquid + recovered
+      );
+      expect(await sdk.bank.getAssetBalance(token.address, bank.address)).toBe(finalCash + debt);
       expect(await sdk.bank.getRecovery(1, 1n, owner)).toMatchObject({
-        claimedAssets: 6_000_000n,
+        claimedAssets: recovered,
         claimableAssets: 0n,
         finalSynced: true
       });
@@ -347,31 +484,31 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
         claimableAssets: 0n
       });
       expect(await sdk.bank.getSnapshot(1)).toMatchObject({
-        totalAssets: 73_000_000n,
+        totalAssets: finalActive,
         recoveryBacking: 0n,
         playerPayableTotal: debt,
         openHolds: 1n
       });
       expect((await sdk.bank.getRecoveryPage(1, owner)).items).toMatchObject([
-        { epochId: 1n, claimedAssets: 6_000_000n }
+        { epochId: 1n, claimedAssets: recovered }
       ]);
       const ledger = await sdk.bank.getProviderLedger(1, owner, { startBlock: 0 });
       expect(ledger.map((row) => [row.action, row.assets])).toEqual([
-        ["recovery", 6_000_000n],
-        ["withdraw", 32_000_000n],
+        ["recovery", recovered],
+        ["withdraw", liquid],
         ["deposit", 100_000_000n]
       ]);
       if (deferred) {
         await write(token, "setBlocked", [player, false]);
         expect((await sdk.bank.claimPlayerPayable(1, player)).ok).toBe(true);
-        expect(await sdk.bank.getAssetBalance(token.address, bank.address)).toBe(77_000_000n);
+        expect(await sdk.bank.getAssetBalance(token.address, bank.address)).toBe(finalCash);
         expect(await sdk.bank.getSnapshot(1)).toMatchObject({
-          totalAssets: 73_000_000n,
+          totalAssets: finalActive,
           playerPayableTotal: 0n,
           recoveryBacking: 0n
         });
         expect(await sdk.bank.getRecovery(1, 1n, owner)).toMatchObject({
-          claimedAssets: 6_000_000n,
+          claimedAssets: recovered,
           claimableAssets: 0n
         });
       }
@@ -387,7 +524,7 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
     await write(token, "mint", [depositor, 100_000_000n]);
     expect((await sdk.bank.deposit(1, 100_000_000n, owner)).ok).toBe(true);
     const hash = `0x${"22".repeat(32)}` as Hex;
-    await write(bank, "holdBet", [1n, player, 1_000_000n, 20_000_000n, hash]);
+    await write(bank, "holdBet", [1n, player, 1_000_000n, 20_000_000n, hash, player]);
     const seal = async (account: Address, shares: bigint) => {
       const accountSDK = sdkFor(account);
       expect((await accountSDK.bank.requestRedeem(1, shares)).ok).toBe(true);
@@ -399,7 +536,12 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
       expect((await accountSDK.bank.redeem(1, shares)).ok).toBe(true);
       return claim.claimableAssets;
     };
-    expect(await seal(owner, 100_000_000n)).toBe(81_000_000n);
+    const equity = (100_000_000n * 101_001_000n) / 100_001_000n;
+    const liquid = (equity * 81_000_000n) / 101_000_000n;
+    const risk = (equity * 20_000_000n) / 101_000_000n;
+    const recovered = (risk * 19_000_000n) / 20_000_000n;
+    const residual = 100_000_000n - liquid - recovered;
+    expect(await seal(owner, 100_000_000n)).toBe(liquid);
     expect(await sdk.bank.getSnapshot(1)).toMatchObject({
       totalAssets: 0n,
       totalSupply: 0n,
@@ -428,12 +570,12 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
     await write(bank, "refundBet", [1n, 1_000_000n]);
     expect(await sdk.bank.getRecovery(1, 1n, owner)).toMatchObject({
       shares: 100_000_000n,
-      claimableAssets: 19_000_000n,
+      claimableAssets: recovered,
       pendingAssets: 0n
     });
     expect((await sdk.bank.claimRecovery(1, 1n)).ok).toBe(true);
-    expect(await sdk.bank.getAssetBalance(token.address, owner)).toBe(1_000_000_000n);
-    expect(await sdk.bank.getAssetBalance(token.address, bank.address)).toBe(0n);
+    expect(await sdk.bank.getAssetBalance(token.address, owner)).toBe(1_000_000_000n - residual);
+    expect(await sdk.bank.getAssetBalance(token.address, bank.address)).toBe(residual);
     expect(await sdk.bank.getSnapshot(1)).toMatchObject({
       totalAssets: 0n,
       recoveryBacking: 0n,
@@ -442,4 +584,37 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
       exitPayable: 0n
     });
   }, 60_000);
+  it("caps active holds and executes a full batch within the transaction gas budget", async () => {
+    const { client, evm, owner, player, token, bank, sdk, write } = await fixture();
+    await write(bank, "setSettlementRouterOnce", [owner]);
+    await write(token, "mint", [player, 128_000_000n]);
+    await write(token, "approve", [bank.address, 128_000_000n], player);
+    expect((await sdk.bank.deposit(1, 1_000_000_000n, owner)).ok).toBe(true);
+    const snapshotHash = `0x${"33".repeat(32)}` as Hex;
+    for (let id = 1n; id <= 128n; id++) {
+      await write(bank, "holdBet", [id, player, 1_000_000n, 2_000_000n, snapshotHash, player]);
+    }
+    await expect(
+      client.simulateContract({
+        address: bank.address,
+        abi: BankAbi,
+        account: owner,
+        functionName: "holdBet",
+        args: [129n, player, 1n, 2n, snapshotHash, player]
+      })
+    ).rejects.toThrow();
+    expect((await sdk.bank.requestRedeem(1, 1_000_000_000n)).ok).toBe(true);
+    const queued = await sdk.bank.getPosition(1, owner);
+    await evm.setNextBlockTimestamp({ timestamp: queued.queuedBatch!.cutoff });
+    const activation = await write(bank, "activateBatch");
+    expect(activation.gasUsed).toBeLessThan(12_000_000n);
+    expect((await sdk.bank.getSnapshot(1)).activeOpenHolds).toBe(0n);
+    for (let id = 1n; id <= 128n; id++) await write(bank, "refundBet", [id, 1_000_000n]);
+    const recovery = await write(bank, "claimRecovery", [1n, owner, owner]);
+    expect(recovery.gasUsed).toBeLessThan(12_000_000n);
+    expect((await sdk.bank.getSnapshot(1)).recoveryBacking).toBe(0n);
+    console.info(
+      `128-hold receipts: activation=${activation.gasUsed}, recovery=${recovery.gasUsed}`
+    );
+  }, 120_000);
 });

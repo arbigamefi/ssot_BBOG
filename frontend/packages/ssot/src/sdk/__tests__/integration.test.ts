@@ -122,12 +122,17 @@ const RECEIPT = { blockNumber: 100n, status: "success" as const, logs: [] };
 
 function mockPublicClient(overrides?: Record<string, any>) {
   return {
+    getGasPrice: vi.fn().mockResolvedValue(1n),
     getBlock: vi.fn().mockResolvedValue({ timestamp: 1_700_000_000n }),
     getContractEvents: vi.fn().mockResolvedValue([]),
     getBlockNumber: vi.fn().mockResolvedValue(130n),
     getLogs: vi.fn().mockResolvedValue([]),
     getTransactionReceipt: vi.fn().mockResolvedValue(RECEIPT),
-    readContract: vi.fn().mockResolvedValue(0n),
+    readContract: vi
+      .fn()
+      .mockImplementation(async ({ functionName }: { functionName: string }) =>
+        functionName === "quoteVRFFee" ? [1000n, 200000] : 0n
+      ),
     simulateContract: vi.fn().mockResolvedValue({ request: { mock: true } }),
     waitForTransactionReceipt: vi.fn().mockResolvedValue(RECEIPT),
     ...overrides
@@ -293,7 +298,10 @@ describe("createSSOTSDK", () => {
     "laggingSimulation",
     "persistentLag",
     "noApproval",
-    "walletFailure"
+    "walletFailure",
+    "capacityChanged",
+    "feeChanged",
+    "minimumChanged"
   ])("continues safely from mined approval (%s)", async (scenario) => {
     const readFailure = scenario === "readFailure";
     if (scenario === "laggingSimulation" || scenario === "persistentLag") {
@@ -318,7 +326,12 @@ describe("createSSOTSDK", () => {
       releaseDigest: TEST_RELEASE.releaseDigest,
       warnings: [],
       steps: [
-        { type: "approve", token: ASSET, spender: BANK, amount: 1_000_000n },
+        {
+          type: "approve",
+          token: ASSET,
+          spender: getAddress(TEST_RELEASE.contracts.gameHub),
+          amount: 1_000_000n
+        },
         {
           type: "placeBet",
           to: getAddress(TEST_RELEASE.contracts.gameHub),
@@ -350,6 +363,8 @@ describe("createSSOTSDK", () => {
       },
       preview: {
         vrfFee: 100_000n,
+        gasPrice: 1n,
+        quoteBlockNumber: 130n,
         stake: 1_000_000n,
         allowance: 0n,
         needsApproval: true,
@@ -377,8 +392,43 @@ describe("createSSOTSDK", () => {
           new BaseError("wallet response lost", { name: "TransactionExecutionError" })
         );
     }
+    const changedError = {
+      capacityChanged: "ActiveHoldLimit",
+      feeChanged: "InsufficientVRFFee",
+      minimumChanged: "StakeBelowMinimum"
+    }[scenario];
+    if (changedError) {
+      pub.simulateContract
+        .mockResolvedValueOnce({ request: { functionName: "approve" } })
+        .mockRejectedValueOnce(
+          new BaseError("wrapped", {
+            cause: Object.assign(new Error("reverted"), {
+              name: "ContractFunctionRevertedError",
+              data: { errorName: changedError, args: [1_000_000n, 2_000_000n] }
+            })
+          })
+        );
+    }
     const result = await sdk.gameHub.executePlan(plan);
-
+    if (changedError) {
+      expect(result.placeBetTx.ok).toBe(false);
+      expect(wal.writeContract).toHaveBeenCalledTimes(1); // Approval only, no stake transaction.
+      expect(result.placeBetTx.error?.code).toBe(
+        {
+          capacityChanged: "ACTIVE_HOLD_LIMIT",
+          feeChanged: "INSUFFICIENT_VRF_FEE",
+          minimumChanged: "STAKE_BELOW_MINIMUM"
+        }[scenario]
+      );
+      expect(pub.simulateContract).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          functionName: "placeBet",
+          gasPrice: 1n,
+          value: 100_000n
+        })
+      );
+      return;
+    }
     expect(result.placeBetTx.ok).toBe(
       !["persistentLag", "noApproval", "walletFailure"].includes(scenario)
     );
@@ -400,20 +450,22 @@ describe("createSSOTSDK", () => {
       expect.objectContaining({
         address: getAddress(ASSET),
         functionName: "allowance",
-        args: [ACCOUNT, getAddress(BANK)]
+        args: [ACCOUNT, getAddress(TEST_RELEASE.contracts.gameHub)]
       })
     );
     expect(pub.simulateContract).toHaveBeenCalledWith(
       expect.objectContaining({
         address: getAddress(ASSET),
         functionName: "approve",
-        args: [getAddress(BANK), 1_000_000n]
+        args: [getAddress(TEST_RELEASE.contracts.gameHub), 1_000_000n]
       })
     );
     expect(pub.simulateContract).toHaveBeenCalledWith(
       expect.objectContaining({
         address: getAddress(TEST_RELEASE.contracts.gameHub),
-        functionName: "placeBet"
+        functionName: "placeBet",
+        gasPrice: 1n,
+        value: 100_000n
       })
     );
   });
@@ -429,7 +481,12 @@ describe("createSSOTSDK", () => {
         releaseDigest: TEST_RELEASE.releaseDigest,
         warnings: [],
         steps: [
-          { type: "approve", token: ASSET, spender: BANK, amount: 1_000_000n },
+          {
+            type: "approve",
+            token: ASSET,
+            spender: getAddress(TEST_RELEASE.contracts.gameHub),
+            amount: 1_000_000n
+          },
           {
             type: "placeBet",
             to: getAddress(TEST_RELEASE.contracts.gameHub),
@@ -461,6 +518,8 @@ describe("createSSOTSDK", () => {
         },
         preview: {
           vrfFee: 100_000n,
+          gasPrice: 1n,
+          quoteBlockNumber: 130n,
           stake: 1_000_000n,
           allowance: 0n,
           needsApproval: true,
@@ -939,7 +998,10 @@ describe("createSSOTSDK", () => {
         state: 2
       })
       .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(ODDS_TICKET_HASH);
+      .mockResolvedValueOnce(ODDS_TICKET_HASH)
+      .mockResolvedValueOnce(1n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(128n);
 
     const input: PlaceSportsTicketInput = {
       chainId: 84532,
@@ -997,7 +1059,12 @@ describe("createSSOTSDK", () => {
       releaseDigest: TEST_RELEASE.releaseDigest,
       warnings: [],
       steps: [
-        { type: "approve", token: ASSET, spender: BANK, amount: 1_000_000n },
+        {
+          type: "approve",
+          token: ASSET,
+          spender: getAddress(TEST_RELEASE.contracts.sportsHub),
+          amount: 1_000_000n
+        },
         {
           type: "placeSportsTicket",
           to: getAddress(TEST_RELEASE.contracts.sportsHub),
@@ -1045,7 +1112,7 @@ describe("createSSOTSDK", () => {
       expect.objectContaining({
         address: getAddress(ASSET),
         functionName: "approve",
-        args: [getAddress(BANK), 1_000_000n]
+        args: [getAddress(TEST_RELEASE.contracts.sportsHub), 1_000_000n]
       })
     );
     expect(pub.simulateContract).toHaveBeenCalledWith(
@@ -1213,7 +1280,10 @@ describe("createSSOTSDK", () => {
       .mockResolvedValueOnce(1000000n)
       .mockResolvedValueOnce(10000000n)
       .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(0n);
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(128n)
+      .mockResolvedValueOnce(1n);
 
     const input: PlaceBetInput = {
       chainId: 84532,
@@ -1253,7 +1323,10 @@ describe("createSSOTSDK", () => {
       .mockResolvedValueOnce(1_636_000n)
       .mockResolvedValueOnce(1_000_000n)
       .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(1000n);
+      .mockResolvedValueOnce(1000n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(128n)
+      .mockResolvedValueOnce(1n);
 
     const input: PlaceBetInput = {
       chainId: 84532,
@@ -1279,6 +1352,79 @@ describe("createSSOTSDK", () => {
     expect(result.warnings).toContain(
       "Bank liquidity is tight — your bet may revert if another bet is placed first."
     );
+  });
+
+  it.each(["amount", "count"])(
+    "rejects inconsistent %s before reading chain state",
+    async (field) => {
+      const result = await sdk.gameHub.planPlaceBet({
+        chainId: 84532,
+        gameId: GAME_ID,
+        poolId: 1,
+        betCount: field === "count" ? 2 : 1,
+        stake: field === "amount" ? 1n : 10n,
+        params: "0x",
+        maxHouseEdgeBps: 3000,
+        stakeSpec: encodeStakeSpec({ amountPerRoll: 10n, betCount: 1, stopGain: 0n, stopLoss: 0n })
+      });
+      expect(result).toMatchObject({ error: { code: "STAKE_SPEC_MISMATCH" } });
+      expect(pub.readContract).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([127n, 128n])("preflights active position capacity at %s of 128", async (holds) => {
+    pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      switch (functionName) {
+        case "riskInPaused":
+          return false;
+        case "quoteVRFFee":
+          return [1000n, 200000];
+        case "maxPayout":
+          return 20n;
+        case "totalAssets":
+          return 100n;
+        case "totalReserved":
+          return 1000n; // Segregated old risk is irrelevant to admission.
+        case "activeOpenHolds":
+          return holds;
+        case "MAX_ACTIVE_HOLDS":
+          return 128n;
+        default:
+          return 0n;
+      }
+    });
+    const result = await sdk.gameHub.planPlaceBet({
+      chainId: 84532,
+      gameId: GAME_ID,
+      poolId: 1,
+      betCount: 1,
+      stake: 10n,
+      params: "0x",
+      maxHouseEdgeBps: 3000,
+      stakeSpec: encodeStakeSpec({ amountPerRoll: 10n, betCount: 1, stopGain: 0n, stopLoss: 0n })
+    });
+    if (holds === 128n) expect(result).toMatchObject({ error: { code: "POOL_CAPACITY_FULL" } });
+    else {
+      expect(result).not.toHaveProperty("error");
+      for (const functionName of [
+        "riskInPaused",
+        "quoteVRFFee",
+        "allowance",
+        "totalAssets",
+        "activeReserved",
+        "riskReserveBps",
+        "activeOpenHolds",
+        "MAX_ACTIVE_HOLDS"
+      ]) {
+        expect(pub.readContract).toHaveBeenCalledWith(
+          expect.objectContaining({ functionName, blockNumber: 130n })
+        );
+      }
+    }
+    expect(pub.readContract).not.toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "totalReserved" })
+    );
+    expect(wal.writeContract).not.toHaveBeenCalled();
   });
 
   it("returns WALLET_NOT_CONNECTED for writes without a wallet", async () => {

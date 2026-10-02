@@ -98,6 +98,9 @@ export type PoolSnapshot = {
   totalAssets: bigint;
   totalReserved: bigint;
   activeReserved: bigint;
+  minStake: bigint;
+  activeOpenHolds: bigint;
+  maxActiveHolds: bigint;
   riskInPaused: boolean;
   riskReserveBps?: number;
 };

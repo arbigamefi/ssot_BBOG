@@ -3,11 +3,11 @@
 Identify each bet by chain, GameHub and bet ID. Read `getBet` and `getBetTerminal` at confirmed blocks;
 compare the relevant Router and Bank state rather than trusting a cached UI or missing event.
 
-| Hub state | Valid next action |
-| --- | --- |
-| `PendingVRF` | Wait for callback, or call public `refund` once chain time reaches `placedAt + current refundTimeoutSeconds` |
-| `RandomReady` | Call public `finalize` with the admitted execution budget |
-| Terminal | Reconcile the terminal proof and payment evidence; do not submit another settlement |
+| Hub state     | Valid next action                                                                                    |
+| ------------- | ---------------------------------------------------------------------------------------------------- |
+| `PendingVRF`  | Wait for callback, or call public `refund` once chain time reaches the bet’s stored `refundDeadline` |
+| `RandomReady` | Call public `finalize` with the admitted execution budget                                            |
+| Terminal      | Reconcile the terminal proof and payment evidence; do not submit another settlement                  |
 
 The current refund timeout is mutable but capped at one day. Thus a PendingVRF bet placed before a
 batch cutoff is contract-eligible for refund no later than cutoff plus one day, if it remains

@@ -17,6 +17,14 @@ export function toDomainError(err: unknown): DomainError {
       retryable: true
     };
   }
+  if (causes.some((cause) => cause.name === "WalletContextChangedError")) {
+    return {
+      code: "WALLET_CONTEXT_CHANGED",
+      message: "The wallet or network changed. Review the current action before trying again.",
+      severity: "warning",
+      retryable: false
+    };
+  }
   if (causes.some((cause) => cause.name === "BetContextChangedError")) {
     return {
       code: "BET_CONTEXT_CHANGED",
@@ -266,6 +274,20 @@ function mapRevert(errorName: string, args?: unknown[]): DomainError {
         severity: "error"
       };
     // Bank errors
+    case "StakeBelowMinimum":
+      return {
+        code: "STAKE_BELOW_MINIMUM",
+        message: "Total stake is below this pool’s minimum.",
+        severity: "warning",
+        details: { stake: args?.[0], minimum: args?.[1] }
+      };
+    case "ActiveHoldLimit":
+      return {
+        code: "ACTIVE_HOLD_LIMIT",
+        message: "This pool is at its open-bet capacity. Try again after a bet settles.",
+        severity: "warning",
+        retryable: true
+      };
     case "SolvencyViolation":
       return {
         code: "SOLVENCY_VIOLATION",

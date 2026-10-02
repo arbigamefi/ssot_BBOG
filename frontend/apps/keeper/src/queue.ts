@@ -49,9 +49,18 @@ export class FinalizeQueue {
   }
 
   retry(item: QueueItem, delayMs: number) {
-    this.inFlight.delete(item.betId.toString());
-    const next = { ...item, attempts: item.attempts + 1, availableAt: this.now() + delayMs };
-    this.queued.set(item.betId.toString(), next);
+    const key = item.betId.toString();
+    this.inFlight.delete(key);
+    // A ready event can arrive while the PendingVRF read is still in flight.
+    // Preserve that event and its earlier wakeup instead of reinstating an old delay.
+    const queued = this.queued.get(key);
+    const next = {
+      ...item,
+      ...queued,
+      attempts: Math.max(item.attempts, queued?.attempts ?? 0) + 1,
+      availableAt: Math.min(this.now() + delayMs, queued?.availableAt ?? Infinity)
+    };
+    this.queued.set(key, next);
     return next;
   }
 

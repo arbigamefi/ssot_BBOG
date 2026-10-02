@@ -59,6 +59,7 @@ export interface TxPipeline {
     functionName: string;
     args: readonly unknown[];
     value?: bigint;
+    gasPrice?: bigint;
     /** Final synchronous intent check immediately before the wallet request. */
     beforeWrite?: () => void;
   }): Promise<TxResult>;
@@ -73,6 +74,7 @@ export interface TxPipeline {
     functionName: string;
     args: readonly unknown[];
     value?: bigint;
+    gasPrice?: bigint;
   }): Promise<TxResult>;
   extractEventArgs<T extends { eventName: string }>(params: {
     abi: Abi;
@@ -102,6 +104,8 @@ function sleep(ms: number): Promise<void> {
 export function createTxPipeline(opts?: {
   journal?: JournalSink;
   config?: TxPipelineConfig;
+  /** Synchronous host context check before every wallet request, including approvals. */
+  beforeWrite?: () => void;
 }): TxPipeline {
   const journal = opts?.journal;
   const cfg = { ...DEFAULT_CONFIG, ...opts?.config };
@@ -176,6 +180,7 @@ export function createTxPipeline(opts?: {
     functionName: string;
     args: readonly unknown[];
     value?: bigint;
+    gasPrice?: bigint;
     beforeWrite?: () => void;
   }): Promise<TxResult> {
     // Simulate with retry on transient errors
@@ -190,7 +195,8 @@ export function createTxPipeline(opts?: {
           abi: params.abi,
           functionName: params.functionName as any,
           args: params.args as any,
-          value: params.value
+          value: params.value,
+          ...(params.gasPrice == null ? {} : { gasPrice: params.gasPrice })
         });
         break; // success
       } catch (e) {
@@ -233,6 +239,7 @@ export function createTxPipeline(opts?: {
     let walletRequested = false;
     try {
       await throttle();
+      opts?.beforeWrite?.();
       params.beforeWrite?.();
       walletRequested = true;
       txHash = await params.walletClient.writeContract(sim.request);
@@ -338,10 +345,14 @@ export function createTxPipeline(opts?: {
     functionName: string;
     args: readonly unknown[];
     value?: bigint;
+    gasPrice?: bigint;
   }): Promise<TxResult> {
     let txHash = "0x0" as Hex;
+    let walletRequested = false;
     try {
       await throttle();
+      opts?.beforeWrite?.();
+      walletRequested = true;
       txHash = await params.walletClient.writeContract({
         chain: params.walletClient.chain,
         account: params.walletClient.account!,
@@ -349,7 +360,8 @@ export function createTxPipeline(opts?: {
         abi: params.abi,
         functionName: params.functionName as any,
         args: params.args as any,
-        value: params.value
+        value: params.value,
+        ...(params.gasPrice == null ? {} : { gasPrice: params.gasPrice })
       });
       journal?.({
         chainId: params.chainId,
@@ -402,7 +414,8 @@ export function createTxPipeline(opts?: {
     } catch (e) {
       const isTimeout = (e as any)?.name === "TxTimeoutError";
       const cause = toDomainError(e);
-      const uncertain = txHash !== "0x0" || ["RPC_ERROR", "UNKNOWN"].includes(cause.code);
+      const uncertain =
+        txHash !== "0x0" || (walletRequested && ["RPC_ERROR", "UNKNOWN"].includes(cause.code));
       const error: DomainError = isTimeout
         ? makeTxTimeoutError()
         : uncertain
@@ -418,7 +431,9 @@ export function createTxPipeline(opts?: {
         chainId: params.chainId,
         action: params.action,
         txHash,
-        causeCode: cause.code
+        causeCode: cause.code,
+        phase: walletRequested ? "wallet" : "beforeWrite",
+        ...(walletRequested ? {} : { transactionSubmitted: false })
       };
       journal?.({
         chainId: params.chainId,

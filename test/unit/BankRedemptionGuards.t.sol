@@ -29,7 +29,7 @@ contract BankRedemptionGuardsTest is Test {
     function setUp() external {
         vm.warp(200 days + 3 hours);
         asset = new BlacklistToken();
-        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6);
+        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6, 1);
         vm.prank(gov);
         bank.setSettlementRouterOnce(address(this));
         asset.mint(player, 1_000_000_000e6);
@@ -202,7 +202,8 @@ contract BankRedemptionGuardsTest is Test {
         vm.expectRevert(abi.encodeWithSelector(IBank.ReservedTooSmall.selector, betId, 20e6, 21e6));
         bank.settleBet(betId, 15e6, 15e6, 0, 6e6, none);
         bank.settleBet(betId, 15e6, 15e6, 0, 5e6, none);
-        assertEq(bank.recoveryEpoch(1).settledCost, 20e6);
+        assertEq(bank.recoveryEpoch(1).settledCost, bank.recoveryEpoch(1).initialReserve);
+        assertEq(bank.recoveryEpoch(1).recoveredAssets, 0);
     }
 
     // M49: nobody but the controller or its operator can send historical recovery to a receiver.
@@ -265,7 +266,7 @@ contract BankRedemptionGuardsTest is Test {
 
     function _hold(uint256 stake, uint256 reserved) internal returns (uint256 betId) {
         betId = nextBetId++;
-        bank.holdBet(betId, player, stake, reserved, bytes32(betId));
+        bank.holdBet(betId, player, stake, reserved, bytes32(betId), player);
     }
 
     /// @dev A player bet of `amount` that loses: the pool's NAV rises by `amount`.

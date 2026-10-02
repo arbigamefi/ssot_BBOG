@@ -18,7 +18,6 @@ tar -czf "$OUT" -C "$ROOT_DIR" \
   deploy/docker/env/keeper.primary.env.example \
   deploy/docker/env/keeper.testnet.primary.env.example \
   deploy/docker/env/keeper.backup.env.example \
-  deploy/docker/env/proxy.env.example \
-  deploy/docker/certs/.gitkeep
+  deploy/docker/env/proxy.env.example
 
 echo "wrote $OUT"

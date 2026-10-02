@@ -12,7 +12,7 @@ export const CASINO_ROUND_SOFT_VRF_TIMEOUT_MS = 60_000;
 export const CASINO_ROUND_READ_RETRY_GRACE_MS = 15_000;
 export const CASINO_ROUND_EVENT_FALLBACK_POLL_INTERVAL_MS = 10_000;
 
-type RoundEventWatcher = typeof import("@ssot/ssot/sdk")["watchGameHubRoundEvents"];
+type RoundEventWatcher = (typeof import("@ssot/ssot/sdk"))["watchGameHubRoundEvents"];
 
 async function loadRoundEventWatcher(): Promise<RoundEventWatcher> {
   const sdk = await import("@ssot/ssot/sdk");
@@ -56,7 +56,7 @@ export function deriveCasinoRoundPhase({
   placedAt,
   randomReadyAt,
   now,
-  refundTimeoutSeconds,
+  refundDeadline,
   softVrfTimeoutMs = CASINO_ROUND_SOFT_VRF_TIMEOUT_MS,
   manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS
 }: {
@@ -64,7 +64,7 @@ export function deriveCasinoRoundPhase({
   placedAt?: number;
   randomReadyAt?: number;
   now: number;
-  refundTimeoutSeconds?: number;
+  refundDeadline?: number;
   softVrfTimeoutMs?: number;
   manualSettleDelayMs?: number;
 }): CasinoRoundPhase {
@@ -80,7 +80,7 @@ export function deriveCasinoRoundPhase({
     const placedAtMs = toUnixMs(placedAt);
     if (placedAtMs != null) {
       const elapsedMs = now - placedAtMs;
-      if (refundTimeoutSeconds && elapsedMs >= refundTimeoutSeconds * 1_000) {
+      if (refundDeadline && now >= refundDeadline * 1_000) {
         return "refundable";
       }
       if (elapsedMs >= softVrfTimeoutMs) return "timeout_soft";
@@ -175,7 +175,6 @@ export function useCasinoRoundWatcher({
   betId,
   active,
   onTerminal,
-  refundTimeoutSeconds,
   pollIntervalMs = 2_000,
   softVrfTimeoutMs = CASINO_ROUND_SOFT_VRF_TIMEOUT_MS,
   manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS,
@@ -188,7 +187,6 @@ export function useCasinoRoundWatcher({
   betId: bigint | undefined;
   active: boolean;
   onTerminal?: (bet: DomainBet) => void;
-  refundTimeoutSeconds?: number;
   pollIntervalMs?: number;
   softVrfTimeoutMs?: number;
   manualSettleDelayMs?: number;
@@ -246,9 +244,9 @@ export function useCasinoRoundWatcher({
             phase: deriveCasinoRoundPhase({
               betState: bet.state,
               placedAt: bet.placedAt,
+              refundDeadline: bet.refundDeadline,
               randomReadyAt,
               now: Date.now(),
-              refundTimeoutSeconds,
               softVrfTimeoutMs,
               manualSettleDelayMs
             }),
@@ -339,7 +337,6 @@ export function useCasinoRoundWatcher({
     pollIntervalMs,
     betNotFoundErrorMessage,
     readErrorMessage,
-    refundTimeoutSeconds,
     softVrfTimeoutMs,
     manualSettleDelayMs
   ]);

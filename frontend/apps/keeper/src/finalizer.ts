@@ -7,7 +7,7 @@ export type FinalizerDeps = {
   readBet: (betId: bigint) => Promise<BetRead>;
   simulateFinalize: (betId: bigint) => Promise<void>;
   writeFinalize: (betId: bigint) => Promise<Hex>;
-  readRefundClock?: () => Promise<{ timestamp: bigint; timeoutSeconds: bigint }>;
+  readRefundClock?: () => Promise<{ timestamp: bigint }>;
   simulateRefund?: (betId: bigint) => Promise<void>;
   writeRefund?: (betId: bigint) => Promise<Hex>;
   waitFinalizeReceipt: (txHash: Hex) => Promise<{ status: "success" | "reverted" }>;
@@ -63,19 +63,20 @@ export async function finalizeIfReady(
     let action: "finalize" | "refund" = "finalize";
     if (before.state === "pendingVrf") {
       if (
-        before.placedAt == null ||
+        before.refundDeadline == null ||
+        before.refundDeadline <= 0n ||
         !deps.readRefundClock ||
         !deps.simulateRefund ||
         !deps.writeRefund
       ) {
         throw new Error(
-          "PendingVRF recovery requires placedAt and the current on-chain refund clock"
+          "PendingVRF recovery requires a stored refund deadline and the on-chain clock"
         );
       }
-      const { timestamp, timeoutSeconds } = await deps.readRefundClock();
-      const readyAt = before.placedAt + timeoutSeconds;
+      const { timestamp } = await deps.readRefundClock();
+      const readyAt = before.refundDeadline;
       if (timestamp < readyAt) {
-        // Governance can shorten the timeout. Re-read within a minute rather than sleeping to an old deadline.
+        // Reconcile callbacks or refunds from other callers at least once per minute.
         return {
           kind: "deferred",
           state: "pendingVrf",
@@ -90,6 +91,14 @@ export async function finalizeIfReady(
     const txHash = await (action === "refund"
       ? deps.writeRefund!(event.betId)
       : deps.writeFinalize(event.betId));
+    logger.info("casino.finalize.broadcast", {
+      betId: event.betId.toString(),
+      action,
+      txHash,
+      source: event.source,
+      receivedToBroadcastMs: Math.max(0, now() - event.receivedAt),
+      attemptToBroadcastMs: now() - startedAt
+    });
     const receipt = await deps.waitFinalizeReceipt(txHash);
     if (receipt.status !== "success") {
       const raced = await deps.readBet(event.betId);

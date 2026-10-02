@@ -25,7 +25,7 @@ describe("casino round helpers", () => {
         placedAt: 1,
         now: 62_000,
         softVrfTimeoutMs: 60_000,
-        refundTimeoutSeconds: 3_600
+        refundDeadline: 3_601
       })
     ).toBe("timeout_soft");
 
@@ -34,7 +34,7 @@ describe("casino round helpers", () => {
         betState: "placed",
         placedAt: 1,
         now: 3_602_000,
-        refundTimeoutSeconds: 3_600
+        refundDeadline: 3_601
       })
     ).toBe("refundable");
 

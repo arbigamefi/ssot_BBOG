@@ -73,6 +73,9 @@ interface IBankVault {
 ///         - riskInPaused freezes Risk-In + Optional Outflow, but never blocks settle/refund or player payables
 ///         - LP exits receive liquid cash and keep historical recovery rights (ADR-0035)
 interface IBank is IBankVault {
+    function minStake() external view returns (uint256);
+    error StakeBelowMinimum(uint256 stake, uint256 minimum);
+
     /// @notice One queued batch per current epoch. Activation fixes liquid assets and burns shares once.
     struct RedeemBatch {
         uint64 cutoff; // first multiple of batchPeriod strictly after the batch's first request
@@ -102,7 +105,7 @@ interface IBank is IBankVault {
     }
 
     struct RecoveryPosition {
-        uint256 shares; // frozen wallet plus controller-request weight
+        uint256 shares; // activated controller-request weight only
         uint256 claimableAssets;
         uint256 claimedAssets;
         uint256 pendingAssets; // maximum additional recovery if every remaining hold has zero cost
@@ -193,7 +196,15 @@ interface IBank is IBankVault {
     function holdbackReleasable(address payee) external view returns (uint256);
 
     // -------- bet funds interface (only SettlementRouter) --------
-    function holdBet(uint256 betId, address player, uint256 stake, uint256 reserved, bytes32 snapshotHash) external;
+    /// @notice Router supplies the authenticated calling hub as fundingHub; player is the beneficiary.
+    function holdBet(
+        uint256 betId,
+        address player,
+        uint256 stake,
+        uint256 reserved,
+        bytes32 snapshotHash,
+        address fundingHub
+    ) external;
 
     /// @dev accrue XP awards (E-class) in the same call; must NOT transfer to payees during settlement.
     /// @dev payoutNet is owed to the player (excludes fee-on-payout); failed transfers become player payables.
@@ -227,11 +238,13 @@ interface IBank is IBankVault {
     function batchPeriod() external view returns (uint256);
     /// @notice ID of the current risk epoch and its sole queued redemption batch. Starts at 1.
     function currentEpoch() external view returns (uint256);
-    function currentOpenHolds() external view returns (uint256);
+    function activeOpenHolds() external view returns (uint256);
+    function MAX_ACTIVE_HOLDS() external view returns (uint256);
+    error ActiveHoldLimit();
     function redeemBatch(uint256 batchId) external view returns (RedeemBatch memory);
     /// @notice Positions not yet settled or refunded: totalBetsHeld - totalBetsSettled - totalBetsRefunded.
     function openHolds() external view returns (uint256);
-    /// @notice Reserve of current-epoch holds, charged only to active capital.
+    /// @notice Reserve units in open holds still charged to active capital.
     function activeReserved() external view returns (uint256);
     /// @notice Total cash backing all historical reserve pockets, excluded from active NAV.
     function recoveryBacking() external view returns (uint256);
@@ -281,13 +294,8 @@ interface IBank is IBankVault {
     );
     event RedeemClaimable(address indexed controller, uint256 indexed batchId, uint256 shares, uint256 assets);
     event RedeemRemainderReleased(uint256 indexed batchId, uint256 assets, bool toProtocol);
-    event RecoveryUpdated(
-        uint256 indexed epochId,
-        uint256 remainingReserve,
-        uint256 remainingHolds,
-        uint256 settledCost,
-        uint256 recoveredAssets,
-        uint256 backingAssets
+    event BetRiskSettled(
+        uint256 indexed betId, uint256 activeUnits, uint256 exitingUnits, uint256 cost, uint256 historicalRecovery
     );
     event RecoverySynced(uint256 indexed epochId, address indexed controller, uint256 shares, uint256 assets);
     event RecoveryClaimed(

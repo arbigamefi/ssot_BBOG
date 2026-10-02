@@ -79,6 +79,13 @@ contract SettlementRouterHandler is Test {
         sportsHub = sportsHub_;
         attackerHub = attackerHub_;
 
+        asset.mint(casinoHub, 100_000_000e6);
+        asset.mint(sportsHub, 100_000_000e6);
+        vm.prank(casinoHub);
+        asset.approve(address(casinoBank), type(uint256).max);
+        vm.prank(sportsHub);
+        asset.approve(address(sportsBank), type(uint256).max);
+
         for (uint256 i = 0; i < 8; ++i) {
             address player = address(uint160(uint256(keccak256(abi.encode("router-player", i + 1)))));
             players.push(player);
@@ -269,7 +276,7 @@ contract SettlementRouterHandler is Test {
         SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](0);
 
         vm.prank(attackerHub);
-        try bank.holdBet(positionId, player, 1e6, 2e6, keccak256("BYPASS")) {
+        try bank.holdBet(positionId, player, 1e6, 2e6, keccak256("BYPASS"), player) {
             ++vBankBypass;
         } catch {}
 
@@ -322,15 +329,14 @@ contract SettlementRouterHandler is Test {
         Bank rightBank = Bank(m.bank);
         Bank wrongBank = rightBank == casinoBank ? sportsBank : casinoBank;
 
-        (address player, uint256 stake, uint256 reserved, bytes32 snapshotHash, bool open,) =
-            rightBank.holds(positionId);
+        (address player, uint256 stake, uint256 reserved, bytes32 snapshotHash, bool open) = rightBank.holds(positionId);
         assertEq(player, m.player, "right bank player mismatch");
         assertEq(stake, m.stake, "right bank stake mismatch");
         assertEq(reserved, m.reserved, "right bank reserved mismatch");
         assertEq(snapshotHash, m.snapshotHash, "right bank snapshot mismatch");
         assertEq(open, m.state == SSOTTypes.PositionState.Held, "right bank open mismatch");
 
-        (address wrongPlayer,,,, bool wrongOpen,) = wrongBank.holds(positionId);
+        (address wrongPlayer,,,, bool wrongOpen) = wrongBank.holds(positionId);
         assertEq(wrongPlayer, address(0), "wrong bank has position player");
         assertFalse(wrongOpen, "wrong bank has open position");
     }
@@ -391,8 +397,8 @@ contract SettlementRouterInvariants is StdInvariant, Test {
 
     function setUp() external {
         usdc = new MockERC20("USD Coin", "USDC", 6);
-        casinoBank = new Bank(address(usdc), gov, 0, "Casino LP USDC", "clpUSDC", 6);
-        sportsBank = new Bank(address(usdc), gov, 0, "Sports LP USDC", "slpUSDC", 6);
+        casinoBank = new Bank(address(usdc), gov, 0, "Casino LP USDC", "clpUSDC", 6, 1);
+        sportsBank = new Bank(address(usdc), gov, 0, "Sports LP USDC", "slpUSDC", 6, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
 

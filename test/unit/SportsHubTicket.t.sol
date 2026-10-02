@@ -69,7 +69,7 @@ contract SportsHubTicketTest is Test {
         oddsSigner = vm.addr(oddsSignerKey);
 
         usdc = new MockERC20("USD Coin", "USDC", 6);
-        sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6);
+        sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
         riskEngine = new MockSportsRiskEngine();
@@ -91,7 +91,7 @@ contract SportsHubTicketTest is Test {
 
         usdc.mint(player, 10_000e6);
         vm.prank(player);
-        usdc.approve(address(sportsBank), type(uint256).max);
+        usdc.approve(address(sportsHub), type(uint256).max);
     }
 
     function test_placeTicket_successOpensRouterPositionAndTracksExposure() external {
@@ -147,7 +147,7 @@ contract SportsHubTicketTest is Test {
     }
 
     function test_placeTicket_tracksEventExposurePerPool() external {
-        Bank secondSportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports B", "lpUSDC-SB", 6);
+        Bank secondSportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports B", "lpUSDC-SB", 6, 1);
 
         vm.startPrank(gov);
         registry.registerPool(
@@ -160,7 +160,7 @@ contract SportsHubTicketTest is Test {
         vm.stopPrank();
 
         vm.prank(player);
-        usdc.approve(address(secondSportsBank), type(uint256).max);
+        usdc.approve(address(sportsHub), type(uint256).max);
 
         uint64 firstMarketId = _createAndOpenMarketForPool(SPORTS_POOL_ID);
         uint64 secondMarketId = _createAndOpenMarketForPool(SECOND_SPORTS_POOL_ID);

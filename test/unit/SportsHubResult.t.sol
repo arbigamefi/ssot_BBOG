@@ -51,7 +51,7 @@ contract SportsHubResultTest is Test {
         reporter3 = vm.addr(reporter3Key);
 
         usdc = new MockERC20("USD Coin", "USDC", 6);
-        sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6);
+        sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
         sportsHub = new SportsHub(address(router), riskEngine, gov, ODDS_SET_HASH, REPORTER_SET_HASH);

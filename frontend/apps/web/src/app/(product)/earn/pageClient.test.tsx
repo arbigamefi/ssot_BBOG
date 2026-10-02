@@ -397,7 +397,7 @@ describe("EarnPageClient", () => {
       )
     );
     expect(within(ledger).getByText("Wallet shares")).toBeDefined();
-    expect(within(ledger).getByText("Loaded net P&L").parentElement?.textContent).toContain("—");
+    expect(within(ledger).queryByText("Loaded net P&L")).toBeNull();
     const recovery = await screen.findByRole("region", { name: "Epoch 1" });
     fireEvent.click(within(recovery).getByRole("button", { name: "Claim recovery" }));
     await waitFor(() =>
@@ -454,7 +454,9 @@ describe("EarnPageClient", () => {
       (within(rightPanel).getByRole("button", { name: "Claim recovery" }) as HTMLButtonElement)
         .disabled
     ).toBe(true);
-    expect(screen.getByText(/Incomplete return:/)).toBeDefined();
+    expect(
+      screen.getByText(/Historical rights remain unresolved or discovery is unfinished/)
+    ).toBeDefined();
   });
 
   it("starts discovery from the first page after refreshing to a newer Bank snapshot", async () => {
@@ -513,7 +515,7 @@ describe("EarnPageClient", () => {
     renderWithQueryClient(<EarnPageClient />);
     expect(await screen.findByText(/Historical recovery could not be loaded/)).toBeDefined();
     expect(screen.queryByText("No historical rights found in the complete discovery.")).toBeNull();
-    expect(screen.getByText("Loaded net P&L").parentElement?.textContent).toContain("—");
+    expect(screen.queryByText("Loaded net P&L")).toBeNull();
   });
 
   it("selects same-asset Banks separately and discards selection across chain or release changes", async () => {
@@ -680,9 +682,7 @@ describe("EarnPageClient", () => {
     ).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Cancel queued shares" }));
     expect(bank.cancelRedeemRequest).not.toHaveBeenCalled();
-    expect(
-      screen.getAllByText(/Earlier bets remain assigned to their original holders/)[0]
-    ).toBeDefined();
+    expect(screen.getAllByText(/These rights belong to activated exit requests/)[0]).toBeDefined();
     expect(await screen.findByText("Earlier bets still open: 2")).toBeDefined();
   });
 
@@ -759,7 +759,7 @@ describe("EarnPageClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Deposit assets" }));
     await waitFor(() => expect(bank.deposit).toHaveBeenCalledWith(1, 1_000_000n, account));
     expect(
-      screen.getAllByText(/Deposits join active capital immediately at its current book price/)[0]
+      screen.getAllByText(/Deposits immediately buy active capital at full book value/)[0]
     ).toBeDefined();
   });
 

@@ -28,22 +28,25 @@ Keywords MUST, MUST NOT, SHOULD and MAY have their RFC 2119 meanings.
 ## Deposits, redemptions and player debt
 
 - Deposit/mint use active NAV/supply, virtual-offset conversion and directional rounding. New
-  depositors share current-epoch risk but MUST NOT acquire previously frozen recovery rights.
+  depositors share remaining active risk but MUST NOT acquire previously frozen recovery rights.
 - A queued request transfers current rights to its controller, remains cancellable until actual
   activation and joins the same queue after eligibility. Requests and cancellations cannot change
   earlier epochs' ownership. Bank/zero controllers and external share transfers/mints to Bank are invalid.
 - LP operations MUST NOT independently stop adequately funded betting. Old unresolved epochs MUST NOT
   gate later activation or cash claims. There is one waiting queue and no global cap on open epochs.
-- Activation freezes N, S and the current epoch's whole R0, segregates R0, prices liquid cash, burns
-  queued Q once and advances the epoch. Every old hold belongs to exactly one epoch. Settlement MUST
-  NOT loop over epochs or holders; share history uses the pinned OpenZeppelin checkpoints.
-- Let `L=N-R0` and `G(x)=min(floor(S*(x+V)/(S+V)),x)`. Liquid batch assets are `floor(Q*G(L)/S)`.
-  Old terminal cost C and remaining reserve R give `D=R0-C-R`, `H=G(L+D)-G(L)`, `U=D-H`.
-  Every snapshot holder owns cumulative `floor(holderUnits*H/S)` recovery, minus prior claims.
-  Completed positions can release recovery even while another position in that epoch remains open.
-- Full reserve isolation, cumulative allocation, explicit virtual residuals and final dust follow
-  ADR-0035. Protocol capital residuals MUST be separate from gameplay fee accrual; new LP NAV MUST NOT
-  receive historical recovery or a full-exit residual. All-real-share exit cannot extinguish old rights.
+- Activation freezes N, S and Q, and isolates only exiting reserve units. Staying shares continue
+  underwriting; released staying capital MUST be reusable in the settlement transaction.
+- Let `G=min(floor(S*(N+V)/(S+V)),N)` and `E=floor(Q*G/S)`. Liquid is `floor(E*(N-R)/N)`;
+  each hold allocates `floor(activeUnits*E/N)` to this exit batch. Zero NAV allocates zero.
+- For original reserve T, terminal cost C and batch units u, batch recovery is `floor(u*(T-C)/T)`.
+  Controllers own the floor of their requested share of cumulative batch recovery, less prior claims.
+  Remaining wallet shares carry active risk through transfers and new deposits; no wallet checkpoint exists.
+- ADR-0035 defines aggregate backing, protocol units on full exits and both levels of final dust.
+  No new depositor receives segregated recovery or full-exit residuals. Protocol residuals are separate
+  from gameplay fees. All-real-share exit cannot extinguish old controller rights.
+- Active-risk holds are capped at 128 per Bank to bound batch operations. Entirely segregated holds
+  consume no active slot. Settlement MUST NOT loop over batches or holders; batch reads/activation
+  visit at most 128 allocations. Historical batches have no global cap.
 - Bank MUST check combined terminal cost <= position reserve and hold reserve >= stake. Cost includes
   payoutNet, refund, PF and every XP bucket, whether paid or recorded as player debt. Later claims
   MUST NOT charge the epoch again. Historical backing and fixed liabilities cannot fund new risk.

@@ -11,6 +11,7 @@ import {
   getMinBetAmountInput,
   isBetAmountAboveMax,
   isBetAmountUnavailable,
+  betAmountInputToRaw,
   normalizeBetAmountInput,
   resolveBetMaxRaw,
   scaleBetAmountInput
@@ -31,6 +32,7 @@ export function MobileCasinoActionBar({
   assetDecimals,
   betAmount,
   maxBetRaw,
+  minBetRaw,
   walletBalanceRaw,
   onBetAmountChange,
   hasAccount,
@@ -58,6 +60,7 @@ export function MobileCasinoActionBar({
   betAmount: string;
   /** Per-roll pool cap; combined with wallet balance for the Max quick action. */
   maxBetRaw?: bigint;
+  minBetRaw: bigint;
   walletBalanceRaw?: bigint | null;
   onBetAmountChange?: (amount: string) => void;
   hasAccount: boolean;
@@ -88,11 +91,11 @@ export function MobileCasinoActionBar({
   const perRollBalance =
     walletBalanceRaw == null ? null : walletBalanceRaw / BigInt(Math.max(1, Math.floor(betCount)));
   const maxRaw = resolveBetMaxRaw(perRollBalance, maxBetRaw);
-  const amountUnavailable = isBetAmountUnavailable(assetDecimals, maxRaw);
-  const amountExceedsMax = isBetAmountAboveMax(betAmount, assetDecimals, maxRaw);
+  const amountUnavailable = isBetAmountUnavailable(minBetRaw, maxRaw);
+  const amountExceedsMax = isBetAmountAboveMax(betAmount, assetDecimals, maxRaw, minBetRaw);
   const controlsLocked = isPending && state.status !== "failed";
   const adjust = (next: string) =>
-    onBetAmountChange?.(clampBetAmountInput(next, assetDecimals, maxRaw));
+    onBetAmountChange?.(clampBetAmountInput(next, assetDecimals, maxRaw, minBetRaw));
 
   // Thumb-zone quick amounts so a bet can be sized without scrolling up to the
   // full panel. Only shown when amount control is wired and not mid-round.
@@ -105,6 +108,7 @@ export function MobileCasinoActionBar({
           scaleBetAmountInput({
             input: betAmount,
             decimals: assetDecimals,
+            minRaw: minBetRaw,
             numerator: 1n,
             denominator: 2n,
             maxRaw
@@ -119,6 +123,7 @@ export function MobileCasinoActionBar({
           scaleBetAmountInput({
             input: betAmount,
             decimals: assetDecimals,
+            minRaw: minBetRaw,
             numerator: 2n,
             maxRaw
           })
@@ -156,7 +161,7 @@ export function MobileCasinoActionBar({
               if (controlsDisabled) return;
               onBetAmountChange?.(normalizeBetAmountInput(event.target.value, assetDecimals));
             }}
-            onBlur={() => adjust(betAmount || getMinBetAmountInput(assetDecimals))}
+            onBlur={() => adjust(betAmount || getMinBetAmountInput(assetDecimals, minBetRaw))}
             className="min-w-0 border-none bg-transparent text-right font-mono text-lg font-semibold text-fg outline-none"
           />
           <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
@@ -211,6 +216,7 @@ export function MobileCasinoActionBar({
         manualRefundAvailable={manualRefundAvailable}
         amountUnavailable={amountUnavailable}
         amountExceedsMax={amountExceedsMax}
+        amountBelowMin={betAmountInputToRaw(betAmount, assetDecimals) < minBetRaw}
         onClick={primaryAction}
         density="compact"
       />

@@ -929,7 +929,6 @@
         "deposited": "Depósitos carregados",
         "withdrawn": "Saques carregados",
         "openValue": "Valor LP conhecido",
-        "netPnl": "P&L carregado",
         "shares": "Cotas"
       },
       "columns": {
@@ -940,7 +939,7 @@
         "sharePrice": "Preço da cota",
         "tx": "Tx"
       },
-      "incomplete": "A cobertura dos fluxos de caixa até este snapshot ainda não foi verificada. O retorno completo está indisponível."
+      "incomplete": "O histórico de fluxos de caixa está incompleto. Os totais cobrem apenas os registros carregados."
     },
     "overview": {
       "totalAssets": {
@@ -951,7 +950,7 @@
     "async": {
       "inactivePool": "Este pool está inativo e fechado para novas apostas e depósitos. Pedidos de resgate, cancelamentos permitidos e recebimento de valores devidos continuam disponíveis conforme as regras do contrato.",
       "requestDetail": "Solicite a saída com cotas da carteira. A ativação fixa o dinheiro disponível imediatamente e preserva os direitos históricos de recuperação. Apostas antigas pendentes não bloqueiam lotes posteriores.",
-      "pendingRisk": "As cotas na fila ainda participam dos resultados ativos. Na ativação, todos os titulares mantêm seus direitos sobre apostas anteriores. O dinheiro pode ser zero; a recuperação é incerta e pode chegar depois.",
+      "pendingRisk": "Cotas na fila ainda participam dos resultados ativos. A ativação separa apenas o risco e a recuperação da saída. Cotas mantidas continuam financiando apostas. O dinheiro pode ser zero e a recuperação é incerta.",
       "queuedTitle": "Pedido na fila",
       "queuedDetail": "As cotas permanecem ativas até a ativação. Apostas antigas pendentes não bloqueiam este lote. O dinheiro é precificado na ativação; a recuperação histórica permanece separada. A reserva disponível e pausas de emergência continuam valendo; não há prazo garantido para pagamento integral em dinheiro.",
       "eligibleAt": "Ativação possível a partir de: {time}. Não é um prazo garantido de ativação ou pagamento.",
@@ -959,7 +958,7 @@
       "cancelDetail": "Cancele para devolver todas as cotas na fila enquanto o lote não for ativado, mesmo após o horário mínimo. Solicitações ativadas não podem ser canceladas. A transação verifica o estado atual.",
       "cancel": "Cancelar cotas na fila",
       "paused": "O pool está pausado. Solicitações e cancelamentos na fila continuam disponíveis; depósitos, saques e recuperação aguardam a retomada.",
-      "depositTerms": "Depósitos entram imediatamente no capital ativo pelo valor contábil atual. Incluem apostas atuais pendentes, mas não direitos de recuperação de ativações anteriores.",
+      "depositTerms": "Depósitos compram capital ativo pelo valor contábil completo, incluindo riscos antigos e novos ainda abertos. Direitos de saída já separados não são incluídos.",
       "claimDetail": "Este dinheiro está reservado para sua saída. Resgatar todas as cotas precificadas paga o valor atribuído e preserva os direitos históricos de recuperação.",
       "totalEquityDetail": "Valor da carteira + estimativa na fila + dinheiro precificado. A recuperação histórica aparece separadamente e não integra esta estimativa.",
       "queuedEquity": "Cotas na fila / dinheiro estimado",
@@ -972,13 +971,13 @@
     },
     "recovery": {
       "title": "Direitos históricos de recuperação",
-      "detail": "Apostas anteriores continuam atribuídas aos titulares originais, incluindo quem permaneceu no pool. Zero cotas na carteira não elimina esses direitos.",
+      "detail": "Estes direitos pertencem a pedidos de saída ativados. Cotas mantidas recuperam capital automaticamente na liquidação. Um saldo de cotas zero não apaga os direitos de saída.",
       "loading": "Buscando direitos históricos…",
       "incomplete": "A busca histórica está incompleta. Carregue as páginas restantes antes de avaliar toda a posição.",
       "error": "Não foi possível carregar a recuperação histórica. Seus direitos não são considerados zero.",
       "empty": "Nenhum direito histórico encontrado na busca completa.",
       "epoch": "Época {epoch}",
-      "units": "Unidades no snapshot",
+      "units": "Cotas de saída ativadas",
       "claimable": "Dinheiro de recuperação disponível",
       "upperBound": "Limite superior da recuperação restante",
       "upperBoundDetail": "O limite não é dinheiro disponível agora nem promessa de pagamento.",
@@ -989,7 +988,7 @@
       "loadMore": "Carregar mais direitos históricos",
       "refresh": "Atualizar direitos históricos",
       "receiver": "O dinheiro será enviado a {receiver}. Esta ação não autoriza um keeper a resgatar por você.",
-      "incompleteReturn": "Retorno incompleto: há direitos históricos pendentes ou a busca ainda não terminou.",
+      "incompleteReturn": "Há direitos históricos pendentes ou ainda não identificados; a posição exibida está incompleta.",
       "backing": "Reserva histórica",
       "backingDetail": "Excluída do capital ativo; cobre obrigações anteriores e recuperação não resgatada.",
       "donationNote": "Doações ao Bank não são dinheiro recebido externamente pelo titular.",
@@ -1221,6 +1220,7 @@
           "betMined": "APOSTA MINERADA...",
           "signing": "ASSINANDO / APOSTANDO...",
           "reduceAmount": "REDUZIR VALOR",
+          "increaseAmount": "Increase bet amount",
           "selectToBet": "ESCOLHA UMA APOSTA",
           "approveThenPlace": "APROVAR E DEPOIS APOSTAR",
           "preparing": "PREPARANDO RODADA...",

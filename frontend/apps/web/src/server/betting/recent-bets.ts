@@ -841,6 +841,7 @@ async function queryBetReceiptTerminalTxFallback({
       lastEventName: terminal.eventName,
       lastTxHash: terminalTxHash,
       placedAt: numberSecondsToMs(bet.placedAt),
+      refundDeadline: numberSecondsToMs(bet.refundDeadline),
       player: getAddress(bet.player) as Address,
       pricingAffiliate: getAddress(bet.pricingAffiliate) as Address,
       randomHash: bet.randomHash as Hex,

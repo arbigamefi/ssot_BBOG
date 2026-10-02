@@ -24,6 +24,15 @@ jobs:
       - name: Show Forge version
         run: forge --version
 
+      - name: Setup Node for release import validation
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: Install pinned dependencies
+        run: |
+          bash script/ci/install_deps.sh
+
       - name: Validate keeper key and v1.6 release safety
         run: |
           bash -n script/ops/swap-keeper-key.sh
@@ -31,10 +40,6 @@ jobs:
 
       - name: Verify historical-recovery accounting model
         run: python3 test/model/recovery_pocket_model.py
-
-      - name: Install pinned dependencies
-        run: |
-          bash script/ci/install_deps.sh
 
       - name: Run unit tests (PR profile)
         run: |

@@ -450,3 +450,28 @@ describe("redemption health", () => {
     });
   });
 });
+
+describe("payable health", () => {
+  it("separates incomplete discovery and read failures from expected refused payouts", async () => {
+    const health = new KeeperHealthReporter({ config: baseConfig, keeper });
+    const bank = baseConfig.gameHub;
+    await health.recordRunning(100n, 0);
+    await health.recordPayables([{ bank, caughtUp: false, pending: 0 }], 0);
+    expect(health.snapshot().degradedBy).toContain("payables");
+    await health.recordPayables([{ bank, caughtUp: true, pending: 1, error: "blacklisted" }], 0);
+    expect(health.snapshot().status).toBe("running");
+    await health.recordPayables([{ bank, caughtUp: true, pending: 1, readError: "RPC outage" }], 0);
+    expect(health.snapshot().degradedBy).toContain("payables");
+    await health.recordPayables(
+      [{ bank, caughtUp: true, pending: 1, claimError: "send failed" }],
+      0
+    );
+    await health.recordScan(101n, 0);
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      lastError: expect.stringContaining("send failed")
+    });
+    await health.recordPayables([{ bank, caughtUp: true, pending: 0 }], 0);
+    expect(health.snapshot().status).toBe("running");
+  });
+});

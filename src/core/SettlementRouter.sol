@@ -68,7 +68,7 @@ contract SettlementRouter is ISettlementRouter {
             state: SSOTTypes.PositionState.Held
         });
 
-        IBank(p.bank).holdBet(positionId, player, stake, reserved, snapshotHash);
+        IBank(p.bank).holdBet(positionId, player, stake, reserved, snapshotHash, msg.sender);
 
         emit PositionOpened(
             positionId, msg.sender, poolId, player, p.asset, p.bank, stake, reserved, snapshotHash, edgeBps

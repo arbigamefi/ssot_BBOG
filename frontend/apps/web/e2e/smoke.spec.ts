@@ -1,47 +1,12 @@
 import { expect, test } from "@playwright/test";
-import type { Page } from "@playwright/test";
 import { embeddedChainIds } from "@ssot/ssot/release";
+import { clearComplianceGate, coreRoutes, expectRouteContent, gotoReady } from "./route-helpers";
 
 /**
  * Browser smoke tests for the production routes.
  *
  * The suite is intentionally read-only and wallet-free.
  */
-
-async function clearComplianceGate(page: Page) {
-  await page.context().setExtraHTTPHeaders({ "accept-language": "en-US,en;q=0.9" });
-  await page.context().addCookies([
-    {
-      name: "arbi-locale",
-      value: "en",
-      url: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000"
-    }
-  ]);
-  await page.addInitScript(() => {
-    window.localStorage.setItem("arbigamefi.compliance.age.v1", JSON.stringify(true));
-    window.localStorage.setItem(
-      "arbigamefi.compliance.terms.v1",
-      JSON.stringify({ version: "2026-05-28", acceptedAt: Date.now() })
-    );
-    window.localStorage.setItem("arbigamefi.compliance.cookies.v1", JSON.stringify("rejected"));
-  });
-}
-
-async function gotoReady(page: Page, path: string) {
-  const response = await page.goto(path, { waitUntil: "commit" });
-  await expect(page.locator("body")).toBeVisible();
-  await expect(page.locator("body")).not.toContainText(/Application error|Internal Server Error/i);
-  return response;
-}
-
-const coreRoutes = [
-  { path: "/portfolio", text: "Account" },
-  { path: "/portfolio/activity", text: "Casino ledger" },
-  { path: "/earn", text: "Liquidity" },
-  { path: "/sportsbook", text: "Sportsbook" },
-  { path: "/ops", text: "Operational proof" },
-  { path: "/legal/privacy", text: "Privacy" }
-] as const;
 
 test.describe("current route smoke", () => {
   test.describe.configure({ mode: "serial" });
@@ -135,9 +100,8 @@ test.describe("current route smoke", () => {
 
   for (const route of coreRoutes) {
     test(`core route renders without wallet interaction: ${route.path}`, async ({ page }) => {
-      const response = await gotoReady(page, route.path);
-      expect(response?.status(), route.path).toBeLessThan(400);
-      await expect(page.getByText(route.text).first()).toBeVisible();
+      await gotoReady(page, route.path);
+      await expectRouteContent(page, route);
     });
   }
 });

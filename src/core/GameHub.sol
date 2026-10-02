@@ -10,6 +10,7 @@ import {IGameModule} from "./interfaces/IGameModule.sol";
 import {SSOTTypes} from "./interfaces/SSOTTypes.sol";
 import {Governable} from "../access/Governable.sol";
 import {Errors} from "../libs/Errors.sol";
+import {StakeFunding} from "../libs/StakeFunding.sol";
 import {HouseEdgeLib} from "../libs/HouseEdgeLib.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -37,6 +38,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     uint256 public constant override EDGE_CHANGE_DELAY = HouseEdgeLib.EDGE_CHANGE_DELAY;
     /// @dev The bound also keeps `placedAt + refundTimeoutSeconds` from overflowing and blocking refunds.
     uint256 public constant override MAX_REFUND_TIMEOUT_SECONDS = HouseEdgeLib.MAX_REFUND_TIMEOUT_SECONDS;
+    uint256 public constant override MIN_REFUND_TIMEOUT_SECONDS = HouseEdgeLib.MIN_REFUND_TIMEOUT_SECONDS;
 
     address public immutable override settlementRouter;
     address public immutable override vrfHub;
@@ -140,7 +142,9 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     }
 
     function _setRefundTimeout(uint256 seconds_) private {
-        if (seconds_ > MAX_REFUND_TIMEOUT_SECONDS) revert InvalidRefundTimeout(seconds_);
+        if (seconds_ < MIN_REFUND_TIMEOUT_SECONDS || seconds_ > MAX_REFUND_TIMEOUT_SECONDS) {
+            revert InvalidRefundTimeout(seconds_);
+        }
         refundTimeoutSeconds = seconds_;
         emit RefundTimeoutSet(seconds_);
     }
@@ -303,12 +307,19 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     // later copied during finalization; abi.decode alone accepts arbitrarily long trailing data.
     uint256 internal constant MAX_GAME_PARAMS_BYTES = 64;
 
-    function quoteVRFFee(uint32 betCount) public view override returns (uint256 fee, uint32 callbackGasLimit) {
-        // Callback gas scales with betCount (multi-roll). Keep a safe cap.
-        uint32 cb = uint32(300_000 + uint256(betCount) * 20_000);
-        if (cb > 2_000_000) cb = 2_000_000;
-        callbackGasLimit = cb;
-        fee = IVRFHub(vrfHub).quote(cb, 3, 1);
+    function quoteVRFFee(uint32 betCount, uint256 gasPriceBudget)
+        public
+        view
+        override
+        returns (uint256 fee, uint32 callbackGasLimit)
+    {
+        callbackGasLimit = _callbackGasLimit(betCount);
+        fee = IVRFHub(vrfHub).quote(callbackGasLimit, 3, 1, gasPriceBudget);
+    }
+
+    function _callbackGasLimit(uint32 betCount) private pure returns (uint32) {
+        uint256 cb = 300_000 + uint256(betCount) * 20_000;
+        return uint32(cb > 2_000_000 ? 2_000_000 : cb);
     }
 
     function placeBet(
@@ -378,8 +389,10 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
             )
         );
 
+        uint256 fundingBalance = StakeFunding.collect(asset, bank_, stake);
         positionId = ISettlementRouter(settlementRouter)
             .openPosition(poolId, player, stake, reserved, snapshotHash, effectiveHE);
+        StakeFunding.finish(asset, bank_, fundingBalance);
         betDeltaSkyline[positionId] = skyline;
         if (l1 != address(0)) betReferralPayees[positionId] = ReferralPayees({l1: l1, l2: l2});
 
@@ -407,13 +420,13 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         b.snapshotHash = snapshotHash;
         b.paramsHash = paramsHash;
         b.placedAt = uint64(block.timestamp);
+        b.refundDeadline = uint64(block.timestamp + refundTimeoutSeconds);
         b.state = SSOTTypes.BetState.Held;
 
         betParams[positionId] = params;
 
         // --- VRF fee: charged in native token (refactored parity) ---
-        (uint256 requiredFee, uint32 cb) = quoteVRFFee(stakeSpec.betCount);
-        if (msg.value < requiredFee) revert IVRFHub.InsufficientVRFFee(msg.value, requiredFee);
+        uint32 cb = _callbackGasLimit(stakeSpec.betCount);
 
         (uint256 requestId, uint256 charged) =
             IVRFHub(vrfHub).requestRandomWords{value: msg.value}(address(this), positionId, cb, 3, 1, player);
@@ -449,7 +462,8 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
             effectiveHE,
             usedMaxHE,
             cfgId,
-            skylineHash
+            skylineHash,
+            b.refundDeadline
         );
     }
 
@@ -572,7 +586,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
         if (b.state != SSOTTypes.BetState.PendingVRF) revert BadState(betId, b.state, SSOTTypes.BetState.PendingVRF);
 
-        uint256 readyAt = uint256(b.placedAt) + refundTimeoutSeconds;
+        uint256 readyAt = b.refundDeadline;
         if (block.timestamp < readyAt) revert RefundNotReady(betId, block.timestamp, readyAt);
 
         b.resolvedAt = uint64(block.timestamp);

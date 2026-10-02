@@ -13,6 +13,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
@@ -60,7 +62,56 @@ def _as_address(v: Any, *, field: str, path: Path) -> str:
     return s.lower()
 
 
+EXECUTION_ADDRESSES = (
+    "gov", "gameHub", "settlementRouter", "poolRegistry", "vrfHub", "refRegistry", "refEngine", "adapter",
+    "sportsRiskEngine", "sportsHub", "moduleDice", "moduleCoinToss", "moduleRoulette", "moduleKeno",
+    "modulePlinko", "moduleSicBo", "moduleSlots", "moduleBaccarat",
+)
+GAMES = (
+    ("DICE", "dice", "moduleDice"), ("COIN_TOSS", "coin-toss", "moduleCoinToss"),
+    ("ROULETTE", "roulette", "moduleRoulette"), ("KENO", "keno", "moduleKeno"),
+    ("PLINKO", "plinko", "modulePlinko"), ("SIC_BO", "sic-bo", "moduleSicBo"),
+    ("SLOTS", "slots", "moduleSlots"), ("BACCARAT", "baccarat", "moduleBaccarat"),
+)
+
+
+@lru_cache(maxsize=8)
+def _game_id(name: str) -> str:
+    # Use the existing Foundry Keccak implementation, not SHA3-256 or a new crypto implementation.
+    return subprocess.check_output(["cast", "keccak", name], text=True).strip().lower()
+
+
+def _validate_execution(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manifest_path: Path, snapshot_path: Path) -> None:
+    addresses = manifest.get("addresses")
+    if not isinstance(addresses, dict) or set(addresses) != set(EXECUTION_ADDRESSES):
+        raise SystemExit(f"{manifest_path}: unexpected or missing execution addresses")
+    for key in EXECUTION_ADDRESSES:
+        actual = _as_address(addresses[key], field=f"addresses.{key}", path=manifest_path)
+        expected = _as_address(snapshot.get(key), field=key, path=snapshot_path)
+        if actual != expected:
+            raise SystemExit(f"{manifest_path}: addresses.{key} does not match authenticated snapshot")
+    timeout = _as_int(manifest.get("refundTimeoutSeconds"), field="refundTimeoutSeconds", path=manifest_path)
+    if not 60 <= timeout <= 86400:
+        raise SystemExit(f"{manifest_path}: refundTimeoutSeconds outside [60, 86400]")
+    if timeout != _as_int(snapshot.get("refundTimeoutSeconds"), field="refundTimeoutSeconds", path=snapshot_path):
+        raise SystemExit(f"{manifest_path}: refundTimeoutSeconds does not match authenticated snapshot")
+    games = manifest.get("games")
+    if not isinstance(games, list) or len(games) != len(GAMES):
+        raise SystemExit(f"{manifest_path}: expected exactly the current games")
+    by_slug = {g.get("slug"): g for g in games if isinstance(g, dict)}
+    if set(by_slug) != {slug for _, slug, _ in GAMES}:
+        raise SystemExit(f"{manifest_path}: unexpected or duplicate game slug")
+    for name, slug, key in GAMES:
+        game = by_slug[slug]
+        if game.get("gameId", "").lower() != _game_id(name):
+            raise SystemExit(f"{manifest_path}: incorrect gameId for {slug}")
+        if _as_address(game.get("module"), field=f"games.{slug}.module", path=manifest_path) != addresses[key].lower():
+            raise SystemExit(f"{manifest_path}: games.{slug}.module does not match authenticated snapshot")
+
+
 def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manifest_path: Path, snapshot_path: Path) -> None:
+    if any(key.startswith(("poolAssetDecimals_", "poolBankDecimals_")) for key in snapshot):
+        raise SystemExit(f"{snapshot_path}: obsolete unsigned precision field; use authenticated poolLpDecimals_i")
     pools = manifest.get("pools")
     if not isinstance(pools, list) or not pools:
         raise SystemExit(f"{manifest_path}: pools must be a non-empty array")
@@ -81,24 +132,12 @@ def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manif
         if not expected_symbol:
             raise SystemExit(f"{snapshot_path}: poolAssetSymbol_{suffix} must be non-empty")
         expected_decimals = _as_int(
-            snapshot.get(f"poolAssetDecimals_{suffix}"),
-            field=f"poolAssetDecimals_{suffix}",
+            snapshot.get(f"poolLpDecimals_{suffix}"),
+            field=f"poolLpDecimals_{suffix}",
             path=snapshot_path,
         )
         if expected_decimals < 0 or expected_decimals > 36:
-            raise SystemExit(f"{snapshot_path}: poolAssetDecimals_{suffix} out of range: {expected_decimals}")
-        bank_decimals = snapshot.get(f"poolBankDecimals_{suffix}")
-        if bank_decimals is not None:
-            expected_bank_decimals = _as_int(
-                bank_decimals,
-                field=f"poolBankDecimals_{suffix}",
-                path=snapshot_path,
-            )
-            if expected_bank_decimals != expected_decimals:
-                raise SystemExit(
-                    f"{snapshot_path}: poolBankDecimals_{suffix}={expected_bank_decimals} "
-                    f"does not match poolAssetDecimals_{suffix}={expected_decimals}"
-                )
+            raise SystemExit(f"{snapshot_path}: poolLpDecimals_{suffix} out of range: {expected_decimals}")
 
         checks = (
             ("poolId", _as_int(snapshot.get(f"poolId_{suffix}"), field=f"poolId_{suffix}", path=snapshot_path)),
@@ -119,6 +158,26 @@ def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manif
         actual_bank = _as_address(pool.get("bank"), field=f"pools[{i}].bank", path=manifest_path)
         if actual_bank != expected_bank:
             raise SystemExit(f"{manifest_path}: pools[{i}].bank={actual_bank} does not match snapshot {expected_bank}")
+
+        domain = _as_int(snapshot.get(f"poolDomain_{suffix}"), field=f"poolDomain_{suffix}", path=snapshot_path)
+        active = _as_int(snapshot.get(f"poolActive_{suffix}"), field=f"poolActive_{suffix}", path=snapshot_path) != 0
+        if type(pool.get("active")) is not bool or pool["active"] != active:
+            raise SystemExit(f"{manifest_path}: pool active status does not match snapshot")
+        if str(pool.get("domain", "")).lower() != {1: "casino", 2: "sports", 3: "future"}.get(domain, "unknown"):
+            raise SystemExit(f"{manifest_path}: pool domain label does not match snapshot")
+        risk = pool.get("sportsRisk")
+        if domain != 2:
+            if risk is not None:
+                raise SystemExit(f"{manifest_path}: non-sports pool has sportsRisk")
+        else:
+            if not isinstance(risk, dict):
+                raise SystemExit(f"{manifest_path}: missing pool sportsRisk")
+            for field in ("maxStake", "maxPayout", "maxMarketReserved", "maxOutcomeReserved", "maxEventReserved"):
+                key = f"poolSports{field[0].upper() + field[1:]}_{suffix}"
+                if _as_int(risk.get(field), field=field, path=manifest_path) != _as_int(snapshot.get(key), field=key, path=snapshot_path):
+                    raise SystemExit(f"{manifest_path}: pool sportsRisk.{field} does not match snapshot")
+            if str(risk.get("riskHash", "")).lower() != str(snapshot.get(f"poolSportsRiskHash_{suffix}")).lower():
+                raise SystemExit(f"{manifest_path}: pool sportsRisk.riskHash does not match snapshot")
 
         actual_symbol = _as_str(pool.get("symbol"), field=f"pools[{i}].symbol", path=manifest_path)
         if actual_symbol != expected_symbol:
@@ -148,6 +207,18 @@ def _validate_sports(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, mani
         ),
         path=manifest_path,
     )
+    enabled = _as_int(snapshot.get("sportsEnabled"), field="sportsEnabled", path=snapshot_path) != 0
+    if type(sports.get("enabled")) is not bool or sports["enabled"] != enabled:
+        raise SystemExit(f"{manifest_path}: sports.enabled does not match snapshot")
+    for field in ("resultReporterThreshold", "resultChallengeTimeoutSeconds", "maxStake", "maxPayout", "maxMarketReserved", "maxOutcomeReserved", "maxEventReserved"):
+        key = "sports" + field[0].upper() + field[1:]
+        if _as_int(sports.get(field), field=field, path=manifest_path) != _as_int(snapshot.get(key), field=key, path=snapshot_path):
+            raise SystemExit(f"{manifest_path}: sports.{field} does not match snapshot")
+    for field in ("oddsSignerSetHash", "resultReporterSetHash", "resultChallenger", "resultArbitrator"):
+        key = "sports" + field[0].upper() + field[1:]
+        expected = _as_str(snapshot.get(key), field=key, path=snapshot_path).lower()
+        if _as_str(sports.get(field), field=field, path=manifest_path).lower() != expected:
+            raise SystemExit(f"{manifest_path}: sports.{field} does not match snapshot")
     if "hub" in sports:
         raise SystemExit(f"{manifest_path}: sports.hub is not a valid frontend field; use sports.sportsHub")
 
@@ -173,12 +244,12 @@ def _first_active_casino_pool(snapshot: Dict[str, Any], *, snapshot_path: Path) 
         if domain == 1 and active != 0:
             pool_id = _as_int(snapshot.get(f"poolId_{suffix}"), field=f"poolId_{suffix}", path=snapshot_path)
             decimals = _as_int(
-                snapshot.get(f"poolAssetDecimals_{suffix}"),
-                field=f"poolAssetDecimals_{suffix}",
+                snapshot.get(f"poolLpDecimals_{suffix}"),
+                field=f"poolLpDecimals_{suffix}",
                 path=snapshot_path,
             )
             if decimals < 0 or decimals > 36:
-                raise SystemExit(f"{snapshot_path}: poolAssetDecimals_{suffix} out of range: {decimals}")
+                raise SystemExit(f"{snapshot_path}: poolLpDecimals_{suffix} out of range: {decimals}")
             return pool_id, decimals
     raise SystemExit(f"{snapshot_path}: no active casino pool")
 
@@ -320,6 +391,7 @@ def main() -> None:
     if _as_int(vectors["schemaVersion"], field="schemaVersion", path=vectors_path) != 2:
         raise SystemExit(f"{vectors_path}: schemaVersion must be 2")
 
+    _validate_execution(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
     _validate_sports(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
     _validate_pools(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
     _validate_vectors(vectors, snapshot, vectors_path=vectors_path, snapshot_path=snapshot_path)

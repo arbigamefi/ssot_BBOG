@@ -30,7 +30,6 @@ contract StatefulSystemDiffAdapter is StatefulSystemDiff {
         override
     {
         // set deterministic request gas price for wrapper estimates
-        adapter.setRequestGasPriceWei(0);
         adapter.setVRFHub(address(vrf));
         vrf.setAdapter(address(adapter));
     }
@@ -45,8 +44,8 @@ contract StatefulSystemDiffAdapter is StatefulSystemDiff {
         assetA.mint(p, 2_000 ether);
         assetB.mint(p, 2_000 ether);
         vm.startPrank(p);
-        assetA.approve(address(bankA), type(uint256).max);
-        assetB.approve(address(bankB), type(uint256).max);
+        assetA.approve(address(hub), type(uint256).max);
+        assetB.approve(address(hub), type(uint256).max);
         vm.stopPrank();
     }
 

@@ -52,12 +52,13 @@ contract ReleaseDigestV16 is Script {
         json = vm.serializeBytes32(obj, "r", r);
         json = vm.serializeBytes32(obj, "s", s);
 
-        vm.writeJson(json, "deployments/release-latest-v16.json");
+        string memory outputPath = vm.envOr("RELEASE_OUTPUT_PATH", string("deployments/release-latest-v16.json"));
+        vm.writeJson(json, outputPath);
 
         console2.log("snapshot:", snapshotPath);
         console2.log("digest:", vm.toString(digest));
         console2.log("signer:", signer);
-        console2.log("wrote:", "deployments/release-latest-v16.json");
+        console2.log("wrote:", outputPath);
     }
 
     function _digestStatic(string memory snap) internal pure returns (bytes32 digest) {
@@ -117,11 +118,7 @@ contract ReleaseDigestV16 is Script {
 
         digest = keccak256(
             abi.encode(
-                digest,
-                snap.readAddress(".vrfWrapper"),
-                snap.readAddress(".adapter"),
-                snap.readAddress(".vrfHub"),
-                snap.readUint(".requestGasPriceWei")
+                digest, snap.readAddress(".vrfWrapper"), snap.readAddress(".adapter"), snap.readAddress(".vrfHub")
             )
         );
 
@@ -214,12 +211,14 @@ contract ReleaseDigestV16 is Script {
                     digest,
                     snap.readUint(string.concat(".poolBankMinLiqBps_", suffix)),
                     snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix)),
+                    snap.readUint(string.concat(".poolBankMinStake_", suffix)),
                     snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix)),
                     snap.readUint(string.concat(".poolBankMinTurnoverForUnlock_", suffix)),
                     snap.readUint(string.concat(".poolBankHoldbackVestingSeconds_", suffix)),
                     keccak256(bytes(snap.readString(string.concat(".poolLpName_", suffix)))),
                     keccak256(bytes(snap.readString(string.concat(".poolLpSymbol_", suffix)))),
-                    snap.readUint(string.concat(".poolLpDecimals_", suffix))
+                    snap.readUint(string.concat(".poolLpDecimals_", suffix)),
+                    keccak256(bytes(snap.readString(string.concat(".poolAssetSymbol_", suffix))))
                 )
             );
 

@@ -5,7 +5,7 @@ SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v16.json}"
 
 if [[ ! -f "$SNAPSHOT_PATH" ]]; then
   echo "missing snapshot: $SNAPSHOT_PATH"
-  echo "hint: run a deploy (writes deployments/latest-v16.json) and include the artifacts in the release commit/tag."
+  echo "hint: supply the digest-verified release bundle to the Release Gate workflow."
   exit 1
 fi
 

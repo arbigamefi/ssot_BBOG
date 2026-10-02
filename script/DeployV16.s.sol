@@ -121,7 +121,6 @@ contract DeployV16 is Script {
         bytes32 safeControlHash;
         address treasury;
         address vrfWrapper;
-        uint256 requestGasPriceWei;
         uint256 refundTimeoutSeconds;
         uint16 defaultHouseEdgeBps;
         uint256 poolCount;
@@ -134,6 +133,7 @@ contract DeployV16 is Script {
         address asset;
         address bank;
         SSOTTypes.PoolDomain domain;
+        uint256 minStake;
         uint16 riskReserveBps;
         uint16 withdrawalBufferBps;
         uint256 minTurnoverForUnlock;
@@ -193,7 +193,6 @@ contract DeployV16 is Script {
         d.adapter = new ChainlinkV2PlusWrapperAdapter(cfg.vrfWrapper, cfg.gov);
         d.vrf = new VRFHub(address(d.adapter), cfg.gov);
         d.adapter.setVRFHub(address(d.vrf));
-        d.adapter.setRequestGasPriceWei(cfg.requestGasPriceWei);
         d.vrf.setAdapter(address(d.adapter));
 
         d.poolRegistry = new PoolRegistry(cfg.gov);
@@ -288,7 +287,8 @@ contract DeployV16 is Script {
                 pools[i].riskReserveBps,
                 pools[i].lpName,
                 pools[i].lpSymbol,
-                pools[i].lpDecimals
+                pools[i].lpDecimals,
+                pools[i].minStake
             );
             pools[i].bank = address(bank);
             bank.setRiskInPaused(true);
@@ -362,11 +362,11 @@ contract DeployV16 is Script {
         require(cfg.releaseSigner != address(0), "release signer required");
         cfg.treasury = vm.envOr("TREASURY", address(0));
         cfg.vrfWrapper = vm.envAddress("VRF_WRAPPER");
-        cfg.requestGasPriceWei = vm.envOr("REQUEST_GAS_PRICE_WEI", uint256(0));
-        if (block.chainid != 31337 && cfg.requestGasPriceWei == 0) {
-            revert("REQUEST_GAS_PRICE_WEI required off local chain");
-        }
         cfg.refundTimeoutSeconds = vm.envOr("REFUND_TIMEOUT_SECONDS", uint256(3600));
+        require(
+            cfg.refundTimeoutSeconds >= HouseEdgeLib.MIN_REFUND_TIMEOUT_SECONDS,
+            "REFUND_TIMEOUT_SECONDS below one minute"
+        );
         require(
             cfg.refundTimeoutSeconds <= HouseEdgeLib.MAX_REFUND_TIMEOUT_SECONDS, "REFUND_TIMEOUT_SECONDS above one day"
         );
@@ -454,6 +454,8 @@ contract DeployV16 is Script {
         uint256 domainRaw = vm.envOr(string.concat("POOL_DOMAIN_", suffix), uint256(1));
         cfg.domain = _domainFromRaw(domainRaw);
 
+        cfg.minStake = vm.envUint(string.concat("BANK_MIN_STAKE_", suffix));
+        require(cfg.minStake > 0, "BANK_MIN_STAKE_i must be positive");
         cfg.riskReserveBps = _bps(string.concat("BANK_RISK_RESERVE_BPS_", suffix), 1000);
         cfg.withdrawalBufferBps = _bps(string.concat("BANK_WITHDRAWAL_BUFFER_BPS_", suffix), cfg.riskReserveBps);
         cfg.minTurnoverForUnlock =
@@ -533,7 +535,6 @@ contract DeployV16 is Script {
         json = vm.serializeAddress(obj, "vrfWrapper", cfg.vrfWrapper);
         json = vm.serializeAddress(obj, "adapter", address(d.adapter));
         json = vm.serializeAddress(obj, "vrfHub", address(d.vrf));
-        json = vm.serializeUint(obj, "requestGasPriceWei", cfg.requestGasPriceWei);
 
         json = vm.serializeAddress(obj, "poolRegistry", address(d.poolRegistry));
         json = vm.serializeAddress(obj, "settlementRouter", address(d.router));
@@ -674,11 +675,12 @@ contract DeployV16 is Script {
             json = vm.serializeString(obj, string.concat("poolDomainLabel_", suffix), _domainLabel(pools[i].domain));
             json = vm.serializeAddress(obj, string.concat("poolAsset_", suffix), pools[i].asset);
             json = vm.serializeString(obj, string.concat("poolAssetSymbol_", suffix), assetSymbol);
-            json = vm.serializeUint(obj, string.concat("poolAssetDecimals_", suffix), uint256(assetDecimals));
             json = vm.serializeAddress(obj, string.concat("poolBank_", suffix), pools[i].bank);
-            json = vm.serializeUint(
-                obj, string.concat("poolBankDecimals_", suffix), uint256(Bank(pools[i].bank).decimals())
+            require(
+                pools[i].lpDecimals == assetDecimals && pools[i].lpDecimals == Bank(pools[i].bank).decimals(),
+                "pool precision mismatch"
             );
+            json = vm.serializeUint(obj, string.concat("poolBankMinStake_", suffix), pools[i].minStake);
             json = vm.serializeUint(obj, string.concat("poolBankMinLiqBps_", suffix), pools[i].riskReserveBps);
             json = vm.serializeUint(obj, string.concat("poolBankRiskReserveBps_", suffix), pools[i].riskReserveBps);
             json = vm.serializeUint(
@@ -721,7 +723,8 @@ contract DeployV16 is Script {
                         pools[i].riskReserveBps,
                         pools[i].lpName,
                         pools[i].lpSymbol,
-                        pools[i].lpDecimals
+                        pools[i].lpDecimals,
+                        pools[i].minStake
                     )
                 )
             );
@@ -832,7 +835,8 @@ contract DeployV16 is Script {
                         pools[i].riskReserveBps,
                         pools[i].lpName,
                         pools[i].lpSymbol,
-                        pools[i].lpDecimals
+                        pools[i].lpDecimals,
+                        pools[i].minStake
                     )
                 ),
                 verifierUrl

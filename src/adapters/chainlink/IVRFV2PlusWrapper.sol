@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 /// @notice Minimal interface for Chainlink VRF v2.5+ Wrapper (native payment path).
 /// @dev The actual wrapper has more methods; we only use those needed for quoting and requesting.
 interface IVRFV2PlusWrapper {
+    function calculateRequestPriceNative(uint32 callbackGasLimit, uint32 numWords) external view returns (uint256);
     function estimateRequestPriceNative(uint32 callbackGasLimit, uint32 numWords, uint256 requestGasPriceWei)
         external
         view

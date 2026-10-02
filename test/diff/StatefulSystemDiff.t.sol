@@ -157,8 +157,8 @@ contract StatefulSystemDiff is Test {
         _postConfigureVRFAdapter(gov);
         vm.stopPrank();
 
-        bankA = new Bank(address(assetA), gov, 1000, "LP Share ASTA", "LPA", 18);
-        bankB = new Bank(address(assetB), gov, 1000, "LP Share ASTB", "LPB", 18);
+        bankA = new Bank(address(assetA), gov, 1000, "LP Share ASTA", "LPA", 18, 1);
+        bankB = new Bank(address(assetB), gov, 1000, "LP Share ASTB", "LPB", 18, 1);
 
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
@@ -235,8 +235,8 @@ contract StatefulSystemDiff is Test {
             assetA.mint(p, 2_000 ether);
             assetB.mint(p, 2_000 ether);
             vm.startPrank(p);
-            assetA.approve(address(bankA), type(uint256).max);
-            assetB.approve(address(bankB), type(uint256).max);
+            assetA.approve(address(hub), type(uint256).max);
+            assetB.approve(address(hub), type(uint256).max);
             vm.stopPrank();
         }
 
@@ -330,7 +330,7 @@ contract StatefulSystemDiff is Test {
     }
 
     function _hubQuoteVRFFee(uint32 betCount) internal view virtual returns (uint256 fee, uint32 callbackGasLimit) {
-        return hub.quoteVRFFee(betCount);
+        return hub.quoteVRFFee(betCount, tx.gasprice);
     }
 
     function _hubGetBet(uint256 betId) internal view virtual returns (SSOTTypes.Bet memory) {
@@ -831,12 +831,10 @@ contract StatefulSystemDiff is Test {
 
         // schedule snapshotted by id at acceptance, payees snapshotted at acceptance
         (uint16 l0Bps, uint16 l1Bps, uint16 l2Bps, uint16 holdbackBps) = _hubGetReferralConfig(b.referralConfigId);
-        Plan memory planB = _splitBase(
-            baseEdge, l0Bps, l1Bps, l2Bps, pricing.l1, pricing.l2, holdbackBps, minTurnover, turnoverAfter
-        );
-        Plan memory planD = _splitDelta(
-            pricing.skyline, (edge - baseEdge) * 5_000 / BPS, holdbackBps, minTurnover, turnoverAfter
-        );
+        Plan memory planB =
+            _splitBase(baseEdge, l0Bps, l1Bps, l2Bps, pricing.l1, pricing.l2, holdbackBps, minTurnover, turnoverAfter);
+        Plan memory planD =
+            _splitDelta(pricing.skyline, (edge - baseEdge) * 5_000 / BPS, holdbackBps, minTurnover, turnoverAfter);
 
         uint256 paid = planB.playerRakeback + _planTotal(planB) + _planTotal(planD);
         assertLe(paid, operatorShare, "referral and markup exceed the operator share");

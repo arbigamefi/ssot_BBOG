@@ -59,33 +59,33 @@ function sleep(ms: number) {
 
 function computeRiskFreeLiquidity({
   totalAssets,
-  totalReserved,
+  activeReserved,
   riskReserveBps
 }: {
   totalAssets: bigint;
-  totalReserved: bigint;
+  activeReserved: bigint;
   riskReserveBps: bigint;
 }) {
   const riskReserve = (totalAssets * riskReserveBps) / 10000n;
-  const free = totalAssets - totalReserved - riskReserve;
+  const free = totalAssets - activeReserved - riskReserve;
   return free > 0n ? free : 0n;
 }
 
 function canBankHoldBet({
   totalAssets,
-  totalReserved,
+  activeReserved,
   riskReserveBps,
   stake,
   requiredReserve
 }: {
   totalAssets: bigint;
-  totalReserved: bigint;
+  activeReserved: bigint;
   riskReserveBps: bigint;
   stake: bigint;
   requiredReserve: bigint;
 }) {
   const navAfterStake = totalAssets + stake;
-  const reservedAfterStake = totalReserved + requiredReserve;
+  const reservedAfterStake = activeReserved + requiredReserve;
   if (navAfterStake < reservedAfterStake) return false;
   const riskReserveAfterStake = (navAfterStake * riskReserveBps) / 10000n;
   return navAfterStake - reservedAfterStake >= riskReserveAfterStake;
@@ -103,6 +103,8 @@ export interface CreateSSOTSDKParams {
   walletClient?: WalletClient;
   account?: Address;
   journal?: JournalSink;
+  /** Revoke pending writes when the embedding app changes wallet or release context. */
+  assertWalletContext?: () => void;
 }
 
 export interface SSOTSDK {
@@ -117,7 +119,7 @@ export interface SSOTSDK {
 
 export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   const { release, publicClient, walletClient, account } = params;
-  const tx = createTxPipeline({ journal: params.journal });
+  const tx = createTxPipeline({ journal: params.journal, beforeWrite: params.assertWalletContext });
 
   function requireWallet():
     | { walletClient: WalletClient; account: Address }
@@ -187,6 +189,10 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     SportsHubAbi: SPORTS_HUB_ABI,
     IGameModuleAbi: GAME_MODULE_ABI
   } = getContractAbis();
+  // Nested Bank reverts must decode during the final hub simulation as well as planning.
+  const bankErrors = BANK_ABI.filter((item) => item.type === "error");
+  const CASINO_EXECUTION_ABI = [...GAME_HUB_ABI, ...bankErrors];
+  const SPORTS_EXECUTION_ABI = [...SPORTS_HUB_ABI, ...bankErrors];
   const BANK_DEPOSIT_EVENT = getAbiItem({ abi: BANK_ABI, name: "Deposit" }) as AbiEvent;
   const BANK_WITHDRAW_EVENT = getAbiItem({ abi: BANK_ABI, name: "Withdraw" }) as AbiEvent;
   const BANK_RECOVERY_EVENT = getAbiItem({ abi: BANK_ABI, name: "RecoveryClaimed" }) as AbiEvent;
@@ -399,7 +405,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         address: gameHubAddress,
         abi: GAME_HUB_ABI,
         functionName: "quoteVRFFee",
-        args: [betCount]
+        args: [betCount, await publicClient.getGasPrice()]
       })) as unknown as [bigint, number];
       return fee;
     },
@@ -417,9 +423,30 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           };
         }
 
-        if (input.betCount <= 0) {
+        if (input.betCount <= 0 || input.betCount > 100) {
           return {
-            error: { code: "BAD_INPUT", message: "betCount must be > 0", severity: "error" }
+            error: {
+              code: "BAD_INPUT",
+              message: "betCount must be between 1 and 100",
+              severity: "error"
+            }
+          };
+        }
+
+        const stakeSpecDecoded = decodeStakeSpec(input.stakeSpec);
+        const impliedStake = stakeSpecDecoded.amountPerRoll * BigInt(stakeSpecDecoded.betCount);
+        if (stakeSpecDecoded.betCount !== input.betCount || impliedStake !== input.stake) {
+          return {
+            error: {
+              code: "STAKE_SPEC_MISMATCH",
+              message: "stake and betCount must match encoded stakeSpec.",
+              severity: "error"
+            }
+          };
+        }
+        if (stakeSpecDecoded.amountPerRoll <= 0n) {
+          return {
+            error: { code: "BAD_INPUT", message: "amountPerRoll must be > 0", severity: "error" }
           };
         }
 
@@ -432,10 +459,12 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         const asset = getAddress(pool.asset) as Address;
         const bank = getAddress(pool.bank) as Address;
 
+        const blockNumber = await publicClient.getBlockNumber({ cacheTime: 0 });
         const paused = (await publicClient.readContract({
           address: gameHubAddress,
           abi: GAME_HUB_ABI,
           functionName: "riskInPaused",
+          blockNumber,
           args: [BigInt(input.poolId)]
         })) as boolean;
         if (paused) {
@@ -448,11 +477,13 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           };
         }
 
+        const gasPrice = await publicClient.getGasPrice();
         const [rawFee] = (await publicClient.readContract({
           address: gameHubAddress,
           abi: GAME_HUB_ABI,
           functionName: "quoteVRFFee",
-          args: [input.betCount]
+          blockNumber,
+          args: [input.betCount, gasPrice]
         })) as unknown as [bigint, number];
 
         // Add 50% buffer to VRF fee to account for L1 gas price fluctuation
@@ -463,7 +494,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           address: asset,
           abi: ERC20_ABI,
           functionName: "allowance",
-          args: [walletReq.account, bank]
+          blockNumber,
+          args: [walletReq.account, gameHubAddress]
         })) as bigint;
 
         const { needsApproval, approveAmount } = planExactApproval({
@@ -487,14 +519,23 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         }
 
         // Decode stakeSpec early for maxPayout call
-        const stakeSpecForSolvency = decodeStakeSpec(input.stakeSpec);
+        const stakeSpecForSolvency = stakeSpecDecoded;
 
         // Parallel reads: game module maxPayout + bank solvency state
-        const [requiredReserve, totalAssets, totalReserved, riskReserveBps] = await Promise.all([
+        const [
+          requiredReserve,
+          totalAssets,
+          activeReserved,
+          riskReserveBps,
+          activeOpenHolds,
+          maxActiveHolds,
+          minStake
+        ] = await Promise.all([
           publicClient.readContract({
             address: getAddress(moduleAddress) as Address,
             abi: GAME_MODULE_ABI,
             functionName: "maxPayout",
+            blockNumber,
             args: [
               input.params,
               {
@@ -508,30 +549,70 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           publicClient.readContract({
             address: bank as Address,
             abi: BANK_ABI,
+            blockNumber,
             functionName: "totalAssets"
           }) as Promise<bigint>,
           publicClient.readContract({
             address: bank as Address,
             abi: BANK_ABI,
-            functionName: "totalReserved"
+            blockNumber,
+            functionName: "activeReserved"
           }) as Promise<bigint>,
           publicClient.readContract({
             address: bank as Address,
             abi: BANK_ABI,
+            blockNumber,
             functionName: "riskReserveBps"
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: bank,
+            abi: BANK_ABI,
+            blockNumber,
+            functionName: "activeOpenHolds"
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: bank,
+            abi: BANK_ABI,
+            blockNumber,
+            functionName: "MAX_ACTIVE_HOLDS"
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: bank,
+            abi: BANK_ABI,
+            blockNumber,
+            functionName: "minStake"
           }) as Promise<bigint>
         ]);
+        if (input.stake < minStake) {
+          return {
+            error: {
+              code: "STAKE_BELOW_MINIMUM",
+              message: `Total stake must be at least ${minStake} asset units.`,
+              severity: "warning"
+            }
+          };
+        }
+        if (activeOpenHolds >= maxActiveHolds) {
+          return {
+            error: {
+              code: "POOL_CAPACITY_FULL",
+              message: "This pool is temporarily at capacity. Wait for a pending bet to finish.",
+              severity: "warning",
+              retryable: true
+            }
+          };
+        }
 
         const freeLiquidity = computeRiskFreeLiquidity({
           totalAssets,
-          totalReserved,
+          activeReserved,
           riskReserveBps
         });
 
         if (
           !canBankHoldBet({
             totalAssets,
-            totalReserved,
+            activeReserved,
             riskReserveBps,
             stake: input.stake,
             requiredReserve
@@ -540,8 +621,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           const navAfterStake = totalAssets + input.stake;
           const riskReserveAfterStake = (navAfterStake * riskReserveBps) / 10000n;
           const availableAfterStake =
-            navAfterStake > totalReserved + riskReserveAfterStake
-              ? navAfterStake - totalReserved - riskReserveAfterStake
+            navAfterStake > activeReserved + riskReserveAfterStake
+              ? navAfterStake - activeReserved - riskReserveAfterStake
               : 0n;
           return {
             error: {
@@ -559,8 +640,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         const navAfterStake = totalAssets + input.stake;
         const riskReserveAfterStake = (navAfterStake * riskReserveBps) / 10000n;
         const availableAfterStake =
-          navAfterStake > totalReserved + riskReserveAfterStake
-            ? navAfterStake - totalReserved - riskReserveAfterStake
+          navAfterStake > activeReserved + riskReserveAfterStake
+            ? navAfterStake - activeReserved - riskReserveAfterStake
             : 0n;
 
         // Warn if liquidity is tight (reserved > 90% of post-stake capacity).
@@ -574,7 +655,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           steps.push({
             type: "approve",
             token: asset as AddressT,
-            spender: bank as AddressT,
+            spender: gameHubAddress as AddressT,
             amount: approveAmount!
           });
         }
@@ -601,24 +682,6 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           warnings.push("Release snapshot is marked as placeholder; writes are not recommended.");
         }
 
-        const stakeSpecDecoded = decodeStakeSpec(input.stakeSpec);
-        if (stakeSpecDecoded.betCount !== input.betCount) {
-          return {
-            error: {
-              code: "STAKE_SPEC_MISMATCH",
-              message: "stakeSpec.betCount must match betCount.",
-              severity: "error",
-              details: { stakeSpecBetCount: stakeSpecDecoded.betCount, betCount: input.betCount }
-            }
-          };
-        }
-        const impliedStake = stakeSpecDecoded.amountPerRoll * BigInt(stakeSpecDecoded.betCount);
-        if (impliedStake !== input.stake) {
-          warnings.push(
-            `stakeSpec implies stake=${impliedStake.toString()} but input stake=${input.stake.toString()}. Execution will use stakeSpec.`
-          );
-        }
-
         return {
           chainId: input.chainId,
           releaseDigest: release.releaseDigest,
@@ -635,6 +698,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           },
           preview: {
             vrfFee: fee,
+            gasPrice,
+            quoteBlockNumber: blockNumber,
             stake: input.stake,
             allowance,
             needsApproval,
@@ -750,6 +815,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         payload.maxHouseEdgeBps
       ] as const;
 
+      // Re-simulate after approval with the confirmed gas price and native budget.
+      // The real wrapper price is evaluated inside this simulation; a changed
+      // fee, allowance, capacity or reserve cannot trigger an unreviewed write.
       const submitBet = () =>
         tx.simulateAndWrite({
           chainId: plan.chainId,
@@ -759,10 +827,11 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           walletClient: walletReq.walletClient,
           account: walletReq.account,
           address: gameHubAddress,
-          abi: GAME_HUB_ABI,
+          abi: CASINO_EXECUTION_ABI,
           functionName: "placeBet",
           args,
           value: placeStep.value,
+          gasPrice: plan.preview.gasPrice,
           beforeWrite: () => onStage?.("placeBet")
         });
 
@@ -980,6 +1049,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         randomHash: bet.randomHash as Hex,
         state,
         placedAt: Number(bet.placedAt),
+        refundDeadline: Number(bet.refundDeadline),
         vrfRequestedAt: numberOrUndefined(bet.vrfRequestedAt),
         resolvedAt: numberOrUndefined(bet.resolvedAt),
         settledAt: numberOrUndefined(bet.resolvedAt)
@@ -1116,7 +1186,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     },
     async getSnapshot(poolId: number, opts): Promise<DomainBankSnapshot> {
       const pool = resolveBankPool(poolId);
-      const blockNumber = opts?.blockNumber ?? (await publicClient.getBlockNumber());
+      const blockNumber =
+        opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
       const block = await publicClient.getBlock({ blockNumber });
       const shareUnit = 10n ** BigInt(pool.decimals);
       const [ssot, totalSupply, assetsPerShare, performance] = (await Promise.all([
@@ -1192,7 +1263,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
 
     async getPosition(poolId: number, user: AddressT, opts): Promise<DomainBankPosition> {
       const pool = resolveBankPool(poolId);
-      const blockNumber = opts?.blockNumber ?? (await publicClient.getBlockNumber());
+      const blockNumber =
+        opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
       const [block, shares] = await Promise.all([
         publicClient.getBlock({ blockNumber }),
         publicClient.readContract({
@@ -1916,7 +1988,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           address: pool.asset,
           abi: ERC20_ABI,
           functionName: "allowance",
-          args: [walletReq.account, pool.bank]
+          args: [walletReq.account, sportsHubAddress]
         })) as bigint;
         const { needsApproval, approveAmount } = planExactApproval({
           allowance,
@@ -1950,12 +2022,42 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           warnings.push("Could not preview the odds ticket hash before execution.");
         }
 
+        const blockNumber = await publicClient.getBlockNumber({ cacheTime: 0 });
+        const [minStake, activeOpenHolds, maxActiveHolds] = await Promise.all(
+          ["minStake", "activeOpenHolds", "MAX_ACTIVE_HOLDS"].map(
+            (functionName) =>
+              publicClient.readContract({
+                address: pool.bank,
+                abi: BANK_ABI,
+                functionName,
+                blockNumber
+              }) as Promise<bigint>
+          )
+        );
+        if (input.stake < minStake!)
+          return {
+            error: {
+              code: "STAKE_BELOW_MINIMUM",
+              message: `Total stake must be at least ${minStake} asset units.`,
+              severity: "warning"
+            }
+          };
+        if (activeOpenHolds! >= maxActiveHolds!)
+          return {
+            error: {
+              code: "POOL_CAPACITY_FULL",
+              message: "This pool is temporarily at capacity.",
+              severity: "warning",
+              retryable: true
+            }
+          };
+
         const steps: PlaceSportsTicketPlan["steps"] = [];
         if (needsApproval) {
           steps.push({
             type: "approve",
             token: pool.asset as AddressT,
-            spender: pool.bank as AddressT,
+            spender: sportsHubAddress as AddressT,
             amount: approveAmount!
           });
         }
@@ -2090,7 +2192,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         walletClient: walletReq.walletClient,
         account: walletReq.account,
         address: sportsHubAddress,
-        abi: SPORTS_HUB_ABI,
+        abi: SPORTS_EXECUTION_ABI,
         functionName: "placeTicket",
         args
       });

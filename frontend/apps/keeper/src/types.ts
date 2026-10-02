@@ -58,7 +58,7 @@ export type BetRead = {
   betId: bigint;
   requestId: bigint;
   state: BetStateName;
-  placedAt?: bigint;
+  refundDeadline?: bigint;
 };
 
 export type FinalizeOutcome =

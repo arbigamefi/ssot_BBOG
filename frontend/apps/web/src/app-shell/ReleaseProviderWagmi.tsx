@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useAccount, useChainId } from "wagmi";
+import { useAccount } from "wagmi";
 
 import { ReleaseProvider } from "../ssot/release/ReleaseProvider";
 import { useActiveChain } from "./ActiveChainProvider";
@@ -14,8 +14,7 @@ export function ReleaseProviderWagmi({
   sportsbookEnabledFlag?: string;
 }) {
   const { selectedChainId, selectedChain } = useActiveChain();
-  const walletChainId = useChainId();
-  const { isConnected } = useAccount();
+  const { isConnected, chainId: walletChainId } = useAccount();
   return (
     <ReleaseProvider
       chainId={selectedChainId}

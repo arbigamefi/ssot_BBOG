@@ -7,8 +7,8 @@ casino pools and reads the generated contract ABI.
 - Show active wallet equity, queued liquid estimates, priced claimable assets and historical recovery
   separately. Future recovery is an upper bound, not cash or a guaranteed portfolio value.
 - Request by shares. Cancellation is available until actual activation, even after eligibility.
-  Activation prices available cash immediately; each old epoch retains its risk and recovery rights
-  for all snapshot holders. A stuck epoch never gates a later request or activation.
+  Activation prices available cash immediately; only exiting controllers retain separate old recovery rights;
+  staying shares keep underwriting and their capital recovers in the settlement transaction. A stuck epoch never gates a later request or activation.
 - Discover historical rights even when the wallet holds zero active shares. Page contiguous epoch IDs
   at one fixed block. Empty account pages can still have older rights; expose further pagination.
 - Use the same block for Bank views, recovery pages and cash history. Show the snapshot time and

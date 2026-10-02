@@ -4,6 +4,16 @@ on:
   pull_request:
     paths:
       - "frontend/**"
+      - "src/**"
+      - "test/mocks/**"
+      - "test/unit/Bank*"
+      - "script/ci/bank_sdk_integration.sh"
+      - "script/ci/bank_wallet_e2e.sh"
+      - "script/ci/keeper_integration.sh"
+      - "script/ci/install_deps.sh"
+      - "foundry.toml"
+      - "remappings.txt"
+      - "deps.lock"
       - ".github/workflows/frontend-ci.yml"
       - ".node-version"
       - "package.json"
@@ -11,6 +21,16 @@ on:
     branches: ["**"]
     paths:
       - "frontend/**"
+      - "src/**"
+      - "test/mocks/**"
+      - "test/unit/Bank*"
+      - "script/ci/bank_sdk_integration.sh"
+      - "script/ci/bank_wallet_e2e.sh"
+      - "script/ci/keeper_integration.sh"
+      - "script/ci/install_deps.sh"
+      - "foundry.toml"
+      - "remappings.txt"
+      - "deps.lock"
       - ".github/workflows/frontend-ci.yml"
       - ".node-version"
       - "package.json"
@@ -99,3 +119,30 @@ jobs:
 
       - name: Build Storybook
         run: pnpm storybook:build
+
+  bank-sdk-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: bash script/ci/install_deps.sh
+      - run: pnpm -C frontend install --frozen-lockfile
+      - name: Real Bank and SDK on isolated Anvil (required, no skip)
+        run: bash script/ci/bank_sdk_integration.sh
+      - name: Real keeper restart and refunds on Anvil with PostgreSQL
+        run: bash script/ci/keeper_integration.sh
+      - name: Install browser for connected-wallet gate
+        run: pnpm -C frontend/apps/web exec playwright install --with-deps chromium
+      - name: Connected wallet and actual Bank cash (required)
+        run: bash script/ci/bank_wallet_e2e.sh

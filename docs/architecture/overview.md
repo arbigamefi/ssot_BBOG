@@ -75,12 +75,12 @@ Current component boundaries for the prelaunch implementation.
 
 ### 1) Place bet
 
-1. UI/SDK obtains a deterministic fee quote: `GameHub.quoteVRFFee(betCount) -> (feeWei, callbackGasLimit)`.
+1. UI/SDK obtains a budget quote at an explicit gas price: `GameHub.quoteVRFFee(betCount, gasPriceBudget) -> (feeWei, callbackGasLimit)`.
 2. User calls `GameHub.placeBet(gameId, poolId, params, stakeSpec, affiliate, maxHouseEdgeBps)` **payable** with `msg.value >= feeWei`.
 3. GameHub validates params + stake spec and computes `reserved = module.maxPayout(params, stakeSpec)`.
-4. GameHub opens a router position: `SettlementRouter.openPosition(poolId, player, stake, reserved, snapshotHash)`.
-5. SettlementRouter snapshots the pool/Bank and calls `Bank.holdBet(positionId, player, stake, reserved, snapshotHash)`.
-6. GameHub forwards the charged VRF fee to `VRFHub.requestRandomWords(..., payer=player)` and records the `requestId`.
+4. GameHub collects exactly this stake from `msg.sender`, approves only that amount to the pool Bank, and opens `SettlementRouter.openPosition(poolId, player, stake, reserved, snapshotHash, edgeBps)`. Players approve the betting hub; LP deposits approve Bank.
+5. SettlementRouter snapshots the pool/Bank and calls `Bank.holdBet(positionId, player, stake, reserved, snapshotHash, msg.sender)`. Bank pulls from the authenticated hub, checks exact arrival, and the hub clears its allowance and verifies its original balance is restored.
+6. The wrapper determines the actual charge with its native-price function at transaction gas price. GameHub forwards the VRF budget to `VRFHub.requestRandomWords(..., payer=player)` and records the `requestId`.
 7. Any overpayment is refunded best-effort; failed refunds accrue `refundCredit` claimable later (debt-out).
 
 ### 2) Fulfill + finalize

@@ -19,7 +19,7 @@ describe("provider ledger unknown balances", () => {
   ])("does not invent zero balances while data is unavailable: %j", (state) => {
     render(<BankProviderLedgerPanel {...state} decimals={6} entries={[]} symbol="USDC" />);
     expect(screen.queryAllByText("0 USDC")).toHaveLength(0);
-    expect(screen.getAllByText("—")).toHaveLength(5);
+    expect(screen.getAllByText("—")).toHaveLength(4);
   });
 
   it("does not calculate net P&L before the current position is known", () => {
@@ -27,7 +27,7 @@ describe("provider ledger unknown balances", () => {
       <BankProviderLedgerPanel connected loading={false} decimals={6} entries={[]} symbol="USDC" />
     );
     expect(screen.getAllByText("0 USDC")).toHaveLength(2);
-    expect(screen.getAllByText("—")).toHaveLength(3);
+    expect(screen.getAllByText("—")).toHaveLength(2);
   });
 
   it("retains pending and fixed claim equity when no shares remain in the wallet", () => {
@@ -56,7 +56,7 @@ describe("provider ledger unknown balances", () => {
     );
     const summary = (label: string) => within(screen.getByText(label).parentElement!);
     expect(summary("earn.ledger.summary.openValue").getByText("100 USDC")).toBeTruthy();
-    expect(summary("earn.ledger.summary.netPnl").getByText("0 USDC")).toBeTruthy();
+    expect(screen.queryByText("earn.ledger.summary.netPnl")).toBeNull();
   });
 
   it("does not calculate lifetime P&L from an incomplete cash flow page", () => {
@@ -72,9 +72,7 @@ describe("provider ledger unknown balances", () => {
         entries={[]}
       />
     );
-    expect(
-      within(screen.getByText("earn.ledger.summary.netPnl").parentElement!).getByText("—")
-    ).toBeTruthy();
+    expect(screen.queryByText("earn.ledger.summary.netPnl")).toBeNull();
   });
 
   it.each([{ recoveryComplete: false }, { recoveryComplete: true, hasUnsettledRecovery: true }])(
@@ -92,9 +90,7 @@ describe("provider ledger unknown balances", () => {
           {...recovery}
         />
       );
-      expect(
-        within(screen.getByText("earn.ledger.summary.netPnl").parentElement!).getByText("—")
-      ).toBeTruthy();
+      expect(screen.queryByText("earn.ledger.summary.netPnl")).toBeNull();
       expect(screen.getByText("earn.recovery.incompleteReturn")).toBeTruthy();
     }
   );
@@ -121,9 +117,26 @@ describe("provider ledger unknown balances", () => {
     expect(
       within(screen.getByText("earn.ledger.summary.withdrawn").parentElement!).getByText("7 USDC")
     ).toBeTruthy();
-    expect(
-      within(screen.getByText("earn.ledger.summary.netPnl").parentElement!).getByText("−3 USDC")
-    ).toBeTruthy();
+    expect(screen.queryByText("earn.ledger.summary.netPnl")).toBeNull();
     expect(screen.getByText("earn.recovery.donationNote")).toBeTruthy();
+  });
+  it("does not invent profit for received shares without a cost basis", () => {
+    render(
+      <BankProviderLedgerPanel
+        connected
+        loading={false}
+        decimals={6}
+        entries={[]}
+        symbol="USDC"
+        positionAssets={100_000_000n}
+        positionShares={100_000_000n}
+        cashFlowComplete
+        recoveryComplete
+      />
+    );
+    expect(
+      within(screen.getByText("earn.ledger.summary.openValue").parentElement!).getByText("100 USDC")
+    ).toBeTruthy();
+    expect(screen.queryByText("earn.ledger.summary.netPnl")).toBeNull();
   });
 });

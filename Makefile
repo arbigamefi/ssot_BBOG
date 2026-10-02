@@ -178,7 +178,7 @@ release-abis:
 release-package:
 	PYTHON="$(PYTHON)" bash script/release/package_release.sh
 
-# Create an "audit handoff" bundle: code + docs + pinned deps metadata + release artifacts + verify helpers.
+# Create a complete source audit bundle from a clean commit, before deployment.
 # The output is placed under dist/ as a .tar.gz.
 audit-package:
 	bash script/release/package_audit.sh

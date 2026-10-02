@@ -74,7 +74,7 @@ describe("live pool availability", () => {
           ...snapshot,
           recoveryBacking: 50n,
           totalReserved: 20n,
-          currentOpenHolds: 0n,
+          activeOpenHolds: 0n,
           currentEpoch: 2n,
           queuedBatch: null
         })

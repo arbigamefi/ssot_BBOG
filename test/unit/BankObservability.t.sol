@@ -25,7 +25,7 @@ contract BankObservabilityTest is Test {
 
     function setUp() external {
         asset = new MockERC20("USD Coin", "USDC", 6);
-        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6);
+        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6, 1);
 
         vm.prank(gov);
         bank.setSettlementRouterOnce(address(this));
@@ -33,7 +33,7 @@ contract BankObservabilityTest is Test {
 
     function test_constructorRejectsShareDecimalsThatDoNotMatchAsset() external {
         vm.expectRevert(Errors.InvalidConfig.selector);
-        new Bank(address(asset), gov, 0, "LP USDC Bad Decimals", "lpUSDC-BAD", 18);
+        new Bank(address(asset), gov, 0, "LP USDC Bad Decimals", "lpUSDC-BAD", 18, 1);
     }
 
     function test_erc4626EventsAndControllerScopedClaims() external {
@@ -73,7 +73,7 @@ contract BankObservabilityTest is Test {
     }
 
     function test_exitsAreExemptFromTheWithdrawalBuffer() external {
-        Bank bufferedBank = new Bank(address(asset), gov, 9000, "LP USDC Buffered", "lpUSDC-B", 6);
+        Bank bufferedBank = new Bank(address(asset), gov, 9000, "LP USDC Buffered", "lpUSDC-B", 6, 1);
         vm.prank(gov);
         bufferedBank.setSettlementRouterOnce(address(this));
 
@@ -96,7 +96,7 @@ contract BankObservabilityTest is Test {
     }
 
     function test_withdrawalBufferAccountsForReservedRiskOnFeeClaims() external {
-        Bank bufferedBank = new Bank(address(asset), gov, 0, "LP USDC Buffered", "lpUSDC-B", 6);
+        Bank bufferedBank = new Bank(address(asset), gov, 0, "LP USDC Buffered", "lpUSDC-B", 6, 1);
         vm.prank(gov);
         bufferedBank.setSettlementRouterOnce(address(this));
         vm.prank(gov);
@@ -115,9 +115,9 @@ contract BankObservabilityTest is Test {
 
         // A lost bet accrues a protocol fee, then an open bet reserves most of the pool.
         SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](0);
-        bufferedBank.holdBet(1, player, 10e6, 20e6, bytes32(uint256(1)));
+        bufferedBank.holdBet(1, player, 10e6, 20e6, bytes32(uint256(1)), player);
         bufferedBank.settleBet(1, 0, 0, 0, 5e6, awards);
-        bufferedBank.holdBet(2, player, 10e6, 915e6, bytes32(uint256(2)));
+        bufferedBank.holdBet(2, player, 10e6, 915e6, bytes32(uint256(2)), player);
 
         SSOTTypes.SSOT memory s = bufferedBank.getSSOT();
         assertEq(s.NAV, 1_015e6, "player stakes enter NAV while the bets are open");
@@ -145,7 +145,7 @@ contract BankObservabilityTest is Test {
         vm.prank(player);
         asset.approve(address(bank), type(uint256).max);
 
-        bank.holdBet(1, player, 100e6, 250e6, bytes32(uint256(1)));
+        bank.holdBet(1, player, 100e6, 250e6, bytes32(uint256(1)), player);
         SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](0);
         bank.settleBet(1, 140e6, 130e6, 20e6, 3e6, awards);
 
@@ -161,7 +161,7 @@ contract BankObservabilityTest is Test {
         assertEq(bank.totalBetsSettled(), 1, "settled counter should increment");
         assertEq(bank.totalBetsRefunded(), 0, "refund counter should not increment on settle refund");
 
-        bank.holdBet(2, player, 50e6, 70e6, bytes32(uint256(2)));
+        bank.holdBet(2, player, 50e6, 70e6, bytes32(uint256(2)), player);
         bank.refundBet(2, 50e6);
 
         assertEq(bank.totalTurnover(), 80e6, "full refund should not add turnover");
@@ -195,7 +195,7 @@ contract BankObservabilityTest is Test {
 
     function test_performanceCountersAreBankAndAssetScoped() external {
         MockERC20 weth = new MockERC20("Wrapped Ether", "WETH", 18);
-        Bank wethBank = new Bank(address(weth), gov, 0, "LP WETH", "lpWETH", 18);
+        Bank wethBank = new Bank(address(weth), gov, 0, "LP WETH", "lpWETH", 18, 1);
 
         vm.prank(gov);
         wethBank.setSettlementRouterOnce(address(this));
@@ -219,10 +219,10 @@ contract BankObservabilityTest is Test {
 
         SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](0);
 
-        bank.holdBet(1, player, 10e6, 20e6, bytes32(uint256(1)));
+        bank.holdBet(1, player, 10e6, 20e6, bytes32(uint256(1)), player);
         bank.settleBet(1, 11e6, 10e6, 0, 1e6, awards);
 
-        wethBank.holdBet(2, player, 1 ether, 2 ether, bytes32(uint256(2)));
+        wethBank.holdBet(2, player, 1 ether, 2 ether, bytes32(uint256(2)), player);
         wethBank.settleBet(2, 0.8 ether, 0.79 ether, 0, 0.01 ether, awards);
 
         assertEq(bank.totalTurnover(), 10e6, "USDC turnover");

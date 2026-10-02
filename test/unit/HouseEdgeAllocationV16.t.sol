@@ -63,7 +63,7 @@ contract HouseEdgeAllocationV16Test is Test {
 
     function setUp() external {
         asset = new MockERC20("USD", "USD", 18);
-        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18);
+        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18, 1);
         PoolRegistry reg = new PoolRegistry(gov);
         router = new SettlementRouter(address(reg));
         vrf = new VRFHub(address(this), gov);
@@ -99,7 +99,7 @@ contract HouseEdgeAllocationV16Test is Test {
         asset.mint(alice, 10_000 ether);
         vm.deal(alice, 100 ether);
         vm.prank(alice);
-        asset.approve(address(bank), type(uint256).max);
+        asset.approve(address(hub), type(uint256).max);
     }
 
     // ---------------------------------------------------------------------
@@ -430,7 +430,7 @@ contract HouseEdgeAllocationV16Test is Test {
         vm.prank(bob);
         hub.setAffiliateHouseEdge(300);
 
-        (uint256 fee,) = hub.quoteVRFFee(1);
+        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: STAKE, betCount: 1, stopGain: 0, stopLoss: 0});
         vm.prank(alice);
@@ -660,7 +660,7 @@ contract HouseEdgeAllocationV16Test is Test {
         uint256 stopGain,
         address hint
     ) internal returns (uint256 id) {
-        (uint256 fee,) = hub.quoteVRFFee(betCount);
+        (uint256 fee,) = hub.quoteVRFFee(betCount, tx.gasprice);
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: amountPerRoll, betCount: betCount, stopGain: stopGain, stopLoss: 0});
         // The player accepts any edge up to the 5% cap; markup tests need more than the base edge.

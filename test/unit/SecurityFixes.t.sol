@@ -106,7 +106,7 @@ contract SecurityFixes is Test {
 
     function test_firstLpInflationAttackNoLongerProfitable() external {
         MockERC20 asset = new MockERC20("USDC", "USDC", 6);
-        Bank bank = new Bank(address(asset), gov, 0, "B", "B", 6);
+        Bank bank = new Bank(address(asset), gov, 0, "B", "B", 6, 1);
 
         address attacker = address(0xA);
         address victim = address(0xB);
@@ -176,11 +176,11 @@ contract SecurityFixes is Test {
         asset.mint(player, 10 ether);
         vm.deal(player, 10 ether);
         vm.prank(player);
-        asset.approve(address(bank), type(uint256).max);
+        asset.approve(address(hub), type(uint256).max);
 
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1);
+        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
 
         vm.prank(player);
         uint256 betId = hub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, affiliate, 0);
@@ -207,11 +207,11 @@ contract SecurityFixes is Test {
         asset.mint(player, 10 ether);
         vm.deal(player, 10 ether);
         vm.prank(player);
-        asset.approve(address(bank), type(uint256).max);
+        asset.approve(address(hub), type(uint256).max);
 
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1);
+        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
 
         vm.prank(player);
         uint256 betId = hub.placeBet{value: fee}(GAME_BAD_REFUND, 1, "", spec, address(0), 10_000);
@@ -285,7 +285,7 @@ contract SecurityFixes is Test {
 
     function test_newHoldbackAwardDoesNotDelayExistingVesting() external {
         MockERC20 asset = new MockERC20("Asset", "AST", 18);
-        Bank bank = new Bank(address(asset), gov, 0, "LP", "LP", 18);
+        Bank bank = new Bank(address(asset), gov, 0, "LP", "LP", 18, 1);
         address payee = address(0xCAFE);
 
         vm.prank(gov);
@@ -330,7 +330,7 @@ contract SecurityFixes is Test {
         uint32 cbGas = 200_000;
         uint16 conf = 3;
         uint32 words = 1;
-        uint256 required = vrf.quote(cbGas, conf, words);
+        uint256 required = vrf.quote(cbGas, conf, words, tx.gasprice);
 
         (uint256 requestId,) = vrf.requestRandomWords{value: required}(address(this), 123, cbGas, conf, words, player);
 
@@ -349,7 +349,7 @@ contract SecurityFixes is Test {
 
     function test_refundBetEmitsReleasedReserve() external {
         MockERC20 asset = new MockERC20("Asset", "AST", 18);
-        Bank bank = new Bank(address(asset), gov, 0, "LP", "LP", 18);
+        Bank bank = new Bank(address(asset), gov, 0, "LP", "LP", 18, 1);
 
         vm.prank(gov);
         bank.setSettlementRouterOnce(address(this));
@@ -358,7 +358,7 @@ contract SecurityFixes is Test {
         vm.prank(player);
         asset.approve(address(bank), type(uint256).max);
 
-        bank.holdBet(77, player, 10 ether, 10 ether, bytes32(uint256(77)));
+        bank.holdBet(77, player, 10 ether, 10 ether, bytes32(uint256(77)), player);
 
         vm.expectEmit(true, true, false, true, address(bank));
         emit BetReserveReleased(77, player, 10 ether);
@@ -370,7 +370,7 @@ contract SecurityFixes is Test {
 
     function _deploy(uint16 defaultHE) internal returns (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) {
         asset = new MockERC20("Asset", "AST", 18);
-        bank = new Bank(address(asset), gov, 0, "LP", "LP", 18);
+        bank = new Bank(address(asset), gov, 0, "LP", "LP", 18, 1);
         PoolRegistry poolRegistry = new PoolRegistry(gov);
         SettlementRouter router = new SettlementRouter(address(poolRegistry));
         vrf = new VRFHub(address(this), gov);
@@ -403,11 +403,11 @@ contract SecurityFixes is Test {
         asset.mint(player, 10 ether);
         vm.deal(player, 10 ether);
         vm.prank(player);
-        asset.approve(address(bank), type(uint256).max);
+        asset.approve(address(hub), type(uint256).max);
 
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1);
+        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
 
         vm.prank(player);
         betId = hub.placeBet{value: fee}(gameId, 1, "", spec, address(0), 10_000);
@@ -419,7 +419,7 @@ contract SecurityFixes is Test {
     }
 
     function _settleDirectHoldback(Bank bank, uint256 betId, address player_, address payee, uint256 amount) internal {
-        bank.holdBet(betId, player_, amount, amount, bytes32(betId));
+        bank.holdBet(betId, player_, amount, amount, bytes32(betId), player_);
 
         SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](1);
         awards[0] = SSOTTypes.XPAward({

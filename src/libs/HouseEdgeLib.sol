@@ -26,6 +26,7 @@ library HouseEdgeLib {
     ///         unfulfilled bet by at most a day. Kept here with the other release-unit constants so the
     ///         deploy script checks the same value.
     uint256 internal constant MAX_REFUND_TIMEOUT_SECONDS = 1 days;
+    uint256 internal constant MIN_REFUND_TIMEOUT_SECONDS = 1 minutes;
 
     /// @notice Turnover edge: floor(usedTurnover * edgeBps / 10000).
     function turnoverEdge(uint256 usedTurnover, uint256 edgeBps) internal pure returns (uint256) {

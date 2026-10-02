@@ -49,6 +49,7 @@ export function applyGameHubEventToBet(
     if (ev.args.stake != null) next.stake = toBigintString(ev.args.stake);
     if (ev.args.requestId != null) next.requestId = toBigintString(ev.args.requestId);
     next.placedBlock = ev.blockNumber;
+    if (ev.args.refundDeadline != null) next.refundDeadline = Number(ev.args.refundDeadline) * 1000;
     next.state = "placed";
   }
 

@@ -1,14 +1,16 @@
 import { formatUnits, parseDecimalToUnits } from "../../betting/model/units";
 
-export const MIN_BET_AMOUNT_INPUT = "0.01";
 const DECIMAL_INPUT_PATTERN = /[^\d.]/g;
 
-export function getMinBetAmountRaw(decimals: number): bigint {
-  return decimals >= 2 ? parseDecimalToUnits(MIN_BET_AMOUNT_INPUT, decimals) : 1n;
+export function getMinBetAmountRaw(minTotalStake: bigint, betCount: number): bigint {
+  if (minTotalStake <= 0n || !Number.isInteger(betCount) || betCount < 1 || betCount > 100)
+    return 0n;
+  const count = BigInt(betCount);
+  return (minTotalStake + count - 1n) / count;
 }
 
-export function getMinBetAmountInput(decimals: number): string {
-  return formatBetAmountRaw(getMinBetAmountRaw(decimals), decimals);
+export function getMinBetAmountInput(decimals: number, minRaw: bigint): string {
+  return formatBetAmountRaw(minRaw, decimals);
 }
 
 export function normalizeBetAmountInput(input: string, decimals: number): string {
@@ -46,19 +48,30 @@ export function resolveBetMaxRaw(
   return candidates.reduce((min, value) => (value < min ? value : min));
 }
 
-export function isBetAmountUnavailable(decimals: number, maxRaw?: bigint): boolean {
-  return maxRaw != null && maxRaw < getMinBetAmountRaw(decimals);
+export function isBetAmountUnavailable(minRaw: bigint, maxRaw?: bigint): boolean {
+  return minRaw <= 0n || (maxRaw != null && maxRaw < minRaw);
 }
 
-export function isBetAmountAboveMax(input: string, decimals: number, maxRaw?: bigint): boolean {
-  if (maxRaw == null || maxRaw < getMinBetAmountRaw(decimals)) return false;
+export function isBetAmountAboveMax(
+  input: string,
+  decimals: number,
+  maxRaw: bigint | undefined,
+  minRaw: bigint
+): boolean {
+  if (maxRaw == null || maxRaw < minRaw) return false;
   return betAmountInputToRaw(input, decimals) > maxRaw;
 }
 
-export function clampBetAmountInput(input: string, decimals: number, maxRaw?: bigint): string {
-  const minRaw = getMinBetAmountRaw(decimals);
-  if (isBetAmountUnavailable(decimals, maxRaw)) return formatBetAmountRaw(maxRaw ?? 0n, decimals);
+export function clampBetAmountInput(
+  input: string,
+  decimals: number,
+  maxRaw: bigint | undefined,
+  minRaw: bigint
+): string {
   const normalized = normalizeBetAmountInput(input, decimals);
+  // A missing pool read must never replace the entered stake with the wallet maximum.
+  if (minRaw <= 0n) return normalized;
+  if (isBetAmountUnavailable(minRaw, maxRaw)) return formatBetAmountRaw(maxRaw ?? 0n, decimals);
   const raw = betAmountInputToRaw(normalized, decimals);
   const capped = maxRaw == null ? raw : raw > maxRaw ? maxRaw : raw;
   return formatBetAmountRaw(capped < minRaw ? minRaw : capped, decimals);
@@ -69,17 +82,19 @@ export function scaleBetAmountInput({
   decimals,
   numerator,
   denominator = 1n,
-  maxRaw
+  maxRaw,
+  minRaw
 }: {
   input: string;
   decimals: number;
   numerator: bigint;
   denominator?: bigint;
   maxRaw?: bigint;
+  minRaw: bigint;
 }): string {
   const raw = betAmountInputToRaw(input, decimals);
   const scaled = denominator === 0n ? raw : (raw * numerator) / denominator;
-  return clampBetAmountInput(formatBetAmountRaw(scaled, decimals), decimals, maxRaw);
+  return clampBetAmountInput(formatBetAmountRaw(scaled, decimals), decimals, maxRaw, minRaw);
 }
 
 export function multiplyBetAmountInput(input: string, betCount: number, decimals: number): string {

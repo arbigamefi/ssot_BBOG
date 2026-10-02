@@ -128,6 +128,19 @@
     },
     {
       "inputs": [],
+      "name": "MIN_REFUND_TIMEOUT_SECONDS",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "acceptGovernance",
       "outputs": [],
       "stateMutability": "nonpayable",
@@ -437,6 +450,11 @@
             {
               "internalType": "uint64",
               "name": "placedAt",
+              "type": "uint64"
+            },
+            {
+              "internalType": "uint64",
+              "name": "refundDeadline",
               "type": "uint64"
             },
             {
@@ -813,6 +831,11 @@
           "internalType": "uint32",
           "name": "betCount",
           "type": "uint32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "gasPriceBudget",
+          "type": "uint256"
         }
       ],
       "name": "quoteVRFFee",
@@ -1263,6 +1286,12 @@
           "internalType": "bytes32",
           "name": "deltaSkylineHash",
           "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "refundDeadline",
+          "type": "uint64"
         }
       ],
       "name": "BetPlaced",
@@ -1711,22 +1740,6 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "paid",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "required",
-          "type": "uint256"
-        }
-      ],
-      "name": "InsufficientVRFFee",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
           "name": "bps",
           "type": "uint256"
         }
@@ -1795,6 +1808,22 @@
         }
       ],
       "name": "RiskInPaused",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "SafeERC20FailedOperation",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "TransferFailed",
       "type": "error"
     },
     {

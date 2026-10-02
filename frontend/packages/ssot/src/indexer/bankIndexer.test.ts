@@ -174,7 +174,7 @@ describe("bankIndexer.syncOnce()", () => {
         "RedeemBatchPriced",
         "RedeemBatchActivated",
         "RecoveryClaimed",
-        "RecoveryUpdated",
+        "BetRiskSettled",
         "RecoverySynced",
         "Withdraw",
         "PlayerPayableCreated",

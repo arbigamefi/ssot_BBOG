@@ -26,9 +26,9 @@ contract PoolRegistryTest is Test {
         usdc = new MockERC20("USD Coin", "USDC", 6);
         weth = new MockERC20("Wrapped Ether", "WETH", 18);
 
-        usdcBankA = new Bank(address(usdc), gov, 1000, "LP USDC A", "lpUSDC-A", 6);
-        usdcBankB = new Bank(address(usdc), gov, 1000, "LP USDC B", "lpUSDC-B", 6);
-        wethBank = new Bank(address(weth), gov, 1000, "LP WETH", "lpWETH", 18);
+        usdcBankA = new Bank(address(usdc), gov, 1000, "LP USDC A", "lpUSDC-A", 6, 1);
+        usdcBankB = new Bank(address(usdc), gov, 1000, "LP USDC B", "lpUSDC-B", 6, 1);
+        wethBank = new Bank(address(weth), gov, 1000, "LP WETH", "lpWETH", 18, 1);
 
         registry = new PoolRegistry(gov);
     }

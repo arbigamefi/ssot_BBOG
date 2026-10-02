@@ -14,8 +14,8 @@ ArbiGameFi 是钱包原生的 casino 与 sportsbook 项目。每个资金池（B
 
 - **每笔投注在接受时锁定规则与最大赔付。** 结算只能在这笔准备金以内完成，所有负债在形成时就从资金池净值中扣除。
 - **LP 固定获得每笔流水 house edge 的一半。** 份额是合约常量，推荐奖励与协议费用只能从另一半里支付，由结算路由器独立限额。
-- **LP 退出不会暂停下注。** 退出在激活时把尚未结算的风险整体隔离，退出者与留存者按当时持仓共同承担。一笔永远无法结算的旧投注只锁住它自己的准备金，不阻塞后续退出。
-- **合约不可升级。** 治理可以暂停新风险、准入玩法与资金池，并在合约上限内调参，但不能提取 LP 资金，也不能改写已接受投注的条件。
+- **LP 退出不会暂停下注。** 退出在激活时只隔离申请者对应的旧风险和回收权，留存份额继续承保，结算同笔恢复可用资本。一笔永远无法结算的旧投注只锁住它自己的准备金，不阻塞后续退出。
+- **合约不可升级。** 治理可以暂停新风险、准入玩法与资金池，并在合约上限内调参，但不能提取 LP 资金，已接受投注的模块、有效 edge 与推荐比例版本固定；退款截止时间在接受投注时固定；治理调整仅影响新投注，默认 1 小时、范围 1 分钟至 1 天。
 
 ## 1. 设计问题与目标
 
@@ -26,14 +26,14 @@ LP 共同承保的链上 casino 同时面对四个相互牵连的问题。
 3. **持续运营**：LP 退出不能打断玩家下注，这是项目所有者的硬性要求。一笔有缺陷的投注也不能冻结整个资金池。
 4. **可核对**：每个结果、费用与支付都必须能够仅凭链上数据重算。
 
-| 目标                  | 设计                                               | 章节   |
-| --------------------- | -------------------------------------------------- | ------ |
-| G1 偿付               | 接受时预留最大赔付；单一的活跃净值扣除全部负债     | §3、§6 |
-| G2 LP 份额固定        | 50% 为合约常量，路由器按开仓记录独立限额           | §4     |
-| G3 退出公平           | 激活时隔离全部未结准备金，退出者与留存者按快照共担 | §5     |
-| G4 下注与退出互不阻塞 | 按期隔离，旧期永远不阻塞新期                       | §5     |
-| G5 支付不能阻断结算   | 转账失败转为玩家应付款，仓位照常终结               | §6     |
-| G6 可核对             | 事件与视图足以重算结果、分配、净值与现金流         | §10    |
+| 目标                  | 设计                                           | 章节   |
+| --------------------- | ---------------------------------------------- | ------ |
+| G1 偿付               | 接受时预留最大赔付；单一的活跃净值扣除全部负债 | §3、§6 |
+| G2 LP 份额固定        | 50% 为合约常量，路由器按开仓记录独立限额       | §4     |
+| G3 退出公平           | 激活仅隔离退出者风险；留存资本结算同笔恢复     | §5     |
+| G4 下注与退出互不阻塞 | 按期隔离，旧期永远不阻塞新期                   | §5     |
+| G5 支付不能阻断结算   | 转账失败转为玩家应付款，仓位照常终结           | §6     |
+| G6 可核对             | 事件与视图足以重算结果、分配、净值与现金流     | §10    |
 
 本设计明确不提供：合约升级；跨资金池互相赔付；LP 在确定期限内全额取回现金的保证；当前阶段的体育资金池准入。
 
@@ -45,13 +45,17 @@ LP 共同承保的链上 casino 同时面对四个相互牵连的问题。
 | SettlementRouter                    | 把头寸绑定到原始 hub、资金池、Bank 与玩家；校验终态身份、次数与金额；执行分配上限 | 无治理函数，装配后不可更改                   |
 | PoolRegistry                        | 定义资金池与业务域，授予 hub 使用指定资金池的准入                                 | 治理控制                                     |
 | GameHub                             | 固定投注输入，请求随机数，调用游戏模块计算结果，按规则分配 house edge             | 治理可登记游戏模块、调整参数（有上限与延迟） |
-| VRFHub 与 Chainlink VRF v2.5 适配器 | 请求并保存随机数；多付的随机数费用作为可领取的退款额度                            | 依赖 Chainlink VRF                           |
+| VRFHub 与 Chainlink VRF v2.5 适配器 | 请求并保存随机数；多付的随机数费用直接退还，失败时记为可领取退款额度              | 依赖 Chainlink VRF                           |
 | 游戏模块（8 种）                    | 确定性规则：Dice、Coin Toss、Roulette、Keno、Plinko、Sic Bo、Slots、Baccarat      | 模块正确性属于安全假设                       |
 | ReferralRegistry 与分配引擎         | 首次绑定的推荐关系；把运营预算分配给返水、推荐与协议                              | 推荐关系在接受投注时固定                     |
 | SportsHub 与 SportsRiskEngine       | 体育固定赔率票据、敞口、结果证据与争议                                            | **当前不准入异步 Bank**                      |
 | Keeper（链下）                      | 推进结算与退款、激活到期赎回、监控回收池、代玩家领取应付款                        | 所调用的函数任何人都能调用；不托管资金       |
 
 合约没有代理、`delegatecall` 或升级机制，部署后的规则即为最终规则。Bank 不判断开奖结果：已准入的 hub 与模块可以在每笔投注的准备金范围内提交任意结果。因此随机数链路、模块代码和准入流程都是资金安全模型的一部分（§8）。不同资产、casino 与体育分别承保，互不赔付。
+
+下注授权的 spender 是对应的 GameHub 或 SportsHub；LP 申购授权的 spender 仍是 Bank。Hub 只从调用玩家收款，Router 将认证后的 Hub 作为 Bank 的付款方，两段转账均校验精确到账，失败全笔回滚。玩家给 Bank 的申购授权不能被已准入 Hub 用来扣下注本金。这不限制已准入 Hub 在自身仓位准备金范围内提交结算，准入治理风险仍然存在。
+
+每个 Bank 按资产最小单位配置最低单仓总本金。USDC 的业务值为 1 USDC（1,000,000 单位）；单仓最多 100 轮，因此每轮至少 0.01 USDC。其他资产须在部署时显式确认其最低额。容量上限按 `activeOpenHolds` 判断；历史退出风险不占用新仓位名额。最低下注和及时结算降低容量占用成本，但不保证任何网络负载下都能接单。
 
 Casino 投注的状态流转如下：
 
@@ -68,12 +72,12 @@ stateDiagram-v2
 
 ## 3. 账本与偿付
 
-同一链上状态下定义：B 为 Bank 的实际资产余额，PF 为协议应付款，XP 为全部推荐奖励负债（可领、锁定与 holdback 三部分），X 为已定价但未领取的 LP 退出款，PP 为玩家应付款，P 为历史回收池备付金，Ra 为当前期未结投注的准备金。
+同一链上状态下定义：B 为 Bank 的实际资产余额，PF 为协议应付款，XP 为全部推荐奖励负债（可领、锁定与 holdback 三部分），X 为已定价但未领取的 LP 退出款，PP 为玩家应付款，P 为历史回收池备付金，Ra 为所有未结投注中由活跃份额承担的准备金。
 
 ```text
 活跃 NAV       = B − PF − XP − X − PP − P
 偿付不变量     B ≥ PF + XP + X + PP + P + Ra，且 活跃 NAV ≥ Ra
-全部准备金     totalReserved = Ra + 各历史期剩余准备金
+全部准备金     totalReserved = Ra + 已隔离的退出者及协议剩余准备金
 ```
 
 份额价格、`totalAssets()`、`getSSOT()`、新风险检查与协议出金检查都使用同一个活跃 NAV。P 同时覆盖历史期尚未终结的风险，以及已经释放但尚未领取的回收款，因此不能用历史准备金代替它，也不能再重复扣除其中的准备金。
@@ -132,7 +136,7 @@ PF_new + XP_new ≤ O
 
 ### 5.1 存入
 
-`deposit` / `mint` 按活跃池账面价即时执行（ERC-4626）。新 LP 参与当前期尚未结算的风险，但不取得已经隔离的历史期的回收权。账面价值不等于随时可提取的现金。
+`deposit` / `mint` 按活跃池账面价即时执行（ERC-4626）。新 LP 参与当前期尚未结算的风险，但不取得已经隔离的历史期的回收权。账面价值不等于随时可提取的现金。账面 NAV 包含未结投注本金；即使随机数已公开，只要尚未执行终态结算，已知的派彩仍可能未从该报价中扣除。新 LP 可能买入这部分已知损失，页面报价也可能因区块更新而过时。
 
 ### 5.2 请求、取消与授权
 
@@ -143,56 +147,49 @@ PF_new + XP_new ≤ O
 - **托管限制。** Bank 自身不能成为 controller，普通转账和铸造也不能把份额直接转给 Bank。`rescueToken` 拒绝移动资产与 Bank 份额。
 - **网站与 keeper。** 网站从不请求为 keeper 授予 operator 权限，用户自己领取。
 
-### 5.3 激活：定价现金、隔离旧风险
+### 5.3 激活：只隔离退出者的风险
 
-请求在第一个周期边界（`batchPeriod`，治理在 1 小时至 7 天内设定，初始 1 天）之后可以激活，任何人都可以调用 `activateBatch`。一次激活原子地完成：
+请求在批次周期边界后可由任何人激活。周期初始为一天，治理可在一小时至七天内调整。实际激活前仍可取消。
 
-1. 固定当前活跃 NAV N、真实份额 S，以及**当前期全部**未结准备金 R0。
-2. 把 R0 整体转入该期的回收池备付金。这部分资金从此只为该期旧投注和该期持有人服务。
-3. 按持仓快照冻结所有当时持有人（留存者与申请者）对该期回收的权利。快照取钱包余额加排队份额，以期号记账；同一区块内激活之后的转账不影响快照。
-4. 为申请份额定价可领现金，烧毁申请份额，进入下一期。
+1. 读取活跃 NAV N、真实份额 S、申请份额 Q 和活跃准备金 R。
+2. 按同一虚拟偏移报价及真实权益上限，算出申请者权益 E。
+3. 为申请者固定液态现金，同时只把各仓位中对应 E 的准备金单位隔离为申请 controller 的历史权利。
+4. 烧毁 Q，进入下一批。留存份额继续承担其余旧风险和新投注；后续存入按完整账面价买入这部分风险。
 
-旧期中的投注照常结算，只更新本期账目，不遍历用户或其他期。激活不等待任何旧投注，也不影响新下注；下注只受活跃资本上限约束。
+激活不停止下注，也不等待旧仓清零。每池最多允许 128 个仍由活跃资本承担风险的未结仓位，以限制批次操作的 gas。全部风险已隔离的旧仓不占此名额。资本不足、此并发容量上限或紧急暂停仍可能拒绝新下注，不能承诺无限容量。
 
-### 5.4 回收曲线
+### 5.4 原始准备金单位与回收
 
-C 为该期旧投注累计的实际终结成本（玩家净派彩、退款、PF 与全部 XP，转账失败形成的欠款同样计入），R 为其剩余准备金。
+虚拟偏移 V 不变；以下均向下取整，N 为零时分配为零：
 
 ```text
-G(x)  = min(floor(S × (x + V) / (S + V)), x)     全体真实份额在净值 x 下的权益
-L     = N − R0
-申请者现金 = floor(申请份额 × G(L) / S)
-D     = R0 − C − R                                 已安全释放的资金
-H     = G(L + D) − G(L)                            原真实持有人的累计回收
-U     = D − H                                      虚拟头寸对应的残值
-持有人累计回收 = floor(快照份额 × H / S)，本次可领 = 累计回收 − 已领取
+G = min(floor(S × (N + V) / (S + V)), N)
+E = floor(Q × G / S)
+批次现金 = floor(E × (N − R) / N)
+各仓位划给本批的单位 u = floor(该仓位活跃单位 × E / N)
 ```
 
-- **只增不减。** G 随 x 单调不减，每次最多增加 1，所以 D、H、U 都只会增加。
-- **随结算逐步释放。** 同一期内，已经结算的投注就能释放回收，不必等待同期另一笔仍未结算的投注。
-- **按累计值领取。** 领取计算累计应得减去已领，不对每次释放的小额增量分别取整。
-- **旧权利不被改写。** 此后的入金、转账和全部份额退出，都不会改变已冻结的回收权。
+每个单位始终使用该投注最初的准备金 T 作分母，后续退出不重设分母。该投注终结成本 C 包括玩家净派彩、退款、PF、所有 XP 和转账失败形成的玩家欠款，且 C 不得超过 T。本批从这笔投注回收 `floor(u × (T − C) / T)`。每位 controller 按其申请份额占 Q 的比例分配批次累计回收，减去已领金额。
 
-### 5.5 演算：退出者与留存者共担旧风险
+留存准备金在投注终结的同笔交易里释放，直接恢复承保，不需领取、再次存入或 keeper 复投。退出者的回收仍在活跃 NAV 之外。同一批有一笔卡住，不妨碍领取其他已终结投注释放的金额。原始单位与负债守恒规则详见 ADR-0035。
 
-两位 LP 各存入 1,000 USDC（共 2,000 份）。一名玩家有一笔未结投注：本金 100，准备金 200。Alice 申请全部退出并被激活，此时 N = 2,100，R0 = 200，L = 1,900。Alice 立即获得 950 USDC 的可领现金。Bob 留在池中，活跃权益也是 950 USDC。200 USDC 进入回收池，两人各占一半。
+### 5.5 演算：留存资本自动继续承保
 
-| 该笔投注的结果 | Alice 合计 |  Bob 合计 | 说明                        |
-| -------------- | ---------: | --------: | --------------------------- |
-| 玩家赢得 200   |     950.00 |    950.00 | 两人各承担净损失 100 的一半 |
-| 玩家输         |  ≈1,050.00 | ≈1,050.00 | 各分得一半本金收益          |
-| 投注退款       |   1,000.00 |  1,000.00 | 回收 100，两人各得 50       |
+忽略虚拟偏移和整数尾差的简化示例：Alice、Bob 各存入 1,000 USDC；一笔投注本金 100、准备金 200，故 N 为 2,100。Alice 全部退出时，约 950 记为可领现金、100 作为旧风险保留；Bob 的活跃 NAV 约为 1,050，其中 100 仍预留给旧投注。
 
-在"玩家输"一行，虚拟头寸的残值为 50 个最小单位（0.00005 USDC），归协议资本。Alice 无论何时申请，结果都与她留在池中一样；开奖后抢先退出不再有利可图，下注也从未暂停。
+| 投注终结成本 | Alice 现金加回收 | Bob 活跃 NAV | Bob 剩余旧准备金 |
+| ------------ | ---------------: | -----------: | ---------------: |
+| 200          |              950 |          950 |                0 |
+| 0            |            1,050 |        1,050 |                0 |
+| 100          |            1,000 |        1,000 |                0 |
 
-### 5.6 残值与尾差的归属
+实际费用计入终结成本，精确金额按合约整数公式计算。Bob 在这笔交易结束时即可用已释放资本继续承保。若期间有新 LP 存入，他们买入 Bob 所在活跃池的剩余旧风险，而不取得 Alice 已隔离的回收权。
 
-- 回收曲线的虚拟残值 U，归协议资本。
-- 全额退出时申请者现金以外的液态虚拟残值 L − G(L)，归协议资本；部分退出时不从留存者那里提前扣除。
-- 全部持有人都完成最终同步后，历史分配的舍入尾差归协议资本。
-- 普通批次领取的舍入尾差：部分退出时回到活跃 NAV；全额退出时归协议，即使期间已有新 LP 存入。
+### 5.6 残值与尾差
 
-协议资本记为协议应付款，但单独记账，不计入玩法手续费或流水 edge。已分配未领取的款项永不过期，也不能被没收。
+部分退出的风险分配向下取整，余数留给活跃资本。全部真实份额退出时，剩余风险单位与液态残值归协议，排除在后续新 LP 的 NAV 外。每笔仓位的整批取整尾差，要等所有退出单位分配完才转协议；每批按 controller 分配的尾差，要等所有申请份额完成最终同步才转协议。已分配未领取的款项持续有备付，不会过期或被没收。
+
+普通现金领取的批次尾差：部分退出时回到活跃 NAV，全额退出时归协议，即使中途已有新 LP 存入。协议资本残值单独记录，不计入玩法手续费或流水 edge。取整可能导致与双重取整的整体报价相差一个最小单位；不承诺任意小额路径下的价格完全相同。
 
 ### 5.7 两类领取
 
@@ -202,15 +199,15 @@ U     = D − H                                      虚拟头寸对应的残值
 
 这种情况只可能由结算链路上的合约缺陷引起（§7）。按本设计：
 
-- **Bank**：该笔准备金永久留在所属历史期，只有这部分回收无法释放，由该期持有人按快照比例承担。下注、新存入、后续批次的退出与其他期的回收全部照常。可领现金没有全额到账期限；若全部资金都在承担未终结风险，可领现金可能为零，但回收权不会被折价抹去。
+- **Bank**：该笔未结风险继续由留存份额和已退出 controller 各自的准备金单位承担；退出者对应回收暂不能释放，后续退出可继续分离剩余活跃风险。下注、新存入、后续批次的退出与其他期的回收全部照常。可领现金没有全额到账期限；若全部资金都在承担未终结风险，可领现金可能为零，但回收权不会被折价抹去。
 - **玩家**：合约不能把合法的赢家改成退款来释放准备金，因为那会让输家可以故意制造结算失败以取回本金，所以该玩家在链上无法得到支付。运营政策是由运营方按用户条款以协议收入在链下补偿。这一承诺须在上线前写入条款，链上规则不因此改变。
 
 ## 6. 投注结算与支付
 
 - **接受**：规则参数最多 64 字节，最多 100 局。准备金取模块给出的最大赔付，且不低于本金；新风险须通过活跃资本检查。
-- **随机数**：通过 Chainlink VRF v2.5 wrapper 请求。玩家以链的原生资产预付随机数费用，多付部分记为可领取的退款额度。这是独立于 Bank 的原生资产账本。回调只写入随机数，不结算资金。
+- **随机数**：通过 Chainlink VRF v2.5 wrapper 请求。玩家以链的原生资产预付随机数费用，执行费用由 wrapper 按交易实际 gas 价格计算；多付部分先尝试退还玩家，失败时记为可领取的退款额度。这是独立于 Bank 的原生资产账本。回调只写入随机数，不结算资金。
 - **结算**：`finalize` 任何人都可调用。模块计算失败或结果超出准备金时，自动全额退款。随后依次计算派彩手续费、按 §4 分配，再由路由器与 Bank 校验。
-- **超时退款**：等待随机数超过超时时间（治理可调，合约上限 1 天）后，任何人都可为玩家退回本金。
+- **超时退款**：到达接受投注时固定的退款截止时间（默认 1 小时，治理配置只影响新投注）后，任何人都可为玩家退回本金。
 - **支付与玩家应付款**：Bank 先尝试直接转账给玩家。若代币拒绝转账（例如地址被发行方冻结），或转账因调用方给的 gas 不足而失败，全额记为该玩家的应付款，释放准备金，仓位照常终结。`claimPlayerPayable` 任何人都能触发，暂停期间也可执行，但总是支付给玩家本人；领取失败时债务保留。Keeper 会在下一轮自动代领，遇到仍被冻结的地址则退避重试。成功支付与新增应付款互斥，终结时计入的成本不会在领取时重复扣账。
 - **暂停**：阻止新风险、存入、批次激活、LP 现金与回收领取，以及协议费用与推荐奖励的领取。不阻止结算、退款、玩家应付款领取、取消请求与账目同步。
 - **收据**：分别证明终态金额与支付方式（已转账、已记应付款或证据不足）。终结时记下的应付款是历史事实，不能据此推断当前是否仍未领取。
@@ -224,7 +221,7 @@ U     = D − H                                      虚拟头寸对应的残值
 | 玩家地址被发行方冻结           | 直接转账失败                           | 转为玩家应付款，仓位照常终结；keeper 退避重试代领                        | 解冻前无法到账                         |
 | 代币全局暂停                   | 所有转账失败                           | 结算记为应付款；各类领取失败但权利保留                                   | 取决于发行方                           |
 | 结算链路缺陷，某笔永远无法结算 | 该笔准备金锁定                         | 只影响所属历史期的回收；下注与后续退出照常（§5.8）                       | 该期 LP 失去对应回收；该玩家需链下补偿 |
-| 开奖后、结算前抢先退出         | 可能转嫁未入账的赔付                   | 激活时隔离全部未结准备金，退出者与留存者共担                             | 无                                     |
+| 开奖后、结算前抢先退出         | 可能转嫁未入账的赔付                   | 只隔离退出者的风险，留存份额继续承担其余风险                             | 无                                     |
 | LP 集中退出                    | 活跃资本减少                           | 按期定价，下注继续                                                       | 单笔可接受的最大投注下降               |
 | 错误或恶意的模块、hub 被准入   | 可在准备金内给出错误结果               | 多签准入；路由器限额；Bank 准备金上限                                    | LP 需信任准入流程与模块代码            |
 | 治理密钥失陷                   | 可暂停、准入新模块与 hub、在上限内调参 | 多签；参数上限与延迟；已登记游戏的模块不可更换；治理无法直接提取 LP 资金 | 经由新准入恶意模块的间接损失           |
@@ -232,16 +229,19 @@ U     = D − H                                      虚拟头寸对应的残值
 
 ## 8. 治理与信任假设
 
-| 合约           | 治理可以                                                                                        | 限制                                                                                          |
-| -------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Bank           | 暂停／恢复新风险；设置风险与出金缓冲、holdback 周期、解锁门槛、批次周期、guardian；领取协议费用 | 缓冲不超过 100%；批次周期 1 小时至 7 天；不能动用资产与份额                                   |
-| GameHub        | 登记游戏模块；排队或取消 edge 调整；切换推荐比例版本；设置超时退款时间                          | 每个游戏 ID 只能登记一次，不能更换或注销；edge ≤ 5%，调整 7 天后生效；超时 ≤ 1 天；推荐 ≤ 35% |
-| PoolRegistry   | 登记资金池；启停资金池；登记 hub 并授予资金池准入                                               | 停用不影响已有投注的结算                                                                      |
-| VRFHub／适配器 | 设置适配器与请求 gas 价格                                                                       | 回调不能修改已结算的投注                                                                      |
+| 合约           | 治理可以                                                                                        | 限制                                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Bank           | 暂停／恢复新风险；设置风险与出金缓冲、holdback 周期、解锁门槛、批次周期、guardian；领取协议费用 | 缓冲不超过 100%；批次周期 1 小时至 7 天；不能动用资产与份额                                                           |
+| GameHub        | 登记游戏模块；排队或取消 edge 调整；切换推荐比例版本；设置超时退款时间                          | 每个游戏 ID 只能登记一次，不能更换或注销；edge ≤ 5%，调整 7 天后生效；新单超时 1 分钟至 1 天，默认 1 小时；推荐 ≤ 35% |
+| PoolRegistry   | 登记资金池；启停资金池；登记 hub 并授予资金池准入                                               | 停用不影响已有投注的结算                                                                                              |
+| VRFHub／适配器 | 设置适配器与请求 gas 价格                                                                       | 回调不能修改已结算的投注                                                                                              |
 
-- **guardian**：只能暂停 Bank 的新风险，不能恢复，也不能移动资金或修改其他参数；恢复只能由治理执行。
-- **治理不能做的事**：升级合约、提取 LP 资金、修改 LP 的 50% 份额、改写已接受投注的条件、没收或转移回收权。
+- **guardian**：可以触发 Bank 暂停（包括新风险、存入、批次激活及 LP 领取，具体见 §6），不能恢复，也不能移动资金或修改其他参数；恢复只能由治理执行。
+- **治理不能做的事**：升级合约、提取 LP 资金、修改 LP 的 50% 份额、改写已接受投注的模块、有效 edge 与推荐比例版本、没收或转移回收权。
+- **退款超时即时生效**：`GameHub.setRefundTimeout` 修改全局超时，已有未终结投注也使用当前值，并非开仓时固定；上限为 1 天。
 - **准入即时生效**：登记游戏模块、hub 与资金池没有时间锁。这是 LP 需要信任的核心治理权限，上线前应评估为准入增加延迟。
+- **外部 LP 准入前待决**：明确模块、hub 和池准入变更是否采用时间锁及其紧急禁用权限；收款权限隔离不能代替准入治理。Guardian 应采用与治理独立的多签，并实测发现到暂停、治理撤换 guardian 到解除暂停的耗时及旧 guardian 失权。
+- **代币发行方风险**：发行方可能冻结、没收或销毁 Bank 的底层资产，使资产不足以覆盖账面负债。应付款记录不保证有足够现金，也不绕开发行方限制；收费转账及 rebasing 资产不受支持。
 - **外部依赖**：代币发行方、Chainlink VRF、链与 RPC 的可用性，以及有人愿意支付推进交易的 gas。
 - **Keeper**：只推进公开状态，不决定结果，不持有用户授权，也不托管资金。
 
@@ -277,19 +277,19 @@ U     = D − H                                      虚拟头寸对应的残值
 
 ArbiGameFi is an unlaunched, wallet-native casino and sportsbook. Each Bank underwrites one asset's bets with LP capital, and its contracts are immutable.
 
-**Bets and payouts.** Every accepted bet fixes its rules and reserves its maximum payout, so settlement can never exceed that reserve. One active NAV subtracts all liabilities: protocol fees, referral rewards, priced LP exits, player payables and historical recovery backing.
+**Bets and payouts.** Every accepted bet fixes its module, effective edge and referral version and reserves its maximum payout. Terminal obligations cannot exceed that reserve. Refund eligibility uses the current global timeout, which governance can change within the one-day ceiling. One active NAV subtracts all liabilities: protocol fees, referral rewards, priced LP exits, player payables and historical recovery backing.
 
 **LP economics.** LPs keep a constant half of each casino bet's turnover house edge. Referral rewards and protocol fees come from the other half, capped independently by the settlement router.
 
 **LP exits.**
 
 - Deposits are immediate (ERC-4626). Exits are ERC-7540 requests.
-- Activation, callable by anyone after the batch-period boundary, prices the requester's liquid cash. It also seals the epoch's entire open reserve into a recovery pocket owned pro rata by every holder at that boundary, so exiting and staying LPs bear the same outcomes.
-- Betting never pauses for exits. A position that can never settle locks only its own reserve and never blocks later exits.
+- Activation, callable by anyone after the batch-period boundary, prices the requester's liquid cash. Only exiting controllers' old risk and recovery rights are segregated. Staying shares continue underwriting; settlement frees their reserve in that same transaction. New deposits buy the remaining active book risk.
+- LP operations impose no betting pause. A stuck position does not block later batches. Available capital, emergency pause and a 128 active-risk-position capacity still constrain new betting.
 - A virtual offset of one thousandth of a token protects first deposits while keeping the virtual position's residual, which goes to protocol capital, negligible.
 
 **Payments.** A refused or gas-starved payout becomes a payable that anyone may trigger but only the player can receive; the keeper claims it on the player's behalf.
 
-**Governance and trust.** Governance can pause, admit modules, hubs and pools, and tune bounded parameters, but cannot upgrade contracts, move LP funds or rewrite accepted bets. Admission has no timelock and is the key trust assumption.
+**Governance and trust.** Governance can pause, admit modules, hubs and pools, and tune bounded parameters, but cannot upgrade contracts, move LP funds or rewrite the module, effective edge or referral version of accepted bets. Each accepted bet fixes its refund deadline; timeout changes affect only later bets. Guardian pause also blocks deposits, batch activation and LP claims; settlement, refunds and player-payable claims remain live. Admission has no timelock and is the key trust assumption.
 
 **Status.** Sports pools are not admitted. The implementation is tested locally but not yet deployed or externally audited.

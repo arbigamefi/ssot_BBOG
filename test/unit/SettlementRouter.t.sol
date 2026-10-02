@@ -29,7 +29,7 @@ contract SettlementRouterTest is Test {
 
     function setUp() external {
         usdc = new MockERC20("USD Coin", "USDC", 6);
-        bank = new Bank(address(usdc), gov, 0, "LP USDC", "lpUSDC", 6);
+        bank = new Bank(address(usdc), gov, 0, "LP USDC", "lpUSDC", 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
 
@@ -237,11 +237,13 @@ contract SettlementRouterTest is Test {
     }
 
     function test_openPosition_emitsRecordedEdge() external {
+        _fundHub(100e6);
         vm.expectEmit(true, true, true, true, address(router));
         emit ISettlementRouter.PositionOpened(
             1, hub, 1, player, address(usdc), address(bank), 100e6, 250e6, SNAPSHOT, EDGE_BPS
         );
-        _open(100e6, 250e6);
+        vm.prank(hub);
+        router.openPosition(1, player, 100e6, 250e6, SNAPSHOT, EDGE_BPS);
     }
 
     function test_openPosition_rejectsEdgeAboveMax() external {
@@ -311,6 +313,7 @@ contract SettlementRouterTest is Test {
     }
 
     function test_zeroEdgePositionCannotAccrueAnything() external {
+        _fundHub(100e6);
         vm.prank(hub);
         uint256 positionId = router.openPosition(1, player, 100e6, 250e6, SNAPSHOT, 0);
         assertEq(router.allocationCap(positionId, 0), 0);
@@ -335,7 +338,7 @@ contract SettlementRouterTest is Test {
         vm.expectRevert(abi.encodeWithSelector(IBank.ReservedTooSmall.selector, positionId, 250e6, 252e6));
         router.settlePosition(positionId, 250e6, 250e6, 0, 1.2e6, awards);
         assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Held));
-        (,,,, bool open,) = bank.holds(positionId);
+        (,,,, bool open) = bank.holds(positionId);
         assertTrue(open);
         assertEq(bank.totalReserved(), 250e6);
         assertEq(bank.protocolFeesPayable(), 0);
@@ -367,6 +370,7 @@ contract SettlementRouterTest is Test {
         uint256 cap = ((stake - refund) * edge / 10_000) * 5_000 / 10_000;
         allocated = bound(allocated, 0, cap + 3);
 
+        _fundHub(stake);
         vm.prank(hub);
         uint256 positionId = router.openPosition(1, player, stake, stake, SNAPSHOT, edge);
         assertEq(router.allocationCap(positionId, refund), cap);
@@ -393,8 +397,32 @@ contract SettlementRouterTest is Test {
     }
 
     function _open(uint256 stake, uint256 reserved) internal returns (uint256 positionId) {
+        _fundHub(stake);
         vm.prank(hub);
         return router.openPosition(1, player, stake, reserved, SNAPSHOT, EDGE_BPS);
+    }
+
+    function _fundHub(uint256 stake) internal {
+        vm.prank(player);
+        usdc.transfer(hub, stake);
+        vm.prank(hub);
+        usdc.approve(address(bank), stake);
+    }
+
+    function test_registeredHubCannotSpendPlayerBankAllowance() external {
+        uint256 beforeBalance = usdc.balanceOf(player);
+        uint256 beforeAllowance = usdc.allowance(player, address(bank));
+        vm.prank(hub);
+        vm.expectRevert(bytes("allow"));
+        router.openPosition(1, player, 100e6, 250e6, SNAPSHOT, EDGE_BPS);
+        assertEq(usdc.balanceOf(player), beforeBalance);
+        assertEq(usdc.allowance(player, address(bank)), beforeAllowance);
+        assertEq(router.nextPositionId(), 1);
+        assertEq(bank.totalReserved(), 0);
+        // Legitimate hub-owned funds can still fund a position for that beneficiary.
+        _open(100e6, 250e6);
+        assertEq(usdc.balanceOf(hub), 0);
+        assertEq(usdc.allowance(hub, address(bank)), 0);
     }
 
     function _award(uint256 accrued, uint256 holdback) internal view returns (SSOTTypes.XPAward memory) {

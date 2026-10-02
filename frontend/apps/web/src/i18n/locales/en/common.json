@@ -434,6 +434,7 @@
           "betMined": "BET MINED...",
           "signing": "SIGNING / PLACING...",
           "reduceAmount": "REDUCE AMOUNT",
+          "increaseAmount": "Increase bet amount",
           "selectToBet": "SELECT A BET",
           "approveThenPlace": "APPROVE, THEN PLACE BET",
           "preparing": "PREPARING ROUND...",
@@ -975,7 +976,9 @@
         "approving": "Approving tokens · waiting for confirmation",
         "placing": "Placing bet · waiting for confirmation",
         "cost": "Total {total} {symbol} · Randomness fee budget ≈ {fee}; gas extra.",
-        "contextChanged": "Your wallet, network or bet settings changed. The next step was stopped; review the current settings before continuing."
+        "contextChanged": "Your wallet, network or bet settings changed. The next step was stopped; review the current settings before continuing.",
+        "capacity": "This pool is temporarily full. Try again after an open bet settles.",
+        "minimumStake": "Total stake is below the pool minimum. Refresh pool state and adjust the amount or roll count."
       },
       "poolStatus": {
         "loading": "Checking the {symbol} pool before new bets…",
@@ -2975,7 +2978,6 @@
         "deposited": "Loaded deposits",
         "withdrawn": "Loaded withdrawals",
         "openValue": "Known LP value",
-        "netPnl": "Loaded net P&L",
         "shares": "Wallet shares"
       },
       "columns": {
@@ -2986,7 +2988,7 @@
         "sharePrice": "Share price",
         "tx": "Tx"
       },
-      "incomplete": "Cash-flow coverage through this snapshot is not yet verified. A complete return is unavailable."
+      "incomplete": "Cash-flow history is incomplete. Totals cover the loaded entries only."
     },
     "overview": {
       "totalAssets": {
@@ -2999,7 +3001,7 @@
       "requestDetail": "Request an exit using wallet shares. Activation prices available cash immediately and preserves historical recovery rights separately. Unresolved old bets do not block later batches.",
       "requestAmount": "Shares to request",
       "wallet": "Wallet: {amount} shares",
-      "pendingRisk": "Queued shares still bear active pool results. At activation, all existing holders retain their share of earlier bets. Cash can be zero; recovery is uncertain and may arrive later.",
+      "pendingRisk": "Queued shares still bear active pool results. Activation freezes only the exiting request’s earlier risk and recovery rights. Staying shares keep underwriting. Cash can be zero and recovery is uncertain.",
       "request": "Request redemption",
       "cancelDetail": "Cancel returns all your queued shares while the batch remains unactivated, including after the earliest activation time. Activated requests cannot be cancelled. The transaction checks current chain state.",
       "cancel": "Cancel queued shares",
@@ -3010,8 +3012,8 @@
       "paused": "The pool is paused. Requests and queued cancellations remain available; deposits, exit cash claims and recovery payments wait until it resumes.",
       "unknown": "Pool status is temporarily unavailable. Refresh before trying again.",
       "refresh": "Refresh pool state",
-      "depositTerms": "Deposits join active capital immediately at its current book price. This includes current unsettled bets, but excludes recovery rights from earlier activations.",
-      "issuerRisk": "Token issuer restrictions can delay transfers and claims. A recorded entitlement does not mean cash has reached your wallet.",
+      "depositTerms": "Deposits immediately buy active capital at full book value, including its remaining old and new unsettled risk. Already segregated exit recovery rights are excluded. New deposits also bear revealed but unsettled payouts. Displayed data may lag and does not prove there is no pending risk.",
+      "issuerRisk": "Issuer freezes, confiscation or destruction of pool assets can prevent payment and cause insolvency. Recorded claims do not guarantee full payment.",
       "totalEquity": "Active and priced LP value (estimate)",
       "totalEquityDetail": "Wallet value + queued estimate + priced cash. Historical recovery is shown separately and is not included in this estimate.",
       "walletEquity": "Wallet shares / book value",
@@ -3043,13 +3045,13 @@
     },
     "recovery": {
       "title": "Historical recovery rights",
-      "detail": "Earlier bets remain assigned to their original holders, including holders who stayed in the pool. A zero wallet share balance does not remove these rights.",
+      "detail": "These rights belong to activated exit requests. Staying shares keep active risk and recover capital automatically at settlement. A zero wallet balance does not erase exited rights.",
       "loading": "Discovering historical rights…",
       "incomplete": "Historical discovery is incomplete. Load the remaining pages before assessing your full position.",
       "error": "Historical recovery could not be loaded. Your rights are not assumed to be zero.",
       "empty": "No historical rights found in the complete discovery.",
       "epoch": "Epoch {epoch}",
-      "units": "Snapshot units",
+      "units": "Activated exit shares",
       "claimable": "Available recovery cash",
       "upperBound": "Remaining recovery upper bound",
       "upperBoundDetail": "An upper bound is not cash available now or a promised payout.",
@@ -3060,7 +3062,7 @@
       "loadMore": "Load more historical rights",
       "refresh": "Refresh historical rights",
       "receiver": "Cash is sent to {receiver}. This action does not grant a keeper permission to claim for you.",
-      "incompleteReturn": "Incomplete return: historical rights remain unresolved or discovery is unfinished.",
+      "incompleteReturn": "Historical rights remain unresolved or discovery is unfinished; the displayed position is incomplete.",
       "backing": "Historical backing",
       "backingDetail": "Excluded from active capital; supports earlier obligations and unclaimed recovery.",
       "donationNote": "Donations to the Bank are not external cash received by the holder.",

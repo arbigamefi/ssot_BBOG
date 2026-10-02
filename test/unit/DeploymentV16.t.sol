@@ -135,6 +135,8 @@ contract DeploymentV16Test is Test {
         vm.setEnv("SAFE_OWNERS_HASH", vm.toString(keccak256(abi.encode(safe.getOwners(), uint256(2)))));
         vm.setEnv("VRF_WRAPPER", vm.toString(address(asset)));
         vm.setEnv("NUM_POOLS", "2");
+        vm.setEnv("BANK_MIN_STAKE_0", "1000000");
+        vm.setEnv("BANK_MIN_STAKE_1", "1000000");
         vm.setEnv("POOL_ASSET_0", vm.toString(address(asset)));
         vm.setEnv("POOL_ASSET_1", vm.toString(address(asset)));
         vm.setEnv("POOL_DOMAIN_0", "1");
@@ -249,6 +251,39 @@ contract DeploymentV16Test is Test {
         GameHub(snap.readAddress(".gameHub")).setRefundTimeout(snap.readUint(".refundTimeoutSeconds") + 1);
         vm.expectRevert("game configuration mismatch");
         verifier.verify(snap, false);
+    }
+
+    function testSignedPrecisionMustMatchBankAndAsset() public isolatedEnv {
+        (string memory snap,) = _deploy();
+        verifier.verify(snap, false);
+        vm.serializeJson("bad-precision", snap);
+        string memory changed = vm.serializeUint("bad-precision", "poolLpDecimals_0", 9);
+        vm.expectRevert("bank precision mismatch");
+        verifier.verify(changed, false);
+        // Full uint comparison: values that truncate to the correct uint8 also fail.
+        changed = vm.serializeUint("bad-precision", "poolLpDecimals_0", 262);
+        vm.expectRevert("bank precision mismatch");
+        verifier.verify(changed, false);
+        // Preserve all Bank state and the signed precision, changing only the
+        // token's metadata response to exercise the independent asset check.
+        vm.etch(address(asset), address(new MockERC20("Test USD", "TUSD", 9)).code);
+        vm.expectRevert("asset precision mismatch");
+        verifier.verify(snap, false);
+    }
+
+    function testSnapshotEmitsOnlyAuthenticatedPrecision() public isolatedEnv {
+        (string memory snap,) = _deploy();
+        assertEq(snap.readUint(".poolLpDecimals_0"), 6);
+        assertFalse(vm.keyExistsJson(snap, ".poolAssetDecimals_0"));
+        assertFalse(vm.keyExistsJson(snap, ".poolBankDecimals_0"));
+        DigestHarnessV16 digest = new DigestHarnessV16();
+        bytes32 original = digest.digest(snap);
+        vm.serializeJson("precision-digest", snap);
+        string memory changed = vm.serializeUint("precision-digest", "poolLpDecimals_0", 9);
+        assertNotEq(digest.digest(changed), original);
+        vm.serializeJson("precision-digest", snap);
+        changed = vm.serializeString("precision-digest", "poolAssetSymbol_0", "OTHER");
+        assertNotEq(digest.digest(changed), original);
     }
 
     function testBankRiskDriftBlocksAcceptancePreparation() public isolatedEnv {

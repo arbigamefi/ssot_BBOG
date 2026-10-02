@@ -38,15 +38,42 @@ and `dev:with-keepers` use those selected local configurations.
 
 ## Casino settlement and LP pricing
 
+With `KEEPER_RPC_WS` configured, contract watchers use `eth_subscribe` (`poll: false`).
+`GameHub.BetRandomReady` (using its `positionId` field) and `VRFHub.Fulfilled` both enqueue the
+position and immediately request a queue drain. Queue deduplication and the serialized
+write path prevent the two events from sending duplicate transactions. A ready event
+also brings forward a position that was waiting for its PendingVRF refund deadline.
+The 500 ms queue timer handles deferred work; normal ready delivery does not wait for
+the HTTP scan interval.
+
+The runtime recreates the socket and all watchers after a subscription error or socket
+close, with one shared retry timer. Retries continue after a prolonged provider outage;
+shutdown cancels retries and closes the owned socket. HTTP lifecycle recovery remains
+enabled because a new WS subscription cannot replay events missed during an outage.
+The transport does not expose a socket before its initial handshake resolves. A peer
+that never completes that handshake can stall WS setup; it does not block HTTP recovery
+or CLI shutdown. No overlapping connection attempts are created, and any connection
+that resolves after shutdown is closed. Restart a persistently stalled instance only
+after checking the provider and authorizing the operational action.
+
+`wsEnabled` and `websocket_watchers_registered` only describe configuration and local
+watcher registration. A `running` health snapshot does not prove WS delivery. Verify
+provider subscription acknowledgements separately, then correlate a real ready event,
+an enqueue with `source=gameHub` or `source=vrfHub`, and the final transaction receipt.
+An enqueue with `source=scan` proves HTTP discovery, but the queued item retains its
+original source when a later WS event wakes it. Attribute settlement using the event
+and enqueue timeline, not the finalizer's source alone. Test this with an authorized
+testnet bet; a read-only `newHeads` probe alone does not prove settlement.
+
 Before every transaction, the keeper reads `GameHub.getBet`:
 
 - `RandomReady` calls `finalize` using **3,050,000 transaction gas** for both
   simulation and send: the admitted 3,000,000 execution budget plus intrinsic
   gas/calldata allowance. Additional modules, assets or referral configurations
   require their own gas qualification.
-- `PendingVRF` stays queued until the current on-chain
-  `placedAt + refundTimeoutSeconds` is reached, then calls public `refund`.
-  The timeout and chain timestamp are reread on retries. A callback racing a
+- `PendingVRF` stays queued until its stored `refundDeadline` is reached by chain time,
+  then calls public `refund`. Its deadline and the chain timestamp are reread on retries;
+  later global timeout changes do not affect it. A callback racing a
   refund triggers another state read; a known result goes through finalization.
 - Terminal bets need no new transaction. Retryable errors use bounded backoff
   without an attempt-count cutoff.
@@ -58,16 +85,29 @@ that the epoch advanced. A race with another caller or a pause triggers a fresh 
 Historical open positions never gate activation. Activation prices liquid assets immediately
 and retains the old reserve and recovery rights under that epoch.
 
-Historical recovery monitoring discovers `RedeemBatchActivated` events from the release origin,
-rescans the recent overlap for reorgs and polls at most 50 known epochs per turn. Unvisited old
-alerts are retained; incomplete discovery reports degraded health rather than claiming complete
-coverage. This monitor does not gate betting or later exits.
+Historical recovery monitoring discovers `RedeemBatchActivated` events from the release origin
+through finalized blocks and polls at most 50 known epochs per turn at that finalized block.
+Unvisited old alerts are retained; incomplete discovery reports degraded health rather than claiming
+complete coverage. Alerts can lag by chain finality; latest head and the finalized target are exposed
+separately. Finalized terminal epochs can be removed safely. This monitor does not gate betting or
+later exits; batch activation still reconciles the latest numbered block.
 
-Player payables are discovered from `PlayerPayableCreated` events from the release origin, with the
-same reorg overlap. The keeper claims each positive `playerPayable(player)` with `claimPlayerPayable`,
-which always pays the player's own address. A refused claim (a blacklisted player, a paused token)
-leaves the debt owed and is retried with exponential backoff from 5 minutes to 6 hours. Payables are
-reported in health without degrading it, because an owed debt is not a keeper fault.
+Player payables are discovered from `PlayerPayableCreated` events from the release origin through
+finalized blocks, using a monotonic bounded cursor. Small budgets resume the unfinished range; there
+is no moving-head overlap that can age out a replacement event. Health exposes the latest head and
+finalized discovery target; `caughtUp` refers to that finalized target. Newly created debts may wait
+for chain finality before automatic discovery. Players can always trigger their own on-chain claim.
+
+Known debts are read at the latest numbered block and paid with `claimPlayerPayable`, which always
+pays the player's own address. A successful claim or observed zero remains tracked until a zero at a
+finalized block at or beyond that observation confirms it. Until then the keeper retries debt restored
+by a reorg. An unavailable or regressing finality response reports a discovery failure.
+
+Only a recognized refused-transfer result from simulation is treated as an expected refusal. It leaves
+the debt owed and uses exponential backoff from 5 minutes to 6 hours. Unknown reverts, RPC, funding,
+send and receipt failures require attention: they degrade `payables` health and remain visible during
+backoff until a successful reconciliation clears them. An issuer rejection that cannot be identified
+narrowly also remains actionable; the keeper does not suppress arbitrary errors based on their text.
 
 Casino finalization, timeout refunds, batch activation and payable claims share a serialized write
 path. Pausing a Bank does not block settlement/refund debt-out or payable claims. The keeper does
@@ -108,9 +148,12 @@ within a process; it does not coordinate separate workers or the web app.
 
 Bank `Deposit`/`Withdraw`/`RecoveryClaimed` cash-flow indexing runs independently at
 `KEEPER_BANK_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS` (default 60). Set it to zero
-only when provider-ledger indexing is intentionally disabled. Each casino scan
-and each Bank-ledger scan combines its event types into one log request per
-chunk; block timestamps and contract reads add RPC work.
+only when provider-ledger indexing is intentionally disabled. It scans monotonically from the release
+origin through finalized blocks under `bank-provider-ledger-finalized`; an unrelated GameHub cursor
+cannot skip ledger history. Rows are persisted before the cursor advances. An unavailable or regressing
+finalized target fails the scan. Indexed cash flows can therefore lag on-chain claims by finality.
+Each casino scan and each Bank-ledger scan combines its event types into one log request per chunk;
+block timestamps and contract reads add RPC work.
 
 ## Sports recovery
 
@@ -145,15 +188,16 @@ Keep the file outside the web app's public directory.
 
 Each failure is cleared only by success on its own path:
 
-| `degradedBy`      | Meaning                                                                        |
-| ----------------- | ------------------------------------------------------------------------------ |
-| `scan` / `ledger` | Event or provider-ledger scan failed                                           |
-| `finalize`        | Casino terminalization failed                                                  |
-| `recovery`        | Lifecycle coverage is incomplete or persistence/read failed                    |
-| `redemption`      | Bank read or queue-activation reconciliation failed                            |
-| `pocket-recovery` | Historical epoch discovery is incomplete or failed                             |
-| `pocket`          | Historical recovery read failed or unresolved holds exceeded the age threshold |
-| `stalled`         | Scan progress or lifecycle reconciliation stopped advancing                    |
+| `degradedBy`      | Meaning                                                                         |
+| ----------------- | ------------------------------------------------------------------------------- |
+| `scan` / `ledger` | Event or provider-ledger scan failed                                            |
+| `finalize`        | Casino terminalization failed                                                   |
+| `recovery`        | Lifecycle coverage is incomplete or persistence/read failed                     |
+| `redemption`      | Bank read or queue-activation reconciliation failed                             |
+| `pocket-recovery` | Historical epoch discovery is incomplete or failed                              |
+| `pocket`          | Historical recovery read failed or unresolved holds exceeded the age threshold  |
+| `payables`        | Finalized payable discovery incomplete, or state/finality/claim delivery failed |
+| `stalled`         | Scan progress or lifecycle reconciliation stopped advancing                     |
 
 Historical recovery age uses chain timestamp minus activation time, including while
 paused. An overdue unactivated queue is not a historical recovery alert. Restart
@@ -185,3 +229,8 @@ Without the explicit URL, SQL integration tests are skipped.
 For local durable indexing, `pnpm -C frontend bet-index:db:up` starts the local
 Compose database. `pnpm -C frontend keeper:backfill --help` describes the bounded
 historical event ingestion command; this is event recovery, not a schema upgrade.
+
+Local real-process integration: `bash script/ci/keeper_integration.sh` runs the keeper
+against disposable Anvil and PostgreSQL, covers offline callbacks, restart recovery and
+fixed-deadline refunds while paused, then checks the durable receipt. It owns and removes
+its test processes/container and never uses deployment wallets or an existing database.

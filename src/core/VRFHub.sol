@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {IVRFHub} from "./interfaces/IVRFHub.sol";
 import {IVRFAdapter} from "./interfaces/IVRFAdapter.sol";
 import {Governable} from "../access/Governable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Errors} from "../libs/Errors.sol";
 
 /// @notice Minimal VRFHub with charged-fee semantics (refactored parity).
@@ -18,7 +19,7 @@ import {Errors} from "../libs/Errors.sol";
 /// - If `adapter` is configured, VRFHub forwards the charged fee to the adapter which
 ///   performs the provider request and returns the provider requestId.
 /// - VRFHub still enforces liveness and bookkeeping; fulfill stays `coordinator`-gated.
-contract VRFHub is IVRFHub, Governable {
+contract VRFHub is IVRFHub, Governable, ReentrancyGuard {
     /// @notice Address permitted to call fulfill (provider / wrapper).
     address public immutable coordinator;
 
@@ -36,9 +37,12 @@ contract VRFHub is IVRFHub, Governable {
     uint256 public confirmationsFeeWei;
 
     mapping(uint256 => RequestInfo) internal requests;
+    mapping(uint256 => bool) public seenRequestId;
+    error InvalidRequestId(uint256 requestId);
     mapping(address => uint256) internal _refundCredit;
 
     event AdapterSet(address indexed adapter);
+    event FeeParamsSet(uint256 baseFeeWei, uint256 gasPriceWei, uint256 wordFeeWei, uint256 confirmationsFeeWei);
 
     event Fulfilled(uint256 indexed requestId, address indexed hub, uint256 indexed betId, bytes32 randomHash);
     event Ignored(uint256 indexed requestId);
@@ -78,6 +82,7 @@ contract VRFHub is IVRFHub, Governable {
         gasPriceWei = gasPriceWei_;
         wordFeeWei = wordFeeWei_;
         confirmationsFeeWei = confirmationsFeeWei_;
+        emit FeeParamsSet(baseFeeWei_, gasPriceWei_, wordFeeWei_, confirmationsFeeWei_);
     }
 
     // -------------------------
@@ -92,19 +97,17 @@ contract VRFHub is IVRFHub, Governable {
         return _refundCredit[payer];
     }
 
-    function quote(uint32 callbackGasLimit, uint16 requestConfirmations, uint32 numWords)
+    function quote(uint32 callbackGasLimit, uint16 requestConfirmations, uint32 numWords, uint256 gasPriceBudget)
         public
         view
         override
         returns (uint256 fee)
     {
         if (address(adapter) != address(0)) {
-            return adapter.quoteNative(callbackGasLimit, requestConfirmations, numWords);
+            return adapter.quoteNative(callbackGasLimit, requestConfirmations, numWords, gasPriceBudget);
         }
         // fee = base + gas + words + confirmations
-        fee = baseFeeWei
-            + (uint256(callbackGasLimit) * gasPriceWei)
-            + (uint256(numWords) * wordFeeWei)
+        fee = baseFeeWei + (uint256(callbackGasLimit) * gasPriceWei) + (uint256(numWords) * wordFeeWei)
             + (uint256(requestConfirmations) * confirmationsFeeWei);
     }
 
@@ -119,27 +122,22 @@ contract VRFHub is IVRFHub, Governable {
         uint16 requestConfirmations,
         uint32 numWords,
         address payer
-    ) external payable override returns (uint256 requestId, uint256 feeCharged) {
+    ) external payable override nonReentrant returns (uint256 requestId, uint256 feeCharged) {
         if (payer == address(0)) revert Errors.ZeroAddress();
 
-        uint256 required = quote(callbackGasLimit, requestConfirmations, numWords);
+        IVRFAdapter provider = adapter;
+        uint256 required = address(provider) == address(0)
+            ? quote(callbackGasLimit, requestConfirmations, numWords, tx.gasprice)
+            : provider.requestPriceNative(callbackGasLimit, numWords);
         if (msg.value < required) revert InsufficientVRFFee(msg.value, required);
 
         uint256 refundDue = msg.value - required;
         bool refundOk = true;
 
-        if (refundDue != 0) {
-            (refundOk, ) = payable(payer).call{value: refundDue}("");
-            if (!refundOk) {
-                _refundCredit[payer] += refundDue;
-            }
-        }
-
-        if (address(adapter) != address(0)) {
+        if (address(provider) != address(0)) {
             // Forward the charged fee to the adapter/provider.
-            (requestId, feeCharged) = adapter.requestRandomWordsInNative{value: required}(
-                callbackGasLimit, requestConfirmations, numWords
-            );
+            (requestId, feeCharged) =
+                provider.requestRandomWordsInNative{value: required}(callbackGasLimit, requestConfirmations, numWords);
             // Defensive: enforce charged == required (adapter should be pure proxy).
             if (feeCharged != required) revert Errors.InvalidConfig();
         } else {
@@ -148,24 +146,28 @@ contract VRFHub is IVRFHub, Governable {
             feeCharged = required;
         }
 
+        if (requestId == 0 || seenRequestId[requestId]) revert InvalidRequestId(requestId);
+        seenRequestId[requestId] = true;
         requests[requestId] = RequestInfo({
-            hub: hub,
-            betId: betId,
-            payer: payer,
-            feePaid: msg.value,
-            feeCharged: feeCharged,
-            active: true
+            hub: hub, betId: betId, payer: payer, feePaid: msg.value, feeCharged: feeCharged, active: true
         });
+
+        if (refundDue != 0) {
+            (refundOk,) = payable(payer).call{value: refundDue}("");
+            if (!refundOk) {
+                _refundCredit[payer] += refundDue;
+            }
+        }
 
         emit VRFFeeCharged(requestId, payer, msg.value, feeCharged, refundDue, refundOk);
         emit Requested(requestId, hub, betId);
     }
 
-    function claimRefund() external override returns (uint256 amount) {
+    function claimRefund() external override nonReentrant returns (uint256 amount) {
         amount = _refundCredit[msg.sender];
         if (amount == 0) return 0;
         _refundCredit[msg.sender] = 0;
-        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        (bool ok,) = payable(msg.sender).call{value: amount}("");
         if (!ok) {
             _refundCredit[msg.sender] = amount;
             revert Errors.TransferFailed();
