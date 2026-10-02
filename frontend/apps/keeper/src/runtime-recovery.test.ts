@@ -86,7 +86,7 @@ describe("runtime recovery composition", () => {
           .filter((eventName) => ["BetRandomReady", "BetPlaced"].includes(eventName))
           .map((eventName) => ({
             eventName,
-            args: { betId: 1n, requestId: 1n },
+            args: { positionId: 1n, requestId: 1n },
             blockNumber: 105n,
             transactionHash: hash,
             logIndex: 0
@@ -362,7 +362,7 @@ describe("runtime recovery composition", () => {
           blockNumber: 100n,
           logIndex: i,
           txHash: `0x${String(i + 1).padStart(64, "0")}` as const,
-          args: { betId: BigInt(i + 1), requestId: BigInt(i + 1) }
+          args: { positionId: BigInt(i + 1), requestId: BigInt(i + 1) }
         }))
       );
       runtime = make({ ...base, startupScanEnabled: false, pollIntervalMs });

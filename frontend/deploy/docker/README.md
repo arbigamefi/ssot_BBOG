@@ -101,8 +101,8 @@ tar -xzf arbigamefi-docker-deploy-bundle.tar.gz -C /opt/arbigamefi/frontend
 cd /opt/arbigamefi/frontend
 ```
 
-Keep the real `.env` files and Cloudflare cert files on the host. Updating the
-deploy bundle must not overwrite real secrets.
+Keep the real `.env` files on the host. Updating the deploy bundle must not
+overwrite real secrets.
 
 The workflow publishes:
 
@@ -250,28 +250,9 @@ curl -sSI -A 'Twitterbot/1.0' "https://$ARBGAMEFI_DOMAIN/casino/receipt/84532/29
 Expected result after the second request: `content-type: image/png`,
 immutable cache headers, and `cf-cache-status: HIT` or a warm-cache equivalent.
 
-After copying the cert files to the VPS, restart only the proxy:
-
-```bash
-docker compose -f compose.production.yml up -d caddy
-```
-
 Verify through Cloudflare:
 
 ```bash
 curl -fsS https://$ARBGAMEFI_DOMAIN/api/healthz | jq .
 curl -fsS https://$ARBGAMEFI_DOMAIN/ops/casino-keeper-health.json | jq .
 ```
-
-## 7. Rollback
-
-Keep the previous image tag available. A minimal rollback is:
-
-```bash
-docker compose -f compose.production.yml pull
-docker compose -f compose.production.yml up -d --no-deps web
-curl -fsS https://$ARBGAMEFI_DOMAIN/api/healthz | jq .
-```
-
-Database rollback is separate and must use a tested Postgres backup/restore
-procedure before public-risk launch.

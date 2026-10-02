@@ -16,8 +16,6 @@ storybook-static/
 deploy/casino-keeper/*.env
 deploy/docker/env/*.env
 !deploy/docker/env/*.env.example
-deploy/docker/certs/*
-!deploy/docker/certs/.gitkeep
 
 # IDE / editor
 .idea/

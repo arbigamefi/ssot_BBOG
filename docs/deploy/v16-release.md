@@ -45,6 +45,10 @@ backing; insufficient active funds and an independent emergency pause still reje
 Every admitted casino game must finalize, and timed-out PendingVRF bets must refund. Reconcile
 HouseEdgeAllocated events, actual cash transfers, XP and PF liabilities. Exercise restart/replay,
 reorg handling, alert delivery, Safe pause and governance-only unpause.
+Verify the new keeper's WS subscription and a real ready event through its final transaction receipt;
+exercise disconnect/reconnect and HTTP catch-up. Restoring an old development keeper does not satisfy
+this gate. Retire old containers, release bindings and obsolete data separately after accounting for
+any remaining old-contract funds and positions; no compatibility or migration implementation is needed.
 Bank payable discovery, historical-risk monitoring and provider cash-flow indexing advance through
 finalized blocks. Verify the target RPC supports this tag and monitor finalized coverage separately
 from the latest head. Automatic payable discovery, risk alerts and indexed LP cash flows may lag by

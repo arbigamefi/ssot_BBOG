@@ -531,6 +531,125 @@ contract GameHubE2E is Test {
         assertGt(bankA.claimRecovery(1, gov, gov), 0);
     }
 
+    // Incremental property from the independent review: compare actual cash, not a second implementation of
+    // Bank's allocation formula. Reuse this fixture's Hub/Router/VRF/modules with a six-decimal pool.
+    function test_exitCashEquivalenceWithReadyAndLateSettledPositions() external {
+        _assertExitCashEquivalence(12345, 12, 1_000_000e6, false);
+    }
+
+    function test_exitCashEquivalenceWithReadyAndTimedOutPositions() external {
+        _assertExitCashEquivalence(67890, 12, 1e6, true);
+    }
+
+    function testFuzz_exitCashEquivalenceAlwaysIncludesOpenRisk(
+        uint256 seed,
+        uint8 nBets,
+        uint256 stayingDeposit,
+        bool refundPending
+    ) external {
+        _assertExitCashEquivalence(seed, bound(nBets, 1, 12), bound(stayingDeposit, 1e6, 3_000_000e6), refundPending);
+    }
+
+    function _assertExitCashEquivalence(uint256 seed, uint256 n, uint256 stayingDeposit, bool refundPending) internal {
+        (BlacklistToken token, Bank pool) = _newPayablePool(false);
+        address earlyLp = address(0xEA);
+        address lateLp = address(0xEB);
+        _depositExitControl(token, pool, earlyLp, 1_000_000e6);
+        _depositExitControl(token, pool, lateLp, 1_000_000e6);
+        _depositExitControl(token, pool, gov, stayingDeposit);
+        uint256 shares = pool.balanceOf(earlyLp);
+        assertEq(shares, pool.balanceOf(lateLp), "both LPs start with identical risk ownership");
+        uint256 earlyBalance = token.balanceOf(earlyLp);
+        uint256 lateBalance = token.balanceOf(lateLp);
+
+        uint256[] memory ids = new uint256[](n);
+        uint8[] memory phases = new uint8[](n); // 0 = settled, 1 = ready, 2 = pending at the early exit
+        uint256 open;
+        for (uint256 i; i < n; ++i) {
+            ids[i] = _placeExitControl(token, seed, i);
+            // A one-bet case always carries open risk; multi-bet cases force both open states and a settled
+            // control when possible. No fuzz sample can pass just because every bet closed before exit.
+            phases[i] = i == 0
+                ? uint8(1 + seed % 2)
+                : i == 1 ? uint8(3 - phases[0]) : i == 2 ? 0 : uint8(uint256(keccak256(abi.encode(seed, i))) % 3);
+            if (phases[i] <= 1) _fulfill(ids[i], uint256(keccak256(abi.encode(seed, i, "ready"))));
+            if (phases[i] == 0) gameHub.finalize(ids[i]);
+            else ++open;
+        }
+        assertGt(open, 0, "the early exit must carry live risk");
+        assertEq(pool.openHolds(), open);
+        assertGt(pool.totalReserved(), 0);
+
+        vm.prank(earlyLp);
+        pool.requestRedeem(shares, earlyLp, earlyLp);
+        vm.warp(pool.redeemBatch(pool.currentEpoch()).cutoff);
+        uint256 epoch = pool.activateBatch();
+        assertEq(pool.recoveryEpoch(epoch).remainingHolds, open);
+        assertGt(pool.recoveryEpoch(epoch).initialReserve, 0, "early LP owns a nonempty recovery claim");
+        vm.prank(earlyLp);
+        uint256 earlyCash = pool.redeem(shares, earlyLp, earlyLp);
+        assertGt(earlyCash, 0, "claim liquid cash while positions are still open");
+        assertEq(pool.openHolds(), open);
+
+        for (uint256 i; i < n; ++i) {
+            if (phases[i] == 1) gameHub.finalize(ids[i]);
+            if (phases[i] == 2) {
+                if (refundPending) {
+                    assertGe(block.timestamp, gameHub.getBet(ids[i]).refundDeadline);
+                    gameHub.refund(ids[i]);
+                } else {
+                    _fulfill(ids[i], uint256(keccak256(abi.encode(seed, i, "late"))));
+                    gameHub.finalize(ids[i]);
+                }
+            }
+            assertEq(
+                uint256(gameHub.getBet(ids[i]).state),
+                uint256(phases[i] == 2 && refundPending ? SSOTTypes.BetState.Refunded : SSOTTypes.BetState.Settled)
+            );
+        }
+        assertEq(pool.openHolds(), 0);
+        assertEq(pool.totalReserved(), 0);
+        assertEq(pool.recoveryEpoch(epoch).remainingHolds, 0);
+        vm.prank(earlyLp);
+        earlyCash += pool.claimRecovery(epoch, earlyLp, earlyLp);
+
+        // No new deposits or bets after the first exit: both LPs bore the same portfolio to completion.
+        vm.prank(lateLp);
+        pool.requestRedeem(shares, lateLp, lateLp);
+        vm.warp(pool.redeemBatch(pool.currentEpoch()).cutoff);
+        pool.activateBatch();
+        vm.prank(lateLp);
+        uint256 lateCash = pool.redeem(shares, lateLp, lateLp);
+
+        assertEq(token.balanceOf(earlyLp) - earlyBalance, earlyCash);
+        assertEq(token.balanceOf(lateLp) - lateBalance, lateCash);
+        // For this bounded six-decimal fixture: per-position/recovery floors plus bounded virtual pricing
+        // drift. This is not a universal tolerance for arbitrary pool sizes or capital flows.
+        assertApproxEqAbs(earlyCash, lateCash, 4 * n + 4, "exit timing changed final LP cash");
+        assertEq(pool.exitPayable(), 0);
+        assertEq(pool.recoveryBacking(), 0);
+    }
+
+    function _depositExitControl(BlacklistToken token, Bank pool, address lp, uint256 assets) internal {
+        token.mint(lp, assets);
+        vm.startPrank(lp);
+        token.approve(address(pool), assets);
+        pool.deposit(assets, lp);
+        vm.stopPrank();
+    }
+
+    function _placeExitControl(BlacklistToken token, uint256 seed, uint256 i) internal returns (uint256) {
+        uint256 amount = bound(uint256(keccak256(abi.encode(seed, i, "amount"))), 1e6, 2_000e6);
+        uint32 count = uint32(bound(uint256(keccak256(abi.encode(seed, i, "count"))), 1, 3));
+        token.mint(alice, amount * count);
+        bool dice = uint256(keccak256(abi.encode(seed, i, "game"))) % 2 == 0;
+        bytes memory params = dice
+            ? abi.encode(true, uint8(bound(uint256(keccak256(abi.encode(seed, i, "target"))), 5, 95)))
+            : abi.encode(seed % 2 == 0);
+        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec(amount, count, 0, 0);
+        return _place(alice, dice ? GAME_DICE : GAME_COIN, 3, params, spec, address(0));
+    }
+
     function test_asyncPendingRefundWhilePausedReleasesHistoricalRecovery() external {
         uint256 cutoff = _requestGovExit(bankA);
         SSOTTypes.StakeSpec memory spec =

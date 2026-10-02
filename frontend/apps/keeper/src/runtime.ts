@@ -264,7 +264,8 @@ export function createKeeperRuntime({
       ? undefined
       : createPublicClient({
           chain,
-          transport: webSocket(config.wsRpcUrl)
+          // One runtime supervisor owns reconnects and subscriptions, including initial failures.
+          transport: webSocket(config.wsRpcUrl, { reconnect: false })
         });
 
   const queue = new FinalizeQueue();
@@ -275,6 +276,9 @@ export function createKeeperRuntime({
   });
   const timers: Array<ReturnType<typeof setInterval>> = [];
   const unwatchers: Array<() => void> = [];
+  let wsRetryTimer: ReturnType<typeof setTimeout> | undefined;
+  let closeWebSocket: (() => void) | undefined;
+  let resettingWebSocket = false;
   let stopped = false;
   let scanning = false;
   let bankProviderLedgerScanning = false;
@@ -635,11 +639,11 @@ export function createKeeperRuntime({
   };
 
   const enqueueBetRandomReadyLog = (log: {
-    args?: { betId?: bigint; requestId?: bigint; randomHash?: Hex };
+    args?: { positionId?: bigint; requestId?: bigint; randomHash?: Hex };
     blockNumber?: bigint;
     transactionHash?: Hex;
   }) => {
-    const betId = log.args?.betId;
+    const betId = log.args?.positionId;
     if (betId == null) return;
     enqueue({
       source: "gameHub",
@@ -799,6 +803,9 @@ export function createKeeperRuntime({
       txHash: log.transactionHash,
       receivedAt: Date.now()
     });
+    void trackOperation(drainQueue()).catch((error) => {
+      logger.error("casino.keeper.ready_drain_failed", { error: describeError(error) });
+    });
   };
 
   /**
@@ -847,12 +854,12 @@ export function createKeeperRuntime({
       }
       for (const log of readyLogs) {
         const args = log.args as
-          | { betId?: bigint; requestId?: bigint; randomHash?: Hex }
+          | { positionId?: bigint; requestId?: bigint; randomHash?: Hex }
           | undefined;
-        if (args?.betId == null) continue;
+        if (args?.positionId == null) continue;
         enqueue({
           source: "scan",
-          betId: BigInt(args.betId),
+          betId: BigInt(args.positionId),
           requestId: args.requestId == null ? undefined : BigInt(args.requestId),
           randomHash: args.randomHash,
           blockNumber: log.blockNumber,
@@ -1099,8 +1106,153 @@ export function createKeeperRuntime({
    * (HTTP 401/429) or dropped connection as an ErrorEvent whose message is empty, and viem's
    * own socket errors put the RPC URL in theirs, so neither is logged as-is.
    */
-  const logWatchError = (event: string, error: unknown, eventName?: string) =>
+  const stopWebSocketWatchers = () => {
+    resettingWebSocket = true;
+    try {
+      for (const unwatch of unwatchers.splice(0)) unwatch();
+      const close = closeWebSocket;
+      closeWebSocket = undefined;
+      close?.();
+    } finally {
+      resettingWebSocket = false;
+    }
+  };
+
+  const logWatchError = (event: string, error: unknown, eventName?: string) => {
     logger.error(event, { eventName, transport: "websocket", error: describeError(error) });
+    if (stopped || resettingWebSocket || wsRetryTimer != null) return;
+    // One bounded timer for all watchers. Closing the old socket also discards
+    // failed subscriptions before the next attempt; HTTP catch-up stays live.
+    wsRetryTimer = setTimeout(() => {
+      stopWebSocketWatchers();
+      wsRetryTimer = undefined;
+      void startWebSocketWatchers();
+    }, 2_000);
+  };
+
+  const startWebSocketWatchers = async () => {
+    if (!wsClient || stopped) return;
+    try {
+      const rpcClient = await wsClient.transport.getRpcClient();
+      if (stopped) {
+        rpcClient.close();
+        return;
+      }
+      const onClose = () =>
+        logWatchError("casino.keeper.websocket_closed", new Error("WebSocket connection closed"));
+      rpcClient.socket.addEventListener("close", onClose);
+      closeWebSocket = () => {
+        rpcClient.socket.removeEventListener("close", onClose);
+        rpcClient.close();
+      };
+      unwatchers.push(
+        wsClient.watchContractEvent({
+          poll: false,
+          address: config.gameHub,
+          abi: GAME_HUB_KEEPER_ABI,
+          eventName: "BetRandomReady",
+          onLogs: (logs) => {
+            (logs as unknown as Parameters<typeof enqueueBetRandomReadyLog>[0][]).forEach(
+              enqueueBetRandomReadyLog
+            );
+            void trackOperation(
+              writeBetIndexLogs("BetRandomReady", logs as unknown as GameHubLog[])
+            ).catch(() => undefined);
+          },
+          onError: (error) => logWatchError("casino.keeper.gamehub_watch_error", error)
+        })
+      );
+      unwatchers.push(
+        wsClient.watchContractEvent({
+          poll: false,
+          address: config.gameHub,
+          abi: GAME_HUB_KEEPER_ABI,
+          eventName: "BetPlaced",
+          onLogs: (logs) => {
+            for (const log of logs as unknown as GameHubLog[])
+              if (log.args?.positionId != null)
+                enqueue({
+                  source: "gameHub",
+                  betId: BigInt(log.args.positionId as bigint),
+                  receivedAt: Date.now(),
+                  blockNumber: log.blockNumber
+                });
+            void trackOperation(
+              writeBetIndexLogs("BetPlaced", logs as unknown as GameHubLog[])
+            ).catch(() => undefined);
+          },
+          onError: (error) =>
+            logWatchError("casino.keeper.gamehub_index_watch_error", error, "BetPlaced")
+        })
+      );
+      if (betIndexStore) {
+        for (const eventName of ["BetFinalized", "BetRefunded"] as const) {
+          unwatchers.push(
+            wsClient.watchContractEvent({
+              poll: false,
+              address: config.gameHub,
+              abi: GAME_HUB_KEEPER_ABI,
+              eventName,
+              onLogs: (logs) =>
+                void trackOperation(
+                  writeBetIndexLogs(eventName, logs as unknown as GameHubLog[])
+                ).catch(() => undefined),
+              onError: (error) =>
+                logWatchError("casino.keeper.gamehub_index_watch_error", error, eventName)
+            })
+          );
+        }
+        if (config.sportsTicketIndexEnabled && config.sportsHub) {
+          for (const eventName of SPORTS_TICKET_EVENTS) {
+            unwatchers.push(
+              wsClient.watchContractEvent({
+                poll: false,
+                address: config.sportsHub,
+                abi: SPORTS_HUB_KEEPER_ABI,
+                eventName,
+                onLogs: (logs) =>
+                  void trackOperation(
+                    writeSportsTicketIndexLogs(eventName, logs as unknown as GameHubLog[])
+                  ),
+                onError: (error) =>
+                  logWatchError("casino.keeper.sports_ticket_index_watch_error", error, eventName)
+              })
+            );
+          }
+        }
+      }
+      if (config.sportsTerminalizerEnabled && config.sportsHub) {
+        for (const eventName of SPORTS_TERMINALIZER_EVENTS) {
+          unwatchers.push(
+            wsClient.watchContractEvent({
+              poll: false,
+              address: config.sportsHub,
+              abi: SPORTS_HUB_KEEPER_ABI,
+              eventName,
+              onLogs: (logs) => scheduleSportsTerminalizerLogs(eventName, logs),
+              onError: (error) => logWatchError("sports.terminalizer.watch_error", error, eventName)
+            })
+          );
+        }
+      }
+      unwatchers.push(
+        wsClient.watchContractEvent({
+          poll: false,
+          address: config.vrfHub,
+          abi: VRF_HUB_KEEPER_ABI,
+          eventName: "Fulfilled",
+          onLogs: (logs) =>
+            (logs as unknown as Parameters<typeof enqueueFulfilledLog>[0][]).forEach(
+              enqueueFulfilledLog
+            ),
+          onError: (error) => logWatchError("casino.keeper.vrfhub_watch_error", error)
+        })
+      );
+      logger.info("casino.keeper.websocket_watchers_registered", { watchers: unwatchers.length });
+    } catch (error) {
+      logWatchError("casino.keeper.websocket_connect_failed", error);
+    }
+  };
 
   const start = async () => {
     logger.info("casino.keeper.starting", {
@@ -1133,105 +1285,9 @@ export function createKeeperRuntime({
     await initializeBetIndex();
     await sportsRecovery?.prepare();
 
-    if (wsClient) {
-      unwatchers.push(
-        wsClient.watchContractEvent({
-          address: config.gameHub,
-          abi: GAME_HUB_KEEPER_ABI,
-          eventName: "BetRandomReady",
-          onLogs: (logs) => {
-            (logs as unknown as Parameters<typeof enqueueBetRandomReadyLog>[0][]).forEach(
-              enqueueBetRandomReadyLog
-            );
-            void trackOperation(
-              writeBetIndexLogs("BetRandomReady", logs as unknown as GameHubLog[])
-            ).catch(() => undefined);
-          },
-          onError: (error) => logWatchError("casino.keeper.gamehub_watch_error", error)
-        })
-      );
-      unwatchers.push(
-        wsClient.watchContractEvent({
-          address: config.gameHub,
-          abi: GAME_HUB_KEEPER_ABI,
-          eventName: "BetPlaced",
-          onLogs: (logs) => {
-            for (const log of logs as unknown as GameHubLog[])
-              if (log.args?.positionId != null)
-                enqueue({
-                  source: "gameHub",
-                  betId: BigInt(log.args.positionId as bigint),
-                  receivedAt: Date.now(),
-                  blockNumber: log.blockNumber
-                });
-            void trackOperation(
-              writeBetIndexLogs("BetPlaced", logs as unknown as GameHubLog[])
-            ).catch(() => undefined);
-          },
-          onError: (error) =>
-            logWatchError("casino.keeper.gamehub_index_watch_error", error, "BetPlaced")
-        })
-      );
-      if (betIndexStore) {
-        for (const eventName of ["BetFinalized", "BetRefunded"] as const) {
-          unwatchers.push(
-            wsClient.watchContractEvent({
-              address: config.gameHub,
-              abi: GAME_HUB_KEEPER_ABI,
-              eventName,
-              onLogs: (logs) =>
-                void trackOperation(
-                  writeBetIndexLogs(eventName, logs as unknown as GameHubLog[])
-                ).catch(() => undefined),
-              onError: (error) =>
-                logWatchError("casino.keeper.gamehub_index_watch_error", error, eventName)
-            })
-          );
-        }
-        if (config.sportsTicketIndexEnabled && config.sportsHub) {
-          for (const eventName of SPORTS_TICKET_EVENTS) {
-            unwatchers.push(
-              wsClient.watchContractEvent({
-                address: config.sportsHub,
-                abi: SPORTS_HUB_KEEPER_ABI,
-                eventName,
-                onLogs: (logs) =>
-                  void trackOperation(
-                    writeSportsTicketIndexLogs(eventName, logs as unknown as GameHubLog[])
-                  ),
-                onError: (error) =>
-                  logWatchError("casino.keeper.sports_ticket_index_watch_error", error, eventName)
-              })
-            );
-          }
-        }
-      }
-      if (config.sportsTerminalizerEnabled && config.sportsHub) {
-        for (const eventName of SPORTS_TERMINALIZER_EVENTS) {
-          unwatchers.push(
-            wsClient.watchContractEvent({
-              address: config.sportsHub,
-              abi: SPORTS_HUB_KEEPER_ABI,
-              eventName,
-              onLogs: (logs) => scheduleSportsTerminalizerLogs(eventName, logs),
-              onError: (error) => logWatchError("sports.terminalizer.watch_error", error, eventName)
-            })
-          );
-        }
-      }
-      unwatchers.push(
-        wsClient.watchContractEvent({
-          address: config.vrfHub,
-          abi: VRF_HUB_KEEPER_ABI,
-          eventName: "Fulfilled",
-          onLogs: (logs) =>
-            (logs as unknown as Parameters<typeof enqueueFulfilledLog>[0][]).forEach(
-              enqueueFulfilledLog
-            ),
-          onError: (error) => logWatchError("casino.keeper.vrfhub_watch_error", error)
-        })
-      );
-    }
+    // Connecting cannot access the store or submit writes. Do not join a stalled
+    // handshake on shutdown; the stopped check closes any socket that arrives later.
+    void startWebSocketWatchers();
 
     timers.push(setInterval(() => void trackOperation(drainQueue()), 500));
     if (config.pollIntervalMs > 0) {
@@ -1294,7 +1350,8 @@ export function createKeeperRuntime({
   const stop = async () => {
     stopped = true;
     timers.forEach(clearInterval);
-    unwatchers.forEach((unwatch) => unwatch());
+    if (wsRetryTimer != null) clearTimeout(wsRetryTimer);
+    stopWebSocketWatchers();
     await sportsRecovery?.stop();
     // In-flight work can enqueue a final health write while it finishes, so join until empty.
     while (activeOperations.size > 0) await Promise.allSettled([...activeOperations]);

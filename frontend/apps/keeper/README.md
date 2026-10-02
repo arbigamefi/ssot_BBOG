@@ -38,6 +38,33 @@ and `dev:with-keepers` use those selected local configurations.
 
 ## Casino settlement and LP pricing
 
+With `KEEPER_RPC_WS` configured, contract watchers use `eth_subscribe` (`poll: false`).
+`GameHub.BetRandomReady` (using its `positionId` field) and `VRFHub.Fulfilled` both enqueue the
+position and immediately request a queue drain. Queue deduplication and the serialized
+write path prevent the two events from sending duplicate transactions. A ready event
+also brings forward a position that was waiting for its PendingVRF refund deadline.
+The 500 ms queue timer handles deferred work; normal ready delivery does not wait for
+the HTTP scan interval.
+
+The runtime recreates the socket and all watchers after a subscription error or socket
+close, with one shared retry timer. Retries continue after a prolonged provider outage;
+shutdown cancels retries and closes the owned socket. HTTP lifecycle recovery remains
+enabled because a new WS subscription cannot replay events missed during an outage.
+The transport does not expose a socket before its initial handshake resolves. A peer
+that never completes that handshake can stall WS setup; it does not block HTTP recovery
+or CLI shutdown. No overlapping connection attempts are created, and any connection
+that resolves after shutdown is closed. Restart a persistently stalled instance only
+after checking the provider and authorizing the operational action.
+
+`wsEnabled` and `websocket_watchers_registered` only describe configuration and local
+watcher registration. A `running` health snapshot does not prove WS delivery. Verify
+provider subscription acknowledgements separately, then correlate a real ready event,
+an enqueue with `source=gameHub` or `source=vrfHub`, and the final transaction receipt.
+An enqueue with `source=scan` proves HTTP discovery, but the queued item retains its
+original source when a later WS event wakes it. Attribute settlement using the event
+and enqueue timeline, not the finalizer's source alone. Test this with an authorized
+testnet bet; a read-only `newHeads` probe alone does not prove settlement.
+
 Before every transaction, the keeper reads `GameHub.getBet`:
 
 - `RandomReady` calls `finalize` using **3,050,000 transaction gas** for both
