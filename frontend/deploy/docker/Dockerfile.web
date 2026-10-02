@@ -27,7 +27,7 @@ ARG WEB_LOW_MEMORY_BUILD=1
 ARG NEXT_SKIP_BUILD_VALIDATION=0
 ARG NEXT_PUBLIC_SITE_URL=https://arbigamefi.com
 ARG NEXT_PUBLIC_ENV=production
-ARG NEXT_PUBLIC_CHAIN_ID=8453
+ARG NEXT_PUBLIC_CHAIN_ID=84532
 ARG NEXT_PUBLIC_WC_PROJECT_ID
 ARG NEXT_PUBLIC_ALCHEMY_API_KEY
 ARG NEXT_PUBLIC_BASE_RPC_URL
@@ -80,7 +80,9 @@ ENV PORT=3000
 WORKDIR /app
 
 RUN groupadd --system --gid 1001 nodejs \
-  && useradd --system --uid 1001 --gid nodejs nextjs
+  && useradd --system --uid 1001 --gid nodejs nextjs \
+  && mkdir -p /var/lib/arbigamefi/casino-keeper \
+  && chown -R nextjs:nodejs /var/lib/arbigamefi
 
 COPY --from=builder --chown=nextjs:nodejs /app/frontend/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/frontend/apps/web/.next/static ./apps/web/.next/static

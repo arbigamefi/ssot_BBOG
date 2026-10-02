@@ -25,6 +25,13 @@ const getArg = (name) => {
   return args[idx + 1] ?? null;
 };
 
+const onlyChain = getArg("--only-chain");
+if (
+  onlyChain !== null &&
+  (!/^[1-9][0-9]*$/.test(onlyChain) || !Number.isSafeInteger(Number(onlyChain)))
+) {
+  throw new Error("--only-chain must be a positive safe integer");
+}
 const fromArg = getArg("--from");
 if (!fromArg) {
   console.error("\nMissing --from <releaseBundleDir|tar.gz>\n");
@@ -240,6 +247,9 @@ async function main() {
   const latestSnapshot = await readJson(latestSnapshotPath);
   const abiIndex = await readJson(abiIndexPath);
 
+  if (onlyChain !== null && manifest.chainId !== Number(onlyChain)) {
+    throw new Error("Release chain differs from --only-chain.");
+  }
   // Verify all inputs before changing active embedded metadata.
   if (
     manifest.architectureVersion !== RELEASE_LINE.architectureVersion ||
@@ -384,6 +394,13 @@ async function main() {
     "utf8"
   );
 
+  if (onlyChain !== null) {
+    for (const file of await fs.readdir(OUT_EMBEDDED)) {
+      if (/^chain-\d+\.json$/.test(file) && file !== embeddedFile) {
+        await fs.rm(path.join(OUT_EMBEDDED, file));
+      }
+    }
+  }
   const existing = (await fs.readdir(OUT_EMBEDDED)).filter(
     (f) => f.startsWith("chain-") && f.endsWith(".json") && !isAppleJunk(f)
   );

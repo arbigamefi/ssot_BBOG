@@ -28,40 +28,64 @@ def manifest(chain):
 
 class ImageGuardTests(unittest.TestCase):
     def setUp(self):
-        self.manifests = {str(chain): manifest(chain) for chain in (8453, 84532)}
+        self.manifests = {str(chain): manifest(chain) for chain in (84532,)}
         self.image_revision = REVISION
         self.probe_calls = 0
+        self.image_chain = "84532"
 
     def docker(self, args, **kwargs):
         if args[:3] == ["docker", "image", "inspect"]:
-            return json.dumps([{"Config": {"Labels": {"org.opencontainers.image.revision": self.image_revision}}}]).encode()
+            return json.dumps([{"Config": {"Labels": {"org.opencontainers.image.revision": self.image_revision, "io.arbigamefi.chain-id": self.image_chain}}}]).encode()
         self.assertEqual(args[:8], ["docker", "run", "--rm", "--read-only", "--network", "none", "--entrypoint", "node"])
         self.probe_calls += 1
         # Execute the actual image probe against a virtual public manifest filesystem.
         prelude = "const data=" + json.dumps(self.manifests) + ";require('node:fs').readFileSync=(p)=>JSON.stringify(data[p.match(/chain-(\\d+)/)[1]]);\n"
+        prelude += "require('node:fs').readdirSync=()=>Object.keys(data).map(c=>'chain-'+c+'.json');\n"
         return REAL_CHECK_OUTPUT(["node", "-e", prelude + args[-1]], stderr=subprocess.DEVNULL)
 
-    def test_valid_images_agree_on_both_chains(self):
+    def test_selected_sepolia_image_needs_no_mainnet_release(self):
         with patch.object(GUARD.subprocess, "check_output", self.docker):
-            rows = GUARD.check("image", REVISION)
-        self.assertEqual([row["chainId"] for row in rows], [8453, 84532])
+            rows = GUARD.check("image", REVISION, 84532, DIGEST)
+        self.assertEqual([row["chainId"] for row in rows], [84532])
 
     def test_wrong_revision_rejected_before_running_container(self):
         self.image_revision = "b" * 40
         with patch.object(GUARD.subprocess, "check_output", self.docker), self.assertRaises(ValueError):
-            GUARD.check("image", REVISION)
+            GUARD.check("image", REVISION, 84532, DIGEST)
         self.assertEqual(self.probe_calls, 0)
 
     def test_unknown_schema_or_digest_mismatch_rejected_by_actual_probe(self):
         for field, value in [("schema", "SSOT_RELEASE_DIGEST_OTHER"), ("digest", "0x" + "4" * 64)]:
             with self.subTest(field=field):
-                self.manifests = {str(c): manifest(c) for c in (8453, 84532)}
-                self.manifests["8453"]["meta"]["releaseLock"][field] = value
+                self.manifests = {str(c): manifest(c) for c in (84532,)}
+                self.manifests["84532"]["meta"]["releaseLock"][field] = value
                 with patch.object(GUARD.subprocess, "check_output", self.docker), self.assertRaises(subprocess.CalledProcessError):
-                    GUARD.check("image", REVISION)
+                    GUARD.check("image", REVISION, 84532, DIGEST)
+
+    def test_wrong_baked_chain_rejected_before_running_container(self):
+        self.image_chain = "8453"
+        with patch.object(GUARD.subprocess, "check_output", self.docker), self.assertRaises(ValueError):
+            GUARD.check("image", REVISION, 84532, DIGEST)
+        self.assertEqual(self.probe_calls, 0)
+
+    def test_stale_release_placeholder_missing_and_extra_chain_rejected(self):
+        for failure in ("stale", "placeholder", "missing", "extra"):
+            with self.subTest(failure=failure):
+                self.manifests = {"84532": manifest(84532)}
+                if failure == "stale":
+                    self.manifests["84532"]["releaseDigest"] = "0x" + "4" * 64
+                    self.manifests["84532"]["meta"]["releaseLock"]["digest"] = "0x" + "4" * 64
+                if failure == "placeholder":
+                    self.manifests["84532"]["isPlaceholder"] = True
+                if failure == "missing":
+                    self.manifests = {}
+                if failure == "extra":
+                    self.manifests["8453"] = manifest(8453)
+                with patch.object(GUARD.subprocess, "check_output", self.docker), self.assertRaises(subprocess.CalledProcessError):
+                    GUARD.check("image", REVISION, 84532, DIGEST)
 
     def test_different_application_releases_rejected(self):
-        env = {"EXPECTED_REVISION": REVISION, "WEB_IMAGE": "ghcr.io/arbigamefi/ssot-bbog-web@sha256:" + "a" * 64,
+        env = {"DEPLOY_CHAIN_ID": "84532", "EXPECTED_RELEASE_DIGEST": DIGEST, "EXPECTED_REVISION": REVISION, "WEB_IMAGE": "ghcr.io/arbigamefi/ssot-bbog-web@sha256:" + "a" * 64,
                "KEEPER_IMAGE": "ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:" + "b" * 64}
         with patch.dict(os.environ, env), patch.object(GUARD, "check", side_effect=[[{"digest": "one"}], [{"digest": "two"}]]), self.assertRaisesRegex(ValueError, "releases differ"):
             GUARD.main()

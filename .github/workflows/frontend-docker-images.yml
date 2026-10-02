@@ -5,21 +5,51 @@ on:
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-docker-images.yml"
+      - "script/release/**"
+      - "script/ci/install_deps.sh"
   push:
     branches: ["master"]
     tags: ["v*"]
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-docker-images.yml"
+      - "script/release/**"
+      - "script/ci/install_deps.sh"
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: "GitHub release containing the signed deployment bundle for this exact source commit"
+        required: true
+        type: string
+      bundle_name:
+        description: "Exact tar.gz release asset name"
+        required: true
+        type: string
+      bundle_sha256:
+        description: "Approved SHA-256 of the exact release archive"
+        required: true
+        type: string
+      chain_id:
+        description: "Only chain included in the application images"
+        required: true
+        default: "84532"
+        type: choice
+        options: ["84532", "8453"]
+      casino_enabled:
+        description: "Enable casino risk-in after acceptance"
+        type: boolean
+        default: false
+      lp_deposits_enabled:
+        description: "Enable LP deposits after acceptance"
+        type: boolean
+        default: false
       image_tag:
-        description: "Optional extra image tag, for example base-mainnet-2026-06-02"
+        description: "Optional extra image tag, for example base-sepolia-v16"
         required: false
         type: string
 
 concurrency:
-  group: frontend-docker-images-${{ github.ref }}
+  group: frontend-docker-images-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -69,18 +99,18 @@ jobs:
               NEXT_SKIP_BUILD_VALIDATION=1
               NEXT_PUBLIC_SITE_URL=https://arbigamefi.com
               NEXT_PUBLIC_ENV=production
-              NEXT_PUBLIC_CHAIN_ID=8453
+              NEXT_PUBLIC_CHAIN_ID=${{ inputs.chain_id || '84532' }}
               NEXT_PUBLIC_WC_PROJECT_ID=${{ vars.NEXT_PUBLIC_WC_PROJECT_ID || '6d44f31abf9391610c3a42e8e7a2d763' }}
-              NEXT_PUBLIC_ALCHEMY_API_KEY=${{ vars.NEXT_PUBLIC_ALCHEMY_API_KEY }}
-              NEXT_PUBLIC_BASE_RPC_URL=${{ vars.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org' }}
+              NEXT_PUBLIC_ALCHEMY_API_KEY=
+              NEXT_PUBLIC_BASE_RPC_URL=https://mainnet.base.org
               NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
               NEXT_PUBLIC_ARBITRUM_RPC_URL=${{ vars.NEXT_PUBLIC_ARBITRUM_RPC_URL }}
               NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL=${{ vars.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL }}
               NEXT_PUBLIC_MAINNET_RPC_URL=https://cloudflare-eth.com
-              NEXT_PUBLIC_RPC_URL=${{ vars.NEXT_PUBLIC_RPC_URL }}
+              NEXT_PUBLIC_RPC_URL=
               NEXT_PUBLIC_ENABLE_ENS_LOOKUP=true
-              NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=false
-              NEXT_PUBLIC_LP_DEPOSITS_ENABLED=false
+              NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=${{ inputs.casino_enabled && 'true' || 'false' }}
+              NEXT_PUBLIC_LP_DEPOSITS_ENABLED=${{ inputs.lp_deposits_enabled && 'true' || 'false' }}
               NEXT_PUBLIC_SPORTSBOOK_ENABLED=false
           - service: keeper
             image: ghcr.io/arbigamefi/ssot-bbog-keeper
@@ -91,11 +121,49 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Foundry for authenticated release import
+        if: github.event_name == 'workflow_dispatch'
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.4
+
+      - name: Setup Node for authenticated release import
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: Import signed release for the selected chain
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          BUNDLE_NAME: ${{ inputs.bundle_name }}
+          RELEASE_BUNDLE_SHA256: ${{ inputs.bundle_sha256 }}
+          DEPLOY_CHAIN_ID: ${{ inputs.chain_id }}
+          RELEASE_SIGNER: ${{ vars.V16_RELEASE_SIGNER }}
+          RPC_URL_BASE_SEPOLIA: ${{ secrets.FORK_RPC_URL_BASE_SEPOLIA }}
+          RPC_URL_BASE: ${{ secrets.FORK_RPC_URL_BASE }}
+        run: |
+          python3 - <<'PYVALID'
+          import os, re
+          if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.gz", os.environ["BUNDLE_NAME"]):
+              raise SystemExit("invalid bundle name")
+          PYVALID
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$BUNDLE_NAME" --dir "$RUNNER_TEMP/release-download"
+          case "$DEPLOY_CHAIN_ID" in
+            84532) export RPC_URL="${RPC_URL_BASE_SEPOLIA:-https://sepolia.base.org}" ;;
+            8453) export RPC_URL="${RPC_URL_BASE:-https://mainnet.base.org}" ;;
+            *) exit 1 ;;
+          esac
+          bash script/ci/install_deps.sh
+          RELEASE_BUNDLE="$RUNNER_TEMP/release-download/$BUNDLE_NAME" bash script/release/prepare_image_release.sh
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -113,18 +181,37 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
             type=raw,value=${{ github.event.inputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag != '' }}
           labels: |
+            io.arbigamefi.chain-id=${{ inputs.chain_id || '84532' }}
             org.opencontainers.image.title=ArbiGameFi ${{ matrix.service }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
 
       - name: Build and optionally push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: frontend
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name == 'workflow_dispatch' }}
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: ${{ matrix.build_args }}
           cache-from: type=gha,scope=frontend-${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=frontend-${{ matrix.service }}
+
+      - name: Verify fresh shared health volume ownership
+        env:
+          IMAGE_ID: ${{ steps.build.outputs.imageid }}
+        run: |
+          volume="keeper-health-${GITHUB_RUN_ID}-${{ matrix.service }}"
+          docker volume create "$volume"
+          trap 'docker volume rm "$volume" >/dev/null' EXIT
+          # Web may create the shared volume first, even with its read-only mount.
+          docker run --rm --network none --entrypoint node \
+            -v "$volume:/var/lib/arbigamefi/casino-keeper:ro" "$IMAGE_ID" -e \
+            "require('node:fs').accessSync('/var/lib/arbigamefi/casino-keeper')"
+          # Both runtime images use UID 1001; keeper must be able to publish health.
+          docker run --rm --network none --user 1001:1001 --entrypoint node \
+            -v "$volume:/var/lib/arbigamefi/casino-keeper" "$IMAGE_ID" -e \
+            "require('node:fs').writeFileSync('/var/lib/arbigamefi/casino-keeper/health.json','{}')"

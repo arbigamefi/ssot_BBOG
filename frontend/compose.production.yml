@@ -25,9 +25,7 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: 0.0.0.0
-      KEEPER_HEALTH_PATH: /var/lib/arbigamefi/casino-keeper/base-mainnet-primary-health.json
-      KEEPER_HEALTH_PATH_8453: /var/lib/arbigamefi/casino-keeper/base-mainnet-primary-health.json
-      KEEPER_HEALTH_PATH_84532: /var/lib/arbigamefi/casino-keeper/base-sepolia-primary-health.json
+      KEEPER_HEALTH_PATH: /var/lib/arbigamefi/casino-keeper/chain-${DEPLOY_CHAIN_ID:?Set DEPLOY_CHAIN_ID}-primary-health.json
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,40 +53,7 @@ services:
     env_file:
       - ./deploy/docker/env/keeper.primary.env
     environment:
-      KEEPER_HEALTH_PATH: /var/lib/arbigamefi/casino-keeper/base-mainnet-primary-health.json
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - keeper_health:/var/lib/arbigamefi/casino-keeper
-    networks:
-      - internal
-
-  keeper-testnet-primary:
-    image: ${KEEPER_IMAGE:?Set KEEPER_IMAGE to an immutable digest}
-    restart: unless-stopped
-    env_file:
-      - ./deploy/docker/env/keeper.testnet.primary.env
-    environment:
-      KEEPER_HEALTH_PATH: /var/lib/arbigamefi/casino-keeper/base-sepolia-primary-health.json
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - keeper_health:/var/lib/arbigamefi/casino-keeper
-    networks:
-      - internal
-
-  # Prefer running the backup keeper on a different host/region. This local
-  # profile exists for staging drills only.
-  keeper-backup:
-    profiles: ["backup-local"]
-    image: ${KEEPER_IMAGE:?Set KEEPER_IMAGE to an immutable digest}
-    restart: unless-stopped
-    env_file:
-      - ./deploy/docker/env/keeper.backup.env
-    environment:
-      KEEPER_HEALTH_PATH: /var/lib/arbigamefi/casino-keeper/base-mainnet-backup-health.json
+      KEEPER_HEALTH_PATH: /var/lib/arbigamefi/casino-keeper/chain-${DEPLOY_CHAIN_ID:?Set DEPLOY_CHAIN_ID}-primary-health.json
     depends_on:
       postgres:
         condition: service_healthy

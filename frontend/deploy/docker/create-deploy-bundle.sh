@@ -6,7 +6,7 @@ OUT="${1:-$ROOT_DIR/dist/arbigamefi-docker-deploy-bundle.tar.gz}"
 
 mkdir -p "$(dirname "$OUT")"
 
-tar -czf "$OUT" -C "$ROOT_DIR" \
+COPYFILE_DISABLE=1 tar -czf "$OUT" -C "$ROOT_DIR" \
   compose.production.yml \
   deploy/docker/README.md \
   deploy/docker/Caddyfile \
@@ -16,8 +16,6 @@ tar -czf "$OUT" -C "$ROOT_DIR" \
   deploy/docker/env/postgres.env.example \
   deploy/docker/env/web.production.env.example \
   deploy/docker/env/keeper.primary.env.example \
-  deploy/docker/env/keeper.testnet.primary.env.example \
-  deploy/docker/env/keeper.backup.env.example \
   deploy/docker/env/proxy.env.example
 
 echo "wrote $OUT"

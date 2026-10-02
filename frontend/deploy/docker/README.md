@@ -1,21 +1,12 @@
 # Docker deployment
 
-Use this for the first deployment of the current application and verified contract release.
-The Compose project and database are `arbigamefi`.
+One deployment runs one explicitly selected chain, one primary keeper, the web
+app, Caddy, and the dedicated `arbigamefi` PostgreSQL database. The first release
+uses Base Sepolia (`84532`) and one USDC casino pool; sportsbook stays disabled.
+No mainnet keeper is started by this stack. Browser RPC uses official public Base
+endpoints; keeper HTTP uses Infura and keeper WebSocket uses Alchemy.
 
-This path runs the production app as normal long-lived processes:
-
-- Cloudflare: DNS/CDN/WAF only.
-- Caddy: TLS termination and reverse proxy.
-- `web`: Next.js standalone server.
-- `keeper-primary`: permissionless casino/sportsbook finalizer and bet-index writer.
-- `postgres`: durable bet-index store.
-
-For a public mainnet launch, prefer managed Postgres. The bundled Postgres
-service is suitable for staging, canaries, and early single-host soft launches
-only if automated backups are configured.
-
-## 1. Prepare Environment Files
+## 1. Prepare environment files
 
 From `frontend/`:
 
@@ -23,160 +14,95 @@ From `frontend/`:
 cp deploy/docker/env/postgres.env.example deploy/docker/env/postgres.env
 cp deploy/docker/env/web.production.env.example deploy/docker/env/web.production.env
 cp deploy/docker/env/keeper.primary.env.example deploy/docker/env/keeper.primary.env
-cp deploy/docker/env/keeper.testnet.primary.env.example deploy/docker/env/keeper.testnet.primary.env
 cp deploy/docker/env/proxy.env.example deploy/docker/env/proxy.env
+export DEPLOY_CHAIN_ID=84532
 ```
 
-Optional local backup keeper drill:
+Replace every placeholder. Keep the database identity and credentials identical
+in Postgres, web and keeper. Both app chain IDs and the keeper release path must
+match `DEPLOY_CHAIN_ID`. Compose owns the keeper health path; do not add health
+path overrides to the web env. Never commit real env files or expose keeper RPC
+keys through `NEXT_PUBLIC_*` values.
+
+The browser chain, public RPCs and feature flags are baked into the image. Runtime
+env changes do not rebuild them. Keep runtime values aligned with the build.
+
+## 2. Build authenticated images
+
+PR and push workflows build for validation only. Publishing images requires a
+manual `Frontend Docker Images` run on the exact reviewed source commit, with:
+
+- `release_tag`: GitHub release holding the signed deployment bundle;
+- `bundle_name`: exact `.tar.gz` asset name;
+- `bundle_sha256`: independently approved archive hash;
+- `chain_id`: `84532` for this deployment;
+- optional `image_tag` for discovery.
+
+Configure repository variable `V16_RELEASE_SIGNER` to the approved release signer
+and optionally secret `FORK_RPC_URL_BASE_SEPOLIA` to a dedicated RPC. A Base mainnet
+build instead uses `FORK_RPC_URL_BASE`. Without a secret, governance verification
+uses the selected chain's official public RPC and fails closed on any RPC error. These are independent trust inputs, never taken
+from the uploaded bundle. Do not put keystore passwords in GitHub or chat.
+
+The build verifies archive hash, complete inventory, and exact source commit,
+then uses the existing strict artifact, signature and live governance checks.
+Only after those pass does it retain the selected chain's embedded manifest.
+Web and keeper are built from that input. A not-yet-accepted Safe takeover cannot
+produce deployable images. Contract deployment and governance acceptance must
+therefore precede this image build.
+
+The `casino_enabled` and `lp_deposits_enabled` workflow inputs default to false
+for the initial operational smoke check. Enable them only in a separately reviewed
+build after the required acceptance checks; this reuses the same signed contract
+release without changing source. Sportsbook stays disabled for this first release.
+
+Images are published to `ghcr.io/arbigamefi/ssot-bbog-web` and
+`ghcr.io/arbigamefi/ssot-bbog-keeper`. Tags are lookup conveniences; deploy only
+immutable digests. Ordinary source builds cannot replace these release tags.
+
+## 3. Prepare the host and validate
+
+Download the `arbigamefi-docker-deploy-bundle` artifact from the same workflow run.
+It contains Compose, deployment scripts, Caddy configuration and env examples,
+without source or secrets. Unpack into `/opt/arbigamefi/frontend`; real env files
+are not included and must not be overwritten.
 
 ```bash
-cp deploy/docker/env/keeper.backup.env.example deploy/docker/env/keeper.backup.env
-```
-
-Edit every copied file. The same database username, password, and database name
-must be reflected in:
-
-- `deploy/docker/env/postgres.env`
-- `BET_INDEX_DATABASE_URL` in `web.production.env`
-- `BET_INDEX_DATABASE_URL` in `keeper.primary.env`
-- `BET_INDEX_DATABASE_URL` in `keeper.testnet.primary.env`
-- `BET_INDEX_DATABASE_URL` in `keeper.backup.env`, if used
-
-Never commit the real `.env` files.
-
-The default Docker stack runs two primary keepers:
-
-- `keeper-primary`: Base mainnet (`8453`)
-- `keeper-testnet-primary`: Base Sepolia (`84532`)
-
-They write separate health snapshots into the shared `keeper_health` volume:
-
-- `/var/lib/arbigamefi/casino-keeper/base-mainnet-primary-health.json`
-- `/var/lib/arbigamefi/casino-keeper/base-sepolia-primary-health.json`
-
-The web service reads both paths through `KEEPER_HEALTH_PATH_8453` and
-`KEEPER_HEALTH_PATH_84532`. Use `?chainId=84532` on `/api/healthz` or
-`/ops/casino-keeper-health.json` to inspect the testnet keeper.
-
-## 2. Preflight
-
-```bash
-cd frontend
-bash deploy/docker/check-production-env.sh
-```
-
-On an artifact-only production host, this checks that required env files exist,
-no placeholder values remain, and the Compose graph is valid.
-
-In a source checkout, you can additionally validate the embedded Base mainnet
-release with:
-
-```bash
-CHECK_EMBEDDED_RELEASE=1 bash deploy/docker/check-production-env.sh
-```
-
-## 3. Build or Pull Images
-
-Preferred production path: build images in GitHub Actions and run only pulled
-images on the VPS. This keeps low-memory hosts from running `next build`.
-
-The production host does **not** need the frontend source tree. It only needs the
-deploy bundle generated by CI and real env files. Caddy provisions and renews
-the origin server certificates in its persistent data volume.
-The bundle contains:
-
-- `compose.production.yml`
-- `deploy/docker/Caddyfile`
-- `deploy/docker/check-production-env.sh`
-- `deploy/docker/deploy-images.sh`
-- `deploy/docker/check-release-images.py`
-- `deploy/docker/env/*.env.example`
-
-Download the `arbigamefi-docker-deploy-bundle` artifact from the
-`Frontend Docker Images` workflow and unpack it on the VPS, for example:
-
-```bash
-mkdir -p /opt/arbigamefi/frontend
-tar -xzf arbigamefi-docker-deploy-bundle.tar.gz -C /opt/arbigamefi/frontend
 cd /opt/arbigamefi/frontend
-```
-
-Keep the real `.env` files on the host. Updating the deploy bundle must not
-overwrite real secrets.
-
-The workflow publishes:
-
-- `ghcr.io/arbigamefi/ssot-bbog-web`
-- `ghcr.io/arbigamefi/ssot-bbog-keeper`
-
-Tags:
-
-- `latest` on `master`
-- `sha-<short-git-sha>` on pushed builds. The Docker workflow uses
-  `docker/metadata-action`'s default 7-character SHA tag, for example
-  `sha-16e76a9`.
-- `v*` git tags
-- optional manual `image_tag` from the workflow dispatch form
-
-CI tags are lookup conveniences. Resolve the reviewed build to immutable digest references before production deployment:
-
-```bash
+export DEPLOY_CHAIN_ID=84532
 export WEB_IMAGE=ghcr.io/arbigamefi/ssot-bbog-web@sha256:<reviewed-web-digest>
 export KEEPER_IMAGE=ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:<reviewed-keeper-digest>
-export EXPECTED_REVISION=<full-reviewed-40-character-commit>
-```
-
-Pull and validate the images:
-
-```bash
+export EXPECTED_REVISION=<full-reviewed-40-character-source-commit>
+export EXPECTED_RELEASE_DIGEST=<approved-0x-prefixed-v16-release-digest>
 bash deploy/docker/check-production-env.sh
-docker compose -p arbigamefi -f compose.production.yml pull postgres caddy web keeper-primary keeper-testnet-primary
-python3 deploy/docker/check-release-images.py
 ```
 
-The image guard checks matching current v1.6 releases and matching OCI source revisions.
+The host checks env chain alignment and database identity. Before service changes,
+the image guard verifies both OCI revisions and chain labels, exactly one embedded
+chain, the expected release digest, and matching web/keeper contract routes. A
+placeholder, stale release, extra chain or missing manifest fails closed.
 
-## 4. Start services
+In an authenticated source build checkout, optionally run
+`CHECK_EMBEDDED_RELEASE=1 bash deploy/docker/check-production-env.sh` to validate
+the selected embedded release too.
+
+## 4. Start and verify
 
 ```bash
 bash deploy/docker/deploy-images.sh
-```
-
-The entrypoint runs checks before starting services. Application images are built in CI.
-
-For a local backup keeper drill on the same host:
-
-```bash
-docker compose -f compose.production.yml --profile backup-local up -d keeper-backup
-```
-
-Production backup keepers should run on another host/region with a different
-funded keeper key and a 5 second delay.
-
-## 5. Verify
-
-```bash
-curl -fsS https://$ARBGAMEFI_DOMAIN/api/healthz | jq .
-curl -fsS https://$ARBGAMEFI_DOMAIN/ops/casino-keeper-health.json | jq .
-docker compose -f compose.production.yml logs --tail=100 web
-docker compose -f compose.production.yml logs --tail=100 keeper-primary
-```
-
-Expected posture:
-
-- `release.status = ok`
-- `keeper.status = ok`
-- `betIndex.status = ok`
-- `betIndex.source = postgres`
-
-Check both keeper chains explicitly:
-
-```bash
-curl -fsS "https://$ARBGAMEFI_DOMAIN/api/healthz?chainId=8453" | jq .
 curl -fsS "https://$ARBGAMEFI_DOMAIN/api/healthz?chainId=84532" | jq .
-curl -fsS "https://$ARBGAMEFI_DOMAIN/ops/casino-keeper-health.json?chainId=8453" | jq .
 curl -fsS "https://$ARBGAMEFI_DOMAIN/ops/casino-keeper-health.json?chainId=84532" | jq .
+docker compose -p arbigamefi -f compose.production.yml logs --tail=100 keeper-primary
 ```
+
+Require `release.status`, `keeper.status` and `betIndex.status` to be `ok`, with
+`betIndex.source=postgres`. Health snapshots alone do not prove settlement: verify
+an actual new-contract bet, VRF callback, WS-triggered keeper settlement, on-chain
+receipt and durable database record, then exercise HTTP recovery after WS loss.
+
+For a public mainnet launch, prefer managed Postgres; a single-host database needs
+a verified backup/recovery plan. A production backup keeper belongs on another
+host/region with a distinct funded key and the configured backup delay.
 
 ## 6. Cloudflare
 

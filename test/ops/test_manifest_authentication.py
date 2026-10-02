@@ -199,9 +199,10 @@ class SignedImportIntegrationTests(unittest.TestCase):
     def files(root):
         return {str(path.relative_to(root)): path.read_bytes() for path in root.rglob('*') if path.is_file()}
 
-    def sync(self, bundle, endpoint=None):
+    def sync(self, bundle, endpoint=None, only_chain=None):
         env = {**self.env, 'RPC_URL': endpoint or self.accepted_rpc}
-        return subprocess.run(['node', str(ROOT / 'frontend/scripts/ssot-sync.mjs'), '--from', str(bundle)],
+        return subprocess.run(['node', str(ROOT / 'frontend/scripts/ssot-sync.mjs'), '--from', str(bundle)] +
+                              (['--only-chain', str(only_chain)] if only_chain is not None else []),
                               cwd=self.frontend, env=env, capture_output=True, text=True, timeout=300)
 
     def assert_success(self, bundle):
@@ -248,6 +249,25 @@ class SignedImportIntegrationTests(unittest.TestCase):
         result = subprocess.run(cmd, cwd=self.root, env=env, capture_output=True, text=True, timeout=300)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(reason, result.stdout + result.stderr)
+
+    def test_selected_chain_prunes_other_manifests_only_after_authentication(self):
+        wrong = 8453 if self.snapshot['chainId'] == 84532 else 84532
+        result = self.sync(self.bundle, only_chain=wrong)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Release chain differs', result.stderr)
+        self.assertEqual(self.files(self.active), self.original)
+        result = self.sync(self.bundle, endpoint=self.pending_rpc, only_chain=self.snapshot['chainId'])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("live governance failed", result.stderr)
+        self.assertEqual(self.files(self.active), self.original)
+        result = self.sync(self.bundle, only_chain=self.snapshot['chainId'])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(set(self.files(self.active)), {f"chain-{self.snapshot['chainId']}.json", 'index.ts'})
+        self.assertNotIn('chain-1.json', (self.active / 'index.ts').read_text())
+        check = subprocess.run(['node', str(ROOT / 'frontend/scripts/check-release.mjs')],
+                               cwd=self.frontend, env={**self.env, 'STRICT_RELEASE': '1',
+                               'REQUIRED_EMBEDDED_CHAIN_IDS': str(self.snapshot['chainId'])}, capture_output=True, text=True)
+        self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
 
     def test_valid_control_then_single_route_change(self):
         bundle = self.changed_bundle()

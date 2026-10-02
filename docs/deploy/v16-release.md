@@ -11,6 +11,7 @@ format. Start with a fresh deployment, a fresh database schema, and the current 
   generated ABIs, then freeze the resulting final audit scope.
 - Configure the final Safe governance, guardian, keeper, signer, assets and VRF wrapper explicitly.
   Use `v16/chain-84532.env.example` as a template, replacing every placeholder.
+  The first deployment is Base Sepolia with exactly one USDC casino pool.
 - Re-read Safe code, owner and control hashes. Use current generated ABIs; a build without a verified
   imported manifest intentionally has no connected pools.
 
@@ -22,15 +23,17 @@ format. Start with a fresh deployment, a fresh database schema, and the current 
    snapshot. Review and execute `make safe-acceptance-v16` with the Safe owners.
 3. Run `make release-governance-check`, `make release-v16` and `make verify-v16` with the configured
    signer and network. A release contains a signed digest, manifest, ABIs and encoding vectors.
-4. Import the verified bundle with `pnpm -C frontend ssot:sync -- --from <bundle>`, supplying the
-   trusted signer and RPC. Check it with `pnpm -C frontend check:release`.
-   Amount precision comes only from signed `poolLpDecimals_i`; the importer also checks it against
-   both Bank and asset decimals. Asset display symbols are signed too. Old unsigned decimal aliases
-   are invalid. A failed artifact, signature or live-governance check must leave the active release
-   unchanged. Local CI exercises a complete successful import before its rejection controls.
-5. Build the web and keeper images from the same source revision. Configure a fresh PostgreSQL
-   database; the keeper initializes the current schema and replays the selected Hub from its release
-   block. Deploy by immutable image digest using the Docker deployment instructions.
+4. Run the authenticated **Frontend Docker Images** workflow on the same source commit with the
+   signed bundle's release tag, exact filename, approved SHA-256, and `chain_id=84532`. Configure the
+   independent `V16_RELEASE_SIGNER` repository variable. The workflow verifies the archive's source
+   revision, artifact consistency, signature and live governance, then imports only the selected chain.
+   Amount precision and symbols come from the signed snapshot; a failed verification cannot replace
+   active metadata. Ordinary PR/push image builds do not publish deployment images.
+5. Configure a fresh PostgreSQL database and one keeper using Infura HTTP plus Alchemy WebSocket.
+   The keeper initializes the current schema and replays the selected Hub from its release block.
+   Use [Docker deployment instructions](../../frontend/deploy/docker/README.md) to pin both immutable
+   image digests, the reviewed source revision, chain ID and expected release digest before startup.
+   Browser RPC remains public; feature flags default off until the appropriate acceptance stage.
 
 ## Network acceptance
 
