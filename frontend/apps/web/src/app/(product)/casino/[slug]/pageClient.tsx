@@ -1,5 +1,4 @@
 "use client";
-import { getMinBetAmountRaw } from "../../../../features/casino/room/bet-amount";
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
@@ -48,7 +47,10 @@ import { GameRoomShell } from "../../../../features/casino/room/game-room-shell"
 import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
 import { derivePlaceBetButtonPhase } from "../../../../features/casino/room/place-bet-button";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
-import { betAmountInputToNumber } from "../../../../features/casino/room/bet-amount";
+import {
+  betAmountInputToNumber,
+  getMinBetAmountRaw
+} from "../../../../features/casino/room/bet-amount";
 import { useReferralAffiliate } from "../../../../features/referral/useReferralAffiliate";
 import {
   GameRoomAuditLedger,
@@ -438,6 +440,12 @@ export function GamePageClient({ slug }: { slug: string }) {
   });
 
   const actionProps = {
+    betAmount,
+    maxBetRaw: maxBetRawPerRoll,
+    minBetRaw: getMinBetAmountRaw(poolSnapshot?.minStake ?? 0n, betCount),
+    onBetAmountChange: setBetAmount,
+    hasAccount: Boolean(sdk?.account),
+    isPending: isBetPanelPending,
     riskInDisabled: !isCasinoRiskInEnabledForChain(chainId),
     poolAvailability: poolRead.status,
     onRefreshPool: poolRead.refresh,
@@ -464,10 +472,6 @@ export function GamePageClient({ slug }: { slug: string }) {
       maxBetIsHint={maxBetState !== "value"}
       maxPayoutLabel={maxPayoutLabel}
       maxPayoutIsHint={maxPayoutState !== "value"}
-      betAmount={betAmount}
-      maxBetRaw={maxBetRawPerRoll}
-      minBetRaw={getMinBetAmountRaw(poolRead.snapshot?.minStake ?? 0n, betCount)}
-      onBetAmountChange={setBetAmount}
       betCount={betCount}
       onBetCountChange={setBetCount}
       stopGain={stopGain}
@@ -476,9 +480,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       onStopLossChange={setStopLoss}
       advancedOpen={advancedOpen}
       onAdvancedOpenChange={setAdvancedOpen}
-      isPending={isBetPanelPending}
       state={state}
-      hasAccount={Boolean(sdk?.account)}
       winChance={winChance}
       multiplier={multiplier}
       expectedPayout={expectedPayout}
@@ -500,13 +502,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       game={game}
       assetSymbol={assetSymbol}
       assetDecimals={assetDecimals}
-      betAmount={betAmount}
-      maxBetRaw={maxBetRawPerRoll}
-      minBetRaw={getMinBetAmountRaw(poolRead.snapshot?.minStake ?? 0n, betCount)}
       walletBalanceRaw={walletBalance?.raw ?? null}
-      onBetAmountChange={setBetAmount}
-      hasAccount={Boolean(sdk?.account)}
-      isPending={isBetPanelPending}
       winChance={winChance}
       state={state}
       roundPhase={placeBetButtonPhase}

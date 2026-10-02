@@ -17,4 +17,4 @@ for attempt in {1..50}; do
 done
 # A failed bind must not attach this suite to a node owned by another process.
 kill -0 "$NODE_PID"
-pnpm -C frontend/packages/ssot exec vitest run -c vitest.config.ts src/sdk/__tests__/bankAsync.anvil.test.ts
+pnpm -C frontend/packages/ssot test src/sdk/__tests__/bankAsync.anvil.test.ts
