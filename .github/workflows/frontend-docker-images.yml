@@ -186,14 +186,32 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
 
       - name: Build and optionally push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: frontend
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
           push: ${{ github.event_name == 'workflow_dispatch' }}
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: ${{ matrix.build_args }}
           cache-from: type=gha,scope=frontend-${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=frontend-${{ matrix.service }}
+
+      - name: Verify fresh shared health volume ownership
+        env:
+          IMAGE_ID: ${{ steps.build.outputs.imageid }}
+        run: |
+          volume="keeper-health-${GITHUB_RUN_ID}-${{ matrix.service }}"
+          docker volume create "$volume"
+          trap 'docker volume rm "$volume" >/dev/null' EXIT
+          # Web may create the shared volume first, even with its read-only mount.
+          docker run --rm --network none --entrypoint node \
+            -v "$volume:/var/lib/arbigamefi/casino-keeper:ro" "$IMAGE_ID" -e \
+            "require('node:fs').accessSync('/var/lib/arbigamefi/casino-keeper')"
+          # Both runtime images use UID 1001; keeper must be able to publish health.
+          docker run --rm --network none --user 1001:1001 --entrypoint node \
+            -v "$volume:/var/lib/arbigamefi/casino-keeper" "$IMAGE_ID" -e \
+            "require('node:fs').writeFileSync('/var/lib/arbigamefi/casino-keeper/health.json','{}')"
