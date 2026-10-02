@@ -1505,7 +1505,8 @@ contract GameHubE2E is Test {
         // Add only a token/Bank pair; reuse the fixture's real Hub, Router, VRF and registered modules.
         token = new BlacklistToken();
         if (useProxy) token = BlacklistToken(address(new ERC1967Proxy(address(token), "")));
-        bank = new Bank(address(token), gov, 1000, "Payable LP", "PLP", 6, 1);
+        // Deploy the compiled artifact to keep this large E2E fixture below the Yul stack limit.
+        bank = Bank(deployCode("Bank.sol:Bank", abi.encode(address(token), gov, 1000, "Payable LP", "PLP", 6, 1)));
         vm.startPrank(gov);
         poolRegistry.registerPool(3, address(token), address(bank), SSOTTypes.PoolDomain.Casino);
         poolRegistry.setHubAllowedForPool(3, address(gameHub), true);
