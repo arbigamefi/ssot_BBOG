@@ -897,7 +897,7 @@
       "pending": "Os dados de desempenho on-chain ainda não estão disponíveis.",
       "windowLabel": "Período",
       "windows": {
-        "all": "Tudo",
+        "d90": "90d",
         "d1": "24h",
         "d7": "7d",
         "d30": "30d"

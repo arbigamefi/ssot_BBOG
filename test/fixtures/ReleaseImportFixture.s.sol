@@ -13,6 +13,15 @@ import {GenerateFrontendManifestV16} from "../../script/release/GenerateFrontend
 import {GenerateGoldenVectorsV16} from "../../script/release/GenerateGoldenVectorsV16.s.sol";
 import {GenerateReleaseNotesV16} from "../../script/release/GenerateReleaseNotesV16.s.sol";
 
+/// @dev Test-only acceptance transport, not a Safe quorum or custody implementation.
+contract ReleaseImportSafeMock is SafeConfigMockV16 {
+    function acceptTargets(address[] calldata targets) external {
+        for (uint256 i; i < targets.length; ++i) {
+            Governable(targets[i]).acceptGovernance();
+        }
+    }
+}
+
 /// @dev Local-only import fixture. It executes the real deployment and release scripts.
 /// SafeConfigMockV16 checks configuration; this does not exercise Safe quorum signatures.
 contract ReleaseImportFixture is Script {
@@ -23,9 +32,12 @@ contract ReleaseImportFixture is Script {
         address bootstrap = vm.addr(0xBEEF);
         // Public test key, remembered only in this simulated local script process.
         address signer = vm.rememberKey(0xA11CE);
-        SafeConfigMockV16 safe = new SafeConfigMockV16();
+        // The Python test broadcasts these transactions to its own empty loopback
+        // Anvil, preserving creation blocks and authorization logs for the verifier.
+        vm.startBroadcast(bootstrap);
+        ReleaseImportSafeMock safe = new ReleaseImportSafeMock();
         MockERC20 asset = new MockERC20("Test USD", "TUSD", 6);
-        vm.deal(bootstrap, 100 ether);
+        vm.stopBroadcast();
         vm.setEnv("DEPLOYER", vm.toString(bootstrap));
         vm.setEnv("CHAIN_ID", vm.toString(block.chainid));
         vm.setEnv("GOV", vm.toString(address(safe)));
@@ -53,14 +65,12 @@ contract ReleaseImportFixture is Script {
         deployer.run();
         string memory snap = deployer.snapshot();
         V16Snapshot.verify(snap, false);
-        vm.dumpState(string.concat(directory, "/pending-alloc.json"));
-        address[] memory targets = V16Snapshot.targets(snap);
-        for (uint256 i; i < targets.length; ++i) {
-            vm.prank(address(safe));
-            Governable(targets[i]).acceptGovernance();
+        if (vm.envOr("RELEASE_IMPORT_ACCEPT_GOVERNANCE", true)) {
+            vm.startBroadcast(bootstrap);
+            safe.acceptTargets(V16Snapshot.targets(snap));
+            vm.stopBroadcast();
+            V16Snapshot.verify(snap, true);
         }
-        V16Snapshot.verify(snap, true);
-        vm.dumpState(string.concat(directory, "/accepted-alloc.json"));
         _writeBundle(directory, snap);
         // A correctly signed but incorrect scale tests live metadata verification,
         // separately from the old-signature digest mismatch control.

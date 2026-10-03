@@ -119,7 +119,7 @@ database and marks health stopped.
 
 `BetIndexStore.initializeSchema()` creates the current schema and indexes.
 Initialization is idempotent; a transaction-scoped advisory lock serializes
-concurrent worker startup. There is no schema upgrade or data migration path.
+concurrent worker startup.
 Bets are identified by chain, GameHub and bet ID. LP ledger reads require Bank
 identity; pool display IDs cannot substitute for it.
 
@@ -186,7 +186,13 @@ remaining holds, backing and age. The
 existing health service consumes this file; the keeper does not deliver alerts.
 Keep the file outside the web app's public directory.
 
-Each failure is cleared only by success on its own path:
+Each failure is cleared only by success on its own path. Finalization errors are retained
+per bet: another bet settling cannot clear them. The same bet settling, being observed
+terminal, or returning to a verified PendingVRF wait clears its error. A verified wait
+means its stored deadline and chain clock were read successfully and the deadline has
+not passed; the bet remains queued and is not yet terminal. A skipped/unknown state does
+not clear an error. Queue depth alone is not an error because healthy bets can be waiting
+for randomness.
 
 | `degradedBy`      | Meaning                                                                         |
 | ----------------- | ------------------------------------------------------------------------------- |
@@ -228,9 +234,17 @@ Without the explicit URL, SQL integration tests are skipped.
 
 For local durable indexing, `pnpm -C frontend bet-index:db:up` starts the local
 Compose database. `pnpm -C frontend keeper:backfill --help` describes the bounded
-historical event ingestion command; this is event recovery, not a schema upgrade.
+historical event ingestion command.
 
-Local real-process integration: `bash script/ci/keeper_integration.sh` runs the keeper
-against disposable Anvil and PostgreSQL, covers offline callbacks, restart recovery and
-fixed-deadline refunds while paused, then checks the durable receipt. It owns and removes
+Local integration: `bash script/ci/keeper_integration.sh` uses disposable Anvil and
+PostgreSQL. Its process-recovery case starts the compiled keeper CLI, waits for a durable
+PendingVRF row/cursor, kills that OS process with SIGKILL, mines the callback while it is
+offline, then starts a different PID against the same database. After terminal recovery,
+a third distinct PID replays the durable state; the test requires one terminal event,
+one broadcast and exactly one nonzero Bank-to-player payment across the restarts.
+
+The subsequent in-process runtime case separately checks the stored refund deadline
+after a timeout configuration change, refund while paused, refused transfer becoming
+player payable debt, and later payment to that player after the transfer is allowed.
+These checks are not additional OS-process restart evidence. The script owns and removes
 its test processes/container and never uses deployment wallets or an existing database.

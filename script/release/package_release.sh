@@ -51,8 +51,7 @@ GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest-
 export RELEASE_PATH SNAPSHOT_PATH NOTES_PATH FRONTEND_MANIFEST_PATH GOLDEN_VECTORS_PATH
 export ABI_INDEX_PATH="$ABIS_INDEX_PATH"
 STRICT=1 PYTHON="$PYTHON" bash script/release/check_release.sh
-FOUNDRY_PROFILE="${VERIFY_PROFILE:-default}" forge script \
-  script/release/VerifyGovernanceV16.s.sol:VerifyGovernanceV16 --rpc-url "$RPC_URL"
+FOUNDRY_PROFILE="${VERIFY_PROFILE:-default}" "$PYTHON" script/release/verify_governance.py
 
 "$PYTHON" - <<'PY'
 import json, os, sys

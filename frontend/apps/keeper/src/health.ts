@@ -8,8 +8,8 @@ import type { FinalizeOutcome, KeeperConfig, KeeperEvent, KeeperRole } from "./t
 export type KeeperHealthStatus = "starting" | "running" | "degraded" | "stopped";
 
 /**
- * Where a failure came from. Each one clears on the next success of the same path, so one
- * transient RPC error no longer holds the keeper degraded until the next bet settles.
+ * Where a failure came from. Scans clear on a successful pass; finalization failures clear
+ * only when the same bet is successfully reconciled, including a healthy deferred read.
  */
 export type KeeperFailureSource =
   | "scan"
@@ -183,6 +183,13 @@ export class KeeperHealthReporter {
   private readonly scanStaleAfterMs: number;
   /** Open failures and their latest message, oldest first. */
   private readonly failures = new Map<KeeperFailureSource, string>();
+  private readonly finalizeFailures = new Map<
+    string,
+    {
+      at: string;
+      detail: NonNullable<KeeperHealthSnapshot["lastFinalizeFailure"]>;
+    }
+  >();
   private phase: "starting" | "running" | "stopped" = "starting";
   private scanProgressMs: number;
   private lifecycleProgressMs: number;
@@ -317,13 +324,46 @@ export class KeeperHealthReporter {
     queueDepth: number
   ) {
     if (this.phase === "starting") this.phase = "running";
-    if (outcome.kind === "settled") {
-      this.failures.delete("finalize");
+    const betId = event.betId.toString();
+    if (outcome.kind === "failed") {
+      const failure = {
+        at: this.isoNow(),
+        detail: { betId, reason: outcome.reason, retryable: outcome.retryable }
+      };
+      this.finalizeFailures.delete(betId);
+      this.finalizeFailures.set(betId, failure);
+      this.fail("finalize", outcome.reason);
       await this.update({
+        queueDepth,
+        lastFinalizeFailureAt: failure.at,
+        lastFinalizeFailure: failure.detail
+      });
+      return;
+    }
+
+    // A healthy read can defer PendingVRF work without leaving a recovered RPC error sticky.
+    // Success for another bet cannot clear unresolved finalization failures.
+    const reconciled =
+      outcome.kind === "settled" || outcome.kind === "raced" || outcome.kind === "deferred";
+    const recovered = reconciled && this.finalizeFailures.delete(betId);
+    const latest = recovered ? [...this.finalizeFailures.values()].at(-1) : undefined;
+    if (recovered) {
+      if (latest) this.failures.set("finalize", latest.detail.reason);
+      else this.failures.delete("finalize");
+    }
+    const failurePatch = recovered
+      ? {
+          lastFinalizeFailureAt: latest?.at,
+          lastFinalizeFailure: latest?.detail
+        }
+      : {};
+    if (outcome.kind === "settled") {
+      await this.update({
+        ...failurePatch,
         queueDepth,
         lastFinalizeSuccessAt: this.isoNow(),
         lastFinalizeSuccess: {
-          betId: event.betId.toString(),
+          betId,
           txHash: outcome.txHash,
           latencyMs: outcome.latencyMs
         }
@@ -331,34 +371,14 @@ export class KeeperHealthReporter {
       return;
     }
 
-    if (outcome.kind === "failed") {
-      this.fail("finalize", outcome.reason);
-      await this.update({
-        queueDepth,
-        lastFinalizeFailureAt: this.isoNow(),
-        lastFinalizeFailure: {
-          betId: event.betId.toString(),
-          reason: outcome.reason,
-          retryable: outcome.retryable
-        }
-      });
-      return;
-    }
-
-    if (outcome.kind === "raced") {
-      this.failures.delete("finalize");
-      await this.update({
-        queueDepth,
-        lastFinalizeFailureAt: undefined,
-        lastFinalizeFailure: undefined
-      });
-      return;
-    }
-
-    await this.update({ queueDepth });
+    await this.update({ ...failurePatch, queueDepth });
   }
 
-  async recordError(message: string, queueDepth: number, source: KeeperFailureSource) {
+  async recordError(
+    message: string,
+    queueDepth: number,
+    source: Exclude<KeeperFailureSource, "finalize">
+  ) {
     this.fail(source, message);
     await this.update({ queueDepth });
   }

@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GameMeta } from "./model";
 import { useCasinoRound, type UseCasinoRoundArgs } from "./use-casino-round";
 
@@ -74,7 +74,11 @@ const props: UseCasinoRoundArgs = {
 };
 
 describe("casino submission intent", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
+  });
+  afterEach(() => vi.unstubAllEnvs());
   it("blocks two immediate clicks before React can render a pending state", async () => {
     let finish!: (plan: any) => void;
     mocks.planNow.mockImplementation(

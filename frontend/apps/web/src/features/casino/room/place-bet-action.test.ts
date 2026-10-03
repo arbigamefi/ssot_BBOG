@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { GameMeta } from "./model";
 import {
@@ -92,7 +92,10 @@ function baseArgs(overrides: Partial<Parameters<typeof executeGamePlaceBetAction
 describe("game room place bet action", () => {
   beforeEach(() => {
     mocks.toastError.mockClear();
-    delete process.env.NEXT_PUBLIC_CASINO_RISK_IN_ENABLED;
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("exposes small branch helpers", () => {
@@ -101,10 +104,11 @@ describe("game room place bet action", () => {
     expect(shouldResetGamePlaceBet("failed")).toBe(true);
     expect(shouldResetGamePlaceBet("ready")).toBe(false);
     expect(isCasinoRiskInEnabledForChain(84532)).toBe(true);
-    expect(isCasinoRiskInEnabledForChain(8453)).toBe(false);
+    expect(isCasinoRiskInEnabledForChain(8453)).toBe(true);
   });
 
   it("blocks unavailable mainnet before opening a wallet or executing a cached plan", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "false");
     for (const account of [undefined, "0x4444444444444444444444444444444444444444"]) {
       const args = baseArgs({
         account,
@@ -202,6 +206,7 @@ describe("game room place bet action", () => {
   });
 
   it("blocks Base mainnet betting until casino risk-in is explicitly enabled", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "false");
     const args = baseArgs({
       release: mainnetRelease,
       messages: {
@@ -216,7 +221,7 @@ describe("game room place bet action", () => {
   });
 
   it("allows Base mainnet betting when casino risk-in is explicitly enabled", async () => {
-    process.env.NEXT_PUBLIC_CASINO_RISK_IN_ENABLED = "true";
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
     const args = baseArgs({
       release: mainnetRelease
     });

@@ -531,6 +531,138 @@ contract GameHubE2E is Test {
         assertGt(bankA.claimRecovery(1, gov, gov), 0);
     }
 
+    function test_recoveryContinuityWithNewCapitalAndTwoPartialExits_Win() external {
+        _runRecoveryContinuityWithNewCapital(0);
+    }
+
+    function test_recoveryContinuityWithNewCapitalAndTwoPartialExits_Loss() external {
+        _runRecoveryContinuityWithNewCapital(1);
+    }
+
+    function test_recoveryContinuityWithNewCapitalAndTwoPartialExits_Refund() external {
+        _runRecoveryContinuityWithNewCapital(2);
+    }
+
+    // Reuse the six-decimal pool and real Hub/Router fixture. Only local time and VRF delivery are controlled.
+    function _runRecoveryContinuityWithNewCapital(uint8 terminal) internal {
+        (BlacklistToken token, Bank bank) = _newPayablePool(false);
+        address controller = address(0xCA11);
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
+        uint256 oldPosition = _place(alice, GAME_DICE, 3, abi.encode(true, uint8(50)), spec, address(0));
+        vm.prank(gov);
+        bank.requestRedeem(1_000e6, controller, gov);
+        vm.warp(bank.redeemBatch(1).cutoff);
+        bank.activateBatch();
+        assertFalse(bank.redeemBatch(1).fullExit);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+        assertGt(bank.recoveryEpoch(1).remainingReserve, 0);
+        vm.prank(controller);
+        assertGt(bank.redeem(1_000e6, controller, controller), 0);
+
+        // New capital buys the remaining active book; it acquires no first-batch recovery rights.
+        token.mint(bob, 200e6);
+        uint256 expectedShares = bank.previewDeposit(200e6);
+        vm.startPrank(bob);
+        token.approve(address(bank), 200e6);
+        assertEq(bank.deposit(200e6, bob), expectedShares);
+        vm.stopPrank();
+        assertEq(bank.getRecovery(1, bob).shares, 0);
+        assertEq(bank.getRecovery(1, controller).shares, 1_000e6);
+        spec.amountPerRoll = 5e6;
+        uint256 newPosition = _place(alice, GAME_DICE, 3, abi.encode(true, uint8(50)), spec, address(0));
+        vm.prank(gov);
+        bank.requestRedeem(1_000e6, controller, gov);
+        vm.warp(bank.redeemBatch(2).cutoff);
+        bank.activateBatch();
+        assertFalse(bank.redeemBatch(2).fullExit);
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
+        assertEq(bank.recoveryEpoch(2).remainingHolds, 2);
+        assertEq(uint256(gameHub.getBet(oldPosition).state), uint256(SSOTTypes.BetState.PendingVRF));
+        vm.prank(controller);
+        assertGt(bank.redeem(1_000e6, controller, controller), 0);
+        assertEq(bank.balanceOf(gov), 3_000e6);
+        assertEq(bank.balanceOf(bob), expectedShares);
+        assertEq(bank.balanceOf(address(bank)), 0);
+
+        // Settle the newer hold first, so the second batch's remaining units unambiguously belong to the old hold.
+        _fulfill(newPosition, _findSeedDiceLose(newPosition, 50));
+        gameHub.finalize(newPosition);
+        assertEq(bank.recoveryEpoch(2).remainingHolds, 1);
+        assertGt(bank.recoveryEpoch(2).remainingReserve, 0);
+        assertEq(bank.openHolds(), 1);
+        assertEq(bank.totalReserved(), 20e6);
+        _assertRecoveryContinuityTerminal(token, bank, oldPosition, controller, terminal);
+    }
+
+    function _assertRecoveryContinuityTerminal(
+        BlacklistToken token,
+        Bank bank,
+        uint256 oldPosition,
+        address controller,
+        uint8 terminal
+    ) internal {
+        IBank.RecoveryEpoch memory first = bank.recoveryEpoch(1);
+        IBank.RecoveryEpoch memory second = bank.recoveryEpoch(2);
+        uint256 activeUnits = 20e6 - first.remainingReserve - second.remainingReserve;
+        uint256 navBefore = bank.totalAssets();
+        uint256 playerBefore = token.balanceOf(alice);
+        uint256 cost = terminal == 0 ? 19_700_000 : terminal == 1 ? 100_000 : 10e6;
+        if (terminal == 2) {
+            assertGe(block.timestamp, gameHub.getBet(oldPosition).refundDeadline);
+            gameHub.refund(oldPosition);
+            assertEq(uint256(gameHub.getBet(oldPosition).state), uint256(SSOTTypes.BetState.Refunded));
+            assertEq(uint256(router.getPosition(oldPosition).state), uint256(SSOTTypes.PositionState.Refunded));
+        } else {
+            _fulfill(
+                oldPosition, terminal == 0 ? _findSeedDiceWin(oldPosition, 50) : _findSeedDiceLose(oldPosition, 50)
+            );
+            gameHub.finalize(oldPosition);
+            assertEq(uint256(gameHub.getBet(oldPosition).state), uint256(SSOTTypes.BetState.Settled));
+            assertEq(uint256(router.getPosition(oldPosition).state), uint256(SSOTTypes.PositionState.Settled));
+        }
+        assertEq(token.balanceOf(alice) - playerBefore, terminal == 0 ? 19_600_000 : terminal == 1 ? 0 : 10e6);
+        assertEq(bank.totalAssets(), navBefore - Math.mulDiv(activeUnits, cost, 20e6));
+        assertEq(
+            bank.recoveryEpoch(1).settledCost,
+            first.settledCost + first.remainingReserve - Math.mulDiv(first.remainingReserve, 20e6 - cost, 20e6)
+        );
+        assertEq(
+            bank.recoveryEpoch(2).settledCost,
+            second.settledCost + second.remainingReserve - Math.mulDiv(second.remainingReserve, 20e6 - cost, 20e6)
+        );
+        assertEq(bank.recoveryEpoch(1).remainingHolds, 0);
+        assertEq(bank.recoveryEpoch(2).remainingHolds, 0);
+        assertEq(bank.getRecovery(1, gov).shares, 0, "the requesting share owner is not the controller");
+        assertEq(bank.getRecovery(2, bob).shares, 0, "new shares do not inherit the requesting controller's rights");
+        vm.prank(bob);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        bank.claimRecovery(1, bob, controller);
+
+        uint256 controllerBefore = token.balanceOf(controller);
+        uint256 navAfterTerminal = bank.totalAssets();
+        vm.startPrank(controller);
+        uint256 recovered = bank.claimRecovery(1, controller, controller);
+        assertGt(recovered, 0);
+        uint256 secondRecovered = bank.claimRecovery(2, controller, controller);
+        assertGt(secondRecovered, 0);
+        assertEq(bank.claimRecovery(1, controller, controller), 0, "a second claim cannot pay twice");
+        vm.stopPrank();
+        assertEq(token.balanceOf(controller) - controllerBefore, recovered + secondRecovered);
+        assertEq(bank.totalAssets(), navAfterTerminal, "paying historical recovery does not charge active LPs again");
+        assertEq(bank.openHolds(), 0);
+        assertEq(bank.totalReserved(), 0);
+        assertEq(bank.activeReserved(), 0);
+        assertEq(bank.exitPayable(), 0);
+        assertEq(bank.recoveryBacking(), 0);
+        assertEq(bank.playerPayableTotal(), 0);
+        assertEq(
+            token.balanceOf(address(bank)),
+            bank.totalAssets() + bank.protocolFeesPayable() + bank.externalPayablesTotal(),
+            "all remaining cash belongs to active LPs or fixed fee and XP liabilities"
+        );
+    }
+
     // Incremental property from the independent review: compare actual cash, not a second implementation of
     // Bank's allocation formula. Reuse this fixture's Hub/Router/VRF/modules with a six-decimal pool.
     function test_exitCashEquivalenceWithReadyAndLateSettledPositions() external {

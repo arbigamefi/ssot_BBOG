@@ -33,6 +33,30 @@ contract SportsRiskEngineTest is Test {
         assertEq(decision.riskHash, riskEngine.currentRiskHashForPool(POOL_ID));
     }
 
+    function test_checkTicket_rejectsOddsAtOrBelowOne() external {
+        uint256[4] memory invalidOdds = [uint256(0), 1, 1e18 - 1, 1e18];
+        ISportsRiskEngine.RiskInput memory input = _input(100e6, 0, 0, 0);
+        for (uint256 i; i < invalidOdds.length; ++i) {
+            input.odds.oddsWad = invalidOdds[i];
+            vm.expectRevert(abi.encodeWithSelector(ISportsRiskEngine.BadOddsSnapshot.selector, MARKET_ID, OUTCOME_ID));
+            riskEngine.checkTicket(input);
+        }
+    }
+
+    function test_checkTicket_acceptsOddsAboveOne() external view {
+        uint256[3] memory validOdds = [uint256(1e18 + 1), 101e16, 2e18];
+        uint256[3] memory payouts = [uint256(100e6), 101e6, 200e6];
+        ISportsRiskEngine.RiskInput memory input = _input(100e6, 0, 0, 0);
+        for (uint256 i; i < validOdds.length; ++i) {
+            input.odds.oddsWad = validOdds[i];
+            ISportsRiskEngine.RiskDecision memory decision = riskEngine.checkTicket(input);
+            assertEq(decision.payout, payouts[i]);
+            assertEq(decision.reserved, payouts[i]);
+            assertGe(decision.reserved, input.stake);
+            assertEq(decision.riskHash, riskEngine.currentRiskHashForPool(POOL_ID));
+        }
+    }
+
     function test_setLimits_governanceOnlyAndUpdatesRiskHash() external {
         bytes32 oldHash = riskEngine.currentRiskHashForPool(POOL_ID);
 

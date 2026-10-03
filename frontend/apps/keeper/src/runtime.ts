@@ -619,7 +619,13 @@ export function createKeeperRuntime({
         betId: item.betId.toString(),
         error: description
       });
-      writeHealth(health.recordError(description, queue.size, "finalize"));
+      writeHealth(
+        health.recordFinalizeOutcome(
+          item,
+          { kind: "failed", reason: description, retryable: true },
+          queue.size
+        )
+      );
     }
   };
 

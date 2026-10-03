@@ -2484,10 +2484,14 @@ function validateSportsOddsInput(input: PlaceSportsTicketInput): DomainError | u
       }
     };
   }
-  if (input.odds.oddsWad <= 0n || input.odds.maxStake <= 0n || input.odds.maxPayout <= 0n) {
+  if (
+    input.odds.oddsWad <= 1_000_000_000_000_000_000n ||
+    input.odds.maxStake <= 0n ||
+    input.odds.maxPayout <= 0n
+  ) {
     return {
       code: "SPORTS_BAD_ODDS_SNAPSHOT",
-      message: "Odds snapshot oddsWad, maxStake, and maxPayout must be non-zero.",
+      message: "Decimal odds must exceed 1.0, and maxStake and maxPayout must be positive.",
       severity: "error"
     };
   }

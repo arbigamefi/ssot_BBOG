@@ -1093,9 +1093,9 @@
       "clearAll": "Clear all"
     },
     "availability": {
-      "title": "Mainnet betting is not yet available",
-      "description": "You can explore games and rules. Try Base Sepolia with test assets; connecting a wallet does not enable mainnet betting.",
-      "tryTestnet": "Try on Base Sepolia"
+      "title": "Betting is not yet available on this network",
+      "description": "You can explore games and rules. Connecting a wallet does not enable betting on this network.",
+      "tryTestnet": "View Base Sepolia"
     }
   },
   "sportsbook": {
@@ -2944,7 +2944,7 @@
       "pending": "On-chain performance is not available yet.",
       "windowLabel": "Time range",
       "windows": {
-        "all": "All",
+        "d90": "90d",
         "d1": "24h",
         "d7": "7d",
         "d30": "30d"

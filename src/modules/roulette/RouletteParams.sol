@@ -65,12 +65,13 @@ library RouletteParams {
         }
 
         if (kind == Kind.Straight) {
+            _requireNumber(payload);
             uint8 n = uint8(payload);
-            _requireNumber(n);
             return uint40(1) << n;
         }
 
         if (kind == Kind.Split) {
+            require(payload < (uint40(1) << 12), "split=range");
             uint8 n0 = uint8(payload & 0x3F);
             uint8 n1 = uint8((payload >> 6) & 0x3F);
             _requireNumber(n0);
@@ -80,40 +81,40 @@ library RouletteParams {
         }
 
         if (kind == Kind.Street) {
-            uint8 s = uint8(payload);
             // Street starts: 1,4,7,...,34
-            require(s >= 1 && s <= 34, "street=range");
+            require(payload >= 1 && payload <= 34, "street=range");
+            uint8 s = uint8(payload);
             require(((s - 1) % 3) == 0, "street=start");
             return (uint40(1) << s) | (uint40(1) << (s + 1)) | (uint40(1) << (s + 2));
         }
 
         if (kind == Kind.Corner) {
-            uint8 n = uint8(payload);
             // top-left of a 2x2 corner: 1..32 and not on rightmost column (3,6,9,...,33,36)
-            require(n >= 1 && n <= 32, "corner=range");
+            require(payload >= 1 && payload <= 32, "corner=range");
+            uint8 n = uint8(payload);
             require((n % 3) != 0, "corner=col");
             return (uint40(1) << n) | (uint40(1) << (n + 1)) | (uint40(1) << (n + 3)) | (uint40(1) << (n + 4));
         }
 
         if (kind == Kind.SixLine) {
-            uint8 s = uint8(payload);
             // Six-line starts: 1,4,7,...,31
-            require(s >= 1 && s <= 31, "six=range");
+            require(payload >= 1 && payload <= 31, "six=range");
+            uint8 s = uint8(payload);
             require(((s - 1) % 3) == 0, "six=start");
             return (uint40(1) << s) | (uint40(1) << (s + 1)) | (uint40(1) << (s + 2)) | (uint40(1) << (s + 3))
                 | (uint40(1) << (s + 4)) | (uint40(1) << (s + 5));
         }
 
         if (kind == Kind.Dozen) {
+            require(payload >= 1 && payload <= 3, "dozen=range");
             uint8 d = uint8(payload);
-            require(d >= 1 && d <= 3, "dozen=range");
             uint8 start = (d - 1) * 12 + 1;
             return _rangeMask(start, start + 11);
         }
 
         if (kind == Kind.Column) {
+            require(payload >= 1 && payload <= 3, "col=range");
             uint8 c = uint8(payload);
-            require(c >= 1 && c <= 3, "col=range");
             // Column 1: 1,4,...,34; Column 2: 2,5,...,35; Column 3: 3,6,...,36
             uint40 m;
             for (uint8 x = c; x <= 36; x += 3) {
@@ -132,7 +133,7 @@ library RouletteParams {
         revert("kind");
     }
 
-    function _requireNumber(uint8 n) internal pure {
+    function _requireNumber(uint40 n) internal pure {
         require(n < MODULO, "n");
     }
 

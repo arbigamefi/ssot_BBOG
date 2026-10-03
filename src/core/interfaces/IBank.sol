@@ -97,7 +97,7 @@ interface IBank is IBankVault {
         uint256 remainingHolds;
         uint256 settledCost;
         uint256 recoveredAssets;
-        uint256 protocolAssets; // virtual recovery plus final allocation dust; excludes gameplay fees
+        uint256 protocolAssets; // final controller-allocation dust for this batch; excludes other protocol capital
         uint256 backingAssets;
         uint256 finalizedShares;
         uint256 finalizedAssets;

@@ -95,6 +95,7 @@ deploy-v16:
 	@$(MAKE) check-deps
 	# Retain broadcast traces; a failed broadcast must be inspected and resumed, not erased.
 	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV16.s.sol:DeployV16 --rpc-url "$$RPC_URL" --account "$${DEPLOY_ACCOUNT:?Set the approved Foundry keystore account}" --broadcast --slow -vvv
+	$(PYTHON) script/tools/gen_verify_helpers.py deployments/latest-v16.json
 
 verify: verify-v16
 verify-helpers: verify-helpers-v16
@@ -140,7 +141,7 @@ safe-acceptance-v16:
 
 release-governance-check:
 	@test -n "$$SNAPSHOT_PATH" -a -n "$$RPC_URL" || { echo "Set chain-specific SNAPSHOT_PATH and RPC_URL"; exit 1; }
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyGovernanceV16.s.sol:VerifyGovernanceV16 --rpc-url "$$RPC_URL" -vvv
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) $(PYTHON) script/release/verify_governance.py
 
 release: release-v16
 release-v16:

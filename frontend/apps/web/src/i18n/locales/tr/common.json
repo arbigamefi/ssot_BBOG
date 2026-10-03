@@ -897,7 +897,7 @@
       "pending": "Zincir üstü performans verileri henüz mevcut değil.",
       "windowLabel": "Zaman aralığı",
       "windows": {
-        "all": "Tümü",
+        "d90": "90g",
         "d1": "24s",
         "d7": "7g",
         "d30": "30g"

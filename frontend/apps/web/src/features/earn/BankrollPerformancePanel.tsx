@@ -14,12 +14,12 @@ type Translate = ReturnType<typeof useTranslations>;
 
 const DEFAULT_WINDOW_DAYS = 30;
 
-/** Time windows offered on the vault-performance view. `days` undefined = all-time. */
-const WINDOW_OPTIONS: Array<{ days?: number; key: "all" | "d1" | "d7" | "d30" }> = [
+/** Daily indexed windows offered on the vault-performance view. */
+const WINDOW_OPTIONS: Array<{ days: number; key: "d1" | "d7" | "d30" | "d90" }> = [
   { days: 1, key: "d1" },
   { days: 7, key: "d7" },
   { days: 30, key: "d30" },
-  { key: "all" }
+  { days: 90, key: "d90" }
 ];
 
 /** Format a signed token amount, prefixing a minus glyph for negatives. */
@@ -63,13 +63,11 @@ export function BankrollPerformancePanel({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const [windowDays, setWindowDays] = React.useState<number | undefined>(DEFAULT_WINDOW_DAYS);
+  const [windowDays, setWindowDays] = React.useState(DEFAULT_WINDOW_DAYS);
 
-  // The chart wants daily granularity; cap to the largest supported window when
-  // showing all-time (the timeseries service clamps to 90 days regardless).
   const timeseries = useCasinoTimeseries({
     asset: assetAddress,
-    days: windowDays ?? 90,
+    days: windowDays,
     enabled: showIndexedHistory
   });
 
@@ -111,8 +109,8 @@ export function BankrollPerformancePanel({
 
   const turnover = chainPerformance?.totalTurnover ?? 0n;
   const payout = chainPerformance?.totalPayoutGross ?? 0n;
-  // Gross gaming revenue = what players staked minus what the vault paid back.
-  // Positive = the house (and therefore providers) is ahead.
+  // Gross gaming revenue = accepted turnover minus gross awards, before fees.
+  // LP profit is measured separately through share equity and cash flows.
   const houseRevenue = turnover - payout;
   const hold = formatHoldPercent(houseRevenue, turnover);
   const velocity = formatMultiple(turnover, vaultAssets);
@@ -225,7 +223,7 @@ export function BankrollPerformancePanel({
       </div>
 
       {showIndexedHistory ? (
-        <VaultEquityChart
+        <CumulativeGgrChart
           decimals={decimals}
           locale={locale}
           points={points}
@@ -265,13 +263,11 @@ function PerformanceHeader({ t }: { t: Translate }) {
 }
 
 /**
- * Vault equity chart — the figure a fund tearsheet leads with: the *cumulative*
- * house P&L trajectory over a dashed zero waterline, so a provider reads "is the
- * bankroll trending up, and how deep did it dip?" at a glance. Peak, trough, and
- * max drawdown sit underneath as honest indexed stats. The shared <TrendChart>
- * owns the SVG; this wrapper derives the cumulative series and surrounding stats.
+ * Indexed cumulative gross gaming revenue, starting from zero for the selected
+ * window. Peak, trough and drawdown describe GGR, not LP equity or net returns.
+ * The shared <TrendChart> owns the SVG; this wrapper derives the series and stats.
  */
-function VaultEquityChart({
+function CumulativeGgrChart({
   points,
   decimals,
   locale,
@@ -280,7 +276,7 @@ function VaultEquityChart({
   t,
   windowToggle
 }: {
-  points: Array<{ date: string; turnover: string; payout: string }>;
+  points: Array<{ date: string; turnover: string; payoutGross: string }>;
   decimals: number;
   locale: string;
   sharePrice?: bigint;
@@ -290,12 +286,13 @@ function VaultEquityChart({
 }) {
   if (points.length === 0) return null;
 
-  // Build the cumulative equity series in integer units (no float drift). Each
-  // day's P&L is stake minus payout; the running sum is the equity curve.
+  // Build the cumulative GGR series in integer units (no float drift). Each
+  // day's gross gaming revenue is consumed stake minus gross awards, matching
+  // the lifetime Bank metric. Net player payouts use a different fee basis.
   let cumulative = 0n;
   const series = points.map((point) => {
     const turnover = BigInt(point.turnover || "0");
-    const pnl = turnover - BigInt(point.payout || "0");
+    const pnl = turnover - BigInt(point.payoutGross || "0");
     cumulative += pnl;
     return { date: point.date, turnover, pnl, cumulative };
   });
@@ -307,13 +304,12 @@ function VaultEquityChart({
   }));
 
   const cumulativeValues = series.map((s) => s.cumulative);
-  const peakValue = cumulativeValues.reduce((m, v) => (v > m ? v : m), cumulativeValues[0]!);
-  const troughValue = cumulativeValues.reduce((m, v) => (v < m ? v : m), cumulativeValues[0]!);
+  const peakValue = cumulativeValues.reduce((m, v) => (v > m ? v : m), 0n);
+  const troughValue = cumulativeValues.reduce((m, v) => (v < m ? v : m), 0n);
 
-  // Max drawdown — the deepest peak-to-valley decline of the equity curve, the
-  // single risk number a provider underwrites against. Derived from the indexed
-  // series, so it is labelled best-effort alongside the chart.
-  let runningPeak = cumulativeValues[0]!;
+  // Include the initial zero: a first-day loss is already a drawdown.
+  // This is an indexed GGR decline, not the loss borne by an individual LP.
+  let runningPeak = 0n;
   let maxDrawdown = 0n;
   for (const value of cumulativeValues) {
     if (value > runningPeak) runningPeak = value;

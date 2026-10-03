@@ -1,7 +1,7 @@
 # ADR-0035: Exit-only recovery rights and continuous underwriting
 
-- **Status:** Accepted economic rule; implemented locally with contract, model and consumer validation. Final candidate freeze and release acceptance remain pending. This revision incorporates the owner's decisions that later exits must remain possible, staying capital must recover in the settlement transaction, and only exiting rights are frozen. Earlier all-holder validation does not validate this revision. See [current review](../audit/current-review.md).
-- **Scope:** the single prelaunch Bank, SDK, keeper and application. No compatibility mode, migration ledger or replacement deployment is introduced here.
+- **Status:** Accepted and implemented with contract, model and consumer validation. External audit and network acceptance remain required. See the [current audit scope](../audit/v1.6-audit-scope.md).
+- **Scope:** the current Bank, SDK, keeper and application.
 - **Required outcomes:** LP requests and activation never impose a betting pause; an unresolved position does not gate subsequent batches; exiting LPs retain their share of that position's risk and eventual recovery. Staying shares continue underwriting and carry the remaining risk through transfers and deposits.
 
 ## Capital and ownership
@@ -78,6 +78,6 @@ Solidity supplies liquid/risk quotes; the SDK must not replicate pricing for the
 
 ## Validation
 
-`test/model/recovery_pocket_model.py` independently models reserve units and explicit batch ownership; Bank unit/invariant tests cover atomic capital recovery, overlapping exits, permanent old risk, full exits/new deposits, controller permissions, dust, token refusal and zero values. The real Anvil SDK suite uses the current compiled Bank and generated ABI. These checks must pass for this revision; earlier all-holder/checkpoint test counts are obsolete.
+`test/model/recovery_pocket_model.py` independently models reserve units and explicit batch ownership; Bank unit/invariant tests cover atomic capital recovery, overlapping exits, permanent old risk, full exits/new deposits, controller permissions, dust, token refusal and zero values. The real Anvil SDK suite uses the current compiled Bank and generated ABI. These checks must pass for the release source.
 
 Release requires meaningful mutation coverage, current consumer and connected-wallet tests, bounded gas and runtime size checks, then a fresh source/ABI freeze, external audit and network acceptance. No local result is native Codex Security scan completion or release approval.

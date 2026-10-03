@@ -1093,9 +1093,9 @@
       "clearAll": "清空"
     },
     "availability": {
-      "title": "主网投注暂未开放",
-      "description": "你可以浏览游戏与规则，或使用测试资产体验 Base Sepolia。连接钱包不会开启主网投注。",
-      "tryTestnet": "前往 Base Sepolia 体验"
+      "title": "当前网络投注暂未开放",
+      "description": "你可以浏览游戏与规则。连接钱包不会开启当前网络的投注。",
+      "tryTestnet": "浏览 Base Sepolia"
     }
   },
   "sportsbook": {
@@ -2944,7 +2944,7 @@
       "pending": "链上表现数据尚未读取到。",
       "windowLabel": "时间范围",
       "windows": {
-        "all": "全部",
+        "d90": "90天",
         "d1": "24小时",
         "d7": "7天",
         "d30": "30天"

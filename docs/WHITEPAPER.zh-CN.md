@@ -1,10 +1,10 @@
 # ArbiGameFi 技术白皮书
 
-> AGF-WP-TECH-2026.09-r1 · 2026-09-29 · 中文，附英文摘要 · 内部审阅稿，尚未对外发布
+> AGF-WP-TECH-2026.10-r2 · 2026-10-02 · 中文，附英文摘要 · 内部审阅稿，尚未对外发布
 >
 > **首要读者**：协议研究者、技术尽调与审计人员、集成方、专业 LP 的技术顾问
 >
-> **适用范围**：v1.6 合约候选源码，含 [ADR-0034](adr/0034-async-lp-redemption-continuous-betting.md) 与 [ADR-0035](adr/0035-recovery-rights-without-exit-blocking.md) 的 LP 异步赎回。**项目尚未上线**：源码与本地测试不代表已经部署或已通过外部审计。候选源码与验证记录见[审计范围](audit/v1.6-audit-scope.md)，规范文本以 [SSOT v1.6](constitution/SSOT.v1.6.md) 与[可执行规范](constitution/ExecutableSSOT.v1.6.md)为准。
+> **适用范围**：v1.6 合约候选源码，含 [ADR-0034](adr/0034-async-lp-redemption-continuous-betting.md) 与 [ADR-0035](adr/0035-recovery-rights-without-exit-blocking.md) 的 LP 异步赎回。**项目尚未正式上线**：Base Sepolia 已有受控部署及部分业务验收，外部审计与完整网络验收仍待完成。当前源码修正不自动改变已经部署的不可升级合约。部署身份见[测试网验收记录](deploy/v16-sepolia-acceptance.md)，候选源码与验证记录见[审计范围](audit/v1.6-audit-scope.md)，规范文本以 [SSOT v1.6](constitution/SSOT.v1.6.md) 与[可执行规范](constitution/ExecutableSSOT.v1.6.md)为准。
 
 ## 摘要
 
@@ -251,7 +251,7 @@ E = floor(Q × G / S)
 
 ## 10. 实现状态与核对方法
 
-**状态**：合约、SDK、keeper、索引与网站已实现，并通过合约单元、差分、不变量与变异测试，以及前端与本地链集成测试（见[审计范围](audit/v1.6-audit-scope.md)的候选证据）。尚未进行网络部署、Safe 接管验收与外部审计。
+**状态**：合约、SDK、keeper、索引与网站已实现，并通过合约单元、差分、不变量与变异测试，以及前端与本地链集成测试（见[审计范围](audit/v1.6-audit-scope.md)的候选证据）。Base Sepolia 受控候选已完成部署、2/3 Safe 接管及部分真实 VRF/keeper 结算与付款；具体源码、地址、区块与收据见[测试网验收记录](deploy/v16-sepolia-acceptance.md)。完整 LP、异常恢复、容量验收和外部审计仍待完成，不放行主网或外部 LP。后续源码修改须重新冻结身份，不能沿用旧部署的验收结论。
 
 **独立核对**：
 
@@ -292,4 +292,4 @@ ArbiGameFi is an unlaunched, wallet-native casino and sportsbook. Each Bank unde
 
 **Governance and trust.** Governance can pause, admit modules, hubs and pools, and tune bounded parameters, but cannot upgrade contracts, move LP funds or rewrite the module, effective edge or referral version of accepted bets. Each accepted bet fixes its refund deadline; timeout changes affect only later bets. Guardian pause also blocks deposits, batch activation and LP claims; settlement, refunds and player-payable claims remain live. Admission has no timelock and is the key trust assumption.
 
-**Status.** Sports pools are not admitted. The implementation is tested locally but not yet deployed or externally audited.
+**Status.** Sports pools are not admitted. A controlled Base Sepolia casino candidate is deployed, with Safe takeover and some real VRF-to-keeper settlement and payment paths verified. Full network acceptance and external audit remain pending. Later source changes require a new candidate identity and do not update the deployed immutable contracts.

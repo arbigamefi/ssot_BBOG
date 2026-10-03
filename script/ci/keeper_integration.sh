@@ -18,10 +18,12 @@ for attempt in {1..60}; do
   sleep 1
 done
 DB_PORT=$(docker port "$CONTAINER" 5432/tcp | cut -d: -f2)
+echo "OWNED_POSTGRES=$CONTAINER PORT=$DB_PORT"
 export KEEPER_TEST_POSTGRES_URL="postgres://postgres:$DB_PASSWORD@127.0.0.1:$DB_PORT/keeper_test"
 export KEEPER_TEST_ANVIL_RPC="http://127.0.0.1:$PORT"
 RUST_LOG=error anvil --host 127.0.0.1 --port "$PORT" --chain-id 84532 --silent >/dev/null 2>&1 &
 NODE_PID=$!
+echo "OWNED_ANVIL_PID=$NODE_PID PORT=$PORT"
 for attempt in {1..50}; do
   kill -0 "$NODE_PID"
   if cast chain-id --rpc-url "$KEEPER_TEST_ANVIL_RPC" >/dev/null 2>&1; then break; fi

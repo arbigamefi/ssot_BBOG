@@ -19,7 +19,7 @@ processes therefore share a durable event store.
 
 Use Postgres for durable indexed events, folded bet rows, and recovery cursors.
 Initialize a fresh database with the current `BetIndexStore.initializeSchema()`;
-this repository provides no upgrade or migration path for an older schema.
+the database must use the current schema.
 
 ## 3. Rationale
 

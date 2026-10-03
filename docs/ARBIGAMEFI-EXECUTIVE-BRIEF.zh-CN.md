@@ -1,6 +1,6 @@
 # ArbiGameFi 项目简介
 
-> AGF-BRIEF-2026.09-r1 · 2026-09-29 · 中文与英文 · 内部审阅稿，尚未对外发布
+> AGF-BRIEF-2026.10-r2 · 2026-10-02 · 中文与英文 · 内部审阅稿，尚未对外发布
 >
 > **读者**：首次接触项目的用户、合作方、媒体与研究者
 
@@ -22,7 +22,7 @@ ArbiGameFi 正在建设单品牌、钱包原生的 casino 与 sportsbook，**项
 - **LP 存入与退出**：存入即时生效，退出先提交请求。退出从不暂停下注，也不会把尚未结算的投注风险转嫁给留下的 LP。
 - **转账失败**：款项会完整保留为玩家应付款，并由系统自动代为领取；收据分别说明结果与实际到账方式。
 
-**现状。** 合约、网站与自动结算服务已实现并通过本地测试，尚未部署，也未经外部审计。牌照、辖区与强制合规措施仍在准备中，完成之前不开放真实资金服务。
+**现状。** Base Sepolia 已部署受控候选，并完成多签接管及部分真实投注结算（见[测试网验收记录](deploy/v16-sepolia-acceptance.md)）。完整网络验收与外部审计尚未完成，测试资金与交易不代表正式运营、用户需求或营收。牌照、辖区与强制合规措施仍在准备中，完成之前不开放真实资金服务。
 
 | 阅读目的           | 入口                                      |
 | ------------------ | ----------------------------------------- |
@@ -46,6 +46,6 @@ ArbiGameFi is an unlaunched, single-brand, wallet-native casino and sportsbook. 
 - Deposits are immediate. Exits are requests that never pause betting and never shift unsettled risk onto the LPs who stay.
 - A failed player transfer is kept in full as a payable and claimed on the player's behalf.
 
-**Status.** The system is implemented and tested locally but not yet deployed or externally audited. Licensing, jurisdictions and enforced compliance controls are still being prepared, and no real-money service opens before they are complete.
+**Status.** A controlled Base Sepolia candidate is deployed, with multisig takeover and some real bet settlements verified. Full network acceptance and external audit remain pending; test assets and transactions do not establish production operation, demand or revenue. Licensing, jurisdictions and enforced compliance controls are still being prepared, and no real-money service opens before they are complete.
 
 Read the [business whitepaper](WHITEPAPER.product.zh-CN.md) to assess cooperation, the [technical whitepaper](WHITEPAPER.zh-CN.md) for mechanisms and trust assumptions, and the [release guide](release/README.md) for current release conditions.

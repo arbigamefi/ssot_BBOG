@@ -582,7 +582,6 @@ contract DeployV16 is Script {
 
     function _writeArtifacts(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d) internal virtual {
         _safeCreateDir("deployments/snapshots");
-        _safeCreateDir("deployments/verify");
         string memory json = _snapshotJson(cfg, pools, d);
         string memory tag = string.concat(vm.toString(block.chainid), "-", vm.toString(block.number), "-v16");
         string memory snapPath = string.concat("deployments/snapshots/deploy-", tag, ".json");
@@ -591,14 +590,6 @@ contract DeployV16 is Script {
         _safeWriteJson(json, "deployments/latest-v16.json");
         console2.log("Wrote v1.6 deployment snapshot:", snapPath);
         console2.log("Wrote v1.6 deployment snapshot:", "deployments/latest-v16.json");
-
-        string memory sh = _verifyScript(cfg, pools, d);
-        string memory verifyPath = string.concat("deployments/verify/verify-", tag, ".sh");
-
-        _safeWriteFile(verifyPath, sh);
-        _safeWriteFile("deployments/verify-latest-v16.sh", sh);
-        console2.log("Wrote v1.6 verify helper:", verifyPath);
-        console2.log("Wrote v1.6 verify helper:", "deployments/verify-latest-v16.sh");
     }
 
     function _writeConfigJson(string memory obj, string memory json, DeployConfig memory cfg)
@@ -732,135 +723,6 @@ contract DeployV16 is Script {
         return json;
     }
 
-    function _verifyScript(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d)
-        internal
-        view
-        returns (string memory)
-    {
-        string memory verifierUrl = vm.envOr("VERIFIER_URL", string(""));
-        if (bytes(verifierUrl).length == 0) {
-            verifierUrl = _defaultVerifierUrl(block.chainid);
-        }
-
-        string memory sh = "#!/usr/bin/env bash\n";
-        sh = string.concat(sh, "set -euo pipefail\n");
-        sh = string.concat(sh, "export FOUNDRY_PROFILE=\"${FOUNDRY_PROFILE:-default}\"\n");
-        sh = string.concat(sh, "ETHERSCAN_API_KEY=\"${ETHERSCAN_API_KEY:-${ETHERSCAN_V2_API_KEY:-}}\"\n");
-        sh = string.concat(
-            sh,
-            "if [ -z \"$ETHERSCAN_API_KEY\" ]; then echo \"set ETHERSCAN_API_KEY (or ETHERSCAN_V2_API_KEY)\"; exit 1; fi\n"
-        );
-        sh = string.concat(sh, "CHAIN_ID=", vm.toString(block.chainid), "\n");
-        sh = string.concat(sh, "VERIFIER_URL=\"${VERIFIER_URL:-", verifierUrl, "}\"\n\n");
-        sh = string.concat(sh, "CHAIN_FLAG=\"--chain\"\n");
-        sh = string.concat(
-            sh,
-            "if forge verify-contract --help 2>/dev/null | grep -q -- \"--chain-id\"; then CHAIN_FLAG=\"--chain-id\"; fi\n\n"
-        );
-        sh = string.concat(sh, "PROFILE_FLAG=\"\"\n");
-        sh = string.concat(
-            sh,
-            "if forge verify-contract --help 2>/dev/null | grep -q -- \"--compilation-profile\"; then PROFILE_FLAG=\"--compilation-profile default\"; fi\n\n"
-        );
-
-        sh = _appendVerifyLine(
-            sh,
-            address(d.adapter),
-            "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter",
-            vm.toString(abi.encode(cfg.vrfWrapper, cfg.gov)),
-            verifierUrl
-        );
-        sh = _appendVerifyLine(
-            sh,
-            address(d.vrf),
-            "src/core/VRFHub.sol:VRFHub",
-            vm.toString(abi.encode(address(d.adapter), cfg.gov)),
-            verifierUrl
-        );
-        sh = _appendVerifyLine(
-            sh,
-            address(d.poolRegistry),
-            "src/core/PoolRegistry.sol:PoolRegistry",
-            vm.toString(abi.encode(cfg.gov)),
-            verifierUrl
-        );
-        sh = _appendVerifyLine(
-            sh,
-            address(d.router),
-            "src/core/SettlementRouter.sol:SettlementRouter",
-            vm.toString(abi.encode(address(d.poolRegistry))),
-            verifierUrl
-        );
-        sh = _appendVerifyLine(
-            sh,
-            address(d.refRegistry),
-            "src/engines/referral/ReferralRegistry.sol:ReferralRegistry",
-            vm.toString(abi.encode(cfg.gov)),
-            verifierUrl
-        );
-        sh = _appendVerifyLine(
-            sh,
-            address(d.refEngine),
-            "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine",
-            "0x",
-            verifierUrl
-        );
-        sh = _appendVerifyLine(
-            sh, address(d.gameHub), "src/core/GameHub.sol:GameHub", _gameHubCtorArgs(cfg, d), verifierUrl
-        );
-        if (address(d.sportsRiskEngine) != address(0)) {
-            sh = _appendVerifyLine(
-                sh,
-                address(d.sportsRiskEngine),
-                "src/core/SportsRiskEngine.sol:SportsRiskEngine",
-                _sportsRiskEngineCtorArgs(cfg),
-                verifierUrl
-            );
-        }
-        if (address(d.sportsHub) != address(0)) {
-            sh = _appendVerifyLine(
-                sh, address(d.sportsHub), "src/core/SportsHub.sol:SportsHub", _sportsHubCtorArgs(cfg, d), verifierUrl
-            );
-        }
-
-        for (uint256 i = 0; i < pools.length; ++i) {
-            sh = _appendVerifyLine(
-                sh,
-                pools[i].bank,
-                "src/core/Bank.sol:Bank",
-                vm.toString(
-                    abi.encode(
-                        pools[i].asset,
-                        cfg.gov,
-                        pools[i].riskReserveBps,
-                        pools[i].lpName,
-                        pools[i].lpSymbol,
-                        pools[i].lpDecimals,
-                        pools[i].minStake
-                    )
-                ),
-                verifierUrl
-            );
-        }
-
-        sh = _appendVerifyLine(sh, address(d.dice), "src/modules/dice/DiceModule.sol:DiceModule", "0x", verifierUrl);
-        sh = _appendVerifyLine(
-            sh, address(d.coin), "src/modules/cointoss/CoinTossModule.sol:CoinTossModule", "0x", verifierUrl
-        );
-        sh = _appendVerifyLine(
-            sh, address(d.roulette), "src/modules/roulette/RouletteModule.sol:RouletteModule", "0x", verifierUrl
-        );
-        sh = _appendVerifyLine(sh, address(d.keno), "src/modules/keno/KenoModule.sol:KenoModule", "0x", verifierUrl);
-        sh = _appendVerifyLine(
-            sh, address(d.plinko), "src/modules/plinko/PlinkoModule.sol:PlinkoModule", "0x", verifierUrl
-        );
-        sh = _appendVerifyLine(sh, address(d.sicBo), "src/modules/sicbo/SicBoModule.sol:SicBoModule", "0x", verifierUrl);
-        sh = _appendVerifyLine(sh, address(d.slots), "src/modules/slots/SlotsModule.sol:SlotsModule", "0x", verifierUrl);
-        return _appendVerifyLine(
-            sh, address(d.baccarat), "src/modules/baccarat/BaccaratModule.sol:BaccaratModule", "0x", verifierUrl
-        );
-    }
-
     function _gameHubCtorArgs(DeployConfig memory cfg, Deployed memory d) internal pure returns (string memory) {
         return vm.toString(
             abi.encode(
@@ -921,16 +783,6 @@ contract DeployV16 is Script {
         );
     }
 
-    function _appendVerifyLine(
-        string memory sh,
-        address addr,
-        string memory contractId,
-        string memory ctorArgs,
-        string memory verifierUrl
-    ) internal pure returns (string memory) {
-        return string.concat(sh, _verifyLine(addr, contractId, ctorArgs, verifierUrl));
-    }
-
     function _hasCasinoPool(PoolConfig[] memory pools) internal pure returns (bool) {
         for (uint256 i = 0; i < pools.length; ++i) {
             if (pools[i].domain == SSOTTypes.PoolDomain.Casino) return true;
@@ -966,42 +818,6 @@ contract DeployV16 is Script {
 
     function _safeWriteJson(string memory json, string memory path) internal {
         vm.writeJson(json, path);
-    }
-
-    function _safeWriteFile(string memory path, string memory data) internal {
-        vm.writeFile(path, data);
-    }
-
-    function _defaultVerifierUrl(uint256 chainId) internal pure returns (string memory) {
-        if (chainId == 8453) return "https://api.etherscan.io/v2/api?chainid=8453";
-        if (chainId == 84532) return "https://api.etherscan.io/v2/api?chainid=84532";
-        if (chainId == 42161) return "https://api.etherscan.io/v2/api?chainid=42161";
-        if (chainId == 421614) return "https://api.etherscan.io/v2/api?chainid=421614";
-        return "";
-    }
-
-    function _verifyLine(address addr, string memory contractId, string memory ctorArgs, string memory verifierUrl)
-        internal
-        pure
-        returns (string memory)
-    {
-        string memory base = string.concat(
-            "forge verify-contract ",
-            vm.toString(addr),
-            " ",
-            contractId,
-            " $CHAIN_FLAG $CHAIN_ID --watch --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY ",
-            "$PROFILE_FLAG"
-        );
-
-        if (bytes(verifierUrl).length != 0) {
-            base = string.concat(base, " --verifier-url $VERIFIER_URL");
-        }
-
-        if (keccak256(bytes(ctorArgs)) != keccak256(bytes("0x"))) {
-            base = string.concat(base, " --constructor-args ", ctorArgs);
-        }
-        return string.concat(base, "\n");
     }
 
     function _tryAssetMetadata(address token) internal view returns (string memory sym, uint8 dec) {

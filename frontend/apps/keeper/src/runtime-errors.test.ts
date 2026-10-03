@@ -211,4 +211,146 @@ describe("runtime error reporting", () => {
     );
     expect(lines.join("\n")).not.toContain(KEY);
   });
+
+  it.each([
+    ["simulate", "settled"],
+    ["simulate", "raced"],
+    ["read", "settled"],
+    ["read", "raced"]
+  ] as const)("retains bet A's %s failure while unrelated bet B is %s", async (failure, result) => {
+    const failedBetId = 15n;
+    const healthyBetId = 16n;
+    const txHash = `0x${"ab".repeat(32)}` as const;
+    const reason = "bet A remains unavailable";
+    let aRecovered = false;
+    let bSettled = result === "raced";
+    const readContract = vi.fn(async ({ args }: { args: readonly [bigint] }) => {
+      const betId = args[0];
+      if (betId === failedBetId && failure === "read" && !aRecovered) throw new Error(reason);
+      return {
+        betId,
+        requestId: betId,
+        state: betId === failedBetId ? (aRecovered ? 4 : 3) : bSettled ? 4 : 3,
+        refundDeadline: 0n
+      };
+    });
+    const simulateContract = vi.fn(async ({ args }: { args: readonly [bigint] }) => {
+      if (args[0] === failedBetId && !aRecovered) throw new Error(reason);
+    });
+    mock.client.readContract = readContract;
+    mock.client.simulateContract = simulateContract;
+    mock.client.writeContract = vi.fn(async () => {
+      bSettled = true;
+      return txHash;
+    });
+    mock.client.waitForTransactionReceipt = vi.fn(async () => ({
+      status: "success"
+    }));
+    runtime = createKeeperRuntime({
+      config: {
+        ...config,
+        wsRpcUrl: undefined,
+        betIndexWriteEnabled: false,
+        sportsTicketIndexEnabled: false,
+        sportsTerminalizerEnabled: false
+      },
+      logger
+    });
+    await runtime.start();
+    runtime.enqueue({
+      source: "scan",
+      betId: failedBetId,
+      receivedAt: Date.now()
+    });
+    await vi.advanceTimersByTimeAsync(500);
+    // A fails again after its first retry; this is still unresolved work, not a recovered blip.
+    await vi.advanceTimersByTimeAsync(2_000);
+    const attempts = failure === "read" ? readContract : simulateContract;
+    expect(attempts.mock.calls.filter(([call]) => call.args[0] === failedBetId)).toHaveLength(2);
+    const beforeB = runtime.health.snapshot();
+    expect(beforeB.status).toBe("degraded");
+    expect(runtime.queue.has(failedBetId)).toBe(true);
+    runtime.enqueue({
+      source: "scan",
+      betId: healthyBetId,
+      receivedAt: Date.now()
+    });
+    await vi.advanceTimersByTimeAsync(500);
+    const afterB = runtime.health.snapshot();
+    console.info(
+      "finalize-isolation-observation",
+      JSON.stringify({
+        failure,
+        result,
+        beforeB,
+        afterB,
+        aQueued: runtime.queue.has(failedBetId),
+        bQueued: runtime.queue.has(healthyBetId)
+      })
+    );
+    expect(runtime.queue.has(failedBetId)).toBe(true);
+    expect(runtime.queue.has(healthyBetId)).toBe(false);
+    expect(afterB).toMatchObject({
+      status: "degraded",
+      queueDepth: 1,
+      degradedBy: ["finalize"],
+      lastError: expect.stringContaining(reason),
+      lastFinalizeFailure: { betId: "15", retryable: true }
+    });
+    // The same bet's verified terminal state clears the failure without a sticky alert.
+    aRecovered = true;
+    runtime.enqueue({
+      source: "scan",
+      betId: failedBetId,
+      receivedAt: Date.now()
+    });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(runtime.health.snapshot()).toMatchObject({
+      status: "running",
+      queueDepth: 0,
+      lastError: undefined,
+      degradedBy: undefined,
+      lastFinalizeFailure: undefined
+    });
+  });
+
+  it("clears a transient read failure when the same bet is safely deferred", async () => {
+    let recovered = false;
+    mock.client.readContract = vi.fn(async ({ args }: { args: readonly [bigint] }) => {
+      if (!recovered) throw new Error("temporary read failure");
+      return {
+        betId: args[0],
+        requestId: args[0],
+        state: 2,
+        refundDeadline: 1000n
+      };
+    });
+    mock.client.getBlock = vi.fn(async () => ({ timestamp: 0n }));
+    mock.client.writeContract = vi.fn();
+    runtime = createKeeperRuntime({
+      config: {
+        ...config,
+        wsRpcUrl: undefined,
+        betIndexWriteEnabled: false,
+        sportsTicketIndexEnabled: false,
+        sportsTerminalizerEnabled: false
+      },
+      logger
+    });
+    await runtime.start();
+    runtime.enqueue({ source: "scan", betId: 15n, receivedAt: Date.now() });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(runtime.health.snapshot().status).toBe("degraded");
+    recovered = true;
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(runtime.queue.has(15n)).toBe(true);
+    expect(runtime.health.snapshot()).toMatchObject({
+      status: "running",
+      queueDepth: 1,
+      degradedBy: undefined,
+      lastError: undefined,
+      lastFinalizeFailure: undefined
+    });
+    expect(mock.client.writeContract).not.toHaveBeenCalled();
+  });
 });

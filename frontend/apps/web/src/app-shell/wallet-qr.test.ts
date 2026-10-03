@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 // Resolve the actual transitive dependency used by RainbowKit, so an install
-// or Docker build that loses the compatibility patch cannot silently pass.
+// or Docker build that loses the QR rendering fix cannot silently pass.
 const require = createRequire(import.meta.url);
 const rainbowRequire = createRequire(require.resolve("@rainbow-me/rainbowkit"));
 const cuerRequire = createRequire(rainbowRequire.resolve("cuer"));
@@ -17,7 +17,7 @@ const { encodeQR } = await import(pathToFileURL(cuerRequire.resolve("qr")).href)
 // Synthetic pairing data only; never persist a real connection URI in tests.
 const pairing = `wc:${"a".repeat(64)}@2?relay-protocol=irn&symKey=${"b".repeat(64)}`;
 
-describe("RainbowKit QR dependency compatibility", () => {
+describe("RainbowKit QR rendering", () => {
   it.each([
     ["WalletConnect pairing", pairing],
     ["MetaMask pairing", `https://metamask.app.link/wc?uri=${encodeURIComponent(pairing)}`],

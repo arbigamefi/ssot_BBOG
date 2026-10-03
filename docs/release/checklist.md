@@ -7,6 +7,9 @@
 - Player-payable fallback and claims preserve the entitled recipient and debt during pause; the keeper claims payables for their players and backs off on refusals.
 - ADR-0035 holds on the audited source: permanently stuck old positions cannot gate later exits; historical risk/recovery rights survive transfers, full exits and later deposits. Complete external audit before outside LP funding.
 - Deployment addresses, Safe configuration, signer, bytecode and parameters match the signed release.
+- Complete Hub/pool and Sports role sets match the signed snapshot at the governance verification
+  block. Historical code and authorization logs cover contract creation; unavailable history rejects
+  the release. This evidence relies on a trusted RPC providing complete logs.
 - Web and keeper use the same current release; database starts with the current schema.
 - Each pool explicitly configures its minimum total stake in asset base units. USDC minimum is 1 USDC per position (100 rolls can use 0.01 USDC each). The default refund timeout remains 3600 seconds and accepted deadlines cannot change. The 60-second structural floor is not a target-network safety recommendation; any shorter deployment timeout needs measured VRF failure and latency acceptance.
 - Before outside LP funding, record the decision on module/hub/pool admission timelocks and independently controlled guardian multisig configuration. Rehearse governance replacing the guardian and unpausing, including loss of old guardian powers and actual claim recovery.

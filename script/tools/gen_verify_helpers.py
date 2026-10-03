@@ -1,25 +1,14 @@
 #!/usr/bin/env python3
-"""Generate Etherscan-family verification helper scripts from deployment snapshots.
+"""Generate the current verification helper from a deployment snapshot.
 
-Why this exists
-- Etherscan API V1 endpoints have been deprecated across the Etherscan family.
-- Contract verification should use the unified Etherscan API V2 endpoint.
-
-This tool regenerates versioned helpers such as:
-- deployments/verify-latest-v16.sh
-
-The scripts default to:
-  https://api.etherscan.io/v2/api?chainid=<CHAIN_ID>
-
-Refs:
-- Etherscan "Verify with Foundry" (API V2 URL format)
-  https://docs.etherscan.io/contract-verification/verify-with-foundry
+Uses the unified Etherscan V2 endpoint and ETHERSCAN_V2_API_KEY.
+Reference: https://docs.etherscan.io/contract-verification/verify-with-foundry
 """
 
 from __future__ import annotations
 
 import json
-import os
+import re
 import sys
 from pathlib import Path
 
@@ -31,7 +20,7 @@ def _must(d: dict, key: str):
 
 
 def _is_hex0x(s: str) -> bool:
-    return isinstance(s, str) and s.startswith("0x")
+    return isinstance(s, str) and re.fullmatch(r"0x(?:[0-9a-fA-F]{2})*", s) is not None
 
 
 def _is_zero_addr(s: str) -> bool:
@@ -40,18 +29,18 @@ def _is_zero_addr(s: str) -> bool:
 
 def _verify_line(addr: str, contract_id: str, ctor_args: str) -> str:
     addr = addr.strip()
-    if not addr.startswith("0x") or len(addr) != 42:
+    if not _is_hex0x(addr) or len(addr) != 42:
         raise ValueError(f"invalid address: {addr}")
 
     base = (
         f"forge verify-contract {addr} {contract_id} "
         f"--chain $CHAIN_ID --compilation-profile default --watch --verifier etherscan "
-        f"--verifier-url \"$VERIFIER_URL\" --etherscan-api-key \"$ETHERSCAN_API_KEY\""
+        f"--verifier-url \"$VERIFIER_URL\" --etherscan-api-key \"$ETHERSCAN_V2_API_KEY\""
     )
 
-    if ctor_args and ctor_args != "0x":
-        if not _is_hex0x(ctor_args):
-            raise ValueError(f"invalid ctor args for {addr}: {ctor_args}")
+    if not _is_hex0x(ctor_args):
+        raise ValueError(f"invalid ctor args for {addr}: {ctor_args}")
+    if ctor_args != "0x":
         base += f" --constructor-args {ctor_args}"
 
     return base + "\n"
@@ -80,13 +69,10 @@ def main() -> int:
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
         "# Ensure verification compiles with the same settings as deployment.\n"
-        # Use the default profile unless the user explicitly overrides.
-        "export FOUNDRY_PROFILE=\"${FOUNDRY_PROFILE:-default}\"\n"
-        "ETHERSCAN_API_KEY=\"${ETHERSCAN_API_KEY:-${ETHERSCAN_V2_API_KEY:-}}\"\n"
-        "if [ -z \"$ETHERSCAN_API_KEY\" ]; then echo \"set ETHERSCAN_API_KEY (or ETHERSCAN_V2_API_KEY)\"; exit 1; fi\n"
+        "export FOUNDRY_PROFILE=default\n"
+        "if [ -z \"${ETHERSCAN_V2_API_KEY:-}\" ]; then echo \"set ETHERSCAN_V2_API_KEY\" >&2; exit 1; fi\n"
         f"CHAIN_ID={chain_id}\n"
         f"VERIFIER_URL=\"${{VERIFIER_URL:-{default_verifier_url}}}\"\n\n"
-
     )
 
     contracts: list[tuple[str, str, str]] = [
@@ -125,7 +111,7 @@ def main() -> int:
         addr = _must(data, addr_key)
         if _is_zero_addr(addr):
             continue
-        ctor_args = data.get(ctor_key, "0x")
+        ctor_args = _must(data, ctor_key)
         script += _verify_line(addr, contract_id, ctor_args)
 
     # Outputs

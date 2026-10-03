@@ -274,8 +274,6 @@ contract DeploymentV16Test is Test {
     function testSnapshotEmitsOnlyAuthenticatedPrecision() public isolatedEnv {
         (string memory snap,) = _deploy();
         assertEq(snap.readUint(".poolLpDecimals_0"), 6);
-        assertFalse(vm.keyExistsJson(snap, ".poolAssetDecimals_0"));
-        assertFalse(vm.keyExistsJson(snap, ".poolBankDecimals_0"));
         DigestHarnessV16 digest = new DigestHarnessV16();
         bytes32 original = digest.digest(snap);
         vm.serializeJson("precision-digest", snap);

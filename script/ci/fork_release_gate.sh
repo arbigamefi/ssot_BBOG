@@ -72,5 +72,5 @@ if [[ -n "${FORK_BLOCK_NUMBER:-}" ]]; then
   echo "[fork gate] blockNumber=$FORK_BLOCK_NUMBER"
 fi
 
-SNAPSHOT_PATH="$SNAPSHOT_PATH" forge script script/release/VerifyGovernanceV16.s.sol:VerifyGovernanceV16 --rpc-url "$RPC_URL"
+SNAPSHOT_PATH="$SNAPSHOT_PATH" RPC_URL="$RPC_URL" "${PYTHON:-python3}" script/release/verify_governance.py
 forge test --match-path "test/fork/*" -vvv

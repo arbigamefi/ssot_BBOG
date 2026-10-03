@@ -105,9 +105,23 @@ class SignedImportIntegrationTests(unittest.TestCase):
         cls.fixture_temp = tempfile.TemporaryDirectory(prefix='import-fixture-', dir=ROOT / 'deployments')
         cls.addClassCleanup(cls.fixture_temp.cleanup)
         cls.fixture_root = Path(cls.fixture_temp.name)
-        env = {**os.environ, 'RELEASE_IMPORT_FIXTURE_DIR': str(cls.fixture_root)}
-        cls.run_checked(['forge', 'script', 'test/fixtures/ReleaseImportFixture.s.sol:ReleaseImportFixture',
-                         '--non-interactive'], cwd=ROOT, env=env)
+        cls.chain_id = 31337
+        cls.accepted_rpc = cls.start_node('accepted')
+        cls.pending_rpc = cls.start_node('pending')
+        # Public fixture key only. These two endpoints are freshly created loopback
+        # nodes; never use real deployment accounts or a genesis state allocation.
+        fixture_key = '0x' + format(0xBEEF, '064x')
+        bootstrap = subprocess.check_output(['cast', 'wallet', 'address', '--private-key', fixture_key], text=True).strip()
+        for state, endpoint in [('accepted', cls.accepted_rpc), ('pending', cls.pending_rpc)]:
+            cls.rpc(endpoint, 'anvil_setBalance', [bootstrap, hex(100 * 10**18)])
+            cls.rpc(endpoint, 'evm_mine')  # Snapshot start has an observable empty predecessor block.
+            directory = cls.fixture_root if state == 'accepted' else cls.fixture_root / 'pending'
+            directory.mkdir(exist_ok=True)
+            env = {**os.environ, 'RELEASE_IMPORT_FIXTURE_DIR': str(directory),
+                   'RELEASE_IMPORT_ACCEPT_GOVERNANCE': str(state == 'accepted').lower()}
+            cls.run_checked(['forge', 'script', 'test/fixtures/ReleaseImportFixture.s.sol:ReleaseImportFixture',
+                             '--rpc-url', endpoint, '--broadcast', '--private-key', fixture_key,
+                             '--non-interactive'], cwd=ROOT, env=env)
         cls.bundle = cls.fixture_root / 'bundle'
         cls.wrong_precision = cls.fixture_root / 'wrong-precision/bundle'
         for bundle in (cls.bundle, cls.wrong_precision):
@@ -115,8 +129,6 @@ class SignedImportIntegrationTests(unittest.TestCase):
                              '--manifest', str(bundle / 'deployments/frontend-manifest-latest-v16.json'),
                              '--dest', str(bundle / 'abis')], cwd=ROOT)
         cls.snapshot = json.loads((cls.bundle / 'deployments/latest-v16.json').read_text())
-        cls.accepted_rpc = cls.start_node('accepted')
-        cls.pending_rpc = cls.start_node('pending')
         # Keep one Foundry project identity for the class. Changing cwd for each
         # case invalidates Foundry's source cache even when the sources match.
         cls.import_temp = tempfile.TemporaryDirectory(prefix='release-import-')
@@ -143,18 +155,15 @@ class SignedImportIntegrationTests(unittest.TestCase):
         return result
 
     @classmethod
-    def rpc(cls, endpoint, method):
+    def rpc(cls, endpoint, method, params=None):
         request = urllib.request.Request(endpoint, json.dumps({
-            'jsonrpc': '2.0', 'id': 1, 'method': method, 'params': []
+            'jsonrpc': '2.0', 'id': 1, 'method': method, 'params': params or []
         }).encode(), {'Content-Type': 'application/json'})
         with urllib.request.urlopen(request, timeout=2) as response:
             return json.load(response)['result']
 
     @classmethod
     def start_node(cls, state):
-        allocations = json.loads((cls.fixture_root / f'{state}-alloc.json').read_text())
-        genesis = cls.fixture_root / f'{state}-genesis.json'
-        genesis.write_text(json.dumps({'config': {'chainId': cls.snapshot['chainId']}, 'alloc': allocations}))
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
@@ -162,7 +171,7 @@ class SignedImportIntegrationTests(unittest.TestCase):
         log = (cls.fixture_root / f'{state}-anvil.log').open('w+')
         cls.addClassCleanup(log.close)
         process = subprocess.Popen(['anvil', '--host', '127.0.0.1', '--port', str(port), '--accounts', '0',
-                                    '--chain-id', str(cls.snapshot['chainId']), '--init', str(genesis), '--silent'],
+                                    '--chain-id', str(cls.chain_id), '--silent'],
                                    stdout=log, stderr=subprocess.STDOUT)
         def stop():
             if process.poll() is None:
@@ -178,7 +187,7 @@ class SignedImportIntegrationTests(unittest.TestCase):
                 log.flush(); log.seek(0)
                 raise AssertionError(f'Local node failed: {log.read()}')
             try:
-                if int(cls.rpc(endpoint, 'eth_chainId'), 16) == cls.snapshot['chainId']:
+                if int(cls.rpc(endpoint, 'eth_chainId'), 16) == cls.chain_id:
                     return endpoint
             except (OSError, ValueError, KeyError):
                 time.sleep(0.05)
@@ -287,13 +296,12 @@ class SignedImportIntegrationTests(unittest.TestCase):
         self.change(bundle, 'golden-vectors-latest', lambda data: data['vectors'][0]['stakeSpec'].update(amountPerRoll=10**9))
         self.assert_rejected(bundle, 'artifact validation', 'amountPerRoll=1000000000')
 
-    def test_obsolete_coordinated_precision_fields_reject_before_activation(self):
+    def test_coordinated_manifest_and_vector_precision_change_rejects_before_activation(self):
         bundle = self.changed_bundle()
-        self.change(bundle, 'latest', lambda data: data.update(poolAssetDecimals_0=9, poolBankDecimals_0=9))
         self.change(bundle, 'frontend-manifest-latest', lambda data: data['pools'][0].update(decimals=9))
         self.change(bundle, 'golden-vectors-latest',
                     lambda data: [row['stakeSpec'].update(amountPerRoll=10**9) for row in data['vectors']])
-        self.assert_rejected(bundle, 'artifact validation', 'obsolete unsigned precision field')
+        self.assert_rejected(bundle, 'artifact validation', 'pools[0].decimals=9')
 
     def test_signed_precision_and_symbol_changes_reject_original_signature(self):
         for field, value in (('poolLpDecimals_0', 9), ('poolAssetSymbol_0', 'OTHER')):

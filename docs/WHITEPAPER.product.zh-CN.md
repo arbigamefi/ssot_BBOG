@@ -1,12 +1,12 @@
 # ArbiGameFi 项目与商业白皮书
 
-> AGF-WP-BIZ-2026.09-r1 · 2026-09-29 · 中文，附英文概要 · 内部审阅稿，尚未对外发布
+> AGF-WP-BIZ-2026.10-r2 · 2026-10-02 · 中文，附英文概要 · 内部审阅稿，尚未对外发布
 >
 > **首要读者**：战略伙伴、渠道决策者、专业资金合作方；有融资情境时的项目投资者
 >
 > **读后决策**：是否值得进一步尽调、讨论合作或投入资源
 >
-> **项目尚未上线。** 本文不声称已有部署、用户、营收、资本承诺、机构背书或牌照。机制细节见[技术白皮书](WHITEPAPER.zh-CN.md)，发布条件见[发布说明](release/README.md)。
+> **项目尚未正式上线。** Base Sepolia 已有受控测试候选，部署、Safe 接管与部分投注结算已核验；这些测试不代表真实用户、营收、资本承诺、机构背书或牌照。机制细节见[技术白皮书](WHITEPAPER.zh-CN.md)，部署证据见[测试网验收记录](deploy/v16-sepolia-acceptance.md)，发布条件见[发布说明](release/README.md)。
 
 ## 摘要
 
@@ -14,7 +14,7 @@ ArbiGameFi 建设单品牌、钱包原生的 casino 与 sportsbook：玩家用�
 
 - **差异**：投注资金由合约而非平台账户托管；结果使用可验证随机数；LP 固定获得每笔流水 house edge 的一半；LP 退出不暂停下注，也不会把尚未结算的风险转嫁给留下的人。
 - **收入**：来自按实际流水计算的 house edge。另一半支付推荐、玩家返水与协议费用。
-- **现状**：合约、网站、结算服务与索引已在源码中实现并通过本地测试，尚未部署，也未经外部审计。
+- **现状**：合约、网站、结算服务与索引已实现；Base Sepolia 受控候选已完成 Safe 接管及部分真实投注结算。完整网络验收与外部审计尚未完成。
 - **尚未证明**：真实需求与回访、单位成本、合规路径和规模化的资本供给。
 - **正在寻找**：渠道与内容合作、专业 LP 与服务伙伴，以及帮助完成审计与合规准备的资源。
 
@@ -147,9 +147,9 @@ LP 份额不是公司股权，不附带代币权利，也不是固定收益产�
 4. 完成外部审计、合规方案与限定环境的验收；
 5. 在有限范围内开展真实使用与渠道验证，再决定扩大范围。
 
-当前进展：合约、SDK、自动结算服务、索引与网站已实现，本地测试覆盖合约单元、不变量、变异测试、前端单元、浏览器与本地链集成（见[审计范围](audit/v1.6-audit-scope.md)）。尚未进行网络部署、多签接管验收与外部审计。
+当前进展：合约、SDK、自动结算服务、索引与网站已实现，本地测试覆盖合约单元、不变量、变异测试、前端单元、浏览器与本地链集成（见[审计范围](audit/v1.6-audit-scope.md)）。Base Sepolia 受控候选已完成部署、2/3 Safe 接管及部分投注的真实 VRF 回调、keeper 结算与付款（见[测试网验收记录](deploy/v16-sepolia-acceptance.md)）。LP 完整退出与历史回收、异常恢复、容量验收与外部审计仍待完成；当前测试不代表正式上线或外部 LP 准入。
 
-合约部署后不可升级，治理由多签执行，guardian 只能紧急暂停新风险。团队与主体信息在尽调阶段单独提供；本文不从架构推断经营记录。
+合约部署后不可升级，治理由多签执行。guardian 可以紧急暂停 Bank，包括新投注、存入、LP 批次激活及退出款和历史回收款领取；暂停不阻止已接受投注的结算、退款与玩家应付款领取，解除暂停只能由治理执行。团队与主体信息在尽调阶段单独提供；本文不从架构推断经营记录。
 
 ## 10. 关键风险
 
@@ -183,4 +183,4 @@ ArbiGameFi is an unlaunched, single-brand, wallet-native casino and sportsbook. 
 
 **Economics.** The other half of the edge funds referrals, player rebates and protocol income; illustrative per-1,000-USDC figures are shown above.
 
-**Status.** The system is implemented and tested locally but not yet deployed or externally audited. It holds no licences, and its compliance controls are UI-level only; geo-blocking, sanctions screening and limit enforcement must be completed before any real-money service. Demand, retention, unit costs and the regulatory path remain to be proven. Partners are invited to evaluate the project against explicit responsibilities, costs and verifiable results.
+**Status.** A controlled Base Sepolia candidate is deployed, with 2-of-3 Safe takeover and some real VRF-to-keeper settlement and payment paths verified. Full network acceptance and external audit remain pending; test assets and transactions do not establish production operation, user demand or revenue. The guardian can pause deposits, betting, LP activation and LP claims; only governance can resume them, while settlement, refunds and player-payable claims remain available. The project holds no licences, and its compliance controls are UI-level only; geo-blocking, sanctions screening and limit enforcement must be completed before any real-money service. Demand, retention, unit costs and the regulatory path remain to be proven. Partners are invited to evaluate the project against explicit responsibilities, costs and verifiable results.

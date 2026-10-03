@@ -1,6 +1,10 @@
 # Current release
 
-The project has not launched. The source supports one contract model, v1.6: fixed 50% LP edge,
+The project has not launched. A controlled Base Sepolia candidate is deployed; its source identity,
+Safe takeover and partial business acceptance are recorded in the
+[Sepolia acceptance record](../deploy/v16-sepolia-acceptance.md). This does not admit outside LP
+funding or mainnet operation. Later source changes do not update its immutable contracts.
+The source supports one contract model, v1.6: fixed 50% LP edge,
 instant deposits, asynchronous redemption without a redemption-driven betting pause, and player-payable fallback.
 
 Use the [deployment workflow](../deploy/v16-release.md) and

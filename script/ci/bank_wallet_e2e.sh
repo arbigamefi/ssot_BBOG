@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-forge build src/core/Bank.sol test/mocks/MockERC20.sol test/mocks/BlacklistToken.sol
+forge build src/core/Bank.sol src/mocks/MockERC20.sol test/mocks/BlacklistToken.sol
 RUN_DIR=$(mktemp -d)
 EMBEDDED=frontend/packages/ssot/src/release/embedded/index.ts
 cp "$EMBEDDED" "$RUN_DIR/embedded.ts"
@@ -34,6 +34,8 @@ export NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL="$BANK_ANVIL_RPC"
 export BASE_SEPOLIA_RPC_URL="$BANK_ANVIL_RPC"
 export NEXT_PUBLIC_MAINNET_RPC_URL="$BANK_ANVIL_RPC"
 export NEXT_PUBLIC_CHAIN_ID=84532
+export NEXT_PUBLIC_LP_DEPOSITS_ENABLED=true
+export NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=false
 export NEXT_PUBLIC_ENABLE_ENS_LOOKUP=false
 export BET_INDEX_READ_ENABLED=false
 export BET_INDEX_DATABASE_URL=""

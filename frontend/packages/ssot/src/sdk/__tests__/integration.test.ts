@@ -1046,6 +1046,42 @@ describe("createSSOTSDK", () => {
     );
   });
 
+  it.each([0n, 1n, 999_999_999_999_999_999n, 1_000_000_000_000_000_000n])(
+    "rejects SportsHub odds %s at or below 1.0 before approval or contract reads",
+    async (oddsWad) => {
+      const sportsSdk = createSSOTSDK({
+        release: SPORTS_TEST_RELEASE,
+        publicClient: pub,
+        walletClient: wal,
+        account: ACCOUNT,
+        journal: journalSink
+      });
+      const result = await sportsSdk.sportsHub.planPlaceTicket({
+        chainId: 84532,
+        marketId: 7n,
+        outcomeId: 1,
+        stake: 1_000_000n,
+        odds: {
+          marketId: 7n,
+          outcomeId: 1,
+          marketVersion: 1n,
+          oddsWad,
+          maxStake: 2_000_000n,
+          maxPayout: 4_200_000n,
+          expiresAt: 1_900_000_000n,
+          nonce: 33n,
+          riskHash: SPORTS_RISK_HASH
+        },
+        signature: SPORTS_SIGNATURE
+      });
+
+      expect("error" in result ? result.error.code : undefined).toBe("SPORTS_BAD_ODDS_SNAPSHOT");
+      expect(pub.readContract).not.toHaveBeenCalled();
+      expect(pub.simulateContract).not.toHaveBeenCalled();
+      expect(wal.writeContract).not.toHaveBeenCalled();
+    }
+  );
+
   it("executes SportsHub placeTicket plans through approval and SportsHub writes", async () => {
     const sportsSdk = createSSOTSDK({
       release: SPORTS_TEST_RELEASE,

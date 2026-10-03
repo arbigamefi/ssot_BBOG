@@ -132,9 +132,8 @@ class PackageGuardTests(unittest.TestCase):
             (root / "bin").mkdir()
             # Static artifact validation succeeds; only the live governance boundary fails.
             (root / "script/release/check_release.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
-            forge = root / "bin/forge"
-            forge.write_text("#!/usr/bin/env bash\nprintf '%s\\n' \"$*\" > forge-call.txt\nexit 1\n")
-            forge.chmod(0o700)
+            (root / "script/release/verify_governance.py").write_text(
+                "from pathlib import Path\nPath('governance-call.txt').write_text('complete permission boundary')\nraise SystemExit(1)\n")
             artifact = root / "artifact.json"
             artifact.write_text('{}')
             env = {**os.environ, "PATH": str(root / "bin") + os.pathsep + os.environ["PATH"],
@@ -146,11 +145,83 @@ class PackageGuardTests(unittest.TestCase):
                             "commit", "-qm", "source fixture"], cwd=root, check=True)
             result = subprocess.run(["bash", str(ROOT / "script/release/package_release.sh")], cwd=root, env=env, capture_output=True, timeout=10)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("VerifyGovernanceV16", (root / "forge-call.txt").read_text())
+            self.assertIn("complete permission boundary", (root / "governance-call.txt").read_text())
             self.assertFalse((root / "dist").exists())
 
 
 class VerifyHelperGuardTests(unittest.TestCase):
+    def snapshot(self):
+        row = {"chainId": 84532, "architectureVersion": "v1.6-house-edge-allocation", "numPools": 1}
+        for key in ("adapter", "vrfHub", "poolRegistry", "settlementRouter", "refRegistry", "refEngine",
+                    "gameHub", "sportsRiskEngine", "sportsHub", "poolBank_0", "moduleDice", "moduleCoinToss",
+                    "moduleRoulette", "moduleKeno", "modulePlinko", "moduleSicBo", "moduleSlots", "moduleBaccarat"):
+            row[key] = "0x" + "0" * 40
+        for i, (key, ctor_key) in enumerate((("adapter", "ctorArgs_adapter"), ("gameHub", "ctorArgs_gameHub"),
+                                            ("poolBank_0", "ctorArgs_bank_0"), ("moduleDice", "ctorArgs_moduleDice")), 1):
+            row[key] = "0x" + str(i) * 40
+            row[ctor_key] = "0x" if key == "moduleDice" else "0x" + str(i) * 64
+        return row
+
+    def generate(self, root, row):
+        snapshot = root / "snapshot.json"
+        snapshot.write_text(json.dumps(row))
+        return subprocess.run(["python3", str(ROOT / "script/tools/gen_verify_helpers.py"), str(snapshot)],
+                              cwd=root, capture_output=True, timeout=10)
+
+    def test_current_snapshot_executes_exact_constructor_and_chain_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            row = self.snapshot()
+            self.assertEqual(self.generate(root, row).returncode, 0)
+            helper = root / "deployments/verify-latest-v16.sh"
+            subprocess.run(["bash", "-n", str(helper)], check=True)
+            (root / "bin").mkdir()
+            fake_forge = root / "bin/forge"
+            fake_forge.write_text("#!/usr/bin/env python3\nimport json, sys\nfrom pathlib import Path\n"
+                                  "with Path('calls.jsonl').open('a') as log: log.write(json.dumps(sys.argv[1:])+'\\n')\n")
+            fake_forge.chmod(0o755)
+            env = {**os.environ, "PATH": str(root / "bin") + os.pathsep + os.environ["PATH"],
+                   "ETHERSCAN_V2_API_KEY": "local-test", "FOUNDRY_PROFILE": "nightly"}
+            env.pop("VERIFIER_URL", None)
+            subprocess.run(["bash", str(helper)], cwd=root, env=env, check=True, capture_output=True, timeout=10)
+            calls = [json.loads(line) for line in (root / "calls.jsonl").read_text().splitlines()]
+            self.assertEqual(len(calls), 4)
+            for call, key, ctor_key in zip(calls, ("adapter", "gameHub", "poolBank_0", "moduleDice"),
+                                          ("ctorArgs_adapter", "ctorArgs_gameHub", "ctorArgs_bank_0", "ctorArgs_moduleDice")):
+                self.assertEqual(call[:2], ["verify-contract", row[key]])
+                self.assertEqual(call[call.index("--chain") + 1], "84532")
+                self.assertEqual(call[call.index("--compilation-profile") + 1], "default")
+                self.assertEqual(call[call.index("--verifier-url") + 1], "https://api.etherscan.io/v2/api?chainid=84532")
+                self.assertEqual(call[call.index("--etherscan-api-key") + 1], "local-test")
+                if key == "moduleDice":
+                    self.assertNotIn("--constructor-args", call)
+                else:
+                    self.assertEqual(call[call.index("--constructor-args") + 1], row[ctor_key])
+
+    def test_missing_key_stops_before_verifier_execution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(self.generate(root, self.snapshot()).returncode, 0)
+            env = dict(os.environ)
+            env.pop("ETHERSCAN_V2_API_KEY", None)
+            result = subprocess.run(["bash", str(root / "deployments/verify-latest-v16.sh")],
+                                    cwd=root, env=env, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn(b"set ETHERSCAN_V2_API_KEY", result.stderr)
+
+    def test_missing_or_nonhex_constructor_cannot_emit_helper(self):
+        for value in (None, "", "0x123; touch injected"):
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                row = self.snapshot()
+                if value is None:
+                    del row["ctorArgs_adapter"]
+                else:
+                    row["ctorArgs_adapter"] = value
+                self.assertNotEqual(self.generate(root, row).returncode, 0)
+                self.assertFalse((root / "deployments/verify-latest-v16.sh").exists())
+                self.assertFalse((root / "injected").exists())
+
     def test_other_snapshots_cannot_generate_executable_helpers(self):
         for version in ("", "unknown-architecture"):
             with self.subTest(version=version), tempfile.TemporaryDirectory() as directory:

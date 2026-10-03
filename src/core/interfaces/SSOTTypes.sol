@@ -58,7 +58,7 @@ library SSOTTypes {
         uint256 PF; // protocolFeesPayable
         uint256 XP; // externalPayablesTotal (== xpAccruedTotal + xpLockedTotal + xpHoldbackTotal)
         uint256 NAV; // active equity, excluding payables and historical recovery backing (ADR-0035)
-        uint256 R; // activeReserved: only current-epoch open reserve
+        uint256 R; // activeReserved: remaining active risk in old and new open positions
         uint256 riskReserveBps; // [0..10_000], new-risk reserve buffer
         uint256 riskReserve; // NAV * riskReserveBps / 10_000
         uint256 riskFree; // NAV - R - riskReserve (clamped at 0)

@@ -2,6 +2,8 @@
 
 The project is in development and has not launched. v1.6 is the only supported contract and release
 format. Start with a fresh deployment, a fresh database schema, and the current application build.
+The [controlled Sepolia candidate](v16-sepolia-acceptance.md) has been deployed and partly accepted.
+Its receipts apply to its recorded source; subsequent fixes require a newly frozen candidate.
 
 ## Before deployment
 
@@ -20,9 +22,16 @@ format. Start with a fresh deployment, a fresh database schema, and the current 
 1. Run `make deploy-dryrun` with the intended configuration and network RPC. Review all addresses,
    pool domains, reserve and withdrawal buffers, game limits, edge allocation and refund timeouts.
 2. Run `make deploy-v16` with the approved keystore account. Set `SNAPSHOT_PATH` to the generated
-   snapshot. Review and execute `make safe-acceptance-v16` with the Safe owners.
+   snapshot. The command generates the verification helper from that snapshot using
+   `script/tools/gen_verify_helpers.py`. Set `ETHERSCAN_V2_API_KEY` for verification;
+   the helper uses the Etherscan V2 endpoint for the snapshot's chain and the default
+   compilation profile. Review and execute `make safe-acceptance-v16` with the Safe owners.
 3. Run `make release-governance-check`, `make release-v16` and `make verify-v16` with the configured
    signer and network. A release contains a signed digest, manifest, ABIs and encoding vectors.
+   Governance verification requires an RPC with historical code and complete authorization logs.
+   The signed start block must precede Registry/SportsHub creation. The verifier replays all Hub/pool
+   and Sports role grants, rejects undeclared members and checks the same frozen block in Forge.
+   A zero optional Sports role declares an empty set; provider or coverage failure rejects the release.
 4. Run the authenticated **Frontend Docker Images** workflow on the same source commit with the
    signed bundle's release tag, exact filename, approved SHA-256, and `chain_id=84532`. Configure the
    independent `V16_RELEASE_SIGNER` repository variable. The workflow verifies the archive's source
@@ -33,7 +42,9 @@ format. Start with a fresh deployment, a fresh database schema, and the current 
    The keeper initializes the current schema and replays the selected Hub from its release block.
    Use [Docker deployment instructions](../../frontend/deploy/docker/README.md) to pin both immutable
    image digests, the reviewed source revision, chain ID and expected release digest before startup.
-   Browser RPC remains public; feature flags default off until the appropriate acceptance stage.
+   Browser RPC remains public. Casino and LP deposit feature flags default off on both supported
+   chains until the appropriate acceptance stage; the controlled Sepolia acceptance image explicitly
+   enables them. Contract pause and available capital remain independent admission checks.
 
 ## Network acceptance
 
@@ -49,9 +60,7 @@ Every admitted casino game must finalize, and timed-out PendingVRF bets must ref
 HouseEdgeAllocated events, actual cash transfers, XP and PF liabilities. Exercise restart/replay,
 reorg handling, alert delivery, Safe pause and governance-only unpause.
 Verify the new keeper's WS subscription and a real ready event through its final transaction receipt;
-exercise disconnect/reconnect and HTTP catch-up. Restoring an old development keeper does not satisfy
-this gate. Retire old containers, release bindings and obsolete data separately after accounting for
-any remaining old-contract funds and positions; no compatibility or migration implementation is needed.
+exercise disconnect/reconnect and HTTP catch-up.
 Bank payable discovery, historical-risk monitoring and provider cash-flow indexing advance through
 finalized blocks. Verify the target RPC supports this tag and monitor finalized coverage separately
 from the latest head. Automatic payable discovery, risk alerts and indexed LP cash flows may lag by

@@ -1,6 +1,6 @@
 # ADR-0034: Asynchronous LP redemption and player payables
 
-- **Status:** Accepted; accounting implementation is being revised together with [ADR-0035](0035-recovery-rights-without-exit-blocking.md). Current-source validation is in progress; external audit and fresh network acceptance remain required. See the [candidate evidence](../audit/v1.6-audit-scope.md).
+- **Status:** Accepted and implemented with [ADR-0035](0035-recovery-rights-without-exit-blocking.md). External audit and network acceptance remain required. See the [current audit scope](../audit/v1.6-audit-scope.md).
 - **Applies to:** the single current prelaunch Bank and its SDK, keeper and application.
 - **Standards:** synchronous deposits follow [ERC-4626](https://eips.ethereum.org/EIPS/eip-4626); asynchronous redemption follows [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540), with ERC-7575/ERC-165 interfaces. Historical recovery is a separate extension.
 

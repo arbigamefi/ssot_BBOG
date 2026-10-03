@@ -131,7 +131,7 @@ contract SportsHubLifecycleTest is Test {
         internal
         returns (uint64 marketId)
     {
-        uint64 lockTime = uint64(block.timestamp + lockOffset);
+        uint64 lockTime = uint64(vm.getBlockTimestamp() + lockOffset);
         uint64 startsAt = lockTime + 1 hours;
 
         vm.startPrank(gov);
@@ -150,7 +150,7 @@ contract SportsHubLifecycleTest is Test {
             oddsWad: 19e17,
             maxStake: 1_000e6,
             maxPayout: 2_000e6,
-            expiresAt: uint64(block.timestamp + 1 hours),
+            expiresAt: uint64(vm.getBlockTimestamp() + 1 hours),
             nonce: nonce,
             riskHash: riskEngine.currentRiskHashForPool(SPORTS_POOL_ID)
         });
@@ -171,7 +171,7 @@ contract SportsHubLifecycleTest is Test {
 
         vm.prank(reporter);
         sportsHub.proposeResult(
-            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(vm.getBlockTimestamp())
         );
 
         SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);

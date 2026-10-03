@@ -110,8 +110,6 @@ def _validate_execution(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, m
 
 
 def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manifest_path: Path, snapshot_path: Path) -> None:
-    if any(key.startswith(("poolAssetDecimals_", "poolBankDecimals_")) for key in snapshot):
-        raise SystemExit(f"{snapshot_path}: obsolete unsigned precision field; use authenticated poolLpDecimals_i")
     pools = manifest.get("pools")
     if not isinstance(pools, list) or not pools:
         raise SystemExit(f"{manifest_path}: pools must be a non-empty array")

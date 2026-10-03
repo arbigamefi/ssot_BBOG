@@ -303,8 +303,115 @@ describe("KeeperHealthReporter failure recovery", () => {
       lastError: "simulate reverted"
     });
 
-    await health.recordFinalizeOutcome({ betId: 16n }, settled, 0);
-    expect(health.snapshot()).toMatchObject({ status: "running", degradedBy: undefined });
+    await health.recordFinalizeOutcome({ betId: 16n }, settled, 1);
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["finalize"]
+    });
+    await health.recordFinalizeOutcome({ betId: 15n }, settled, 0);
+    expect(health.snapshot()).toMatchObject({
+      status: "running",
+      degradedBy: undefined
+    });
+  });
+
+  it.each(["settled", "raced"] as const)(
+    "retains an earlier failed bet when the latest failed bet is %s",
+    async (kind) => {
+      const { health } = clockedReporter();
+      await health.recordRunning(100n, 0);
+      await health.recordFinalizeOutcome(
+        { betId: 15n },
+        { kind: "failed", reason: "A unavailable", retryable: true },
+        1
+      );
+      await health.recordFinalizeOutcome(
+        { betId: 16n },
+        { kind: "failed", reason: "B unavailable", retryable: true },
+        2
+      );
+      await health.recordFinalizeOutcome(
+        { betId: 16n },
+        kind === "settled" ? settled : { kind: "raced", state: "settled" },
+        1
+      );
+      expect(health.snapshot()).toMatchObject({
+        status: "degraded",
+        queueDepth: 1,
+        degradedBy: ["finalize"],
+        lastError: "A unavailable",
+        lastFinalizeFailure: {
+          betId: "15",
+          reason: "A unavailable",
+          retryable: true
+        }
+      });
+      await health.recordFinalizeOutcome({ betId: 15n }, { kind: "raced", state: "refunded" }, 0);
+      expect(health.snapshot()).toMatchObject({
+        status: "running",
+        degradedBy: undefined,
+        lastError: undefined,
+        lastFinalizeFailure: undefined,
+        lastFinalizeFailureAt: undefined
+      });
+    }
+  );
+
+  it.each(["none", "held"] as const)(
+    "keeps a failed bet degraded after skipped %s",
+    async (state) => {
+      const { health } = clockedReporter();
+      await health.recordFinalizeOutcome(
+        { betId: 15n },
+        { kind: "failed", reason: "A unavailable", retryable: true },
+        1
+      );
+      await health.recordFinalizeOutcome({ betId: 15n }, { kind: "skipped", state }, 0);
+      expect(health.snapshot()).toMatchObject({
+        status: "degraded",
+        degradedBy: ["finalize"],
+        lastFinalizeFailure: { betId: "15", reason: "A unavailable" }
+      });
+    }
+  );
+
+  it("clears only the recovered bet when a retry is safely deferred", async () => {
+    const { health } = clockedReporter();
+    for (const betId of [15n, 16n])
+      await health.recordFinalizeOutcome(
+        { betId },
+        { kind: "failed", reason: `bet ${betId} unavailable`, retryable: true },
+        2
+      );
+    await health.recordFinalizeOutcome(
+      { betId: 16n },
+      { kind: "deferred", state: "pendingVrf", retryAfterMs: 60_000 },
+      2
+    );
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["finalize"],
+      lastFinalizeFailure: { betId: "15", reason: "bet 15 unavailable" }
+    });
+  });
+
+  it("does not clear another failure source when the failed bet recovers", async () => {
+    const { health } = clockedReporter();
+    await health.recordFinalizeOutcome(
+      { betId: 15n },
+      { kind: "failed", reason: "A unavailable", retryable: true },
+      1
+    );
+    await health.recordError("scan unavailable", 1, "scan");
+    await health.recordFinalizeOutcome({ betId: 15n }, settled, 0);
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["scan"],
+      lastError: "scan unavailable",
+      lastFinalizeFailure: undefined
+    });
+    await health.recordScan(200n, 0);
+    expect(health.snapshot().status).toBe("running");
   });
 
   it("does not let a settled bet hide a failing scan", async () => {

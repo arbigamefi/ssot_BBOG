@@ -615,7 +615,7 @@ contract BankInvariants is StdInvariant, Test {
         uint256 totalBacking;
         uint256 oldReserve;
         for (uint256 epoch = 1; epoch < bank.currentEpoch(); ++epoch) {
-            (uint256 backing, uint256 reserve) = _assertRecoveryEpoch(epoch);
+            (uint256 backing, uint256 reserve) = this.assertRecoveryEpoch(epoch);
             totalBacking += backing;
             oldReserve += reserve;
         }
@@ -624,7 +624,9 @@ contract BankInvariants is StdInvariant, Test {
         assertLe(bank.activeReserved() + oldReserve, handler.mirrorReserved());
     }
 
-    function _assertRecoveryEpoch(uint256 epoch) internal view returns (uint256 backing, uint256 reserve) {
+    // Keep the per-epoch checks in a separate call frame so viaIR cannot inline
+    // all owner assertions into the historical loop and exceed the stack limit.
+    function assertRecoveryEpoch(uint256 epoch) external view returns (uint256 backing, uint256 reserve) {
         BankHandler.EpochMirror memory m = handler.epochMirror(epoch);
         IBank.RecoveryEpoch memory p = bank.recoveryEpoch(epoch);
         assertEq(p.snapshotNav, m.nav);

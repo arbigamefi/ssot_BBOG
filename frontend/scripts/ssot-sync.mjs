@@ -315,16 +315,10 @@ async function main() {
       { cwd: repoRoot, env: verificationEnv }
     );
     verificationStage = "live governance";
-    await execFileAsync(
-      "forge",
-      [
-        "script",
-        `script/release/VerifyGovernance${RELEASE_LINE.scriptSuffix}.s.sol:VerifyGovernance${RELEASE_LINE.scriptSuffix}`,
-        "--rpc-url",
-        process.env.RPC_URL
-      ],
-      { cwd: repoRoot, env: verificationEnv }
-    );
+    await execFileAsync(process.env.PYTHON ?? "python3", ["script/release/verify_governance.py"], {
+      cwd: repoRoot,
+      env: verificationEnv
+    });
   } catch (error) {
     // Preserve the rejecting stage without echoing commands or RPC credentials.
     const detail =

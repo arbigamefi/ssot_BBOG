@@ -139,7 +139,7 @@ contract SportsRiskEngine is ISportsRiskEngine, Governable {
         if (odds.expiresAt <= block.timestamp) revert OddsExpired(market.marketId, odds.expiresAt, block.timestamp);
         if (
             odds.marketId != market.marketId || odds.outcomeId >= market.outcomeCount
-                || odds.marketVersion != market.version || odds.oddsWad == 0 || odds.maxStake == 0
+                || odds.marketVersion != market.version || odds.oddsWad <= WAD || odds.maxStake == 0
                 || odds.maxPayout == 0
         ) {
             revert BadOddsSnapshot(market.marketId, odds.outcomeId);

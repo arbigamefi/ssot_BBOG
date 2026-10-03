@@ -274,6 +274,7 @@ async function openAsyncExit() {
 
 describe("EarnPageClient", () => {
   beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_LP_DEPOSITS_ENABLED", "true");
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response(JSON.stringify({ rows: [] }), { status: 200 }))
@@ -282,6 +283,7 @@ describe("EarnPageClient", () => {
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     state.release = {
       releaseDigest: "0x7ad0f2cb0000000000000000000000000000000000000000000000000000e1349f",
@@ -800,6 +802,7 @@ describe("EarnPageClient", () => {
   });
 
   it("closes mainnet deposits and lands on the withdraw side", () => {
+    vi.stubEnv("NEXT_PUBLIC_LP_DEPOSITS_ENABLED", "false");
     state.chainId = 8453;
     renderWithQueryClient(<EarnPageClient />);
 

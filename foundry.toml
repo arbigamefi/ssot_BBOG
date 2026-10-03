@@ -3,10 +3,10 @@ src = "src"
 out = "out"
 libs = ["lib"]
 test = "test"
-solc_version = "0.8.24"
+solc_version = "0.8.37"
 optimizer = true
-# 500 runs leave every deployed contract at least 1 KB under EIP-170 (test/unit/ContractSizes.t.sol) and cost
-# under 1% more runtime gas than 2,000 runs on the casino path.
+# Keep at least 1 KB of runtime bytecode margin under EIP-170.
+# Enforced by test/unit/ContractSizes.t.sol.
 optimizer_runs = 500
 via_ir = true
 evm_version = "cancun"
@@ -73,15 +73,12 @@ base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
 arbitrum = "${ARBITRUM_RPC_URL}"
 arbitrum_sepolia = "${ARBITRUM_SEPOLIA_RPC_URL}"
 
-# Explorer API endpoints (Etherscan-family).
-# We default to a single unified key (`ETHERSCAN_API_KEY`).
-# If you prefer per-chain keys, override by exporting those env vars
-# and editing this section.
+# Unified Etherscan V2 verification.
 [etherscan]
-base = { key = "${ETHERSCAN_API_KEY}", chain = 8453, url = "https://api.basescan.org/api" }
-base_sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 84532, url = "https://api-sepolia.basescan.org/api" }
-arbitrum = { key = "${ETHERSCAN_API_KEY}", chain = 42161, url = "https://api.arbiscan.io/api" }
-arbitrum_sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 421614, url = "https://api-sepolia.arbiscan.io/api" }
+base = { key = "${ETHERSCAN_V2_API_KEY}", chain = 8453, url = "https://api.etherscan.io/v2/api?chainid=8453" }
+base_sepolia = { key = "${ETHERSCAN_V2_API_KEY}", chain = 84532, url = "https://api.etherscan.io/v2/api?chainid=84532" }
+arbitrum = { key = "${ETHERSCAN_V2_API_KEY}", chain = 42161, url = "https://api.etherscan.io/v2/api?chainid=42161" }
+arbitrum_sepolia = { key = "${ETHERSCAN_V2_API_KEY}", chain = 421614, url = "https://api.etherscan.io/v2/api?chainid=421614" }
 
 
 
