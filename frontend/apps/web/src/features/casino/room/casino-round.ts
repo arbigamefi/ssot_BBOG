@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { DomainBet } from "@ssot/ssot";
-import type { SSOTSDK, TxResult } from "@ssot/ssot/sdk";
+import type { GameConfig, Hex, SSOTSDK, TxResult } from "@ssot/ssot/sdk";
 
 import { resolvePublicWsRpcUrl } from "../../../app-shell/rpc";
 import { formatUnits } from "../../betting/model/units";
@@ -128,46 +128,66 @@ export function shouldDeferCasinoRoundReadError({
 
 export function useCasinoVrfQuote({
   sdk,
+  gameId,
   betCount,
   quoteErrorMessage = "—"
 }: {
   sdk: SSOTSDK | undefined;
+  gameId: Hex | undefined;
   betCount: number;
   quoteErrorMessage?: string;
 }) {
-  const [snapshot, setSnapshot] = React.useState<CasinoRoundSnapshot>({ phase: "idle" });
-
+  const [revision, refresh] = React.useReducer((n: number) => n + 1, 0);
+  const [read, setRead] = React.useState<{
+    sdk: SSOTSDK;
+    gameId: Hex;
+    betCount: number;
+    revision: number;
+    result: CasinoRoundSnapshot & { config?: GameConfig };
+  }>();
   React.useEffect(() => {
+    if (!sdk || !gameId) return;
     let cancelled = false;
-    const count = Math.max(1, Math.floor(betCount));
-
-    if (!sdk) {
-      setSnapshot((current) => (current.phase === "idle" ? current : { phase: "idle" }));
-      return;
-    }
-
-    setSnapshot((current) => ({ ...current, phase: "loading_quote", quoteError: undefined }));
-
-    sdk.gameHub
-      .quoteVRFFee(count)
-      .then((quote) => {
-        if (!cancelled) setSnapshot({ phase: "ready", quote });
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setSnapshot({
-            phase: "ready",
-            quoteError: quoteErrorMessage
-          });
-        }
-      });
-
+    let reading = false;
+    const update = (result: CasinoRoundSnapshot & { config?: GameConfig }) => {
+      if (!cancelled) setRead({ sdk, gameId, betCount, revision, result });
+    };
+    const run = async () => {
+      if (reading) return;
+      reading = true;
+      let config: GameConfig | undefined;
+      try {
+        config = await sdk.gameHub.getGameConfig(gameId);
+        if (!Number.isInteger(betCount) || betCount < 1 || betCount > config.maxBetCount)
+          throw new Error("Game round limit");
+        const quote = await sdk.gameHub.quoteVRFFee(gameId, betCount);
+        update({ phase: "ready", config, quote });
+      } catch {
+        update({ phase: "ready", config, quoteError: quoteErrorMessage });
+      } finally {
+        reading = false;
+      }
+    };
+    void run();
+    const timer = setInterval(run, 20_000);
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
-  }, [sdk, betCount, quoteErrorMessage]);
-
-  return snapshot;
+  }, [sdk, gameId, betCount, quoteErrorMessage, revision]);
+  // A quote from another wallet/game/count is never usable during the render before the next effect.
+  const current =
+    read &&
+    read.sdk === sdk &&
+    read.gameId === gameId &&
+    read.betCount === betCount &&
+    read.revision === revision
+      ? read.result
+      : undefined;
+  return {
+    ...(current ?? { phase: sdk && gameId ? ("loading_quote" as const) : ("idle" as const) }),
+    refresh
+  };
 }
 
 export function useCasinoRoundWatcher({

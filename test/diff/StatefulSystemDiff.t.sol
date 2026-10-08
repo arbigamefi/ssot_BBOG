@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
+import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
@@ -41,14 +43,14 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 ///   - multi-asset routing
 ///   - multi-roll + stopGain/stopLoss + refund
 ///   - fee-on-payout
-///   - SSOT v1.6 house-edge allocation: LPs keep half the turnover edge; L0/L1/L2 referral and markup
+///   - SSOT v1.6 house-edge allocation: LPs keep half the turnover edge; L0/L1/L2 referral
 ///     amounts -> XP buckets (accrued/locked/holdback); the rest of the operator half -> protocol fees
 ///   - acceptance snapshots: referral payees, schedule versions and base-edge changes never apply
 ///     retroactively
 ///   - holdback vesting release (time-sensitive)
 ///
 /// The model is *intentionally narrow*: it focuses on SSOT accounting and
-/// settlement effects, not ERC4626 share math.
+/// settlement effects across the Bank and NFT Vault custodians.
 contract StatefulSystemDiff is Test {
     using Math for uint256;
 
@@ -65,6 +67,7 @@ contract StatefulSystemDiff is Test {
     SettlementRouter internal router;
     GameHub internal hub;
     VRFHub internal vrf;
+    MockVRFV2PlusWrapper internal wrapper;
 
     DiceModule internal dice;
     CoinTossModule internal coin;
@@ -82,7 +85,6 @@ contract StatefulSystemDiff is Test {
     // Actors
     // -------------------------
     address internal gov = address(0xA11CE);
-    address internal coordinator;
     address internal anyone = address(0xF00D);
 
     address[] internal players;
@@ -137,7 +139,6 @@ contract StatefulSystemDiff is Test {
 
     // pricing + referral mirrors
     mapping(address => address) internal mReferrer; // first-touch
-    mapping(address => uint16) internal mAffiliateHE; // explicit set, 0 => unset
 
     // helper: maintain a small set of "touched payees" so we can assert per-payee buckets
     address[] internal touchedPayees;
@@ -150,18 +151,13 @@ contract StatefulSystemDiff is Test {
         assetA = new MockERC20("AssetA", "ASTA", 18);
         assetB = new MockERC20("AssetB", "ASTB", 18);
 
-        coordinator = _configureVRFAdapter(gov);
-        vrf = new VRFHub(coordinator, gov);
-
-        vm.startPrank(gov);
-        _postConfigureVRFAdapter(gov);
-        vm.stopPrank();
-
-        bankA = new Bank(address(assetA), gov, 1000, "LP Share ASTA", "LPA", 18, 1);
-        bankB = new Bank(address(assetB), gov, 1000, "LP Share ASTB", "LPB", 18, 1);
+        bankA = new Bank(address(assetA), gov, 1000, 18, 1);
+        bankB = new Bank(address(assetB), gov, 1000, 18, 1);
 
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
+        wrapper = new MockVRFV2PlusWrapper();
+        vrf = new VRFHub(address(wrapper), address(router));
 
         refRegistry = new ReferralRegistry(gov);
         refEngine = new DefaultReferralEngine();
@@ -190,7 +186,9 @@ contract StatefulSystemDiff is Test {
         poolRegistry.setHubAllowedForPool(POOL_B, address(hub), true);
 
         bankA.setSettlementRouterOnce(address(router));
+        bankA.setRandomnessConsumerOnce(address(vrf));
         bankB.setSettlementRouterOnce(address(router));
+        bankB.setRandomnessConsumerOnce(address(vrf));
         refRegistry.setBinderOnce(address(hub));
 
         // keep vesting short to ensure holdback release is exercised when time warps
@@ -200,12 +198,7 @@ contract StatefulSystemDiff is Test {
         bankA.setMinPlayerTurnoverForUnlock(20 ether);
         bankB.setMinPlayerTurnoverForUnlock(20 ether);
 
-        // Enable affiliate markup (up to +3%) so skyline pricing and markup awards are exercised.
-        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 300);
         vm.stopPrank();
-        (, uint64 markupActivatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
-        vm.warp(markupActivatesAt);
-        hub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
 
         dice = new DiceModule();
         coin = new CoinTossModule();
@@ -217,14 +210,14 @@ contract StatefulSystemDiff is Test {
         baccarat = new BaccaratModule();
 
         vm.startPrank(gov);
-        hub.registerGame(GAME_DICE, address(dice));
-        hub.registerGame(GAME_COIN, address(coin));
-        hub.registerGame(GAME_ROULETTE, address(roulette));
-        hub.registerGame(GAME_KENO, address(keno));
-        hub.registerGame(GAME_PLINKO, address(plinko));
-        hub.registerGame(GAME_SIC_BO, address(sicBo));
-        hub.registerGame(GAME_SLOTS, address(slots));
-        hub.registerGame(GAME_BACCARAT, address(baccarat));
+        hub.registerGame(GAME_DICE, address(dice), 25, 2_447_746);
+        hub.registerGame(GAME_COIN, address(coin), 25, 2_447_746);
+        hub.registerGame(GAME_ROULETTE, address(roulette), 25, 2_447_746);
+        hub.registerGame(GAME_KENO, address(keno), 25, 2_447_746);
+        hub.registerGame(GAME_PLINKO, address(plinko), 25, 2_447_746);
+        hub.registerGame(GAME_SIC_BO, address(sicBo), 25, 2_447_746);
+        hub.registerGame(GAME_SLOTS, address(slots), 25, 2_447_746);
+        hub.registerGame(GAME_BACCARAT, address(baccarat), 25, 2_447_746);
         vm.stopPrank();
 
         // Players
@@ -240,19 +233,15 @@ contract StatefulSystemDiff is Test {
             vm.stopPrank();
         }
 
-        // Optional hook: adapter variants can add extra player contracts (e.g. refund-failing receivers)
-        // after the base EOAs are initialized.
-        _postPlayersSetup();
-
         // Seed liquidity (gov)
         vm.deal(gov, 100 ether);
         assetA.mint(gov, 20_000 ether);
         assetB.mint(gov, 20_000 ether);
         vm.startPrank(gov);
-        assetA.approve(address(bankA), type(uint256).max);
-        assetB.approve(address(bankB), type(uint256).max);
-        bankA.deposit(10_000 ether, gov);
-        bankB.deposit(10_000 ether, gov);
+        assetA.approve(address(bankA.vault()), type(uint256).max);
+        assetB.approve(address(bankB.vault()), type(uint256).max);
+        LiquidityVault(bankA.vault()).addDepositFor(gov, 10_000 ether);
+        LiquidityVault(bankB.vault()).addDepositFor(gov, 10_000 ether);
         vm.stopPrank();
 
         // Initialize model from chain
@@ -273,52 +262,9 @@ contract StatefulSystemDiff is Test {
     // Deterministic stateful diff
     // -------------------------
 
-    /// @notice Hook to configure an external VRF adapter coordinator before VRFHub is deployed.
-    /// @dev Return the coordinator address that will be authorized to call VRFHub.fulfillRandomWords().
-    ///      Default: this test contract (direct fulfill).
-    function _configureVRFAdapter(
-        address /*gov_*/
-    )
-        internal
-        virtual
-        returns (address coordinatorOut)
-    {
-        coordinatorOut = address(this);
-    }
-
-    /// @notice Hook invoked after VRFHub is deployed (and under gov prank).
-    /// @dev Adapter tests can wire vrf.setAdapter(...) and adapter.setVRFHub(...) here.
-    function _postConfigureVRFAdapter(
-        address /*gov_*/
-    )
-        internal
-        virtual {}
-
-    /// @notice Optional hook invoked after base players are initialized.
-    /// @dev Adapter variants can add additional player contracts (e.g. refund-failing receivers)
-    ///      and grant token approvals here.
-    function _postPlayersSetup() internal virtual {}
-
-    /// @notice Deterministic overpay hook for charged VRF fee.
-    /// @dev Default: no overpay. Adapter variants can override to exercise refund-credit paths.
-    function _vrfOverpayWei(
-        address,
-        /*player*/
-        uint32,
-        /*betCount*/
-        uint256 /*feeCharged*/
-    )
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
-        return 0;
-    }
-
-    /// @notice Fulfill helper that can be overridden by adapter-based tests.
+    /// @notice Authenticated direct-wrapper callback; normal fulfillment settles immediately.
     function _fulfill(uint256 requestId, uint256[] memory randomWords) internal virtual {
-        vrf.fulfillRandomWords(requestId, randomWords);
+        wrapper.fulfillTo(address(vrf), requestId, randomWords);
     }
 
     function _hubDefaultHouseEdgeBps() internal view virtual returns (uint16) {
@@ -329,8 +275,13 @@ contract StatefulSystemDiff is Test {
         return hub.refundTimeoutSeconds();
     }
 
-    function _hubQuoteVRFFee(uint32 betCount) internal view virtual returns (uint256 fee, uint32 callbackGasLimit) {
-        return hub.quoteVRFFee(betCount, tx.gasprice);
+    function _hubQuoteVRFFee(bytes32 gameId, uint32 betCount)
+        internal
+        view
+        virtual
+        returns (uint256 fee, uint32 callbackGasLimit)
+    {
+        return hub.quoteVRFFee(gameId, betCount, tx.gasprice);
     }
 
     function _hubGetBet(uint256 betId) internal view virtual returns (SSOTTypes.Bet memory) {
@@ -354,15 +305,6 @@ contract StatefulSystemDiff is Test {
         return hub.getReferralConfig(id);
     }
 
-    function _hubSetAffiliateHouseEdge(address affiliate, uint16 he) internal virtual returns (bool) {
-        vm.prank(affiliate);
-        try hub.setAffiliateHouseEdge(he) {
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
     function _hubPlaceBet(
         address player,
         bytes32 gameId,
@@ -384,10 +326,6 @@ contract StatefulSystemDiff is Test {
 
     function _hubRefund(uint256 betId) internal virtual {
         hub.refund(betId);
-    }
-
-    function _hubFinalize(uint256 betId) internal virtual {
-        hub.finalize(betId);
     }
 
     function _poolIdForAsset(address asset) internal view returns (uint64) {
@@ -421,7 +359,7 @@ contract StatefulSystemDiff is Test {
         _runStateful(seed, 24);
     }
 
-    /// @notice Internal runner used by adapter variants.
+    /// @notice Deterministic multi-asset settlement sequence.
     function _runStateful(uint256 seed, uint256 steps) internal {
         // Keep the run bounded and reproducible.
         // If a failure occurs, the fuzzed `seed` is sufficient to repro.
@@ -445,13 +383,6 @@ contract StatefulSystemDiff is Test {
             address player = players[(state >> 8) % players.length];
             address affiliate = players[(state >> 16) % players.length];
             if (affiliate == player) affiliate = players[(uint256(uint160(affiliate)) + 1) % players.length];
-
-            // occasionally set affiliate house edge (exercise skyline); values above the cap are rejected
-            if ((state >> 24) % 5 == 0) {
-                uint16 def = _hubDefaultHouseEdgeBps();
-                uint16 he = uint16(bound(uint256(state >> 32), uint256(def), 600));
-                _doSetAffiliateHouseEdge(affiliate, he);
-            }
 
             // build params + stakeSpec
             bytes32 gameId;
@@ -552,15 +483,12 @@ contract StatefulSystemDiff is Test {
                 assertEq(uint256(b.betCount), uint256(betCount));
                 assertEq(uint256(b.stopGain), stopGain);
                 assertEq(uint256(b.stopLoss), stopLoss);
-                assertEq(uint256(b.baseHouseEdgeBps), uint256(pricing.baseHE));
-                assertEq(uint256(b.effectiveHouseEdgeBps), uint256(pricing.effectiveHE));
-                assertEq(b.pricingAffiliate, pricing.pricingAffiliate);
-                assertEq(b.deltaSkylineHash, keccak256(pricing.skyline));
-                assertLe(uint256(b.effectiveHouseEdgeBps), uint256(hub.MAX_HOUSE_EDGE_BPS()));
+                assertEq(uint256(b.houseEdgeBps), uint256(pricing.effectiveHE));
+                assertLe(uint256(b.houseEdgeBps), uint256(hub.MAX_HOUSE_EDGE_BPS()));
                 (address l1, address l2) = hub.getBetReferralPayees(betId);
                 assertEq(l1, pricing.l1, "snapshot L1");
                 assertEq(l2, pricing.l2, "snapshot L2");
-                assertEq(router.getPosition(betId).edgeBps, b.effectiveHouseEdgeBps, "router edge");
+                assertEq(router.getPosition(betId).edgeBps, b.houseEdgeBps, "router edge");
             }
 
             // bindings and governance changes made after acceptance must not change this bet's allocation
@@ -593,8 +521,9 @@ contract StatefulSystemDiff is Test {
 
                 // finalize
                 uint256 expectedPF = _modelFinalize(betId, asset, seedWord, pricing);
-                vm.prank(anyone);
-                _hubFinalize(betId);
+                assertEq(
+                    uint256(hub.getBetTerminal(betId).state), uint256(SSOTTypes.BetState.Settled), "callback settled"
+                );
                 assertEq(hub.getBetTerminal(betId).protocolFeeAccrual, expectedPF, "terminal protocol fee");
                 nFinalized++;
             }
@@ -613,10 +542,7 @@ contract StatefulSystemDiff is Test {
     // -------------------------
 
     struct RefPricing {
-        address pricingAffiliate;
-        uint16 baseHE;
         uint16 effectiveHE;
-        bytes skyline;
         address l1; // referral payees snapshotted at acceptance
         address l2;
         bool accepted; // effectiveHE <= normalized player max
@@ -632,12 +558,12 @@ contract StatefulSystemDiff is Test {
         if (mReferrer[player] != address(0)) return false;
 
         address cur = referrer;
-        // ReferralRegistry caps at 32 hops for gas safety
-        for (uint8 i = 0; i < 32 && cur != address(0); i++) {
+        // Reach an unbound root within the Registry's 64-step search budget
+        for (uint8 i = 0; i < 64 && cur != address(0); i++) {
             if (cur == player) return false;
             cur = mReferrer[cur];
         }
-        return true;
+        return cur == address(0);
     }
 
     function _modelComputePricing(address player, address affiliate, uint16 maxHouseEdgeBps)
@@ -661,61 +587,8 @@ contract StatefulSystemDiff is Test {
             out.l2 = mReferrer[out.l1];
             if (out.l2 == player || out.l2 == out.l1) out.l2 = address(0);
         }
-        out.pricingAffiliate = out.l1 != address(0) ? out.l1 : affiliate;
-
-        uint16 baseHE = _hubDefaultHouseEdgeBps();
-        uint256 maxAllowedRaw = uint256(baseHE) + uint256(hub.maxAffiliateDeltaBps());
-        uint16 maxAllowed = maxAllowedRaw > capBps ? capBps : uint16(maxAllowedRaw);
-        uint16 curMax = baseHE;
-
-        address[6] memory payeesTmp;
-        uint16[6] memory incTmp;
-        uint8 k = 0;
-
-        if (maxAllowed > baseHE) {
-            address cur = out.pricingAffiliate;
-            for (uint8 i = 0; i < 6 && cur != address(0); i++) {
-                uint16 heCur = mAffiliateHE[cur];
-                if (heCur > maxAllowed) heCur = maxAllowed;
-                if (heCur > curMax) {
-                    payeesTmp[k] = cur;
-                    incTmp[k] = heCur - curMax;
-                    curMax = heCur;
-                    unchecked {
-                        ++k;
-                    }
-                }
-                cur = mReferrer[cur];
-            }
-        }
-
-        bytes memory skyline;
-        if (k > 0) {
-            skyline = new bytes(uint256(k) * 22);
-            for (uint8 j = 0; j < k; j++) {
-                uint256 o = uint256(j) * 22;
-                bytes20 p = bytes20(payeesTmp[j]);
-                uint16 inc = incTmp[j];
-                for (uint8 b = 0; b < 20; ++b) {
-                    skyline[o + b] = p[b];
-                }
-                skyline[o + 20] = bytes1(uint8(inc >> 8));
-                skyline[o + 21] = bytes1(uint8(inc));
-            }
-        }
-
-        out.baseHE = baseHE;
-        out.effectiveHE = curMax;
-        out.skyline = skyline;
-        out.accepted = curMax <= maxHE;
-    }
-
-    function _doSetAffiliateHouseEdge(address affiliate, uint16 he) internal {
-        uint16 def = _hubDefaultHouseEdgeBps();
-        if (he < def) he = def;
-        if (_hubSetAffiliateHouseEdge(affiliate, he)) {
-            mAffiliateHE[affiliate] = he;
-        }
+        out.effectiveHE = _hubDefaultHouseEdgeBps();
+        out.accepted = out.effectiveHE <= maxHE;
     }
 
     /// @dev Governance changes: a new referral schedule, or a base-edge change pushed through the delay. Runs
@@ -735,10 +608,10 @@ contract StatefulSystemDiff is Test {
         if ((state >> 208) % 12 == 0) {
             uint16 newBase = uint16(bound(uint256(state >> 128), 100, 300));
             vm.prank(gov);
-            hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, newBase);
-            (, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+            hub.queueEdgeChange(newBase);
+            (, uint64 activatesAt) = hub.pendingEdgeChange();
             vm.warp(activatesAt);
-            hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+            hub.activateEdgeChange();
         }
     }
 
@@ -769,8 +642,8 @@ contract StatefulSystemDiff is Test {
         uint16 maxHE
     ) internal returns (uint256 betId, bytes memory reason) {
         // A rejected bet changes no state; the runner checks that the rejection was expected.
-        (uint256 fee,) = _hubQuoteVRFFee(spec.betCount);
-        uint256 overpay = _vrfOverpayWei(player, spec.betCount, fee);
+        (uint256 fee,) = _hubQuoteVRFFee(gameId, spec.betCount);
+        uint256 overpay = 0;
         uint256 msgValue = fee + overpay;
         bool ok;
         (betId, ok, reason) = _hubPlaceBet(player, gameId, asset, params, spec, affiliate, maxHE, msgValue);
@@ -814,7 +687,7 @@ contract StatefulSystemDiff is Test {
         uint256 feeOnPayout = 0;
         uint256 payoutNet = payoutGross;
         if (payoutGross > 0) {
-            feeOnPayout = Math.mulDiv(payoutGross, uint256(b.effectiveHouseEdgeBps), BPS);
+            feeOnPayout = Math.mulDiv(payoutGross, uint256(b.houseEdgeBps), BPS);
             if (feeOnPayout > payoutGross) feeOnPayout = payoutGross;
             payoutNet = payoutGross - feeOnPayout;
         }
@@ -825,19 +698,16 @@ contract StatefulSystemDiff is Test {
             (asset == address(assetA)) ? bankA.minPlayerTurnoverForUnlock() : bankB.minPlayerTurnoverForUnlock();
 
         // SSOT v1.6 section 2, computed independently of HouseEdgeLib and the on-chain engine.
-        uint256 edge = usedTurnover * uint256(b.effectiveHouseEdgeBps) / BPS;
-        uint256 baseEdge = usedTurnover * uint256(b.baseHouseEdgeBps) / BPS;
+        uint256 edge = usedTurnover * uint256(b.houseEdgeBps) / BPS;
         uint256 operatorShare = edge * 5_000 / BPS;
 
         // schedule snapshotted by id at acceptance, payees snapshotted at acceptance
         (uint16 l0Bps, uint16 l1Bps, uint16 l2Bps, uint16 holdbackBps) = _hubGetReferralConfig(b.referralConfigId);
         Plan memory planB =
-            _splitBase(baseEdge, l0Bps, l1Bps, l2Bps, pricing.l1, pricing.l2, holdbackBps, minTurnover, turnoverAfter);
-        Plan memory planD =
-            _splitDelta(pricing.skyline, (edge - baseEdge) * 5_000 / BPS, holdbackBps, minTurnover, turnoverAfter);
+            _splitBase(edge, l0Bps, l1Bps, l2Bps, pricing.l1, pricing.l2, holdbackBps, minTurnover, turnoverAfter);
 
-        uint256 paid = planB.playerRakeback + _planTotal(planB) + _planTotal(planD);
-        assertLe(paid, operatorShare, "referral and markup exceed the operator share");
+        uint256 paid = planB.playerRakeback + _planTotal(planB);
+        assertLe(paid, operatorShare, "referral awards exceed the operator share");
         protocolFee = operatorShare - paid;
 
         // apply settlement to model
@@ -847,12 +717,11 @@ contract StatefulSystemDiff is Test {
         bm[asset].PF += protocolFee;
         bm[asset].turnover[b.player] = turnoverAfter;
 
-        // apply XP awards in GameHub order: L0 rakeback to the player, then L1, L2, then markup payees
+        // apply XP awards in GameHub order: L0 rakeback to the player, then L1 and L2
         _touchPayee(b.player);
         _awardAccrued(asset, b.player, planB.playerRakeback);
 
         _applyPlanAwards(asset, b.player, planB);
-        _applyPlanAwards(asset, b.player, planD);
 
         // final sanity: payoutGross+refund must fit reserved (B3)
         require(payoutGross + refundAmount <= b.reserved, "reserved");
@@ -904,45 +773,6 @@ contract StatefulSystemDiff is Test {
             _splitAmounts(payees, amounts, holdbackBps, minTurnover, playerTurnover);
     }
 
-    function _splitDelta(
-        bytes memory skyline,
-        uint256 markupBudget,
-        uint16 holdbackBps,
-        uint256 minTurnover,
-        uint256 playerTurnover
-    ) internal pure returns (Plan memory plan) {
-        if (markupBudget == 0 || skyline.length == 0) {
-            plan.payees = new address[](0);
-            plan.immediate = new uint256[](0);
-            plan.locked = new uint256[](0);
-            plan.holdback = new uint256[](0);
-            return plan;
-        }
-        require(skyline.length % 22 == 0, "skyline");
-        uint256 k = skyline.length / 22;
-        require(k <= 6, "k");
-
-        address[] memory payees = new address[](k);
-        uint16[] memory inc = new uint16[](k);
-        uint256 sumInc = 0;
-
-        for (uint256 i = 0; i < k; i++) {
-            (address p, uint16 bps) = _decodeSegment(skyline, i);
-            payees[i] = p;
-            inc[i] = bps;
-            sumInc += uint256(bps);
-        }
-
-        // each share rounded down; the remainder is protocol fees
-        uint256[] memory amounts = new uint256[](k);
-        for (uint256 i = 0; sumInc > 0 && i < k; i++) {
-            if (payees[i] != address(0)) amounts[i] = markupBudget * uint256(inc[i]) / sumInc;
-        }
-
-        (plan.payees, plan.immediate, plan.locked, plan.holdback) =
-            _splitAmounts(payees, amounts, holdbackBps, minTurnover, playerTurnover);
-    }
-
     function _splitAmounts(
         address[] memory payees,
         uint256[] memory amounts,
@@ -975,17 +805,6 @@ contract StatefulSystemDiff is Test {
             holdback[i] = hb;
             if (eligible) immediate[i] = rest;
             else locked[i] = rest;
-        }
-    }
-
-    function _decodeSegment(bytes memory skyline, uint256 index) internal pure returns (address payee, uint16 incBps) {
-        uint256 o = index * 22;
-        require(skyline.length >= o + 22, "o");
-        assembly ("memory-safe") {
-            let word := mload(add(add(skyline, 0x20), o))
-            payee := shr(96, word)
-            let word2 := mload(add(add(skyline, 0x20), add(o, 20)))
-            incBps := shr(240, word2)
         }
     }
 
@@ -1101,7 +920,7 @@ contract StatefulSystemDiff is Test {
 
     function _syncBankModel(address asset) internal {
         Bank bank = (asset == address(assetA)) ? bankA : bankB;
-        bm[asset].B = IERC20Like(asset).balanceOf(address(bank));
+        bm[asset].B = (IERC20Like(asset).balanceOf(address(bank)) + IERC20Like(asset).balanceOf(bank.vault()));
         bm[asset].PF = bank.protocolFeesPayable();
         bm[asset].R = bank.totalReserved();
         bm[asset].xpAccruedTotal = bank.xpAccruedTotal();
@@ -1112,7 +931,11 @@ contract StatefulSystemDiff is Test {
     function _assertBankMatches(address asset) internal view {
         Bank bank = (asset == address(assetA)) ? bankA : bankB;
 
-        assertEq(IERC20Like(asset).balanceOf(address(bank)), bm[asset].B, "bank.B");
+        assertEq(
+            (IERC20Like(asset).balanceOf(address(bank)) + IERC20Like(asset).balanceOf(bank.vault())),
+            bm[asset].B,
+            "bank.B"
+        );
         assertEq(bank.protocolFeesPayable(), bm[asset].PF, "bank.PF");
         assertEq(bank.totalReserved(), bm[asset].R, "bank.R");
         assertEq(bank.xpAccruedTotal(), bm[asset].xpAccruedTotal, "bank.xpAccruedTotal");

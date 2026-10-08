@@ -5,70 +5,13 @@ import { SSOTDb } from "./store";
 import { createBankIndexer, type BankIndexer } from "./bankIndexer";
 import type { SSOTRelease } from "../release/schema";
 
-// ——— Mock release ———
+import releaseFixture from "../fixtures/release-v16.fixture.json";
+
 const MOCK_RELEASE: SSOTRelease = {
+  ...(releaseFixture as SSOTRelease),
   chainId: 84532,
-  name: "test-release",
-  releaseDigest: "0xdeadbeef",
   isPlaceholder: false,
-  contracts: {
-    gameHub: "0x1111111111111111111111111111111111111111",
-    settlementRouter: "0x2222222222222222222222222222222222222222",
-    poolRegistry: "0x3333333333333333333333333333333333333333",
-    sportsHub: "0x7777777777777777777777777777777777777777",
-    sportsRiskEngine: "0x8888888888888888888888888888888888888888",
-    vrfHub: "0x9999999999999999999999999999999999999999",
-    refRegistry: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    refEngine: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    adapter: "0xcccccccccccccccccccccccccccccccccccccccc"
-  },
-  assets: [
-    {
-      symbol: "USDC",
-      decimals: 6,
-      address: "0x4444444444444444444444444444444444444444",
-      bank: "0x5555555555555555555555555555555555555555"
-    }
-  ],
-  games: {
-    "0x0000000000000000000000000000000000000000000000000000000000000001":
-      "0x6666666666666666666666666666666666666666"
-  },
-  gamesMeta: [
-    {
-      gameId: "0x0000000000000000000000000000000000000000000000000000000000000001",
-      slug: "dice",
-      label: "Dice",
-      module: "0x6666666666666666666666666666666666666666"
-    }
-  ],
-  sports: {
-    enabled: false,
-    riskEngine: "0x8888888888888888888888888888888888888888",
-    sportsHub: "0x7777777777777777777777777777777777777777",
-    oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    resultReporterSetHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    resultReporterThreshold: "1",
-    maxStake: "1",
-    maxPayout: "1",
-    maxMarketReserved: "1",
-    maxOutcomeReserved: "1",
-    maxEventReserved: "1"
-  },
-  pools: [
-    {
-      poolId: 1,
-      domainId: 1,
-      domain: "Casino",
-      active: true,
-      asset: "0x4444444444444444444444444444444444444444",
-      bank: "0x5555555555555555555555555555555555555555",
-      symbol: "USDC",
-      decimals: 6,
-      sportsRisk: null
-    }
-  ],
-  meta: { blockNumber: 100, schemaVersion: 2 }
+  meta: { ...(releaseFixture as SSOTRelease).meta, blockNumber: 100 }
 };
 
 // ——— Mock publicClient ———
@@ -107,12 +50,13 @@ describe("createBankIndexer", () => {
     const status = indexer.getStatus();
     expect(status.chainId).toBe(84532);
     expect(status.banks.length).toBe(1);
-    expect(status.banks[0]!.toLowerCase()).toBe("0x5555555555555555555555555555555555555555");
+    expect(status.banks[0]!.toLowerCase()).toBe(BANK.toLowerCase());
   });
 });
 
 const BANK = MOCK_RELEASE.pools[0]!.bank as Address;
-const CURSOR = `84532:bank-events:100:${BANK.toLowerCase()}`;
+const VAULT = MOCK_RELEASE.pools[0]!.vault as Address;
+const CURSOR = `84532:liquidity-events:100:${BANK.toLowerCase()}:${VAULT.toLowerCase()}`;
 const PLAYER = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
 function log(eventName: string, args: Record<string, unknown>, logIndex = 0, blockNumber = 150n) {
   return {
@@ -133,86 +77,109 @@ function setup(client: any, rewindBlocks = 24) {
   });
 }
 
+function vaultLog(eventName: string, args: Record<string, unknown>, index = 0) {
+  return { ...log(eventName, args, index), address: VAULT };
+}
+
 describe("bankIndexer.syncOnce()", () => {
-  it("does not reuse XP-only or other-Bank coverage when lifecycle decoding changes", async () => {
-    await db.cursors.put({
-      id: "84532:bank",
-      chainId: 84532,
-      source: BANK,
-      lastProcessedBlock: 500,
-      updatedAt: 0
-    });
+  it("binds the checkpoint to both Bank and Vault", async () => {
     const client = createMockPublicClient({ blockNumber: 200n });
     setup(client, 0);
     await indexer.syncOnce();
-    expect(client.getLogs.mock.calls[0][0].fromBlock).toBe(100n);
     const otherBank = "0x6666666666666666666666666666666666666666" as Address;
+    const otherVault = "0x7777777777777777777777777777777777777777" as Address;
     const other = createBankIndexer({
-      release: { ...MOCK_RELEASE, pools: [{ ...MOCK_RELEASE.pools[0]!, bank: otherBank }] },
+      release: {
+        ...MOCK_RELEASE,
+        pools: [{ ...MOCK_RELEASE.pools[0]!, bank: otherBank, vault: otherVault }]
+      },
       publicClient: client,
       db,
       config: { confirmations: 0, rewindBlocks: 0 }
     });
     await other.syncOnce();
-    expect(client.getLogs.mock.calls[1][0]).toMatchObject({
+    expect(client.getLogs.mock.calls[2][0]).toMatchObject({
       address: [otherBank],
+      fromBlock: 100n
+    });
+    expect(client.getLogs.mock.calls[3][0]).toMatchObject({
+      address: [otherVault],
       fromBlock: 100n
     });
   });
 
-  it("reads all banks and lifecycle events with one RPC and advances an empty-range cursor", async () => {
+  it("queries the two event sources and advances an empty range together", async () => {
     const client = createMockPublicClient({ blockNumber: 200n });
     setup(client);
     await indexer.syncOnce();
-    expect(client.getLogs).toHaveBeenCalledTimes(1);
-    const query = client.getLogs.mock.calls[0][0];
-    expect(query.address).toEqual([BANK]);
-    expect(query.events.map((event: { name: string }) => event.name)).toEqual(
+    expect(client.getLogs).toHaveBeenCalledTimes(2);
+    const [bankQuery, vaultQuery] = client.getLogs.mock.calls.map((call: any[]) => call[0]);
+    expect(bankQuery.address).toEqual([BANK]);
+    expect(bankQuery.events.map((event: { name: string }) => event.name)).toEqual(
       expect.arrayContaining([
         "BetSettled",
-        "RedeemRequest",
-        "RedeemBatchPriced",
-        "RedeemBatchActivated",
-        "RecoveryClaimed",
-        "BetRiskSettled",
-        "RecoverySynced",
-        "Withdraw",
         "PlayerPayableCreated",
-        "PlayerPayablePaid"
+        "PlayerPayablePaid",
+        "XPAwarded"
       ])
     );
+    expect(vaultQuery.address).toEqual([VAULT.toLowerCase()]);
+    expect(vaultQuery.events.map((event: { name: string }) => event.name)).toEqual([
+      "DepositAdded",
+      "DepositWithdrawn",
+      "Transfer"
+    ]);
     expect((await db.cursors.get(CURSOR))!.lastProcessedBlock).toBe(200);
-    expect(indexer.getStatus().lastSyncedBlock).toBe(200);
   });
 
-  it("keeps requests, pricing, actual LP claims and deferred player payouts distinct under replay", async () => {
+  it("keeps NFT ownership, cash and player payments separate and idempotent", async () => {
     const input = [
-      log("RedeemRequest", { controller: PLAYER, owner: PLAYER, shares: 100n }, 0),
-      log("RedeemBatchPriced", { batchId: 1n, shares: 100n, assets: 90n }, 1),
-      log("RedeemClaimable", { controller: PLAYER, batchId: 1n, shares: 100n, assets: 90n }, 2),
-      log("Withdraw", { owner: PLAYER, receiver: PLAYER, shares: 100n, assets: 90n }, 3),
-      log("PlayerPayableCreated", { player: PLAYER, betId: 1n, amount: 50n }, 4),
-      log("PlayerPayablePaid", { player: PLAYER, caller: PLAYER, amount: 50n }, 5),
-      log("RedeemBatchActivated", { batchId: 1n, reserve: 20n, openHolds: 1n }, 6),
-      log("RecoverySynced", { epochId: 1n, controller: PLAYER, shares: 100n, assets: 10n }, 7),
-      log(
-        "RecoveryClaimed",
-        { epochId: 1n, controller: PLAYER, receiver: PLAYER, caller: PLAYER, assets: 10n },
-        8
-      )
+      vaultLog(
+        "DepositAdded",
+        {
+          payer: PLAYER,
+          owner: PLAYER,
+          depositId: 1099511627776,
+          assets: 100n,
+          withdrawAfter: 1000n
+        },
+        0
+      ),
+      vaultLog("Transfer", { from: PLAYER, to: BANK, tokenId: 1099511627776n }, 1),
+      vaultLog(
+        "DepositWithdrawn",
+        {
+          owner: BANK,
+          depositId: 1099511627776,
+          percent: 500000000000,
+          assets: 40n,
+          withdrawAfter: 2000n
+        },
+        2
+      ),
+      log("PlayerPayableCreated", { player: PLAYER, betId: 1n, amount: 50n }, 3),
+      log("PlayerPayablePaid", { player: PLAYER, caller: PLAYER, amount: 50n }, 4)
     ];
     const client = createMockPublicClient({ blockNumber: 160n, logs: input });
     setup(client);
     await indexer.syncOnce();
     await indexer.syncOnce();
-    const rows = await db.bankEvents.orderBy("logIndex").toArray();
-    expect(rows.map((row) => row.eventName)).toEqual(input.map((row) => row.eventName));
-    expect(rows.filter((row) => row.eventName === "Withdraw")).toHaveLength(1);
-    expect(JSON.parse(rows[0]!.argsJson).shares).toBe("100");
+    expect(
+      (await db.vaultEvents.orderBy("logIndex").toArray()).map((row) => row.eventName)
+    ).toEqual(["DepositAdded", "Transfer", "DepositWithdrawn"]);
+    expect((await db.bankEvents.orderBy("logIndex").toArray()).map((row) => row.eventName)).toEqual(
+      ["PlayerPayableCreated", "PlayerPayablePaid"]
+    );
+    const deposit = await db.vaultEvents.where("eventName").equals("DepositAdded").first();
+    expect(deposit).toMatchObject({ bank: BANK, vault: VAULT.toLowerCase() });
+    expect(JSON.parse(deposit!.argsJson)).toMatchObject({
+      depositId: 1099511627776,
+      assets: "100"
+    });
     expect(await db.xpSnapshots.count()).toBe(0);
   });
 
-  it("writes XP and raw facts atomically with the cursor, including their Bank identity", async () => {
+  it("writes XP facts atomically with their Bank identity", async () => {
     const client = createMockPublicClient({
       blockNumber: 200n,
       logs: [log("XPAwarded", { payee: PLAYER, accrued: 5000n }, 1)]
@@ -226,65 +193,114 @@ describe("bankIndexer.syncOnce()", () => {
     expect((await db.cursors.get(CURSOR))!.lastProcessedBlock).toBe(200);
   });
 
-  it("removes orphaned withdrawal and XP facts when a rewound range becomes empty", async () => {
+  it("removes orphaned Vault and XP facts when a rewound range becomes empty", async () => {
     const client = createMockPublicClient({
       blockNumber: 160n,
       logs: [
-        log(
-          "RecoveryClaimed",
-          { epochId: 1n, controller: PLAYER, receiver: PLAYER, caller: PLAYER, assets: 1n },
-          0
-        ),
+        vaultLog("DepositWithdrawn", {
+          owner: PLAYER,
+          depositId: 1,
+          assets: 1n,
+          percent: 1000000000000,
+          withdrawAfter: 0n
+        }),
         log("XPAwarded", { payee: PLAYER, accrued: 5000n }, 1)
       ]
     });
     setup(client);
     await indexer.syncOnce();
-    expect(await db.bankEvents.count()).toBe(2);
+    expect(await db.vaultEvents.count()).toBe(1);
+    expect(await db.bankEvents.count()).toBe(1);
     client.getLogs.mockResolvedValue([]);
     await indexer.syncOnce();
+    expect(await db.vaultEvents.count()).toBe(0);
     expect(await db.bankEvents.count()).toBe(0);
     expect(await db.xpSnapshots.count()).toBe(0);
     expect((await db.cursors.get(CURSOR))!.lastProcessedBlock).toBe(160);
   });
 
-  it("does not delete facts or advance its checkpoint when a read fails", async () => {
+  it("preserves both event stores and checkpoint if either RPC fails", async () => {
     const client = createMockPublicClient({
       blockNumber: 160n,
-      logs: [log("RedeemRequest", { shares: 1n })]
+      logs: [vaultLog("DepositAdded", { depositId: 1, assets: 1n })]
     });
     setup(client);
     await indexer.syncOnce();
     client.getBlockNumber.mockResolvedValue(170n);
-    client.getLogs.mockRejectedValue(new Error("RPC down"));
+    client.getLogs.mockImplementation(async ({ address }: { address: Address[] }) => {
+      if (address.includes(VAULT)) throw new Error("Vault RPC down");
+      return [];
+    });
     await indexer.syncOnce();
-    expect(indexer.getStatus().lastError).toBe("RPC down");
-    expect(await db.bankEvents.count()).toBe(1);
+    expect(indexer.getStatus().lastError).toBe("Vault RPC down");
+    expect(await db.vaultEvents.count()).toBe(1);
     expect((await db.cursors.get(CURSOR))!.lastProcessedBlock).toBe(160);
   });
 
-  it("rolls back replacement facts and cursor together when storage fails", async () => {
+  it.each([150n, 120n, 90n])("drops orphaned tails when the head retreats to %s", async (head) => {
     const client = createMockPublicClient({
       blockNumber: 160n,
-      logs: [log("RedeemRequest", { shares: 1n })]
+      logs: [
+        { ...vaultLog("DepositAdded", { depositId: 1, assets: 1n }), blockNumber: 158n },
+        log("XPAwarded", { payee: PLAYER, accrued: 5000n }, 1, 158n)
+      ]
+    });
+    setup(client);
+    await indexer.syncOnce();
+    const [vaultRow] = await db.vaultEvents.toArray();
+    await db.vaultEvents.put({ ...vaultRow!, id: "other-chain", chainId: 999 });
+    client.getBlockNumber.mockResolvedValue(head);
+    client.getLogs.mockResolvedValue([]);
+    await indexer.syncOnce();
+    expect(indexer.getStatus().lastError).toBeUndefined();
+    expect(await db.vaultEvents.toArray()).toMatchObject([{ id: "other-chain" }]);
+    expect(await db.bankEvents.count()).toBe(0);
+    expect(await db.xpSnapshots.count()).toBe(0);
+    expect((await db.cursors.get(CURSOR))?.lastProcessedBlock).toBe(
+      head < 100n ? undefined : Number(head)
+    );
+    expect(indexer.getStatus().lastSyncedBlock).toBe(head < 100n ? undefined : Number(head));
+  });
+
+  it("keeps a lowered coverage boundary if replay fails after head rollback", async () => {
+    const client = createMockPublicClient({
+      blockNumber: 160n,
+      logs: [{ ...vaultLog("DepositAdded", { depositId: 1, assets: 1n }), blockNumber: 158n }]
+    });
+    setup(client);
+    await indexer.syncOnce();
+    client.getBlockNumber.mockResolvedValue(150n);
+    client.getLogs.mockRejectedValue(new Error("replay RPC failed"));
+    await indexer.syncOnce();
+    expect(indexer.getStatus().lastError).toBe("replay RPC failed");
+    expect(await db.vaultEvents.count()).toBe(0);
+    expect((await db.cursors.get(CURSOR))?.lastProcessedBlock).toBe(126);
+    expect(indexer.getStatus().lastSyncedBlock).toBe(126);
+  });
+
+  it("rolls back both source replacements if the cursor write fails", async () => {
+    const client = createMockPublicClient({
+      blockNumber: 160n,
+      logs: [vaultLog("DepositAdded", { depositId: 1, assets: 1n })]
     });
     setup(client);
     await indexer.syncOnce();
     const put = vi.spyOn(db.cursors, "put").mockRejectedValueOnce(new Error("disk full"));
     client.getBlockNumber.mockResolvedValue(170n);
-    client.getLogs.mockResolvedValue([log("Withdraw", { shares: 1n, assets: 1n })]);
+    client.getLogs.mockResolvedValue([log("PlayerPayableCreated", { player: PLAYER, amount: 1n })]);
     await indexer.syncOnce();
     put.mockRestore();
     expect(indexer.getStatus().lastError).toBe("disk full");
-    expect((await db.bankEvents.toArray()).map((row) => row.eventName)).toEqual(["RedeemRequest"]);
+    expect((await db.vaultEvents.toArray()).map((row) => row.eventName)).toEqual(["DepositAdded"]);
+    expect(await db.bankEvents.count()).toBe(0);
     expect((await db.cursors.get(CURSOR))!.lastProcessedBlock).toBe(160);
   });
 
-  it("coalesces a timer tick and manual refresh while RPC is in flight", async () => {
+  it("coalesces overlapping refreshes", async () => {
     const client = createMockPublicClient({});
     setup(client);
     await Promise.all([indexer.syncOnce(), indexer.syncOnce()]);
     expect(client.getBlockNumber).toHaveBeenCalledTimes(1);
-    expect(client.getLogs).toHaveBeenCalledTimes(1);
+    expect(client.getLogs).toHaveBeenCalledTimes(2);
   });
 });

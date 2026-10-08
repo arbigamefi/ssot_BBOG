@@ -23,8 +23,8 @@ export async function fetchLandingOverview(
       address: row.address,
       symbol: row.symbol,
       decimals: row.decimals,
-      totalAssets: BigInt(row.totalAssets),
-      totalReserved: BigInt(row.totalReserved),
+      lpCapital: BigInt(row.lpCapital),
+      lockedCapital: BigInt(row.lockedCapital),
       turnover: BigInt(row.turnover),
       protocolFee: BigInt(row.protocolFee)
     }))

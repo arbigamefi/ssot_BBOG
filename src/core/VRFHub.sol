@@ -1,229 +1,210 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
-import {IVRFHub} from "./interfaces/IVRFHub.sol";
-import {IVRFAdapter} from "./interfaces/IVRFAdapter.sol";
-import {Governable} from "../access/Governable.sol";
+import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IVRFHub} from "./interfaces/IVRFHub.sol";
+import {ISettlementRouter} from "./interfaces/ISettlementRouter.sol";
+import {SSOTTypes} from "./interfaces/SSOTTypes.sol";
 import {Errors} from "../libs/Errors.sol";
 
-/// @notice Minimal VRFHub with charged-fee semantics (refactored parity).
-///
-/// Design goals:
-/// - fulfillRandomWords MUST NEVER revert (soft-ignore / try-catch).
-/// - requestRandomWords is payable and charges a deterministic fee quote.
-/// - Overpayment is refunded best-effort; if refund transfer fails, user can later claim.
-/// - No privileged "withdraw" for oracle fees (no backdoor).
-///
-/// Adapter mode:
-/// - If `adapter` is configured, VRFHub forwards the charged fee to the adapter which
-///   performs the provider request and returns the provider requestId.
-/// - VRFHub still enforces liveness and bookkeeping; fulfill stays `coordinator`-gated.
-contract VRFHub is IVRFHub, Governable, ReentrancyGuard {
-    /// @notice Address permitted to call fulfill (provider / wrapper).
-    address public immutable coordinator;
+/// @notice Direct wrapper consumer. A received seed persists before fallible game accounting.
+/// @dev No provider switch, administrator, fee sweep or replacement-randomness path.
+contract VRFHub is IVRFHub, VRFV2PlusWrapperConsumerBase, ReentrancyGuard {
+    /// @dev Base Sepolia block 47638466: c+c/63+1+13400 <= 2500000. Requalify before release.
+    uint32 public constant override MAX_CALLBACK_GAS = 2_447_746;
+    uint32 public constant MIN_CALLBACK_GAS_LIMIT = 200_000;
+    uint256 public constant CALLBACK_COMPLETION_GAS = 45_000;
+    uint256 public constant EXCESS_REFUND_GAS = 30_000;
+    uint256 private constant REFUND_BOOKING_GAS = 65_000;
+    uint256 private constant CALL_OVERHEAD_GAS = 10_000;
 
-    /// @notice Optional adapter used to issue requests to external providers.
-    IVRFAdapter public adapter;
+    address public immutable override settlementRouter;
+    mapping(uint256 => RequestInfo) private _requests;
+    mapping(uint256 => uint256) public override requestIdForPosition;
+    mapping(address => uint256) public override unbookedResultCount;
+    mapping(address => uint256) private _refundCredit;
+    uint256 public override totalRefundCredit;
 
-    /// @notice Internal request nonce (used only when adapter is unset).
-    uint256 public nextRequestId = 1;
-
-    // Fee model (native token) used when adapter is unset:
-    // fee = baseFeeWei + callbackGasLimit*gasPriceWei + numWords*wordFeeWei + confirmations*confirmationsFeeWei
-    uint256 public baseFeeWei;
-    uint256 public gasPriceWei;
-    uint256 public wordFeeWei;
-    uint256 public confirmationsFeeWei;
-
-    mapping(uint256 => RequestInfo) internal requests;
-    mapping(uint256 => bool) public seenRequestId;
-    error InvalidRequestId(uint256 requestId);
-    mapping(address => uint256) internal _refundCredit;
-
-    event AdapterSet(address indexed adapter);
-    event FeeParamsSet(uint256 baseFeeWei, uint256 gasPriceWei, uint256 wordFeeWei, uint256 confirmationsFeeWei);
-
-    event Fulfilled(uint256 indexed requestId, address indexed hub, uint256 indexed betId, bytes32 randomHash);
-    event Ignored(uint256 indexed requestId);
-    event HubCallbackFailed(uint256 indexed requestId, bytes revertData);
-
-    constructor(address coordinator_, address gov_) Governable(gov_) {
-        coordinator = coordinator_;
-        // conservative defaults for tests / local usage
-        baseFeeWei = 1e14; // 0.0001 ETH
-        gasPriceWei = 1e9; // 1 gwei
-        wordFeeWei = 0;
-        confirmationsFeeWei = 0;
+    constructor(address wrapper_, address settlementRouter_) VRFV2PlusWrapperConsumerBase(wrapper_) {
+        if (wrapper_.code.length == 0 || settlementRouter_.code.length == 0) revert Errors.InvalidConfig();
+        settlementRouter = settlementRouter_;
     }
 
-    // -------------------------
-    // Governance
-    // -------------------------
-
-    function setAdapter(address adapter_) external onlyGov {
-        if (adapter_ == address(0)) {
-            adapter = IVRFAdapter(address(0));
-            emit AdapterSet(address(0));
-            return;
-        }
-        // Adapter must be wired to the same coordinator that calls back into VRFHub.
-        if (IVRFAdapter(adapter_).coordinator() != coordinator) revert Errors.InvalidConfig();
-        adapter = IVRFAdapter(adapter_);
-        emit AdapterSet(adapter_);
+    function wrapper() external view override returns (address) {
+        return address(i_vrfV2PlusWrapper);
     }
-
-    function setFeeParams(uint256 baseFeeWei_, uint256 gasPriceWei_, uint256 wordFeeWei_, uint256 confirmationsFeeWei_)
-        external
-        onlyGov
-    {
-        // No strict bounds here; invariants and UI should enforce sanity.
-        baseFeeWei = baseFeeWei_;
-        gasPriceWei = gasPriceWei_;
-        wordFeeWei = wordFeeWei_;
-        confirmationsFeeWei = confirmationsFeeWei_;
-        emit FeeParamsSet(baseFeeWei_, gasPriceWei_, wordFeeWei_, confirmationsFeeWei_);
-    }
-
-    // -------------------------
-    // Views
-    // -------------------------
 
     function getRequest(uint256 requestId) external view override returns (RequestInfo memory) {
-        return requests[requestId];
+        return _requests[requestId];
     }
 
-    function refundCreditOf(address payer) external view override returns (uint256 amount) {
+    function refundCreditOf(address payer) external view override returns (uint256) {
         return _refundCredit[payer];
     }
 
-    function quote(uint32 callbackGasLimit, uint16 requestConfirmations, uint32 numWords, uint256 gasPriceBudget)
-        public
-        view
-        override
-        returns (uint256 fee)
-    {
-        if (address(adapter) != address(0)) {
-            return adapter.quoteNative(callbackGasLimit, requestConfirmations, numWords, gasPriceBudget);
-        }
-        // fee = base + gas + words + confirmations
-        fee = baseFeeWei + (uint256(callbackGasLimit) * gasPriceWei) + (uint256(numWords) * wordFeeWei)
-            + (uint256(requestConfirmations) * confirmationsFeeWei);
+    function quote(uint32 callbackGasLimit, uint256 gasPriceBudget) external view override returns (uint256) {
+        _checkCallbackGas(callbackGasLimit);
+        return i_vrfV2PlusWrapper.estimateRequestPriceNative(callbackGasLimit, 1, gasPriceBudget);
     }
 
-    // -------------------------
-    // Fee + request
-    // -------------------------
-
-    function requestRandomWords(
-        address hub,
-        uint256 betId,
-        uint32 callbackGasLimit,
-        uint16 requestConfirmations,
-        uint32 numWords,
-        address payer
-    ) external payable override nonReentrant returns (uint256 requestId, uint256 feeCharged) {
-        if (payer == address(0)) revert Errors.ZeroAddress();
-
-        IVRFAdapter provider = adapter;
-        uint256 required = address(provider) == address(0)
-            ? quote(callbackGasLimit, requestConfirmations, numWords, tx.gasprice)
-            : provider.requestPriceNative(callbackGasLimit, numWords);
-        if (msg.value < required) revert InsufficientVRFFee(msg.value, required);
-
-        uint256 refundDue = msg.value - required;
-        bool refundOk = true;
-
-        if (address(provider) != address(0)) {
-            // Forward the charged fee to the adapter/provider.
-            (requestId, feeCharged) =
-                provider.requestRandomWordsInNative{value: required}(callbackGasLimit, requestConfirmations, numWords);
-            // Defensive: enforce charged == required (adapter should be pure proxy).
-            if (feeCharged != required) revert Errors.InvalidConfig();
-        } else {
-            // Internal/test mode: use a disjoint requestId namespace to avoid collisions with provider ids.
-            requestId = (uint256(1) << 255) | nextRequestId++;
-            feeCharged = required;
+    function requestRandomWords(uint256 positionId, uint32 callbackGasLimit, uint16 confirmations)
+        external
+        payable
+        override
+        nonReentrant
+        returns (uint256 requestId, uint256 feeCharged)
+    {
+        _checkCallbackGas(callbackGasLimit);
+        if (confirmations == 0) revert InvalidConfirmations();
+        ISettlementRouter router = ISettlementRouter(settlementRouter);
+        SSOTTypes.Position memory pos = router.getPosition(positionId);
+        if (
+            pos.positionId != positionId || pos.ownerHub != msg.sender || pos.state != SSOTTypes.PositionState.Held
+                || pos.player == address(0) || pos.bank == address(0)
+                || router.settlementConsumer(pos.bank) != address(this)
+        ) {
+            revert InvalidRequestBinding(positionId);
         }
+        if (requestIdForPosition[positionId] != 0) revert PositionAlreadyRequested(positionId);
 
-        if (requestId == 0 || seenRequestId[requestId]) revert InvalidRequestId(requestId);
-        seenRequestId[requestId] = true;
-        requests[requestId] = RequestInfo({
-            hub: hub, betId: betId, payer: payer, feePaid: msg.value, feeCharged: feeCharged, active: true
+        // An insufficient new budget may not spend old refund credits through the helper.
+        uint256 required = i_vrfV2PlusWrapper.calculateRequestPriceNative(callbackGasLimit, 1);
+        if (msg.value < required) revert InsufficientVRFFee(msg.value, required);
+        (requestId, feeCharged) = requestRandomnessPayInNative(
+            callbackGasLimit,
+            confirmations,
+            1,
+            VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: true}))
+        );
+        if (feeCharged != required) revert InvalidWrapperCharge();
+        if (requestId == 0 || _requests[requestId].state != RequestState.None) revert InvalidRequestId(requestId);
+        requestIdForPosition[positionId] = requestId;
+        _requests[requestId] = RequestInfo({
+            bank: pos.bank,
+            hub: msg.sender,
+            betId: positionId,
+            payer: pos.player,
+            feePaid: msg.value,
+            feeCharged: feeCharged,
+            seed: 0,
+            state: RequestState.Awaiting
         });
-
+        uint256 refundDue = msg.value - feeCharged;
+        bool refunded = true;
         if (refundDue != 0) {
-            (refundOk,) = payable(payer).call{value: refundDue}("");
-            if (!refundOk) {
-                _refundCredit[payer] += refundDue;
+            refunded = _returnExcess(pos.player, refundDue);
+            if (!refunded) {
+                _refundCredit[pos.player] += refundDue;
+                totalRefundCredit += refundDue;
             }
         }
-
-        emit VRFFeeCharged(requestId, payer, msg.value, feeCharged, refundDue, refundOk);
-        emit Requested(requestId, hub, betId);
+        emit Requested(requestId, msg.sender, positionId, pos.bank);
+        emit VRFFeeCharged(requestId, pos.player, msg.value, feeCharged, refundDue, refunded);
     }
 
     function claimRefund() external override nonReentrant returns (uint256 amount) {
         amount = _refundCredit[msg.sender];
         if (amount == 0) return 0;
         _refundCredit[msg.sender] = 0;
-        (bool ok,) = payable(msg.sender).call{value: amount}("");
-        if (!ok) {
-            _refundCredit[msg.sender] = amount;
-            revert Errors.TransferFailed();
-        }
-        emit VRFFeeRefundClaimed(msg.sender, amount);
+        totalRefundCredit -= amount;
+        bool ok;
+        address payer = msg.sender;
+        assembly ("memory-safe") { ok := call(gas(), payer, amount, 0, 0, 0, 0) }
+        if (!ok) revert Errors.TransferFailed();
+        emit VRFFeeRefundClaimed(payer, amount);
     }
 
-    function detach(uint256 requestId) external override {
-        RequestInfo storage r = requests[requestId];
-        if (r.hub != msg.sender) revert NotOwningHub();
-        address hub = r.hub;
-        uint256 betId = r.betId;
-        bool wasActive = r.active;
-        delete requests[requestId];
-        if (wasActive) emit Detached(requestId, hub, betId);
-    }
-
-    // -------------------------
-    // Fulfill
-    // -------------------------
-
-    /// @notice Called by coordinator/provider. MUST NOT revert.
-    /// @dev For Chainlink wrappers this may be invoked via `rawFulfillRandomWords`.
-    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) public {
-        if (msg.sender != coordinator) {
-            emit Ignored(requestId);
+    /// @dev The inherited raw entry authenticates the immutable wrapper before reaching this hook.
+    function fulfillRandomWords(uint256 requestId, uint256[] memory words) internal override nonReentrant {
+        RequestInfo storage r = _requests[requestId];
+        if (r.state != RequestState.Awaiting || words.length != 1) {
+            emit ResponseIgnored(requestId, r.state);
             return;
         }
-        RequestInfo storage r = requests[requestId];
-        if (r.hub == address(0) || !r.active) {
-            emit Ignored(requestId);
-            return;
+        r.seed = words[0];
+        r.state = RequestState.Received;
+        ++unbookedResultCount[r.bank];
+        emit ResultReceived(requestId, r.bank, words[0]);
+        _deliver(requestId, r);
+    }
+
+    function retry(uint256 requestId) external override nonReentrant returns (bool settled) {
+        RequestInfo storage r = _requests[requestId];
+        if (r.state != RequestState.Received) revert InvalidRequestState(requestId, r.state);
+        _deliver(requestId, r);
+        return r.state == RequestState.Terminal;
+    }
+
+    /// @dev Callable from the guarded callback/retry. Owning Hub includes this inside its atomic child,
+    /// after Router/Bank/Vault accounting; failure rolls that child back, leaving the outer seed intact.
+    function acknowledge(uint256 requestId) external override {
+        RequestInfo storage r = _requests[requestId];
+        if (msg.sender != r.hub) revert NotOwningHub();
+        if (r.state != RequestState.Received) revert InvalidRequestState(requestId, r.state);
+        _requireTerminalPosition(r, SSOTTypes.PositionState.Settled);
+        r.state = RequestState.Terminal;
+        --unbookedResultCount[r.bank];
+        emit ResultAcknowledged(requestId, r.bank);
+    }
+
+    function cancel(uint256 requestId) external override {
+        RequestInfo storage r = _requests[requestId];
+        if (msg.sender != r.hub) revert NotOwningHub();
+        if (r.state != RequestState.Awaiting) revert InvalidRequestState(requestId, r.state);
+        _requireTerminalPosition(r, SSOTTypes.PositionState.Refunded);
+        r.state = RequestState.Cancelled;
+        emit RequestCancelled(requestId);
+    }
+
+    function _requireTerminalPosition(RequestInfo storage r, SSOTTypes.PositionState terminal) private view {
+        SSOTTypes.Position memory pos = ISettlementRouter(settlementRouter).getPosition(r.betId);
+        if (pos.state != terminal || pos.ownerHub != r.hub || pos.bank != r.bank || pos.player != r.payer) {
+            revert InvalidTerminalPosition(r.betId);
         }
+    }
+
+    function _deliver(uint256 requestId, RequestInfo storage r) private {
+        uint256[] memory words = new uint256[](1);
+        words[0] = r.seed;
+        bytes memory data = abi.encodeCall(IRandomWordsReceiver.onRandomWords, (requestId, words));
         address hub = r.hub;
-        uint256 betId = r.betId;
+        uint256 remaining = gasleft();
+        bool delivered;
+        bytes32 failurePrefix;
+        if (remaining > CALLBACK_COMPLETION_GAS + CALL_OVERHEAD_GAS) {
+            uint256 budget = remaining - CALLBACK_COMPLETION_GAS - CALL_OVERHEAD_GAS;
+            assembly ("memory-safe") {
+                delivered := call(budget, hub, 0, add(data, 32), mload(data), 0, 0)
+                if iszero(delivered) {
+                    let scratch := mload(0x40)
+                    mstore(scratch, 0)
+                    let size := returndatasize()
+                    if gt(size, 32) { size := 32 }
+                    returndatacopy(scratch, 0, size)
+                    failurePrefix := mload(scratch)
+                }
+            }
+        }
+        emit CallbackAttempt(requestId, delivered, r.state, failurePrefix);
+    }
 
-        // single-use: deactivate on first attempt
-        r.active = false;
+    function _returnExcess(address payer, uint256 amount) private returns (bool ok) {
+        uint256 remaining = gasleft();
+        if (remaining <= REFUND_BOOKING_GAS + CALL_OVERHEAD_GAS) return false;
+        uint256 budget = remaining - REFUND_BOOKING_GAS - CALL_OVERHEAD_GAS;
+        if (budget > EXCESS_REFUND_GAS) budget = EXCESS_REFUND_GAS;
+        assembly ("memory-safe") { ok := call(budget, payer, amount, 0, 0, 0, 0) }
+    }
 
-        bytes32 rh = keccak256(abi.encode(randomWords));
-
-        try HubLike(hub).onRandomWords(requestId, randomWords) {
-            emit Fulfilled(requestId, hub, betId, rh);
-        } catch (bytes memory err) {
-            emit HubCallbackFailed(requestId, err);
+    function _checkCallbackGas(uint32 callbackGasLimit) private pure {
+        if (callbackGasLimit < MIN_CALLBACK_GAS_LIMIT || callbackGasLimit > MAX_CALLBACK_GAS) {
+            revert InvalidCallbackGas(callbackGasLimit);
         }
     }
+}
 
-    /// @notice Chainlink-compatible callback entry (wrapper/coordinator calls this).
-    function rawFulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) external {
-        fulfillRandomWords(requestId, randomWords);
+    interface IRandomWordsReceiver {
+        function onRandomWords(uint256 requestId, uint256[] calldata words) external;
     }
-
-    receive() external payable {}
-}
-
-interface HubLike {
-    function onRandomWords(uint256 requestId, uint256[] calldata randomWords) external;
-}

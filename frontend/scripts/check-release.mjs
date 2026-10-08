@@ -9,8 +9,7 @@ const REQUIRED_CORE_CONTRACTS = [
   "poolRegistry",
   "vrfHub",
   "refRegistry",
-  "refEngine",
-  "adapter"
+  "refEngine"
 ];
 const REQUIRED_SPORTS_CONTRACTS = ["sportsHub", "sportsRiskEngine"];
 const requiredChainIds = parseRequiredChainIds(process.env.REQUIRED_EMBEDDED_CHAIN_IDS);
@@ -42,6 +41,10 @@ for (const f of jsons) {
   if (raw?.meta?.releaseLock?.schema !== "SSOT_RELEASE_DIGEST_V16") {
     fatalIssues.push("expected current v1.6 release schema");
   }
+  if (raw?.meta?.architectureVersion !== "v1.6-nft-liquidity")
+    fatalIssues.push("expected NFT liquidity architecture");
+  if (Object.hasOwn(contracts, "adapter"))
+    fatalIssues.push("unexpected adapter in current release");
   if (raw?.meta?.schemaVersion !== 2) issues.push("schemaVersion is not 2");
 
   for (const key of REQUIRED_CORE_CONTRACTS) {
@@ -94,7 +97,23 @@ for (const f of jsons) {
     if (!isNonEmptyString(asset?.symbol)) issues.push(`assets[${index}].symbol missing`);
     if (!isValidDecimals(asset?.decimals)) issues.push(`assets[${index}].decimals invalid`);
   });
+  raw?.gamesMeta?.forEach?.((game, index) => {
+    if (!Number.isInteger(game.maxBetCount) || game.maxBetCount < 1 || game.maxBetCount > 25)
+      issues.push(`gamesMeta[${index}].maxBetCount invalid`);
+    if (
+      !Number.isInteger(game.callbackGasLimit) ||
+      game.callbackGasLimit < 200_000 ||
+      game.callbackGasLimit > 2_447_746
+    )
+      issues.push(`gamesMeta[${index}].callbackGasLimit invalid`);
+  });
   raw?.pools?.forEach?.((pool, index) => {
+    for (const field of ["asset", "bank", "vault"]) {
+      if (!/^0x[0-9a-fA-F]{40}$/.test(pool?.[field]) || pool[field].toLowerCase() === ZERO_ADDRESS)
+        issues.push(`pools[${index}].${field} invalid`);
+    }
+    if (pool.bank?.toLowerCase() === pool.vault?.toLowerCase())
+      issues.push(`pools[${index}].bank equals vault`);
     if (!isNonEmptyString(pool?.symbol)) issues.push(`pools[${index}].symbol missing`);
     if (!isValidDecimals(pool?.decimals)) issues.push(`pools[${index}].decimals invalid`);
   });

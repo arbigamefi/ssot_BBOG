@@ -7,7 +7,7 @@ export function isCasinoRiskInEnabledForChain(chainId: number) {
   return process.env.NEXT_PUBLIC_CASINO_RISK_IN_ENABLED === "true";
 }
 
-/** Website switch for LP deposits. Batch requests and claims use their own contract rules. */
+/** Website switch for LP deposits. Mature NFT withdrawals and debt claims use contract rules. */
 export function isLpDepositEnabledForChain(chainId: number) {
   const chain = getAppChain(chainId);
   if (!chain) return false;

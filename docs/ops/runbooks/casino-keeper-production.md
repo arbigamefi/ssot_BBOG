@@ -1,30 +1,32 @@
 # Keeper operations
 
-Deploy the current keeper using the [Docker stack](../../../frontend/deploy/docker/README.md) and
-[keeper configuration](../../../frontend/apps/keeper/README.md). Use a verified current manifest,
-dedicated signer, chain-specific RPC and the current PostgreSQL schema.
+This runbook describes the accepted target; the [implementation plan](../../design/lp-accounting-and-callback-implementation.md)
+tracks release gates, with [local integration evidence](../../audit/nft-consumer-integration-review.md).
+Deploy one authenticated current release with its PostgreSQL schema,
+using the [Docker stack](../../../frontend/deploy/docker/README.md) and dedicated signer.
 
-The keeper finalizes eligible casino results, refunds timed-out PendingVRF positions, handles admitted
-sports terminal paths, activates LP queues to price liquid cash without waiting for old positions, and
-claims player payables, which always pay the player's own address. It does not hold user claim permissions.
-Requests/claims are not inferred from health status; check contract events and actual receipts.
+Normal VRF callbacks settle themselves. The keeper handles failed original-result delivery/finalization,
+eligible missing-randomness refunds, player payables, event indexing and separately admitted sports paths.
+It holds no LP NFT approval/operator permission and performs no automatic mature-NFT withdrawal.
+No LP batch activation or historical-right worker remains. Maturity is derived from each ID's chain
+deadline; it needs no keeper state transition. Index Vault NFT ownership separately from actual
+asset deposit/withdrawal cash, using the authenticated Vault binding and canonical receipt order.
+A Ready event whose bet is already terminal requires indexing, not another finalize transaction.
 
-After an RPC quota or WebSocket outage, verify the running image revision and its actual
-`KEEPER_RPC_WS` configuration without printing the URL credential. From the same host,
-check the chain ID, a successful `eth_subscribe` acknowledgement and incoming `newHeads`.
-This establishes provider availability, not the keeper's own subscription state. Inspect
-watch errors and correlate the next authorized testnet ready event with the keeper's
-`gameHub`/`vrfHub` enqueue and mined receipt. A `scan` enqueue is HTTP discovery evidence;
-an already queued item keeps its original source even if a later WS event wakes it.
-Deploy the current keeper with the newly deployed contracts and their verified release.
-Retired development instances are not recovery targets or dependencies of this deployment.
-Keep HTTP catch-up enabled and check pending signer nonces before restarting a current instance.
+Keep Infura HTTP scanning and Alchemy WebSocket event subscriptions. After an outage, verify the running
+image, chain and actual WS configuration without printing credentials. A successful eth_subscribe/newHeads
+probe proves provider availability, not the keeper's own subscription. Correlate real callback logs with
+keeper ingestion and terminal indexing. Normal success should send zero keeper finalize transactions;
+forced callback failure must demonstrate original-seed retry and one final payment.
 
-Monitor health, backlog, oldest open positions, historical-recovery age and discovery completeness, write failures and database replay
-coverage. Restart after a transport incident only once the configured RPC is available; reconcile
-pending transaction receipts and signer nonces. Shutdown waits for in-flight writes before closing the
-store. Use independent credentials for redundant workers.
+Exercise WS loss/reconnect and HTTP catch-up, duplicate or out-of-order Ready/Finalized events, reorgs,
+restart and pending nonces. Do not revive retired development services. Preserve independent history
+reconciliation; a live queue can be empty while an older position is unresolved.
 
-Alert delivery failures must remain retryable. A healthy HTTP snapshot alone does not prove all bets
-terminated or all user funds were transferred. Governance and guardian actions remain separate from
-permissionless keeper calls; follow the [deployment workflow](../../deploy/v16-release.md).
+Monitor placed-to-terminal latency across all bets, canonical unbooked-result count/age, missing-randomness
+deadlines, capacity, player debts, finalized cash-history coverage and actual send failures. A racing
+worker that finds a terminal bet is not an error; a reproducible accounting failure is not merely a race.
+
+Shutdown waits for in-flight writes. Delivery failures remain retryable. Health alone proves neither
+complete terminalization nor payment; verify receipts and Bank accounting. Governance/Safe actions
+remain separate from permissionless keeper work.

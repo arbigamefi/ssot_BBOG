@@ -48,7 +48,6 @@ export function BankrollPerformancePanel({
   assetSymbol = "UNIT",
   chainPerformance,
   showIndexedHistory = true,
-  sharePrice,
   vaultAssets
 }: {
   assetAddress?: string;
@@ -57,8 +56,6 @@ export function BankrollPerformancePanel({
   chainPerformance?: DomainBankSnapshot;
   /** Asset-level history cannot identify an inactive or replaced Bank. */
   showIndexedHistory?: boolean;
-  /** Latest chain-read assets redeemable per full LP share. Historical share-price points are not indexed yet. */
-  sharePrice?: bigint;
   vaultAssets?: bigint;
 }) {
   const t = useTranslations();
@@ -110,7 +107,7 @@ export function BankrollPerformancePanel({
   const turnover = chainPerformance?.totalTurnover ?? 0n;
   const payout = chainPerformance?.totalPayoutGross ?? 0n;
   // Gross gaming revenue = accepted turnover minus gross awards, before fees.
-  // LP profit is measured separately through share equity and cash flows.
+  // Individual NFT outcomes require their own tree value and cash history.
   const houseRevenue = turnover - payout;
   const hold = formatHoldPercent(houseRevenue, turnover);
   const velocity = formatMultiple(turnover, vaultAssets);
@@ -227,7 +224,6 @@ export function BankrollPerformancePanel({
           decimals={decimals}
           locale={locale}
           points={points}
-          sharePrice={sharePrice}
           symbol={symbol}
           t={t}
           windowToggle={windowToggle}
@@ -271,7 +267,6 @@ function CumulativeGgrChart({
   points,
   decimals,
   locale,
-  sharePrice,
   symbol,
   t,
   windowToggle
@@ -279,7 +274,6 @@ function CumulativeGgrChart({
   points: Array<{ date: string; turnover: string; payoutGross: string }>;
   decimals: number;
   locale: string;
-  sharePrice?: bigint;
   symbol: string;
   t: Translate;
   windowToggle: React.ReactNode;
@@ -317,9 +311,6 @@ function CumulativeGgrChart({
     if (decline > maxDrawdown) maxDrawdown = decline;
   }
 
-  const sharePriceLabel =
-    sharePrice != null ? formatSharePrice(sharePrice, decimals, symbol, locale) : null;
-
   return (
     <div className="border-t border-border-soft px-5 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -341,11 +332,6 @@ function CumulativeGgrChart({
         ariaLabel={t("earn.performance.equityTitle")}
         formatValue={(value) => formatSignedToken(value, decimals, symbol, locale)}
         formatDate={(date) => formatDayLabel(date, locale)}
-        lastValueTag={
-          sharePriceLabel
-            ? { label: t("earn.performance.sharePriceReference"), value: sharePriceLabel }
-            : undefined
-        }
         tooltipRows={(_, index) => {
           const s = series[index]!;
           return [
@@ -367,8 +353,7 @@ function CumulativeGgrChart({
         }}
       />
 
-      {/* Peak / trough / max drawdown — share price now lives on the chart as a
-          last-value tag, so it is not duplicated here. */}
+      {/* Peak, trough and drawdown describe indexed gaming revenue. */}
       <div className="mt-3 grid grid-cols-3 gap-x-4 gap-y-2">
         <EquityStat
           label={t("earn.performance.peak")}
@@ -415,16 +400,4 @@ function EquityStat({
       </span>
     </div>
   );
-}
-
-function formatSharePrice(value: bigint, decimals: number, symbol: string, locale: string) {
-  const scale = 10n ** BigInt(decimals);
-  const whole = value / scale;
-  const fraction = value % scale;
-  const precision = 4;
-  const divisor = 10n ** BigInt(Math.max(decimals - precision, 0));
-  const roundedFraction = decimals > precision ? fraction / divisor : fraction;
-  const fractionText = roundedFraction.toString().padStart(Math.min(decimals, precision), "0");
-  const trimmed = fractionText.replace(/0+$/, "");
-  return `${whole.toLocaleString(locale)}${trimmed ? `.${trimmed}` : ""} ${symbol}`;
 }

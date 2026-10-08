@@ -37,8 +37,6 @@ function renderPanel(
     <EarnActionPanel
       tab="deposit"
       onTabChange={vi.fn()}
-      amountMode="assets"
-      onAmountModeChange={vi.fn()}
       pools={[{ key: "1:0x0000000000000000000000000000000000000002", label: "USDC · Pool #1" }]}
       poolKey="1:0x0000000000000000000000000000000000000002"
       onPoolChange={vi.fn()}
@@ -55,7 +53,7 @@ function renderPanel(
       flow={flow}
       onSubmit={vi.fn()}
       connected
-      withdrawContent={<p>Request and claim shares</p>}
+      withdrawContent={<p>Withdraw selected NFT</p>}
       {...overrides}
     />
   );
@@ -125,9 +123,9 @@ describe("EarnActionPanel", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("keeps redemption controls available while deposits are closed", () => {
+  it("keeps NFT withdrawal controls available while deposits are closed", () => {
     renderPanel(baseFlow, { depositsClosed: true, tab: "withdraw" });
-    expect(screen.getByText("Request and claim shares")).toBeDefined();
+    expect(screen.getByText("Withdraw selected NFT")).toBeDefined();
     expect(screen.queryByRole("textbox", { name: "earn.actions.amount" })).toBeNull();
   });
 

@@ -1,5 +1,5 @@
 import type { Address, Hex, PublicClient } from "viem";
-import { BANK_REDEMPTION_KEEPER_ABI } from "./abi.js";
+import { BANK_KEEPER_ABI } from "./abi.js";
 import { describeError } from "./errors.js";
 import type { PayableHealth } from "./health.js";
 import { splitBlockRange } from "./scan.js";
@@ -94,7 +94,7 @@ export function createPayableClaimer({
         })) {
           const logs = await client.getContractEvents({
             address: bank,
-            abi: BANK_REDEMPTION_KEEPER_ABI,
+            abi: BANK_KEEPER_ABI,
             eventName: "PlayerPayableCreated",
             strict: true,
             ...range
@@ -125,7 +125,7 @@ export function createPayableClaimer({
         try {
           owed = (await client.readContract({
             address: bank,
-            abi: BANK_REDEMPTION_KEEPER_ABI,
+            abi: BANK_KEEPER_ABI,
             functionName: "playerPayable",
             args: [item.player],
             ...(head != null ? { blockNumber: head } : {})
@@ -174,7 +174,7 @@ export function createPayableClaimer({
             continue;
           const finalizedOwed = (await client.readContract({
             address: bank,
-            abi: BANK_REDEMPTION_KEEPER_ABI,
+            abi: BANK_KEEPER_ABI,
             functionName: "playerPayable",
             args: [item.player],
             blockNumber: finalizedBlock

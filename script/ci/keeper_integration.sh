@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-forge build src test/mocks/BlacklistToken.sol
+forge build src test/mocks/BlacklistToken.sol test/helpers/nft-callback/ExactGasWrapperFixture.sol
 pnpm -C frontend/apps/keeper build
 PORT="${KEEPER_TEST_PORT:-18569}"
 CONTAINER="agf-keeper-test-$(uuidgen | tr '[:upper:]' '[:lower:]')"
@@ -31,4 +31,4 @@ for attempt in {1..50}; do
 done
 kill -0 "$NODE_PID"
 node frontend/apps/keeper/integration/casino.mjs
-pnpm -C frontend/packages/bet-index exec vitest run src/recovery.postgres.test.ts src/financial-aggregates.test.ts src/house-edge.test.ts
+pnpm -C frontend/packages/bet-index test

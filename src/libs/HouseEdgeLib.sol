@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -13,13 +13,13 @@ library HouseEdgeLib {
     /// @notice Share of the turnover edge that LPs retain. A constant of the release unit.
     uint16 internal constant LP_SHARE_BPS = 5_000;
 
-    /// @notice Upper bound on L0 + L1 + L2 referral rates, in bps of the base turnover edge.
+    /// @notice Upper bound on L0 + L1 + L2 referral rates, in bps of the turnover edge.
     uint16 internal constant MAX_REFERRAL_BPS = 3_500;
 
     /// @notice Upper bound on any house edge a position can be opened with.
     uint16 internal constant MAX_HOUSE_EDGE_BPS = 500;
 
-    /// @notice Minimum time between queueing and activating a base-edge change or a markup-cap increase.
+    /// @notice Minimum time between queueing and activating a house-edge change.
     uint256 internal constant EDGE_CHANGE_DELAY = 7 days;
 
     /// @notice Longest refund timeout the casino hub accepts, so governance can delay the refund of an

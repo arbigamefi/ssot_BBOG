@@ -64,9 +64,9 @@ function houseEdgeLog(address: string) {
       [
         { type: "uint256" },
         { type: "uint16" },
-        ...Array.from({ length: 8 }, () => ({ type: "uint256" as const }))
+        ...Array.from({ length: 7 }, () => ({ type: "uint256" as const }))
       ],
-      [100000n, 200, 2000n, 1000n, 1000n, 300n, 200n, 400n, 100n, 0n]
+      [100000n, 200, 2000n, 1000n, 1000n, 300n, 200n, 400n, 100n]
     )
   };
 }
@@ -80,17 +80,18 @@ function clientWithTerminal(proof = terminal, extraLogs: unknown[] = []) {
     readContract: vi.fn(async ({ functionName }: { functionName: string }) =>
       functionName === "getBetTerminal"
         ? proof
-        : {
-            asset,
-            bank,
-            player,
-            gameId,
-            pricingAffiliate: player,
-            stake: 200000n,
-            placedAt: 900n,
-            requestId: 7n,
-            randomHash: txHash
-          }
+        : functionName === "getBetReferralPayees"
+          ? [player, asset]
+          : {
+              asset,
+              bank,
+              player,
+              gameId,
+              stake: 200000n,
+              placedAt: 900n,
+              requestId: 7n,
+              randomHash: txHash
+            }
     ),
     getTransactionReceipt: vi.fn().mockResolvedValue({
       blockNumber: 1000n,
@@ -255,8 +256,28 @@ describe("receipt refund proof repair", () => {
     });
     expect(result).toMatchObject({ source: "postgres", row: { refundAmount: "100000" } });
     expect(writeBetRows).toHaveBeenCalledOnce();
-    expect(writeBetRows.mock.calls[0]![0][0]).toMatchObject({ gameHub: getAddress(activeHub) });
+    expect(writeBetRows.mock.calls[0]![0][0]).toMatchObject({
+      gameHub: getAddress(activeHub),
+      referrerL1: getAddress(player),
+      referrerL2: getAddress(asset)
+    });
     expect(stored.refundAmount).toBe("100000");
+  });
+  it("does not invent referral attribution when the immutable payee snapshot cannot be read", async () => {
+    const client = clientWithTerminal();
+    const read = client.readContract;
+    client.readContract = vi.fn(async (args: any) => {
+      if (args.functionName === "getBetReferralPayees") throw new Error("snapshot unavailable");
+      return read(args);
+    }) as typeof read;
+    const result = await materializeBetReceipt({
+      betId: "42",
+      chainId: 84532,
+      terminalTxHash: txHash,
+      client
+    });
+    expect(result.row).toBeNull();
+    expect(writeBetRows).not.toHaveBeenCalled();
   });
   it("stores the settlement's house-edge allocation with the hydrated receipt", async () => {
     const hub = activeRelease.release.contracts.gameHub;
@@ -280,7 +301,7 @@ describe("receipt refund proof repair", () => {
       edge: "2000",
       lpRetained: "1000",
       r1: "400",
-      effectiveHouseEdgeBps: 200
+      houseEdgeBps: 200
     });
     expect(result.source).toBe("postgres");
   });

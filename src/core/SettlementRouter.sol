@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import {Errors} from "../libs/Errors.sol";
 import {HouseEdgeLib} from "../libs/HouseEdgeLib.sol";
 import {IBank} from "./interfaces/IBank.sol";
 import {IPoolRegistry} from "./interfaces/IPoolRegistry.sol";
 import {ISettlementRouter} from "./interfaces/ISettlementRouter.sol";
+import {IVRFHub} from "./interfaces/IVRFHub.sol";
 import {SSOTTypes} from "./interfaces/SSOTTypes.sol";
 
 /// @notice Shared settlement authority between vertical hubs and Bank pools.
@@ -19,6 +20,7 @@ contract SettlementRouter is ISettlementRouter {
     uint256 public override nextPositionId = 1;
 
     mapping(uint256 => SSOTTypes.Position) internal _positions;
+    mapping(address => address) public override settlementConsumer;
 
     constructor(address poolRegistry_) {
         if (poolRegistry_ == address(0)) revert Errors.ZeroAddress();
@@ -28,6 +30,22 @@ contract SettlementRouter is ISettlementRouter {
     function getPosition(uint256 positionId) external view returns (SSOTTypes.Position memory) {
         _requirePosition(positionId);
         return _positions[positionId];
+    }
+
+    function bindRandomnessConsumer(address consumer) external {
+        if (
+            settlementConsumer[msg.sender] != address(0) || consumer.code.length == 0
+                || IBank(msg.sender).settlementRouter() != address(this)
+                || IVRFHub(consumer).settlementRouter() != address(this)
+        ) revert InvalidConsumerBinding();
+        settlementConsumer[msg.sender] = consumer;
+        emit RandomnessConsumerBound(msg.sender, consumer);
+    }
+
+    function unbookedResultCount(address bank) external view returns (uint256) {
+        address consumer = settlementConsumer[bank];
+        if (consumer == address(0)) revert InvalidConsumerBinding();
+        return IVRFHub(consumer).unbookedResultCount(bank);
     }
 
     function openPosition(

@@ -1,24 +1,28 @@
 # Current release
 
-The project has not launched. A controlled Base Sepolia candidate is deployed; its source identity,
-Safe takeover and partial business acceptance are recorded in the
-[Sepolia acceptance record](../deploy/v16-sepolia-acceptance.md). This does not admit outside LP
-funding or mainnet operation. Later source changes do not update its immutable contracts.
-The source supports one contract model, v1.6: fixed 50% LP edge,
-instant deposits, asynchronous redemption without a redemption-driven betting pause, and player-payable fallback.
+The project has not launched. The accepted target is immediate funding into per-deposit ERC721 NFTs,
+a fixed 24-hour withdrawal cooldown, original Azuro V3 tree allocation and liquidity-limited synchronous
+payment, plus same-callback VRF settlement. **Core contracts and application interfaces are implemented and locally verified; external audit and network acceptance are pending.**
+Follow the [detailed plan](../design/lp-accounting-and-callback-implementation.md) and
+[contract rules](../constitution/SSOT.v1.6.md).
 
-Use the [deployment workflow](../deploy/v16-release.md) and
-[contract rules](../constitution/SSOT.v1.6.md). Release artifacts are generated from the current source,
-verified against the configured signer and chain, then imported into the application.
+Use the [Base Sepolia acceptance checklist](../deploy/v16-sepolia-acceptance.md) for one fresh
+deployment, the current database schema and matching application build. Current local results and
+remaining qualification are in the [core review](../audit/nft-core-integration-review.md).
 
-- One generated ABI set: `frontend/packages/ssot/src/abis/contracts/`.
-- Verified deployment manifests: `frontend/packages/ssot/src/release/embedded/`.
-- Test-only manifests and vectors: `frontend/packages/ssot/src/fixtures/`; these are not deployments.
-- Generated deployment and packaging outputs are local build products, not committed history.
+- One generated ABI set: `frontend/packages/ssot/src/abis/contracts/`, including LiquidityVault.
+- Authenticated manifests: `frontend/packages/ssot/src/release/embedded/`; every pool requires its
+  Vault and reciprocal immutable Bank/asset binding.
+- Test fixtures: `frontend/packages/ssot/src/fixtures/`, never deployment substitutes.
+- Pinned tree sources and provenance belong in tracked vendor files; ignored dist is not a build dependency.
+- Deployment/build products remain generated artifacts, not parallel contract implementations.
 
-With no imported manifest the application reports that no release is available and offers no contract
-writes. Do not insert old addresses or test fixtures to make the application appear connected.
+With no imported manifest the application exposes no contract writes. The [deployment workflow](../deploy/v16-release.md)
+and [checklist](checklist.md) require exact source, signer, wrapper, governance and chain evidence.
+Complete tree-inclusive callback gas qualification and the remaining external-LP release gates.
+The user accepted the current ordering tradeoff; verify its public disclosure against the
+[recorded decision](../audit/callback-and-lp-admission-review-2026-10-04.md).
+A timer does not prove safe ordering, and the old 100-round limit is not automatically valid.
 
-Required before launch: final audit scope, external audit, fresh network acceptance, compliance
-readiness (operating entity, jurisdictions, server-side geo-blocking, sanctions screening and player-limit
-enforcement, terms including compensation for bets that can never settle) and operational readiness.
+Launch also requires the existing operating-entity/jurisdiction decisions, server-side access requirements,
+player limits, terms and operational readiness. Local tests and testnet funding do not establish launch readiness.

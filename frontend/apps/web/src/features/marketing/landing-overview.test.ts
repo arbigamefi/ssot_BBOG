@@ -30,15 +30,15 @@ describe("landing bank evidence", () => {
           address: "0x01",
           symbol: "WETH",
           decimals: 18,
-          totalAssets: "1234567890123456789",
-          totalReserved: "0",
+          lpCapital: "1234567890123456789",
+          lockedCapital: "0",
           turnover: "0",
           protocolFee: "0"
         }
       ]
     });
     const result = await fetchLandingOverview(8453, "release-a");
-    expect(result.assets[0]?.totalAssets).toBe(1234567890123456789n);
+    expect(result.assets[0]?.lpCapital).toBe(1234567890123456789n);
     expect(result.assets[0]?.decimals).toBe(18);
   });
 });

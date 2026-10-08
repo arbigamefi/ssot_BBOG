@@ -409,7 +409,9 @@
         "rolls": {
           "label": "回合数",
           "total": "合计: {amount} {symbol}",
-          "aria": "回合数量"
+          "aria": "回合数量",
+          "limit": "本游戏每仓最多 {count} 轮",
+          "loadingLimit": "正在读取本游戏轮数上限"
         },
         "advanced": {
           "label": "高级设置",
@@ -440,7 +442,8 @@
           "preparing": "准备回合...",
           "placeBet": "下注",
           "revealing": "开奖中..."
-        }
+        },
+        "maxSummary": "每轮 {perRound} · 整仓 {total}"
       },
       "selection": {
         "dice": {
@@ -711,7 +714,8 @@
         "facts": {
           "game": "游戏",
           "player": "玩家",
-          "affiliate": "推荐人",
+          "referrerL1": "一级推荐人",
+          "referrerL2": "二级推荐人",
           "asset": "资产",
           "betId": "投注 ID",
           "requestId": "VRF 请求",
@@ -728,9 +732,8 @@
           "lps": "留给 LP",
           "playerRakeback": "玩家返水",
           "referrers": "推荐人",
-          "affiliateMarkup": "推荐人加价",
           "protocol": "协议费",
-          "note": "庄家优势的一半留给 LP；另一半支付推荐奖励和推荐人加价，剩余部分为协议费。金额来自本注单的 HouseEdgeAllocated 事件。"
+          "note": "庄家优势的一半留给 LP；另一半支付推荐奖励，剩余部分为协议费。金额来自本注单的 HouseEdgeAllocated 事件。"
         },
         "actions": {
           "play": "进入该游戏",
@@ -978,7 +981,8 @@
         "cost": "总投注 {total} {symbol} · 随机数费预算约 {fee}，Gas 另计。",
         "contextChanged": "钱包、网络或投注设置已变化，已停止后续提交。请核对当前设置后继续。",
         "capacity": "该池暂时满额，请等待已有投注结算后重试。",
-        "minimumStake": "总下注额低于该池最低要求，请刷新池状态并调整金额或局数。"
+        "minimumStake": "每轮下注额低于该池最低要求，请刷新池状态并提高每轮金额。",
+        "houseEdgeChanged": "当前费率超过你确认的上限。请刷新并核对费率后重新下注。"
       },
       "poolStatus": {
         "loading": "正在检查 {symbol} 金库状态…",
@@ -987,7 +991,17 @@
         "loadingLabel": "正在检查金库…",
         "unavailableLabel": "金库状态暂不可用",
         "pausedLabel": "金库已暂停",
-        "refresh": "检查金库状态"
+        "refresh": "检查金库状态",
+        "full": "仓位暂时满额，请等待已接投注结算后刷新。",
+        "fullLabel": "仓位已满",
+        "noLiquidity": "池内当前没有 LP 资本，暂不能下注。",
+        "noLiquidityLabel": "暂无承保资本",
+        "invalidAccounting": "池子账本读取不一致，当前不能下注。",
+        "invalidAccountingLabel": "账本不可用",
+        "gameUnavailable": "无法确认本游戏的链上准入或费用，请刷新。",
+        "gameUnavailableLabel": "游戏配置不可用",
+        "invalidCount": "所选轮数超过本游戏的当前上限，请减少轮数。",
+        "invalidCountLabel": "调整下注轮数"
       },
       "payment": {
         "transferred": "本笔结算交易已将结算金额转入玩家钱包。",
@@ -2159,7 +2173,7 @@
         },
         "bankPosition": {
           "label": "金库价值",
-          "detail": "你持有的金库份额当前对应的资产价值。"
+          "detail": "所有存款 NFT 的当前树余额；分页未完整读取时不显示合计。"
         },
         "refundCredit": {
           "label": "可退款余额",
@@ -2200,13 +2214,14 @@
         "eyebrow": "资产",
         "title": "钱包资产",
         "loading": "正在加载余额。",
-        "shares": "{amount} 份额",
         "columns": {
           "asset": "资产",
           "wallet": "钱包",
           "bankPosition": "金库价值",
-          "allowance": "已授权"
-        }
+          "allowance": "Vault 授权"
+        },
+        "nftCount": "{count} 个存款 NFT",
+        "incomplete": "完整资产请到 Earn 查看"
       },
       "refund": {
         "title": "退款余额",
@@ -2692,7 +2707,7 @@
       },
       "activity": {
         "title": "推广投注",
-        "description": "通过持久投注索引追踪带有你 affiliate 地址的赌场投注。",
+        "description": "按下注时固定的一级推荐关系统计投注；此处的活动数据不计入二级推荐投注。",
         "loading": "正在加载推广投注...",
         "empty": "还没有索引到推广投注。",
         "stats": {
@@ -2734,10 +2749,7 @@
       "unsupportedWriteAsset": "写入流程需要所选资产存在 active casino pool。",
       "positiveAmount": "金额必须大于 0。",
       "insufficientWalletBalance": "金额超过当前钱包余额。",
-      "exceedsMintable": "Share 数量超过当前钱包余额可 mint 的份额。",
-      "exceedsWithdrawable": "金额超过当前可取金额。",
-      "exceedsRedeemable": "金额超过当前可赎回份额。",
-      "allowanceNotConfirmed": "授权已确认，但 Bank allowance 还没有更新。请等待几秒后重试存入。"
+      "exceedsWithdrawable": "金额超过当前可取金额。"
     },
     "format": {
       "assetFallback": "资产"
@@ -2746,49 +2758,14 @@
       "eyebrow": "金库出资人",
       "title": "为 {symbol} 池提供赔付资本",
       "description": "LP 为赌场赔付提供资本，承担游戏结果的波动。按 v1.6 规则，每笔已结算投注的庄家优势有一半留给 LP，另一半用于推荐奖励和协议费。",
-      "disclosure": "储备、份额价格与累计表现（毛博彩收入、抽水率、周转率）直接读取 Bank 合约，链上可验证；仅每日趋势图与最大回撤来自索引，可能存在延迟。",
-      "bankAddress": "Bank 地址"
-    },
-    "metrics": {
-      "sharePrice": {
-        "label": "每千份价值"
-      },
-      "totalShares": {
-        "label": "活跃份额",
-        "detail": "活跃 LP 份额总量；已定价退出份额已销毁。"
-      }
+      "disclosure": "资本和负债来自 Vault 与 Bank 的链上快照；游戏统计不是个人 NFT 收益。日线图来自索引数据，可能延迟。",
+      "bankAddress": "Vault 地址"
     },
     "summary": {
       "capitalPosture": {
         "title": "可验证储备账本",
         "readModel": "链上读取",
-        "totalAssets": "活跃金库净值",
-        "loading": "正在拉取最新金库快照…",
-        "detail": "支持活跃份额的当前资金，已扣除历史权益备付资金与应付款。",
-        "totalAssetsDetail": "支持活跃份额的当前资金，已扣除历史权益备付资金与应付款。"
-      },
-      "freeReserve": {
-        "label": "可用储备",
-        "detail": "活跃资金中未被未决持仓占用的部分。"
-      },
-      "sharePrice": {
-        "label": "每份价值"
-      },
-      "totalShares": {
-        "label": "活跃份额",
-        "detail": "活跃 LP 份额总量；已定价退出份额已销毁。"
-      },
-      "position": {
-        "label": "你的仓位",
-        "detail": "已连接钱包对应的资产等价值。"
-      },
-      "liquidity": {
-        "label": "风险储备策略",
-        "detail": "风险储备 {floor} · Bank {bank}"
-      },
-      "reserved": {
-        "label": "活跃资金承担的预留负债",
-        "detail": "可用储备 {freeReserve} · 风险储备 {riskReserve}"
+        "loading": "正在拉取最新金库快照…"
       }
     },
     "actions": {
@@ -2796,7 +2773,7 @@
       "title": "存入或退出",
       "asset": "资产",
       "amount": "金额",
-      "connectWallet": "连接钱包后才能执行 Bank 操作。",
+      "connectWallet": "连接钱包后即可存款或提款。",
       "readOnly": "只读模式 —— 切换网络才能操作。",
       "tabs": {
         "deposit": {
@@ -2805,13 +2782,8 @@
         },
         "withdraw": {
           "label": "取出",
-          "description": "按资产数量或按 share 数量退出仓位。"
+          "description": "选择存款 NFT 和提款比例。"
         }
-      },
-      "amountMode": {
-        "label": "输入方式",
-        "assets": "按资产",
-        "shares": "按 Share"
       },
       "max": {
         "walletBalance": "钱包余额",
@@ -2820,30 +2792,25 @@
       },
       "balance": {
         "wallet": "钱包余额",
-        "mintable": "可 mint 份额",
         "withdrawable": "可取金额",
-        "redeemable": "可赎回份额",
         "pending": "读取中",
         "useMax": "最大"
       },
       "submit": {
         "executing": "执行中",
         "deposit": "存入资产",
-        "mint": "Mint 份额",
-        "withdraw": "取出资产",
-        "redeem": "赎回份额"
+        "withdraw": "取出资产"
       },
       "trace": {
         "deposit": "存入追踪",
         "withdraw": "取出追踪",
-        "redeem": "赎回追踪",
         "view": "查看交易状态",
         "close": "关闭",
         "statusDialog": "Bank 交易状态"
       },
       "depositsClosed": {
         "title": "暂不开放新存入",
-        "body": "此资金池暂不接受新存入，已有 LP 请求和领取仍按资金池规则办理。"
+        "body": "此池不接受新入金，现有 NFT 的提款仍按合约规则执行。"
       }
     },
     "flows": {
@@ -2852,27 +2819,16 @@
       },
       "deposit": {
         "preflight": "校验输入并模拟流程。",
-        "approveTitle": "授权 Bank",
+        "approveTitle": "授权 Vault",
         "approveDescription": "设置 ERC20 allowance。",
         "depositTitle": "存入资产",
-        "depositDescription": "广播 Bank.deposit。"
-      },
-      "mint": {
-        "preflight": "校验 share 数量和所需资产。",
-        "mintTitle": "Mint 份额",
-        "mintDescription": "广播 Bank.mint。"
+        "depositDescription": "创建一笔独立的 NFT 存款。"
       },
       "direct": {
         "submit": "提交",
         "confirm": "确认",
         "validate": "校验约束。",
         "receipt": "等待交易回执。"
-      },
-      "withdraw": {
-        "submit": "广播 Bank.withdraw。"
-      },
-      "redeem": {
-        "submit": "广播 Bank.redeem。"
       }
     },
     "trace": {
@@ -2887,40 +2843,17 @@
     "risk": {
       "title": "风险检查",
       "readModel": "混合数据源",
-      "custody": {
-        "label": "托管边界",
-        "title": "非托管 Bank。",
-        "detail": "出资人资本保存在 Bank 合约里。界面将可验证储备和索引表现估算分开展示。"
-      },
-      "buffer": {
-        "label": "赔付缓冲",
-        "detail": "扣除已预留负债({reserved})后的可用储备。公开开放存款前，应与最大赔付控制一起评估。"
-      },
-      "liquidityFloor": {
-        "label": "提款缓冲",
-        "detail": "协议费和推荐奖励领取需保留 {bps} 缓冲，当前约 {amount}。已定价 LP 领取和玩家欠款领取不受此限制。"
-      },
       "release": {
         "label": "Release 摘要",
         "detail": "资产身份、Bank 地址和 UI 读取都锚定到当前 active release manifest。"
-      },
-      "payables": {
-        "label": "应付款",
-        "detail": "外部应付款 {externalPayables} · 资产 {assets}"
       }
     },
     "toast": {
       "processing": "正在处理 Bank 交易...",
-      "minted": "已 mint {amount} 份额",
-      "redeemed": "已赎回 {amount} 份额",
       "deposited": "已存入 {amount} {symbol}",
       "withdrew": "已取出 {amount} {symbol}",
       "viewTransaction": "查看交易",
       "failed": "交易失败"
-    },
-    "units": {
-      "shares": "份额",
-      "sharesLower": "份额"
     },
     "performance": {
       "title": "金库表现",
@@ -2938,8 +2871,6 @@
       "activityTrend": "每日金库活动",
       "pnlTrend": "每日毛博彩收入",
       "volumeTrend": "每日成交量",
-      "sharePriceReference": "份额价格",
-      "currentSharePrice": "当前份额价格",
       "empty": "当前链上还没有金库活动。",
       "pending": "链上表现数据尚未读取到。",
       "windowLabel": "时间范围",
@@ -2949,124 +2880,97 @@
         "d7": "7天",
         "d30": "30天"
       },
-      "note": "累计毛博彩收入来自 Bank.getPerformance() 链上直读（投注流水减毛派彩）。它不是 LP 的利润：LP 份额价格还反映资金池留存的派彩扣减，以及从中计提的推荐奖励和协议费，两者合计最多占每笔投注庄家优势的一半。资金周转率用累计投注流水除以当前链上金库资产。下方每日曲线来自索引，可能延迟；这不是收益承诺。",
+      "note": "游戏毛收入来自 Bank 的累计投注减毛赔付，并非单个 NFT 的收益。NFT 按存款范围分配结算盈亏。日线图来自索引数据，可能延迟，不构成收益承诺。",
       "equityTitle": "累计毛博彩收入",
       "peak": "峰值",
       "trough": "谷值",
       "maxDrawdown": "最大回撤"
     },
     "ledger": {
-      "eyebrow": "出资人账本",
-      "title": "入金、退出与恢复款",
-      "readModel": "Bank 现金流事件",
-      "connectWallet": "连接钱包后查看你的 Bank 出资记录。",
-      "loading": "正在加载出资人账本…",
       "loadingMore": "正在加载更多…",
-      "loadMore": "加载更多",
-      "loadedRows": "已加载 {count} 条",
-      "end": "已到记录末尾",
-      "empty": "此钱包尚无 LP 现金流记录。",
-      "note": "仅实际入金、退出付款和历史恢复付款属于现金流。申请、启动及可领取恢复金额不代表收到现金。捐赠至 Bank 不计为收到款项；仅有份额的事件显示成交份额价格。",
-      "block": "区块 {blockNumber}",
-      "actions": {
-        "deposit": "存入",
-        "withdraw": "取出",
-        "recovery": "恢复付款",
-        "donation": "捐赠"
-      },
-      "summary": {
-        "deposited": "已加载存入",
-        "withdrawn": "已加载取出",
-        "openValue": "已知 LP 价值",
-        "shares": "钱包份额"
-      },
-      "columns": {
-        "type": "类型",
-        "time": "时间",
-        "assets": "资产数量",
-        "shares": "Share 数量",
-        "sharePrice": "Share 价格",
-        "tx": "交易"
-      },
-      "incomplete": "现金流水尚未完整核实，汇总仅覆盖已加载记录。"
-    },
-    "overview": {
-      "totalAssets": {
-        "label": "当前金库净值",
-        "detail": "当前所选 Bank 金库的链上可验证 NAV。"
-      }
-    },
-    "async": {
-      "title": "申请并领取赎回款",
-      "requestDetail": "使用钱包份额申请退出。批次启动时立即确定可支付现金，并单独保留历史恢复权；旧投注未解决不会阻止后续批次。",
-      "requestAmount": "申请赎回份额",
-      "wallet": "钱包：{amount} 份额",
-      "pendingRisk": "排队份额仍承担活跃池盈亏。激活只冻结退出申请对应的旧风险和回收权，留存份额继续承保。可领现金可能为零，回收金额仍不确定。",
-      "request": "申请赎回",
-      "cancelDetail": "只要批次尚未启动，即使已过最早启动时间，也可取消并退回全部排队份额。已启动申请不能取消，交易以当时链上状态为准。",
-      "cancel": "取消排队份额",
-      "claimableTitle": "已定价可领取资产",
-      "claimDetail": "这些现金已为你的退出预留。领取全部已定价份额会支付对应现金，并保留全部历史恢复权。",
-      "claimAll": "领取全部赎回款",
-      "clearZero": "清除零价值退出份额",
-      "paused": "池已暂停。仍可申请退出及取消排队；入金、退出现金领取与恢复款支付需等待恢复。",
-      "unknown": "暂时无法读取池状态，请刷新后再操作。",
-      "refresh": "刷新池状态",
-      "depositTerms": "入金按完整账面价立即买入活跃资本，包括其剩余的新旧未结风险，不取得已隔离的退出回收权。 已揭晓但尚未入账的赔付也由新存入资金承担；展示数据可能滞后，并非没有待结风险。",
-      "issuerRisk": "发行方冻结、没收或销毁池资产可能阻止付款，甚至导致资不抵债。应收权利不保证足额到账。",
-      "totalEquity": "活跃与已定价 LP 价值（估算）",
-      "totalEquityDetail": "钱包估值＋排队估值＋已定价现金。历史恢复权单独展示，不计入此估算。",
-      "walletEquity": "钱包份额／账面估值",
-      "claimableEquity": "已定价赎回资产",
-      "playerTitle": "尚未到账的玩家款",
-      "playerDetail": "已结算或退款的投注记录了未支付玩家款。这部分独立于 LP 权益，仅能支付至你的玩家地址；池暂停时仍可领取，发行方限制仍可能阻止到账。",
-      "claimPlayer": "领取玩家款",
-      "requested": "赎回申请已确认。排队份额在批次启动前继续属于活跃资金。",
-      "cancelled": "符合条件的份额已退回钱包。",
-      "claimed": "赎回领取已确认。",
-      "playerClaimed": "玩家款支付已确认。",
-      "sharePriceDetail": "每千份 LP 的当前账面价值，不是已定价的退出款。",
-      "shareUnitDetail": "每份活跃 LP 的当前账面价值。历史恢复权独立于活跃份额。",
-      "exitLiabilities": "已预留退出现金与玩家应付款",
-      "exitLiabilitiesDetail": "LP 退出款：{exits}。未支付玩家款：{players}。两者已从净值中扣除。",
-      "inactivePool": "此资金池已停用，不再接受新投注和存入。赎回请求、符合条件的取消和已有债权领取仍按合约规则办理。",
-      "queuedTitle": "排队中的申请",
-      "queuedDetail": "份额在启动前仍属于活跃资金。此前未解决投注不会阻止本批次；启动时确定现金价格，历史恢复权单独保留。 可用备付资金与紧急暂停限制仍适用，不承诺全额现金到账期限。",
-      "eligibleAt": "最早可启动时间：{time}。这不是保证启动或到账的时间。",
-      "remainingHolds": "此前尚未结束的投注：{count}",
-      "queuedEquity": "排队份额／可支付现金估算",
-      "queuedQuoteDetail": "链上报价表示若现在启动可分配的现金，不含历史恢复权，实际启动前可能变化。",
-      "receiver": "现金接收地址：{receiver}"
+      "loadMore": "加载更多"
     },
     "pools": {
       "label": "资金池",
       "option": "{symbol} · 池 #{poolId} · {bank}",
       "historyUnavailable": "当前历史图表无法单独区分这个资金池。上方累计数据来自所选池的链上记录。"
     },
-    "recovery": {
-      "title": "历史恢复权",
-      "detail": "这些权利属于已激活的退出请求。留存份额继续承担活跃风险，结算时资本自动恢复承保；钱包份额为零不会抹去已退出的权利。",
-      "loading": "正在查询历史权益…",
-      "incomplete": "历史权益尚未查全。请加载其余页面后再评估完整持仓。",
-      "error": "暂时无法读取历史恢复权，不会将你的权益视为零。",
-      "empty": "完整查询中未发现历史恢复权。",
-      "epoch": "历史期次 {epoch}",
-      "units": "已激活退出份额",
-      "claimable": "可领取恢复现金",
-      "upperBound": "剩余恢复金额上限",
-      "upperBoundDetail": "上限不是当前可提现现金，也不是承诺支付金额。",
-      "remainingHolds": "此前仍未结投注：{count}",
-      "settled": "本期已全部结算，已分配但未领取的现金仍属于你。",
-      "claim": "领取恢复款",
-      "claimed": "恢复款领取已确认。",
-      "loadMore": "加载更多历史权益",
-      "refresh": "刷新历史权益",
-      "receiver": "现金将发送至 {receiver}。此操作不会授予 keeper 代领权限。",
-      "incompleteReturn": "历史权益尚未结清或尚未查全，当前权益展示不完整。",
-      "backing": "历史权益备付资金",
-      "backingDetail": "已从活跃资金扣除，用于此前债务及未领取的恢复款。",
-      "donationNote": "捐赠至 Bank 的资金不计为持有人实际收到的现金。",
-      "snapshot": "快照：区块 {block}，时间 {time}。刷新可查看新活动。"
+    "nft": {
+      "poolCapital": "LP 资本",
+      "poolCapitalDetail": "Vault 中全部存款 NFT 的当前权益总额。",
+      "freeCapital": "当前可提款资本",
+      "freeCapitalDetail": "所有 NFT 共享的资金上限，不能把每笔可提金额相加。",
+      "lockedCapital": "未结投注占用资本",
+      "lockedCapitalDetail": "现有投注结算前占用的 LP 净资本。",
+      "pendingPrincipal": "未结玩家本金",
+      "pendingPrincipalDetail": "由 Bank 单独托管的未结投注本金。",
+      "grossReserve": "未结最大赔付",
+      "grossReserveDetail": "全部未结仓位的总赔付准备金。",
+      "bettingCapital": "下注风险基数",
+      "bettingCapitalDetail": "LP 资本与未结玩家本金之和，用于校验下注风险限额。",
+      "gameHoldDetail": "游戏毛收入不是单个 NFT 的投资收益。",
+      "vaultCash": "Vault 代币余额",
+      "bankCash": "Bank 代币余额",
+      "playerDebt": "待付玩家款项",
+      "protocolDebt": "待付协议费用",
+      "referralDebt": "待付推荐奖励",
+      "vaultSurplus": "Vault 未分配余额",
+      "bankSurplus": "Bank 未分配余额",
+      "surplusDetail": "意外转入的代币不属于 NFT 资本，本页不提供提取入口。",
+      "riskTerms": "结算时，旧存款范围的当前资本足以覆盖该笔投注原始最大 LP 亏损，利润和亏损才都分给旧范围；否则两侧结果都分给当前全池，包括后入存款。零风险投注保留空范围回退规则。预期收益和风险都会随分配变化，结算顺序可能影响分配。已提款资本不再参与后续盈亏。发行方限制可能阻止付款。全池 LP 资本已取空时，后续利润归协议资本。",
+      "orderingRisk": "到期的可用资金可能在投注结果上链记录前提走。留存或后入资金可能分得或承担旧投注盈亏。24 小时锁定不能消除交易先后顺序带来的风险。",
+      "depositTerms": "每次入金新建一个 NFT，并独立锁定 24 小时，期间资金仍参与游戏盈亏。转让 NFT 不改变原有到期时间。",
+      "withdrawTerms": "选择存款 NFT 和当前余额的提款比例。提款成功后立即付给当前所有者，无需先申请或之后再领取。",
+      "partialRelock": "部分提款后，剩余存款重新锁定 24 小时；全部提款会关闭 NFT。展示金额为估算，签署的是比例，交易执行时会重新检查链上状态。",
+      "sharedLimit": "所有 NFT 共用池子的可用资本。投注或其他提款可能改变报价，不保证全部资金的到账期限。",
+      "loading": "正在读取链上状态…",
+      "unavailable": "暂时无法读取资金池或存款状态，请刷新后再签名。",
+      "empty": "当前快照中，此钱包没有存款 NFT。",
+      "deposits": "我的存款 NFT",
+      "owner": "当前所有者",
+      "initialOwner": "初始所有者",
+      "payer": "入金付款人",
+      "receiver": "提款收款人",
+      "withdrawAfter": "可提款时间",
+      "maxNow": "当前可执行",
+      "percent": "该 NFT 的提款比例（%）",
+      "estimated": "预计到账",
+      "close": "关闭空 NFT",
+      "withdraw": "立即提款",
+      "sign": "签署交易",
+      "confirm": "确认回执",
+      "refresh": "刷新链上状态",
+      "approveVault": "授权对应 LiquidityVault 转移本次入金资产，不申请 NFT 或 keeper 授权。",
+      "ownerChanged": "此钱包已不是该 NFT 的所有者，请刷新存款列表。",
+      "deposited": "入金已确认，新 NFT 开始独立的 24 小时锁定期。",
+      "withdrawn": "提款已确认，正在刷新剩余资本。",
+      "playerClaimed": "玩家款项已支付。",
+      "playerDebtDetail": "这是玩家未付赔款，与 LP 资本独立；只能支付到玩家本人地址。暂停期间仍可领取，但发行方限制可能阻止付款。",
+      "playerDebtUnavailable": "玩家应付款读取失败，不能视为零。",
+      "claimPlayer": "领取玩家款项",
+      "history": "入金、提款与 NFT 转让",
+      "historyDetail": "NFT 转让改变所有权，不代表 USDC 现金流。不知道受让人的取得成本时，不能计算其收益。付款人、初始所有者和提款收款人分别展示。",
+      "historyEmpty": "已加载范围内没有存款活动。",
+      "historyIncomplete": "历史记录尚不完整，已加载记录不能用来计算完整的钱包收益。",
+      "noCashFlow": "NFT 转让 · 无资产现金流",
+      "action": {
+        "deposit": "入金",
+        "withdraw": "提款",
+        "transfer": "NFT 转让"
+      },
+      "status": {
+        "ready": "当前可执行",
+        "paused": "资金池已暂停，LP 入金和提款暂不可用。",
+        "busy": "正在处理结算，请稍后刷新。",
+        "unbookedResult": "已收到游戏结果，尚未完成记账，LP 入金和提款暂不可用。",
+        "invalidAccounting": "会计状态无法核对或不一致，LP 操作已阻止。",
+        "unavailable": "权威状态读取失败，请刷新后再签名。",
+        "coolingDown": "24 小时锁定期尚未结束。",
+        "noLiquidity": "当前没有可执行的提款金额。",
+        "invalidPercent": "请输入大于 0 且不超过 100 的比例。",
+        "zeroWithdrawal": "该比例取整后为零，请提高比例，或以 100% 关闭已到期的空 NFT。",
+        "insufficientFreeCapital": "此比例超过当前可用资本，请使用当前最大值或刷新。"
+      }
     }
   },
   "ops": {

@@ -13,7 +13,7 @@ const execFileAsync = promisify(execFile);
 const RELEASE_LINE = {
   name: "v1.6",
   suffix: "v16",
-  architectureVersion: "v1.6-house-edge-allocation",
+  architectureVersion: "v1.6-nft-liquidity",
   schema: "SSOT_RELEASE_DIGEST_V16",
   scriptSuffix: "V16"
 };
@@ -84,11 +84,6 @@ function normalizeAddress(value) {
   return typeof value === "string" ? value.toLowerCase() : value;
 }
 
-function normalizeNumeric(value, fallback = 0) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-}
-
 function requireString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} is required`);
@@ -98,7 +93,15 @@ function requireString(value, label) {
 
 function requireNumeric(value, label) {
   const n = Number(value);
-  if (!Number.isFinite(n)) throw new Error(`${label} is required`);
+  if (
+    value === null ||
+    value === undefined ||
+    value === "" ||
+    typeof value === "boolean" ||
+    !Number.isSafeInteger(n) ||
+    n < 0
+  )
+    throw new Error(`${label} is required as a safe nonnegative integer`);
   return n;
 }
 
@@ -111,7 +114,6 @@ function buildEmbeddedAssets(manifest) {
   const seenAssets = new Set();
   const assets = [];
   for (const pool of sourcePools) {
-    if (!pool.asset || !pool.bank) continue;
     const asset = normalizeAddress(pool.asset);
     if (seenAssets.has(asset)) continue;
     seenAssets.add(asset);
@@ -119,7 +121,8 @@ function buildEmbeddedAssets(manifest) {
       symbol: requireString(pool.symbol, `pools[${pool.poolId ?? assets.length}].symbol`),
       decimals: requireNumeric(pool.decimals, `pools[${pool.poolId ?? assets.length}].decimals`),
       address: asset,
-      bank: normalizeAddress(pool.bank)
+      bank: normalizeAddress(pool.bank),
+      vault: normalizeAddress(pool.vault)
     });
   }
   return assets;
@@ -138,7 +141,9 @@ function buildEmbeddedGamesMeta(manifest) {
     slug: g.slug,
     label: g.label,
     module: normalizeAddress(g.module),
-    paramsEncoding: g.paramsEncoding
+    paramsEncoding: g.paramsEncoding,
+    maxBetCount: requireNumeric(g.maxBetCount, `game ${g.slug} maxBetCount`),
+    callbackGasLimit: requireNumeric(g.callbackGasLimit, `game ${g.slug} callbackGasLimit`)
   }));
 }
 
@@ -166,12 +171,13 @@ function buildEmbeddedSports(manifest) {
 function buildEmbeddedPools(manifest) {
   if (!Array.isArray(manifest.pools)) return undefined;
   return manifest.pools.map((pool, index) => ({
-    poolId: normalizeNumeric(pool.poolId),
-    domainId: normalizeNumeric(pool.domainId),
+    poolId: requireNumeric(pool.poolId, `pools[${index}].poolId`),
+    domainId: requireNumeric(pool.domainId, `pools[${index}].domainId`),
     domain: String(pool.domain ?? ""),
     active: Boolean(pool.active),
     asset: normalizeAddress(requireString(pool.asset, `pools[${index}].asset`)),
     bank: normalizeAddress(requireString(pool.bank, `pools[${index}].bank`)),
+    vault: normalizeAddress(requireString(pool.vault, `pools[${index}].vault`)),
     symbol: requireString(pool.symbol, `pools[${index}].symbol`),
     decimals: requireNumeric(pool.decimals, `pools[${index}].decimals`),
     sportsRisk: pool.sportsRisk
@@ -254,6 +260,8 @@ async function main() {
   if (
     manifest.architectureVersion !== RELEASE_LINE.architectureVersion ||
     latestSnapshot.architectureVersion !== RELEASE_LINE.architectureVersion ||
+    vectors.architectureVersion !== RELEASE_LINE.architectureVersion ||
+    abiIndex.architectureVersion !== RELEASE_LINE.architectureVersion ||
     releaseLock.schema !== RELEASE_LINE.schema
   ) {
     throw new Error(
@@ -301,7 +309,9 @@ async function main() {
         "--vectors",
         vectorsPath,
         "--abis-index",
-        abiIndexPath
+        abiIndexPath,
+        "--out",
+        path.join(repoRoot, "out")
       ],
       { cwd: repoRoot, env: verificationEnv }
     );
@@ -346,16 +356,8 @@ async function main() {
     name: chainName(chainId),
     releaseDigest: digest,
     isPlaceholder: false,
-    refundTimeoutSeconds:
-      Number.isFinite(Number(manifest.refundTimeoutSeconds)) &&
-      Number(manifest.refundTimeoutSeconds) > 0
-        ? Number(manifest.refundTimeoutSeconds)
-        : undefined,
-    defaultHouseEdgeBps:
-      Number.isFinite(Number(latestSnapshot.defaultHouseEdgeBps)) &&
-      Number(latestSnapshot.defaultHouseEdgeBps) >= 0
-        ? Number(latestSnapshot.defaultHouseEdgeBps)
-        : undefined,
+    refundTimeoutSeconds: requireNumeric(manifest.refundTimeoutSeconds, "refundTimeoutSeconds"),
+    defaultHouseEdgeBps: requireNumeric(latestSnapshot.defaultHouseEdgeBps, "defaultHouseEdgeBps"),
     contracts: {
       gameHub: normalizeAddress(addresses.gameHub),
       settlementRouter: normalizeAddress(addresses.settlementRouter),
@@ -364,8 +366,7 @@ async function main() {
       sportsRiskEngine: normalizeAddress(addresses.sportsRiskEngine),
       vrfHub: normalizeAddress(addresses.vrfHub),
       refRegistry: normalizeAddress(addresses.refRegistry),
-      refEngine: normalizeAddress(addresses.refEngine),
-      adapter: normalizeAddress(addresses.adapter)
+      refEngine: normalizeAddress(addresses.refEngine)
     },
     assets: embeddedAssets,
     games: embeddedGames,
@@ -373,6 +374,7 @@ async function main() {
     sports: embeddedSports,
     pools: embeddedPools,
     meta: {
+      architectureVersion: RELEASE_LINE.architectureVersion,
       blockNumber,
       schemaVersion: manifest.schemaVersion,
       generatedAt: manifest.generatedAt,

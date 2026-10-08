@@ -1,6 +1,8 @@
 """Mutation evidence must distinguish semantic test failures from broken test execution."""
 import importlib.util
 import unittest
+import tempfile
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -45,6 +47,47 @@ class MutationClassificationTests(unittest.TestCase):
         outcome, failures = RUNNER.classify_mutant(0, "[PASS] testValue() (gas: 100)\n")
         self.assertEqual(outcome, "survived")
         self.assertEqual(failures, [])
+
+
+class MutationRestorationTests(unittest.TestCase):
+    def run_fixture(self, effect):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "contract.sol"
+            source.write_bytes(b"original\n")
+            mutant = {"id": "LOCAL", "guarantee": "fixture", "tests": ["test.sol"],
+                      "patches": [("contract.sol", "original", "mutated")]}
+            with patch.object(RUNNER, "ROOT", root), patch.object(RUNNER.subprocess, "run",
+                    side_effect=lambda *a, **k: effect(source)):
+                try:
+                    RUNNER.run_mutant(mutant, root)
+                finally:
+                    self.final_content = source.read_bytes()
+                    preimage = root / "source-preimages/contract.sol"
+                    self.preimage = preimage.read_bytes() if preimage.exists() else None
+
+    def test_restores_source_after_test_error(self):
+        def fail(_source):
+            raise OSError("tool failed")
+        with self.assertRaises(OSError):
+            self.run_fixture(fail)
+        self.assertEqual(self.final_content, b"original\n")
+
+    def test_interrupt_restores_source(self):
+        def interrupt(_source):
+            raise KeyboardInterrupt
+        with self.assertRaises(KeyboardInterrupt):
+            self.run_fixture(interrupt)
+        self.assertEqual(self.final_content, b"original\n")
+
+    def test_preserves_concurrent_user_edit_and_preimage(self):
+        def edit(source):
+            source.write_bytes(b"user edit\n")
+            raise OSError("tool failed")
+        with self.assertRaisesRegex(RuntimeError, "Concurrent source changes preserved"):
+            self.run_fixture(edit)
+        self.assertEqual(self.final_content, b"user edit\n")
+        self.assertEqual(self.preimage, b"original\n")
 
 
 if __name__ == "__main__":

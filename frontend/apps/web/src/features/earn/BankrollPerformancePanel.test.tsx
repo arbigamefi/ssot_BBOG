@@ -68,7 +68,6 @@ const TRANSLATIONS: Record<string, string> = {
   "earn.performance.maxDrawdown": "Max drawdown",
   "earn.performance.pnlTrend": "Daily gross gaming revenue",
   "earn.performance.volumeTrend": "Daily volume",
-  "earn.performance.sharePriceReference": "Share price",
   "earn.performance.pending": "On-chain performance is not available yet.",
   "earn.performance.empty": "No vault activity yet on this chain.",
   "earn.performance.windowLabel": "Time range",
@@ -104,7 +103,6 @@ describe("BankrollPerformancePanel", () => {
         assetDecimals={6}
         assetSymbol="USDC"
         chainPerformance={chainPerformance}
-        sharePrice={1_012_300n}
         vaultAssets={1000000000n}
       />
     );
@@ -116,15 +114,12 @@ describe("BankrollPerformancePanel", () => {
     expect(screen.getByText("100 USDC")).toBeDefined(); // total wagered
     expect(screen.getByText("99 USDC")).toBeDefined(); // total payout
     expect(screen.getByText("1,200")).toBeDefined(); // total held bets
-    // Equity chart: cumulative trajectory with peak/trough + the chain-read
-    // share price surfaced as an honest stat (not an overlay on the data).
+    // Indexed gaming revenue is not a price for the deposit NFTs.
     expect(screen.getByText("Cumulative gross gaming revenue")).toBeDefined();
     expect(screen.getByText("Peak")).toBeDefined();
     expect(screen.getByText("Trough")).toBeDefined();
-    // Share price is now a last-value tag on the chart (sharePriceReference),
-    // not a duplicated bottom stat. 1_012_300 @ 6dp → 1.0123 USDC.
-    expect(screen.getByText("Share price")).toBeDefined();
-    expect(screen.getByText("1.0123 USDC")).toBeDefined();
+    expect(screen.queryByText("Share price")).toBeNull();
+    expect(screen.queryByText("1.0123 USDC")).toBeNull();
     // Lifetime on-chain headline and indexed chart labels are distinct.
     expect(screen.getByText("Lifetime · on-chain verified")).toBeDefined();
     expect(screen.getAllByText("Indexed · best-effort").length).toBeGreaterThan(0);

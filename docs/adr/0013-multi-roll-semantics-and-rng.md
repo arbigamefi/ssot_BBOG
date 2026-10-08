@@ -6,13 +6,13 @@
 ## Context
 
 Multi-roll games (Dice/Roulette/Keno) use:
+
 - a single VRF word used as a **seed**
 - deterministic per-roll RNG derived from that seed
 - early stopping via `stopGain` / `stopLoss`
 - partial refunds of unused escrow
 
-To reach full feature parity while staying institution-grade proof-friendly, we need a single,
-cross-game definition of:
+Games share one definition of:
 
 - stake specification (`amountPerRoll`, `betCount`)
 - `usedTurnover` vs `refundAmount`
@@ -27,6 +27,11 @@ We standardize multi-roll as a **stake specification** carried by every bet:
 - `betCount` (number of rolls requested)
 - `stopGain` (token units; `0` disables)
 - `stopLoss` (token units; `0` disables)
+
+GameHub checks `amountPerRoll >= Bank.minBetAmount()` and
+`1 <= betCount <= gameMaxBetCount <= 25` before collecting funds or requesting randomness.
+The selected USDC minimum is 10,000 raw units (0.01 USDC) per round: 25 minimum-size
+rounds require 0.25 USDC total. There is no separate position-total minimum.
 
 Define:
 
@@ -52,6 +57,7 @@ If stopped early, remaining escrow is refunded.
 ### Canonical RNG expansion
 
 Let:
+
 - `seed := randomWords[0]`
 - `domain := "SSOT_RNG_V1"`
 
@@ -65,14 +71,15 @@ If a module needs multiple independent random values per roll:
 
 Modules MUST NOT use external state (timestamp, blockhash, etc.) as randomness.
 
-## Implementation plan (PR-sized chunks)
+## Implementation
 
-1. Update module interface to return (at minimum) `(payoutGross, usedTurnover)` and optionally `(rollsExecuted, trace)`.
-2. Update Hub finalize path to compute `refundAmount = stake - usedTurnover` and pass it to Bank settlement.
-3. Update B3/B5 invariants and add E2E tests:
-   - refund correctness (`usedTurnover + refund == stake`)
-   - early stop triggers for stopGain and stopLoss
-4. Update reference model + diff tests to use the canonical RNG expansion.
+[IGameModule.resolve](../../src/core/interfaces/IGameModule.sol) returns exactly
+`(payoutGross, refundAmount)`. GameHub rejects refunds exceeding the accepted stake
+and total gross payout plus refund exceeding the reserve, then derives
+`usedTurnover = stake - refundAmount` for turnover allocation and Bank settlement.
+Modules use the shared [RNG](../../src/libs/RNG.sol) and
+[StopLogic](../../src/libs/StopLogic.sol); module differential and end-to-end tests
+check deterministic results, early stops and conservation of used and refunded stake.
 
 ## Acceptance
 
@@ -93,5 +100,5 @@ Modules MUST NOT use external state (timestamp, blockhash, etc.) as randomness.
 
 ## Links
 
-- Constitution: `docs/constitution/SSOT.v1.6.md`
-- Executable SSOT: `docs/constitution/ExecutableSSOT.v1.6.md`
+- [Constitution](../constitution/SSOT.v1.6.md)
+- [Executable SSOT](../constitution/ExecutableSSOT.v1.6.md)

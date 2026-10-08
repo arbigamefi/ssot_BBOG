@@ -62,8 +62,16 @@ frontend-check:
 
 test:
 	@$(MAKE) check-deps
-	python3 test/model/recovery_pocket_model.py
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --threads 1 -vvv
+
+# Freeze gate for the tree equivalence and differential suites at 4,096 fuzz runs (ADR-0034 amendment
+# 2026-10-07): RANGE_SUM, UNUSED_SUFFIX, the k > 0 settlement equivalence and the chained Vault differential.
+TREE_EQUIVALENCE_SUITES = test/unit/{AzuroRangeSumEquivalence,AzuroUnusedSuffixEquivalence,AzuroTreeProperties,LiquidityVaultAllocation,LiquidityVaultChainedDifferential}.t.sol
+
+.PHONY: tree-equivalence-release
+tree-equivalence-release:
+	@$(MAKE) check-deps
+	FOUNDRY_PROFILE=release forge test --match-path "$(TREE_EQUIVALENCE_SUITES)" -vv
 
 .PHONY: test-casino-admission
 test-casino-admission:
@@ -72,7 +80,6 @@ test-casino-admission:
 
 pr:
 	@$(MAKE) check-deps
-	python3 test/model/recovery_pocket_model.py
 	FOUNDRY_PROFILE=pr forge test --threads 1 --match-path "test/unit/*" -vvv
 	FOUNDRY_PROFILE=pr forge test --match-path "test/diff/*" -vvv
 	FOUNDRY_PROFILE=pr forge test --match-path "test/invariants/*" -vvv
@@ -131,7 +138,7 @@ sports-phase0-readiness:
 
 
 # The only supported deployment/release line.
-.PHONY: deploy-v16 deploy-dryrun verify-v16 verify-helpers-v16 sports-dry-run-v16 release-v16 release-governance-check safe-acceptance-v16
+.PHONY: deploy-v16 deploy-dryrun verify-v16 verify-helpers-v16 sports-dry-run-v16 release-v16 release-governance-check release-domain-check safe-acceptance-v16
 
 deploy-dryrun:
 	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV16.s.sol:DeployV16 --rpc-url "$$RPC_URL" -vvv
@@ -146,6 +153,7 @@ release-governance-check:
 release: release-v16
 release-v16:
 	@$(MAKE) release-governance-check
+	@$(MAKE) release-domain-check
 	@$(MAKE) release-digest
 	@$(MAKE) release-notes
 	@$(MAKE) release-frontend-manifest
@@ -157,8 +165,16 @@ release-v16:
 release-digest:
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/ReleaseDigestV16.s.sol:ReleaseDigestV16 --account "$${RELEASE_ACCOUNT:?Set the approved release signer keystore account}" -vvv
 
+# Fails before anything is signed when the snapshot lies outside its chain's accepted first-callback domain:
+# offline snapshot checks, then the live token and VRF provider at one frozen block.
+release-domain-check:
+	@test -n "$$SNAPSHOT_PATH" -a -n "$$RPC_URL" || { echo "Set chain-specific SNAPSHOT_PATH and RPC_URL"; exit 1; }
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyCallbackDomainV16.s.sol:VerifyCallbackDomainV16 -vvv
+	$(PYTHON) script/release/verify_callback_provider.py
+
 release-verify:
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyReleaseV16.s.sol:VerifyReleaseV16 -vvv
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyCallbackDomainV16.s.sol:VerifyCallbackDomainV16 -vvv
 
 release-check:
 	PYTHON="$(PYTHON)" bash script/release/check_release.sh

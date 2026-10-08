@@ -3,7 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GameMeta } from "./model";
 import { useCasinoRound, type UseCasinoRoundArgs } from "./use-casino-round";
 
-const mocks = vi.hoisted(() => ({ planNow: vi.fn(), executeNow: vi.fn(), reset: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  planNow: vi.fn(),
+  executeNow: vi.fn(),
+  reset: vi.fn(),
+  houseEdgeBps: 200,
+  quoteFailed: false,
+  recovery: vi.fn()
+}));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@ssot/ui", () => ({ toast: { error: vi.fn() } }));
 vi.mock("../../betting/usePlaceBetStepper", () => ({
@@ -15,8 +22,24 @@ vi.mock("./feedback", async (importOriginal) => ({
   useVrfTimeoutToast: vi.fn()
 }));
 vi.mock("./casino-round", () => ({
-  useCasinoVrfQuote: () => ({ phase: "ready" }),
-  useCasinoRoundWatcher: () => ({ phase: "idle" })
+  useCasinoVrfQuote: () => ({
+    phase: "ready",
+    quote: 1n,
+    config: mocks.quoteFailed
+      ? undefined
+      : { maxBetCount: 25, houseEdgeBps: mocks.houseEdgeBps, callbackGasLimit: 2_000_000 },
+    quoteError: mocks.quoteFailed ? "RPC failed" : undefined,
+    refresh: vi.fn()
+  }),
+  useCasinoRoundWatcher: () =>
+    mocks.quoteFailed
+      ? {
+          phase: "refundable",
+          bet: { betId: 7n, state: "pendingVrf", houseEdgeBps: 200 },
+          manualRefundAvailable: true,
+          manualRefund: mocks.recovery
+        }
+      : { phase: "idle" }
 }));
 const game: GameMeta = {
   gameId: "0x1111111111111111111111111111111111111111",
@@ -76,9 +99,25 @@ const props: UseCasinoRoundArgs = {
 describe("casino submission intent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.houseEdgeBps = 200;
+    mocks.quoteFailed = false;
     vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
   });
   afterEach(() => vi.unstubAllEnvs());
+  it("preserves an existing PendingVRF refund while a fresh fee read fails", async () => {
+    mocks.quoteFailed = true;
+    const { result } = renderHook(() => useCasinoRound(props));
+    expect(result.current.houseEdgeBps).toBeUndefined();
+    expect(result.current.availability).toBe("gameUnavailable");
+    expect(result.current.activeBet).toMatchObject({ betId: 7n, houseEdgeBps: 200 });
+    expect(result.current.manualRefundAvailable).toBe(true);
+    result.current.manualRefund?.();
+    expect(mocks.recovery).toHaveBeenCalledOnce();
+    await act(async () => {
+      await result.current.placeBet();
+    });
+    expect(mocks.planNow).not.toHaveBeenCalled();
+  });
   it("blocks two immediate clicks before React can render a pending state", async () => {
     let finish!: (plan: any) => void;
     mocks.planNow.mockImplementation(
@@ -98,6 +137,38 @@ describe("casino submission intent", () => {
       finish({ preview: {} });
       await first;
     });
+    expect(mocks.executeNow).toHaveBeenCalledOnce();
+  });
+  it("invalidates a pending intent when governance changes the displayed fee, then signs the refreshed fee", async () => {
+    let finish!: (plan: any) => void;
+    mocks.planNow.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    const { result, rerender } = renderHook(() => useCasinoRound(props));
+    let first!: Promise<void>;
+    act(() => {
+      first = result.current.placeBet();
+    });
+    expect(mocks.planNow).toHaveBeenLastCalledWith(
+      expect.objectContaining({ maxHouseEdgeBps: 200 })
+    );
+    mocks.houseEdgeBps = 300;
+    rerender();
+    await act(async () => {
+      finish({ preview: {} });
+      await first;
+    });
+    expect(mocks.executeNow).not.toHaveBeenCalled();
+    mocks.planNow.mockResolvedValueOnce({ preview: {} });
+    await act(async () => {
+      await result.current.placeBet();
+    });
+    expect(mocks.planNow).toHaveBeenLastCalledWith(
+      expect.objectContaining({ maxHouseEdgeBps: 300 })
+    );
     expect(mocks.executeNow).toHaveBeenCalledOnce();
   });
   it("discards an in-flight quote after the user changes the amount", async () => {

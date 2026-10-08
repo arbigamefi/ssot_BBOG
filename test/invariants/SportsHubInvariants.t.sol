@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {BankTestBase, TestRandomnessConsumer, DirectRouterFixture} from "../utils/BankTestBase.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 import "forge-std/StdInvariant.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
@@ -12,7 +14,7 @@ import {SportsRiskEngine} from "../../src/core/SportsRiskEngine.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
-contract SportsHubHandler is Test {
+contract SportsHubHandler is BankTestBase {
     MockERC20 public asset;
     Bank public bank;
     PoolRegistry public registry;
@@ -248,7 +250,7 @@ contract SportsHubHandler is Test {
     }
 }
 
-contract SportsHubInvariants is StdInvariant, Test {
+contract SportsHubInvariants is StdInvariant, BankTestBase {
     MockERC20 internal asset;
     Bank internal bank;
     PoolRegistry internal registry;
@@ -275,7 +277,7 @@ contract SportsHubInvariants is StdInvariant, Test {
         oddsSigner = vm.addr(oddsSignerKey);
 
         asset = new MockERC20("USD Coin", "USDC", 6);
-        bank = new Bank(address(asset), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6, 1);
+        bank = new Bank(address(asset), gov, 1000, 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
         riskEngine = new SportsRiskEngine(gov, 1_000e6, 2_000e6, 20_000e6, 20_000e6, 20_000e6);
@@ -286,6 +288,7 @@ contract SportsHubInvariants is StdInvariant, Test {
         registry.setHubRegistered(address(sportsHub), true);
         registry.setHubAllowedForPool(SPORTS_POOL_ID, address(sportsHub), true);
         bank.setSettlementRouterOnce(address(router));
+        _bindTestConsumer(bank);
         sportsHub.setOddsSigner(oddsSigner, true);
         sportsHub.setResultReporter(reporter, true);
         uint64 marketId = sportsHub.createMarket(
@@ -303,8 +306,8 @@ contract SportsHubInvariants is StdInvariant, Test {
 
         asset.mint(gov, 1_000_000e6);
         vm.startPrank(gov);
-        asset.approve(address(bank), type(uint256).max);
-        bank.deposit(500_000e6, gov);
+        asset.approve(address(bank.vault()), type(uint256).max);
+        LiquidityVault(bank.vault()).addDepositFor(gov, 500_000e6);
         vm.stopPrank();
 
         handler = new SportsHubHandler(

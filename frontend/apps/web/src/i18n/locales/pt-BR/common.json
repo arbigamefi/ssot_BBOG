@@ -692,71 +692,28 @@
       "unsupportedWriteAsset": "Fluxos de escrita exigem um pool de cassino ativo para o ativo selecionado.",
       "positiveAmount": "O valor deve ser positivo.",
       "insufficientWalletBalance": "O valor excede o saldo da carteira conectada.",
-      "exceedsMintable": "A quantidade de cotas excede o que pode ser emitido com o saldo da carteira conectada.",
-      "exceedsWithdrawable": "O valor excede o saldo atualmente sacável.",
-      "exceedsRedeemable": "O valor excede as cotas atualmente resgatáveis.",
-      "allowanceNotConfirmed": "A aprovação foi confirmada, mas a allowance do Bank ainda não atualizou. Tente depositar novamente em alguns segundos."
+      "exceedsWithdrawable": "O valor excede o saldo atualmente sacável."
     },
     "toast": {
       "processing": "Processando transação do Bank...",
-      "minted": "Emitiu {amount} cotas",
-      "redeemed": "Resgatou {amount} cotas",
       "deposited": "Depositou {amount} {symbol}",
       "withdrew": "Sacou {amount} {symbol}",
       "viewTransaction": "Ver transação",
       "failed": "Falha na transação"
-    },
-    "units": {
-      "shares": "Cotas",
-      "sharesLower": "cotas"
     },
     "format": {
       "assetFallback": "Ativo"
     },
     "hero": {
       "eyebrow": "Fornecedor de bankroll",
-      "bankAddress": "Endereço do banco"
-    },
-    "metrics": {
-      "sharePrice": {
-        "label": "Valor / 1k cotas"
-      },
-      "totalShares": {
-        "label": "Cotas ativas",
-        "detail": "Cotas LP ativas; as cotas de saída precificadas já foram queimadas."
-      }
+      "bankAddress": "Endereço do Vault",
+      "disclosure": "O capital e as obrigações são obtidos de registros on-chain do Vault e do Bank. As estatísticas dos jogos não representam o retorno de cada NFT. Os gráficos diários usam dados indexados e podem apresentar atraso."
     },
     "summary": {
       "capitalPosture": {
         "title": "Livro de reservas verificável",
         "readModel": "leitura on-chain",
-        "totalAssets": "NAV ativo do cofre",
-        "loading": "Lendo o snapshot mais recente do Bank…",
-        "detail": "Capital atual das cotas ativas; exclui reservas históricas e obrigações.",
-        "totalAssetsDetail": "Capital atual das cotas ativas; exclui reservas históricas e obrigações."
-      },
-      "freeReserve": {
-        "label": "Reserva livre",
-        "detail": "Capital ativo não reservado para posições abertas."
-      },
-      "sharePrice": {
-        "label": "Preço por cota"
-      },
-      "totalShares": {
-        "label": "Cotas ativas",
-        "detail": "Cotas LP ativas; as cotas de saída precificadas já foram queimadas."
-      },
-      "position": {
-        "label": "Sua posição",
-        "detail": "Equivalente em ativos da carteira conectada."
-      },
-      "liquidity": {
-        "label": "Política de reserva de risco",
-        "detail": "Reserva de risco {floor} · Bank {bank}"
-      },
-      "reserved": {
-        "label": "Passivos reservados do capital ativo",
-        "detail": "Reserva livre {freeReserve} · Reserva de risco {riskReserve}"
+        "loading": "Lendo o snapshot mais recente do Bank…"
       }
     },
     "actions": {
@@ -773,13 +730,8 @@
         },
         "withdraw": {
           "label": "Sacar",
-          "description": "Saia informando um valor em ativos ou uma quantidade de cotas."
+          "description": "Selecione um NFT de depósito e a porcentagem que deseja sacar."
         }
-      },
-      "amountMode": {
-        "label": "Modo de entrada",
-        "assets": "Por ativos",
-        "shares": "Por cotas"
       },
       "max": {
         "walletBalance": "Saldo da carteira",
@@ -789,29 +741,24 @@
       "submit": {
         "executing": "Executando",
         "deposit": "Depositar ativos",
-        "mint": "Emitir cotas",
-        "withdraw": "Sacar ativos",
-        "redeem": "Resgatar cotas"
+        "withdraw": "Sacar ativos"
       },
       "balance": {
         "wallet": "Saldo da carteira",
-        "mintable": "Cotas disponíveis para emitir",
         "withdrawable": "Disponível para sacar",
-        "redeemable": "Cotas resgatáveis",
         "pending": "Carregando",
         "useMax": "Máx."
       },
       "trace": {
         "deposit": "Rastreamento de depósito",
         "withdraw": "Rastreamento de saque",
-        "redeem": "Rastreamento de resgate",
         "view": "Ver status da transação",
         "close": "Fechar",
         "statusDialog": "Status da transação do Bank"
       },
       "depositsClosed": {
         "title": "Novos depósitos estão fechados",
-        "body": "Este pool não aceita novos depósitos. Pedidos de saída e resgates continuam disponíveis conforme as regras do pool."
+        "body": "Este pool não aceita novos depósitos. Os saques dos NFTs existentes seguem as regras do contrato."
       }
     },
     "flows": {
@@ -820,27 +767,16 @@
       },
       "deposit": {
         "preflight": "Valide os dados e simule o fluxo.",
-        "approveTitle": "Aprovar Bank",
+        "approveTitle": "Aprovar Vault",
         "approveDescription": "Define a allowance ERC20.",
         "depositTitle": "Depositar ativos",
-        "depositDescription": "Envia Bank.deposit."
-      },
-      "mint": {
-        "preflight": "Valide a quantidade de cotas e os ativos necessários.",
-        "mintTitle": "Emitir cotas",
-        "mintDescription": "Envia Bank.mint."
+        "depositDescription": "Cria um depósito com NFT próprio."
       },
       "direct": {
         "submit": "Enviar",
         "confirm": "Confirmar",
         "validate": "Validar restrições.",
         "receipt": "Aguardar recibo."
-      },
-      "withdraw": {
-        "submit": "Envia Bank.withdraw."
-      },
-      "redeem": {
-        "submit": "Envia Bank.redeem."
       }
     },
     "trace": {
@@ -855,26 +791,9 @@
     "risk": {
       "title": "Verificações de risco",
       "readModel": "fonte mista",
-      "custody": {
-        "label": "Limite de custódia",
-        "title": "Bank não custodial.",
-        "detail": "O capital do provedor fica no contrato Bank. A UI separa reservas verificáveis de estimativas indexadas."
-      },
-      "buffer": {
-        "label": "Buffer de pagamento",
-        "detail": "Reserva livre após passivos reservados ({reserved}). Compare com controles de pagamento máximo antes de abrir depósitos públicos."
-      },
-      "liquidityFloor": {
-        "label": "Buffer de saque",
-        "detail": "Buffer de {bps} para resgates do protocolo e de indicações, atualmente {amount}. Resgates LP já precificados e valores devidos a jogadores são isentos."
-      },
       "release": {
         "label": "Digest do release",
         "detail": "Identidade do ativo, endereço do Bank e leituras da UI são ancorados ao release manifest ativo."
-      },
-      "payables": {
-        "label": "Contas a pagar",
-        "detail": "Pagáveis externos {externalPayables} · Ativos {assets}"
       }
     },
     "performance": {
@@ -891,8 +810,6 @@
       "players": "Jogadores",
       "activityTrend": "Atividade diária do cofre",
       "volumeTrend": "Volume diário",
-      "sharePriceReference": "Preço da cota",
-      "currentSharePrice": "Preço atual da cota",
       "empty": "Nenhuma atividade do cofre nesta rede ainda.",
       "pending": "Os dados de desempenho on-chain ainda não estão disponíveis.",
       "windowLabel": "Período",
@@ -904,95 +821,89 @@
       },
       "peak": "Pico",
       "trough": "Vale",
-      "maxDrawdown": "Drawdown máximo"
+      "maxDrawdown": "Drawdown máximo",
+      "note": "A receita bruta dos jogos é o volume de apostas do Bank menos os pagamentos brutos, e não o retorno de um NFT específico. Os resultados são atribuídos aos depósitos conforme a faixa de liquidez registrada. Os dados diários indexados podem apresentar atraso; não há promessa de rendimento."
     },
     "ledger": {
-      "eyebrow": "Livro do provedor",
-      "title": "Depósitos, saídas e recuperação",
-      "readModel": "Eventos de caixa do Bank",
-      "connectWallet": "Conecte uma carteira para ver seu histórico como provedor do Bank.",
-      "loading": "Carregando livro do provedor…",
       "loadingMore": "Carregando mais…",
-      "loadMore": "Carregar mais",
-      "loadedRows": "{count} linhas carregadas",
-      "end": "Fim do livro",
-      "empty": "Nenhum fluxo de caixa LP encontrado para esta carteira.",
-      "note": "Somente depósitos, pagamentos de saída e recuperação histórica efetivos são fluxos de caixa. Solicitações, ativação e recuperação disponível não são recebimentos. Doações ao Bank não contam como dinheiro recebido. O preço por cota só aparece para eventos com cotas.",
-      "block": "Bloco {blockNumber}",
-      "actions": {
+      "loadMore": "Carregar mais"
+    },
+    "nft": {
+      "poolCapital": "Capital dos LPs",
+      "poolCapitalDetail": "Valor total atual dos NFTs de depósito no Vault.",
+      "freeCapital": "Disponível para saque",
+      "freeCapitalDetail": "Compartilhado por todos os depósitos; os limites individuais de saque não podem ser somados.",
+      "lockedCapital": "Capital que cobre apostas abertas",
+      "lockedCapitalDetail": "Capital líquido dos LPs reservado até a liquidação das apostas existentes.",
+      "pendingPrincipal": "Principal dos jogadores pendente",
+      "pendingPrincipalDetail": "Valores de apostas ainda não liquidadas, mantidos separadamente no Bank.",
+      "grossReserve": "Pagamentos pendentes máximos",
+      "grossReserveDetail": "Reserva bruta de todas as posições abertas.",
+      "bettingCapital": "Capital para apostas",
+      "bettingCapitalDetail": "Capital dos LPs somado ao principal pendente dos jogadores; usado no limite de risco das apostas.",
+      "gameHoldDetail": "A receita dos jogos não representa o retorno de um NFT específico.",
+      "vaultCash": "Saldo de tokens do Vault",
+      "bankCash": "Saldo de tokens do Bank",
+      "playerDebt": "Pagamento devido ao jogador",
+      "protocolDebt": "Taxas devidas ao protocolo",
+      "referralDebt": "Recompensas de indicação devidas",
+      "vaultSurplus": "Excedente não alocado do Vault",
+      "bankSurplus": "Excedente não alocado do Bank",
+      "surplusDetail": "Transferências de tokens não previstas não integram o capital dos NFTs e não podem ser sacadas aqui.",
+      "riskTerms": "Na liquidação, a faixa de depósitos anteriores recebe tanto lucros quanto perdas somente se seu capital atual cobrir a perda máxima original dos LPs nessa aposta. Caso contrário, ambos são distribuídos ao pool atual, incluindo depósitos posteriores. Apostas sem risco mantêm a regra para faixa vazia. Retorno esperado e risco acompanham essa distribuição, que pode variar com a ordem de liquidação. O capital sacado deixa de participar. Restrições do emissor podem impedir pagamentos. Sem capital de LPs, lucros posteriores vão para o capital do protocolo.",
+      "orderingRisk": "Após o fim do bloqueio, o capital disponível pode ser sacado antes de o resultado de uma aposta ser registrado na blockchain. O capital que permanece ou entra depois pode receber ganhos ou absorver perdas de apostas anteriores. O bloqueio de 24 horas não elimina o risco causado pela ordem das transações.",
+      "depositTerms": "Cada depósito cria um NFT separado e inicia seu próprio bloqueio de saque de 24 horas. Durante esse período, o capital participa dos resultados dos jogos. Transferir um NFT mantém seu prazo original.",
+      "withdrawTerms": "Selecione um NFT de depósito e uma porcentagem do seu valor atual. Um saque bem-sucedido paga imediatamente ao proprietário atual. Não é necessário fazer uma solicitação de saque nem resgatar o valor depois.",
+      "partialRelock": "Um saque parcial bloqueia o depósito restante por mais 24 horas. Um saque total encerra o NFT. O valor é uma estimativa; sua transação assina uma porcentagem e passa por uma nova verificação do estado atual da rede.",
+      "sharedLimit": "Todos os NFTs compartilham o capital disponível do pool. As cotações podem mudar quando apostas ou outros saques são executados; não há prazo garantido para pagamento integral.",
+      "loading": "Lendo o estado atual on-chain…",
+      "unavailable": "O estado atual do pool ou do depósito está indisponível. Atualize antes de assinar.",
+      "empty": "Esta carteira não possui NFTs de depósito no registro consultado.",
+      "deposits": "Seus NFTs de depósito",
+      "owner": "Proprietário atual",
+      "initialOwner": "Proprietário inicial",
+      "payer": "Pagador dos ativos",
+      "receiver": "Destinatário do pagamento",
+      "withdrawAfter": "Saque a partir de",
+      "maxNow": "Disponível para saque agora",
+      "percent": "Porcentagem deste NFT (%)",
+      "estimated": "Pagamento estimado",
+      "close": "Encerrar NFT sem saldo",
+      "withdraw": "Sacar agora",
+      "sign": "Assinar transação",
+      "confirm": "Confirmar recebimento",
+      "refresh": "Atualizar estado on-chain",
+      "approveVault": "Autorize o LiquidityVault vinculado a transferir estes ativos. Não é solicitada autorização para NFTs nem para um keeper.",
+      "ownerChanged": "Esta carteira não é mais proprietária do NFT selecionado. Atualize a lista de depósitos.",
+      "deposited": "Depósito confirmado. O novo NFT tem seu próprio bloqueio de 24 horas.",
+      "withdrawn": "Saque confirmado. Atualizando o capital restante.",
+      "playerClaimed": "Pagamento ao jogador confirmado.",
+      "playerDebtDetail": "Este prêmio ainda não pago ao jogador é separado do capital dos LPs. O pagamento é enviado apenas ao endereço do jogador. Ele pode ser resgatado enquanto o pool estiver pausado, sujeito às restrições do emissor.",
+      "playerDebtUnavailable": "Não foi possível consultar o valor devido ao jogador; ele não é considerado zero.",
+      "claimPlayer": "Resgatar pagamento ao jogador",
+      "history": "Depósitos, saques e transferências de NFTs",
+      "historyDetail": "Transferências de NFTs mudam a titularidade sem transferir os tokens que os lastreiam. Não é possível calcular o retorno do destinatário de um NFT sem seu custo de aquisição. O pagador, o proprietário inicial e o destinatário do saque são mostrados separadamente.",
+      "historyEmpty": "Nenhuma movimentação de depósito foi encontrada no intervalo carregado.",
+      "historyIncomplete": "O histórico está incompleto. Os registros carregados não permitem determinar o retorno total da carteira.",
+      "noCashFlow": "Transferência de NFT · sem fluxo de ativos",
+      "action": {
         "deposit": "Depósito",
         "withdraw": "Saque",
-        "recovery": "Recuperação",
-        "donation": "Doação"
+        "transfer": "Transferência de NFT"
       },
-      "summary": {
-        "deposited": "Depósitos carregados",
-        "withdrawn": "Saques carregados",
-        "openValue": "Valor LP conhecido",
-        "shares": "Cotas"
-      },
-      "columns": {
-        "type": "Tipo",
-        "time": "Hora",
-        "assets": "Ativos",
-        "shares": "Cotas",
-        "sharePrice": "Preço da cota",
-        "tx": "Tx"
-      },
-      "incomplete": "O histórico de fluxos de caixa está incompleto. Os totais cobrem apenas os registros carregados."
-    },
-    "overview": {
-      "totalAssets": {
-        "label": "NAV do cofre atual",
-        "detail": "NAV verificável do cofre Bank selecionado a partir da release ativa."
+      "status": {
+        "ready": "Disponível",
+        "paused": "Pool pausado; depósitos e saques dos LPs estão indisponíveis.",
+        "busy": "A liquidação está em andamento. Atualize em instantes.",
+        "unbookedResult": "Um resultado de jogo já recebido aguarda contabilização. Depósitos e saques dos LPs estão temporariamente indisponíveis.",
+        "invalidAccounting": "As verificações contábeis estão indisponíveis ou apresentam inconsistências. As operações dos LPs estão bloqueadas.",
+        "unavailable": "Não foi possível consultar o estado oficial na rede. Atualize antes de assinar.",
+        "coolingDown": "O bloqueio de saque de 24 horas ainda não terminou.",
+        "noLiquidity": "Não há valor disponível para saque neste momento.",
+        "invalidPercent": "Informe uma porcentagem maior que 0 e menor ou igual a 100.",
+        "zeroWithdrawal": "Esta porcentagem resulta em zero ativos após o arredondamento. Aumente-a ou use 100% para encerrar um NFT sem saldo cujo bloqueio já tenha terminado.",
+        "insufficientFreeCapital": "Esta porcentagem excede o capital disponível. Use o máximo atual ou atualize."
       }
-    },
-    "async": {
-      "inactivePool": "Este pool está inativo e fechado para novas apostas e depósitos. Pedidos de resgate, cancelamentos permitidos e recebimento de valores devidos continuam disponíveis conforme as regras do contrato.",
-      "requestDetail": "Solicite a saída com cotas da carteira. A ativação fixa o dinheiro disponível imediatamente e preserva os direitos históricos de recuperação. Apostas antigas pendentes não bloqueiam lotes posteriores.",
-      "pendingRisk": "Cotas na fila ainda participam dos resultados ativos. A ativação separa apenas o risco e a recuperação da saída. Cotas mantidas continuam financiando apostas. O dinheiro pode ser zero e a recuperação é incerta.",
-      "queuedTitle": "Pedido na fila",
-      "queuedDetail": "As cotas permanecem ativas até a ativação. Apostas antigas pendentes não bloqueiam este lote. O dinheiro é precificado na ativação; a recuperação histórica permanece separada. A reserva disponível e pausas de emergência continuam valendo; não há prazo garantido para pagamento integral em dinheiro.",
-      "eligibleAt": "Ativação possível a partir de: {time}. Não é um prazo garantido de ativação ou pagamento.",
-      "remainingHolds": "Apostas anteriores ainda abertas: {count}",
-      "cancelDetail": "Cancele para devolver todas as cotas na fila enquanto o lote não for ativado, mesmo após o horário mínimo. Solicitações ativadas não podem ser canceladas. A transação verifica o estado atual.",
-      "cancel": "Cancelar cotas na fila",
-      "paused": "O pool está pausado. Solicitações e cancelamentos na fila continuam disponíveis; depósitos, saques e recuperação aguardam a retomada.",
-      "depositTerms": "Depósitos compram capital ativo pelo valor contábil completo, incluindo riscos antigos e novos ainda abertos. Direitos de saída já separados não são incluídos.",
-      "claimDetail": "Este dinheiro está reservado para sua saída. Resgatar todas as cotas precificadas paga o valor atribuído e preserva os direitos históricos de recuperação.",
-      "totalEquityDetail": "Valor da carteira + estimativa na fila + dinheiro precificado. A recuperação histórica aparece separadamente e não integra esta estimativa.",
-      "queuedEquity": "Cotas na fila / dinheiro estimado",
-      "requested": "Pedido de resgate confirmado. As cotas na fila permanecem ativas até a ativação do lote.",
-      "shareUnitDetail": "Valor contábil ativo por cota LP. Direitos históricos de recuperação são separados das cotas ativas.",
-      "totalEquity": "Valor LP ativo e precificado (estimativa)",
-      "queuedQuoteDetail": "Cotação on-chain do dinheiro se ativado agora; exclui recuperação histórica e pode mudar.",
-      "receiver": "Destinatário do dinheiro: {receiver}",
-      "exitLiabilities": "Dinheiro de saída e pagamentos a jogadores reservados"
-    },
-    "recovery": {
-      "title": "Direitos históricos de recuperação",
-      "detail": "Estes direitos pertencem a pedidos de saída ativados. Cotas mantidas recuperam capital automaticamente na liquidação. Um saldo de cotas zero não apaga os direitos de saída.",
-      "loading": "Buscando direitos históricos…",
-      "incomplete": "A busca histórica está incompleta. Carregue as páginas restantes antes de avaliar toda a posição.",
-      "error": "Não foi possível carregar a recuperação histórica. Seus direitos não são considerados zero.",
-      "empty": "Nenhum direito histórico encontrado na busca completa.",
-      "epoch": "Época {epoch}",
-      "units": "Cotas de saída ativadas",
-      "claimable": "Dinheiro de recuperação disponível",
-      "upperBound": "Limite superior da recuperação restante",
-      "upperBoundDetail": "O limite não é dinheiro disponível agora nem promessa de pagamento.",
-      "remainingHolds": "Apostas anteriores ainda abertas: {count}",
-      "settled": "Esta época foi totalmente liquidada. O dinheiro atribuído e não resgatado continua sendo seu.",
-      "claim": "Resgatar recuperação",
-      "claimed": "Pagamento de recuperação confirmado.",
-      "loadMore": "Carregar mais direitos históricos",
-      "refresh": "Atualizar direitos históricos",
-      "receiver": "O dinheiro será enviado a {receiver}. Esta ação não autoriza um keeper a resgatar por você.",
-      "incompleteReturn": "Há direitos históricos pendentes ou ainda não identificados; a posição exibida está incompleta.",
-      "backing": "Reserva histórica",
-      "backingDetail": "Excluída do capital ativo; cobre obrigações anteriores e recuperação não resgatada.",
-      "donationNote": "Doações ao Bank não são dinheiro recebido externamente pelo titular.",
-      "snapshot": "Snapshot: bloco {block}, {time}. Atualize para ver novas atividades."
     }
   },
   "casino": {
@@ -1195,7 +1106,9 @@
         "rolls": {
           "label": "Rolagens",
           "total": "Total: {amount} {symbol}",
-          "aria": "Número de rolagens"
+          "aria": "Número de rolagens",
+          "limit": "Até {count} rodadas por posição neste jogo",
+          "loadingLimit": "Consultando o limite de rodadas deste jogo"
         },
         "advanced": {
           "label": "Avançado",
@@ -1226,7 +1139,8 @@
           "preparing": "PREPARANDO RODADA...",
           "placeBet": "APOSTAR",
           "revealing": "Revelando..."
-        }
+        },
+        "maxSummary": "{perRound} por rodada · {total} no total"
       },
       "roundStatus": {
         "title": "Status da rodada",
@@ -1867,6 +1781,21 @@
             }
           ]
         }
+      },
+      "poolStatus": {
+        "full": "O pool atingiu o limite de posições abertas. Atualize após a liquidação de uma aposta existente.",
+        "fullLabel": "Pool no limite de capacidade",
+        "noLiquidity": "O pool não tem capital dos LPs disponível para aceitar novas apostas.",
+        "noLiquidityLabel": "Sem capital dos LPs",
+        "invalidAccounting": "A contabilidade do pool está indisponível ou apresenta inconsistências. Novas apostas estão desativadas.",
+        "invalidAccountingLabel": "Contabilidade indisponível",
+        "gameUnavailable": "Não foi possível confirmar a habilitação do jogo ou a cotação de sua taxa. Atualize antes de apostar.",
+        "gameUnavailableLabel": "Configurações do jogo indisponíveis",
+        "invalidCount": "A quantidade de rodadas selecionada excede o limite atual deste jogo. Escolha menos rodadas.",
+        "invalidCountLabel": "Ajustar quantidade de rodadas"
+      },
+      "feedback": {
+        "houseEdgeChanged": "A margem atual da casa excede a taxa que você aceitou. Atualize e confira a taxa antes de apostar novamente."
       }
     }
   },
@@ -2853,7 +2782,7 @@
         },
         "bankPosition": {
           "label": "Valor no cofre",
-          "detail": "Valor atual das suas cotas de bankroll."
+          "detail": "Valor atual dos NFTs de depósito; uma página parcial nunca é exibida como se fosse a posição completa."
         },
         "refundCredit": {
           "label": "Saldo de reembolso",
@@ -2894,13 +2823,14 @@
         "eyebrow": "Ativos",
         "title": "Ativos da carteira",
         "loading": "Carregando saldos.",
-        "shares": "{amount} cotas",
         "columns": {
           "asset": "Ativo",
           "wallet": "Carteira",
           "bankPosition": "Valor no cofre",
-          "allowance": "Aprovado"
-        }
+          "allowance": "Valor autorizado ao Vault"
+        },
+        "nftCount": "{count} NFTs de depósito",
+        "incomplete": "Abra a página de liquidez para ver a posição completa"
       },
       "refund": {
         "title": "Saldo de reembolso",

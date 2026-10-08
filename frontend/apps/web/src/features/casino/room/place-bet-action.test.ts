@@ -77,6 +77,7 @@ function baseArgs(overrides: Partial<Parameters<typeof executeGamePlaceBetAction
     onBeforeExecute: vi.fn(),
     betAmount: "10",
     betCount: 1,
+    maxHouseEdgeBps: 200,
     stopGain: 0,
     stopLoss: 0,
     diceTarget: 50,
@@ -231,6 +232,24 @@ describe("game room place bet action", () => {
     expect(args.executeNow).toHaveBeenCalledWith(plannedBet);
   });
 
+  it("signs precisely the displayed live fee ceiling", async () => {
+    const args = baseArgs({ maxHouseEdgeBps: 200 });
+    await executeGamePlaceBetAction(args);
+    expect(args.planNow).toHaveBeenCalledWith(expect.objectContaining({ maxHouseEdgeBps: 200 }));
+  });
+  it.each([undefined, 0, 501, NaN])(
+    "does not plan or sign without a valid read fee (%s)",
+    async (maxHouseEdgeBps) => {
+      const args = baseArgs({
+        maxHouseEdgeBps,
+        messages: { houseEdgeUnavailable: "Refresh current fee" }
+      });
+      await executeGamePlaceBetAction(args);
+      expect(mocks.toastError).toHaveBeenCalledWith("Refresh current fee");
+      expect(args.planNow).not.toHaveBeenCalled();
+      expect(args.executeNow).not.toHaveBeenCalled();
+    }
+  );
   it("does not expose raw unexpected errors as player copy", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {

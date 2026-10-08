@@ -69,7 +69,14 @@ export function useCasinoRound({
   onRoundReset
 }: UseCasinoRoundArgs) {
   const t = useTranslations();
+  const vrfQuote = useCasinoVrfQuote({
+    sdk,
+    gameId: game?.gameId,
+    betCount,
+    quoteErrorMessage: t("casino.room.errors.quoteFailed")
+  });
   const intentKey = JSON.stringify([
+    vrfQuote.config?.houseEdgeBps,
     release?.chainId,
     poolId,
     sdk?.account,
@@ -105,11 +112,16 @@ export function useCasinoRound({
     reconcileFailed: t("casino.room.errors.reconcileFailed"),
     bindFailed: t("casino.room.errors.bindFailed")
   });
-  const vrfQuote = useCasinoVrfQuote({
-    sdk,
-    betCount,
-    quoteErrorMessage: t("casino.room.errors.quoteFailed")
-  });
+  const gameAvailability: PoolAvailability = !vrfQuote.config
+    ? vrfQuote.quoteError
+      ? "gameUnavailable"
+      : "loading"
+    : betCount < 1 || betCount > vrfQuote.config.maxBetCount
+      ? "invalidCount"
+      : vrfQuote.quoteError || vrfQuote.quote == null
+        ? "gameUnavailable"
+        : "ready";
+  const availability = poolAvailability === "ready" ? gameAvailability : poolAvailability;
   const roundWatcher = useCasinoRoundWatcher({
     sdk,
     betId: state.betId,
@@ -145,7 +157,8 @@ export function useCasinoRound({
     submissionInFlight.current = true;
     try {
       await executeGamePlaceBetAction({
-        poolAvailability,
+        poolAvailability: availability,
+        maxHouseEdgeBps: vrfQuote.config?.houseEdgeBps,
         account: sdk?.account,
         openConnectModal,
         release,
@@ -194,8 +207,9 @@ export function useCasinoRound({
           noActiveCasinoPool: t("casino.room.errors.noActiveCasinoPool"),
           unexpectedError: t("casino.room.feedback.unknown"),
           contextChanged: t("casino.room.feedback.contextChanged"),
+          houseEdgeUnavailable: t("casino.room.poolStatus.gameUnavailable"),
           poolUnavailable: t(
-            `casino.room.poolStatus.${poolAvailability === "ready" ? "unavailable" : poolAvailability}`,
+            `casino.room.poolStatus.${availability === "ready" ? "unavailable" : availability}`,
             { symbol: release.pools?.find((pool) => pool.poolId === poolId)?.symbol ?? "" }
           )
         }
@@ -205,8 +219,9 @@ export function useCasinoRound({
     }
   }, [
     intentKey,
+    vrfQuote.config?.houseEdgeBps,
     sdk,
-    poolAvailability,
+    availability,
     betAmount,
     betCount,
     coinSide,
@@ -250,6 +265,11 @@ export function useCasinoRound({
     roundPhase,
     isTransactionActive,
     isRoundAnimating,
+    houseEdgeBps: vrfQuote.config?.houseEdgeBps,
+    maxBetCount: vrfQuote.config?.maxBetCount,
+    callbackGasLimit: vrfQuote.config?.callbackGasLimit,
+    availability,
+    refreshGame: vrfQuote.refresh,
     vrfQuote: vrfQuote.quote,
     vrfQuoteError: vrfQuote.quoteError,
     activeBetId: state.betId,

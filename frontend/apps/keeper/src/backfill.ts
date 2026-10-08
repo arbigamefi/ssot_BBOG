@@ -15,9 +15,9 @@ import {
 } from "@ssot/bet-index";
 
 import {
-  fetchBankProviderLedgerRows,
-  type BankProviderLedgerPool
-} from "./bank-provider-ledger.js";
+  fetchVaultProviderLedgerRows,
+  type VaultProviderLedgerPool
+} from "./vault-provider-ledger.js";
 import { fetchGameHubLogs, GAME_HUB_INDEX_EVENTS } from "./gamehub-logs.js";
 import { loadRelease } from "./env.js";
 import { describeError } from "./errors.js";
@@ -36,7 +36,7 @@ type BackfillConfig = {
   confirmations: bigint;
   scanChunkBlocks: bigint;
   releasePath: string;
-  bankProviderLedgerPools: BankProviderLedgerPool[];
+  vaultProviderLedgerPools: VaultProviderLedgerPool[];
 };
 
 function cleanEnvValue(value: string | undefined) {
@@ -89,11 +89,12 @@ export function loadBackfillConfig(env: NodeJS.ProcessEnv = process.env): Backfi
 
   const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
   return {
-    bankProviderLedgerPools: (release.pools ?? [])
+    vaultProviderLedgerPools: (release.pools ?? [])
       .filter((pool) => pool.active !== false)
       .map((pool) => ({
         asset: getAddress(pool.asset),
         bank: getAddress(pool.bank),
+        vault: getAddress(pool.vault),
         decimals: pool.decimals ?? 6,
         poolId: pool.poolId
       })),
@@ -172,7 +173,7 @@ export async function runBetIndexBackfill({
 
     let eventCount = 0;
     let rowCount = 0;
-    let bankProviderLedgerRowCount = 0;
+    let vaultProviderLedgerRowCount = 0;
     for (const chunk of splitBlockRange({
       fromBlock: range.fromBlock,
       toBlock: range.toBlock,
@@ -203,17 +204,17 @@ export async function runBetIndexBackfill({
           await indexStore.writeGameHubEvents(await enrichFinalizedBetEvents(publicClient, events))
         ).length;
       }
-      const rowsByPool = await fetchBankProviderLedgerRows({
+      const rowsByPool = await fetchVaultProviderLedgerRows({
         chainId: config.chainId,
-        pools: config.bankProviderLedgerPools,
+        pools: config.vaultProviderLedgerPools,
         publicClient,
         range: chunk
       });
       for (const { pool, rows } of rowsByPool) {
-        bankProviderLedgerRowCount += (
-          await indexStore.replaceBankProviderLedgerRange({
+        vaultProviderLedgerRowCount += (
+          await indexStore.replaceVaultProviderLedgerRange({
             chainId: config.chainId,
-            bank: pool.bank,
+            vault: pool.vault,
             ...chunk,
             rows
           })
@@ -236,7 +237,7 @@ export async function runBetIndexBackfill({
       chainId: config.chainId,
       dryRun: config.dryRun,
       eventCount,
-      bankProviderLedgerRowCount,
+      vaultProviderLedgerRowCount,
       fromBlock: range.fromBlock.toString(),
       gameHub: config.gameHub,
       recent,

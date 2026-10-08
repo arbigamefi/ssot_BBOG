@@ -258,40 +258,41 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
     expect(await second.getUnresolvedBetIds(query)).toEqual([10n, 2n ** 255n]);
   });
 
-  it("binds provider cash flow to Bank identity across reused pool IDs and aliases", async () => {
+  it("binds provider cash flow to Vault identity across reused pool IDs and aliases", async () => {
     const row = {
       chainId: 31337,
       poolId: "1",
       owner: scope.sportsHub,
+      vault: scope.sportsHub,
       bank: scope.sportsHub,
       asset: other.sportsHub,
       id: "unused",
       action: "withdraw" as const,
       assets: "10",
-      shares: "10",
+      depositId: "10",
       txHash: "0xaa" as const,
       blockNumber: 20,
       logIndex: 1,
       updatedAt: 0
     };
-    await first.writeBankProviderLedgerRows([
+    await first.writeVaultProviderLedgerRows([
       row,
-      { ...row, txHash: "0xbb", bank: other.sportsHub, blockNumber: 21, assets: "999" },
+      { ...row, txHash: "0xbb", vault: other.sportsHub, blockNumber: 21, assets: "999" },
       { ...row, txHash: "0xcc", poolId: "9", blockNumber: 22, assets: "20" },
       { ...row, txHash: "0xdd", chainId: 31338, blockNumber: 23 }
     ]);
     const query = {
       chainId: 31337,
       owner: scope.sportsHub,
-      bank: scope.sportsHub,
+      vault: scope.sportsHub,
       limit: 10
     };
-    expect((await second.getBankProviderLedger(query)).map((item) => item.assets)).toEqual([
+    expect((await second.getVaultProviderLedger(query)).map((item) => item.assets)).toEqual([
       "20",
       "10"
     ]);
     expect(
-      (await first.getBankProviderLedger({ ...query, beforeBlock: 22, beforeLogIndex: 1 })).map(
+      (await first.getVaultProviderLedger({ ...query, beforeBlock: 22, beforeLogIndex: 1 })).map(
         (item) => item.assets
       )
     ).toEqual(["10"]);
@@ -301,60 +302,98 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
       chainId: 777,
       poolId: "1",
       owner: scope.sportsHub,
+      vault: scope.sportsHub,
       bank: scope.sportsHub,
       asset: other.sportsHub,
       id: "ignored",
-      action: "recovery" as const,
+      action: "withdraw" as const,
       assets: "8",
-      shares: "0",
+      depositId: "0",
       txHash: "0x777a" as const,
       blockNumber: 20,
       logIndex: 1,
       updatedAt: 0,
       receiver: other.sportsHub,
       caller: scope.sportsHub,
-      epochId: "7"
+      withdrawAfter: "7"
     };
-    await first.writeBankProviderLedgerRows([
+    await first.writeVaultProviderLedgerRows([
       row,
-      { ...row, txHash: "0x777b", bank: other.sportsHub },
+      { ...row, txHash: "0x777b", vault: other.sportsHub },
       { ...row, txHash: "0x777c", chainId: 778 }
     ]);
-    const query = { chainId: 777, bank: scope.sportsHub, owner: scope.sportsHub, limit: 10 };
+    const query = { chainId: 777, vault: scope.sportsHub, owner: scope.sportsHub, limit: 10 };
     await expect(
-      first.replaceBankProviderLedgerRange({
+      first.replaceVaultProviderLedgerRange({
         chainId: 777,
-        bank: scope.sportsHub,
+        vault: scope.sportsHub,
         fromBlock: 20n,
         toBlock: 20n,
         rows: [{ ...row, blockNumber: 21 }]
       })
     ).rejects.toThrow("outside replacement");
-    expect(await second.getBankProviderLedger(query)).toMatchObject([
-      { action: "recovery", receiver: other.sportsHub, caller: scope.sportsHub, epochId: "7" }
+    expect(await second.getVaultProviderLedger(query)).toMatchObject([
+      { action: "withdraw", receiver: other.sportsHub, caller: scope.sportsHub, withdrawAfter: "7" }
     ]);
-    expect(await second.getBankProviderLedger({ ...query, endBlock: 19 })).toEqual([]);
-    await first.replaceBankProviderLedgerRange({
+    expect(await second.getVaultProviderLedger({ ...query, endBlock: 19 })).toEqual([]);
+    await first.replaceVaultProviderLedgerRange({
       chainId: 777,
-      bank: scope.sportsHub,
+      vault: scope.sportsHub,
       fromBlock: 20n,
       toBlock: 20n,
       rows: []
     });
-    expect(await second.getBankProviderLedger(query)).toEqual([]);
-    expect(await second.getBankProviderLedger({ ...query, bank: other.sportsHub })).toHaveLength(1);
-    expect(await second.getBankProviderLedger({ ...query, chainId: 778 })).toHaveLength(1);
+    expect(await second.getVaultProviderLedger(query)).toEqual([]);
+    expect(await second.getVaultProviderLedger({ ...query, vault: other.sportsHub })).toHaveLength(
+      1
+    );
+    expect(await second.getVaultProviderLedger({ ...query, chainId: 778 })).toHaveLength(1);
     const range = {
       chainId: 777,
-      bank: scope.sportsHub,
+      vault: scope.sportsHub,
       fromBlock: 20n,
       toBlock: 20n,
-      rows: [{ ...row, action: "donation" as const, receiver: scope.sportsHub }]
+      rows: [{ ...row, action: "deposit" as const, receiver: scope.sportsHub }]
     };
-    await first.replaceBankProviderLedgerRange(range);
-    await second.replaceBankProviderLedgerRange(range);
-    expect(await first.getBankProviderLedger(query)).toMatchObject([
-      { action: "donation", epochId: "7", assets: "8" }
+    await first.replaceVaultProviderLedgerRange(range);
+    await second.replaceVaultProviderLedgerRange(range);
+    expect(await first.getVaultProviderLedger(query)).toMatchObject([
+      { action: "deposit", withdrawAfter: "7", assets: "8" }
     ]);
+  });
+
+  it("retains a gifted deposit in both payer and owner queries without duplicate cash", async () => {
+    const row = {
+      id: "ignored",
+      chainId: 779,
+      poolId: "1",
+      bank: scope.sportsHub,
+      vault: scope.sportsHub,
+      asset: other.sportsHub,
+      owner: scope.sportsHub,
+      caller: other.sportsHub,
+      receiver: scope.sportsHub,
+      action: "deposit" as const,
+      depositId: "1099511627776",
+      assets: "100",
+      txHash: "0x779a" as const,
+      blockNumber: 20,
+      logIndex: 1,
+      updatedAt: 0
+    };
+    await first.writeVaultProviderLedgerRows([row, row]);
+    const query = { chainId: 779, vault: scope.sportsHub, limit: 10 };
+    for (const owner of [scope.sportsHub, other.sportsHub]) {
+      expect(await second.getVaultProviderLedger({ ...query, owner })).toMatchObject([
+        { action: "deposit", owner: scope.sportsHub, caller: other.sportsHub, assets: "100" }
+      ]);
+    }
+    expect(
+      await second.getVaultProviderLedger({
+        ...query,
+        owner: other.sportsHub,
+        vault: other.sportsHub
+      })
+    ).toEqual([]);
   });
 });

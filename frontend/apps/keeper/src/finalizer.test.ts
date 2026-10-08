@@ -19,6 +19,7 @@ describe("finalizeIfReady", () => {
     const readBet = vi.fn(async () => bet("none"));
     const simulateFinalize = vi.fn();
     const outcome = await finalizeIfReady(baseEvent, {
+      readRequest: vi.fn(async () => canonical("received")),
       readBet,
       simulateFinalize,
       writeFinalize: vi.fn(),
@@ -31,6 +32,7 @@ describe("finalizeIfReady", () => {
 
   it("treats already terminal bets as raced success", async () => {
     const outcome = await finalizeIfReady(baseEvent, {
+      readRequest: vi.fn(async () => canonical("received")),
       readBet: vi.fn(async () => bet("settled")),
       simulateFinalize: vi.fn(),
       writeFinalize: vi.fn(),
@@ -48,6 +50,7 @@ describe("finalizeIfReady", () => {
     const materializeReceipt = vi.fn(async () => undefined);
 
     const outcome = await finalizeIfReady(baseEvent, {
+      readRequest: vi.fn(async () => canonical("received")),
       readBet,
       simulateFinalize: vi.fn(async () => undefined),
       writeFinalize: vi.fn(async () => "0xabc" as `0x${string}`),
@@ -67,6 +70,7 @@ describe("finalizeIfReady", () => {
       warn: vi.fn()
     };
     const outcome = await finalizeIfReady(baseEvent, {
+      readRequest: vi.fn(async () => canonical("received")),
       readBet: vi
         .fn()
         .mockResolvedValueOnce(bet("randomReady"))
@@ -100,6 +104,7 @@ describe("finalizeIfReady", () => {
     const sleep = vi.fn(async () => undefined);
 
     const outcome = await finalizeIfReady(baseEvent, {
+      readRequest: vi.fn(async () => canonical("received")),
       readBet,
       simulateFinalize: vi.fn(async () => undefined),
       writeFinalize: vi.fn(async () => "0xabc" as `0x${string}`),
@@ -115,6 +120,7 @@ describe("finalizeIfReady", () => {
 
   it("marks reverted receipts retryable", async () => {
     const outcome = await finalizeIfReady(baseEvent, {
+      readRequest: vi.fn(async () => canonical("received")),
       readBet: vi.fn(async () => bet("randomReady")),
       simulateFinalize: vi.fn(async () => undefined),
       writeFinalize: vi.fn(async () => "0xabc" as `0x${string}`),
@@ -128,6 +134,7 @@ describe("finalizeIfReady", () => {
   it("keeps the RPC URL out of a failure reason, which the health snapshot publishes", async () => {
     const logger = { error: vi.fn(), info: vi.fn(), warn: vi.fn() };
     const outcome = await finalizeIfReady(baseEvent, {
+      readRequest: vi.fn(async () => canonical("received")),
       readBet: vi.fn(async () => bet("randomReady")),
       simulateFinalize: vi.fn(async () => {
         throw new HttpRequestError({
@@ -162,6 +169,7 @@ describe("PendingVRF terminalization", () => {
   const pending = () => ({ ...bet("pendingVrf"), refundDeadline: 200n });
   function deps() {
     return {
+      readRequest: vi.fn(async () => canonical("awaiting")),
       readBet: vi.fn().mockResolvedValue(pending()),
       readRefundClock: vi.fn().mockResolvedValue({ timestamp: 199n }),
       simulateRefund: vi.fn().mockResolvedValue(undefined),
@@ -172,6 +180,36 @@ describe("PendingVRF terminalization", () => {
       verifyAttempts: 1
     };
   }
+  it.each([199n, 100_000n])(
+    "finalizes Received+PendingVRF at chain time %s without refunding",
+    async (timestamp) => {
+      const d = deps();
+      d.readRequest.mockResolvedValue(canonical("received"));
+      d.readRefundClock.mockResolvedValue({ timestamp });
+      d.readBet.mockResolvedValueOnce(pending()).mockResolvedValueOnce(bet("settled"));
+      expect(await finalizeIfReady(baseEvent, d)).toMatchObject({
+        kind: "settled",
+        txHash: "0xdef"
+      });
+      expect(d.readRefundClock).not.toHaveBeenCalled();
+      expect(d.writeRefund).not.toHaveBeenCalled();
+    }
+  );
+  it("fails closed when canonical state is unreadable even after the refund deadline", async () => {
+    const d = deps();
+    d.readRefundClock.mockResolvedValue({ timestamp: 100_000n });
+    d.readRequest.mockRejectedValue(new Error("canonical RPC unavailable"));
+    expect(await finalizeIfReady(baseEvent, d)).toMatchObject({ kind: "failed", retryable: true });
+    expect(d.writeRefund).not.toHaveBeenCalled();
+    expect(d.writeFinalize).not.toHaveBeenCalled();
+  });
+  it("reconciles terminal/cancelled canonical state against Hub instead of attempting refund", async () => {
+    const d = deps();
+    d.readRequest.mockResolvedValue(canonical("cancelled"));
+    d.readBet.mockResolvedValueOnce(pending()).mockResolvedValueOnce(bet("refunded"));
+    expect(await finalizeIfReady(baseEvent, d)).toEqual({ kind: "raced", state: "refunded" });
+    expect(d.writeRefund).not.toHaveBeenCalled();
+  });
   it("keeps an ineligible bet scheduled until its fixed deadline", async () => {
     const d = deps();
     expect(await finalizeIfReady(baseEvent, d)).toEqual({
@@ -194,6 +232,7 @@ describe("PendingVRF terminalization", () => {
   });
   it("never sends a timeout refund for RandomReady even long after placement", async () => {
     const d = deps();
+    d.readRequest.mockResolvedValue(canonical("received"));
     d.readBet.mockResolvedValueOnce(bet("randomReady")).mockResolvedValueOnce(bet("settled"));
     expect(await finalizeIfReady(baseEvent, d)).toMatchObject({ kind: "settled", txHash: "0xdef" });
     expect(d.readRefundClock).not.toHaveBeenCalled();
@@ -213,6 +252,7 @@ describe("PendingVRF terminalization", () => {
     d.readBet.mockResolvedValueOnce(pending()).mockResolvedValueOnce(bet("randomReady"));
     d.simulateRefund.mockRejectedValue(new Error("BadState"));
     expect(await finalizeIfReady(baseEvent, d)).toMatchObject({ kind: "failed", retryable: true });
+    d.readRequest.mockResolvedValue(canonical("received"));
     d.readBet.mockResolvedValueOnce(bet("randomReady")).mockResolvedValueOnce(bet("settled"));
     expect(await finalizeIfReady(baseEvent, d)).toMatchObject({ kind: "settled", txHash: "0xdef" });
     expect(d.writeRefund).not.toHaveBeenCalled();
@@ -220,6 +260,7 @@ describe("PendingVRF terminalization", () => {
   it("reports missing refund reads as failure instead of silently skipping a pending bet", async () => {
     expect(
       await finalizeIfReady(baseEvent, {
+        readRequest: vi.fn(async () => canonical("awaiting")),
         readBet: vi.fn(async () => bet("pendingVrf")),
         simulateFinalize: vi.fn(),
         writeFinalize: vi.fn(),
@@ -228,3 +269,12 @@ describe("PendingVRF terminalization", () => {
     ).toMatchObject({ kind: "failed", retryable: true });
   });
 });
+
+function canonical(state: "received" | "awaiting" | "cancelled" | "terminal") {
+  return {
+    state,
+    bank: "0x0000000000000000000000000000000000000001" as const,
+    hub: "0x0000000000000000000000000000000000000001" as const,
+    betId: 12n
+  };
+}

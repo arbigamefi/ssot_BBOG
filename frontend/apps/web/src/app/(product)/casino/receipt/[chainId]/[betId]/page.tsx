@@ -274,12 +274,6 @@ export default async function CasinoReceiptPage({
                   value={receiptModel.houseEdge.referrersValue}
                 />
               ) : null}
-              {receiptModel.houseEdge.affiliateMarkupValue ? (
-                <Fact
-                  label={labels.houseEdge.affiliateMarkup}
-                  value={receiptModel.houseEdge.affiliateMarkupValue}
-                />
-              ) : null}
               <Fact
                 label={labels.houseEdge.protocol}
                 value={receiptModel.houseEdge.protocolFeeValue}
@@ -301,7 +295,8 @@ export default async function CasinoReceiptPage({
           <div className="max-h-[32svh] min-h-0 min-w-0 overflow-y-auto overscroll-contain pb-1 sm:max-h-72">
             <Fact label={labels.facts.game} value={gameLabel} />
             <Fact label={labels.facts.player} value={shortHex(receiptModel.player)} />
-            <Fact label={labels.facts.affiliate} value={shortHex(receiptModel.pricingAffiliate)} />
+            <Fact label={labels.facts.referrerL1} value={shortHex(receiptModel.referrerL1)} />
+            <Fact label={labels.facts.referrerL2} value={shortHex(receiptModel.referrerL2)} />
             <Fact label={labels.facts.asset} value={asset?.symbol ?? shortHex(row.asset)} />
             <Fact label={labels.facts.betId} value={receiptModel.betId} />
             <Fact label={labels.facts.requestId} value={receiptModel.requestId ?? "—"} />

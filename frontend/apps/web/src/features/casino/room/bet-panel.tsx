@@ -47,6 +47,7 @@ export function GameRoomBetPanel({
   minBetRaw,
   onBetAmountChange,
   betCount,
+  maxBetCount,
   onBetCountChange,
   stopGain,
   onStopGainChange,
@@ -97,6 +98,7 @@ export function GameRoomBetPanel({
   minBetRaw: bigint;
   onBetAmountChange: (amount: string) => void;
   betCount: number;
+  maxBetCount: number | undefined;
   onBetCountChange: (count: number) => void;
   stopGain: number;
   onStopGainChange: (amount: number) => void;
@@ -108,8 +110,8 @@ export function GameRoomBetPanel({
   state: GameRoomBetPanelState;
   hasAccount: boolean;
   winChance: number;
-  multiplier: number;
-  expectedPayout: number;
+  multiplier: number | undefined;
+  expectedPayout: number | undefined;
   /** Latest VRF fee quote shown as chain/protocol context, not as a workflow step. */
   vrfQuote?: bigint;
   /** Active bet id when the round has been broadcast/mined. */
@@ -257,6 +259,7 @@ export function GameRoomBetPanel({
         <BetRollsSection
           betAmount={betAmount}
           betCount={betCount}
+          maxBetCount={maxBetCount}
           assetDecimals={assetDecimals}
           assetSymbol={assetSymbol}
           isPending={controlsLocked}

@@ -6,9 +6,9 @@
   "main": "dist/cli.js",
   "scripts": {
     "backfill": "node dist/backfill.js",
-    "prebackfill": "pnpm -C ../../packages/bet-index build && tsc -p tsconfig.json",
+    "prebackfill": "pnpm build",
     "prebuild": "pnpm -C ../../packages/bet-index build",
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
     "prestart": "pnpm -C ../../packages/bet-index build",
     "pretypecheck": "pnpm -C ../../packages/bet-index build",
     "start": "node dist/cli.js",

@@ -105,8 +105,8 @@ export function ClaimsBuckets({
           label={t("portfolio.claims.buckets.cards.bank.label")}
           value={shortHex(snapshot?.bank, pendingLabel)}
           detail={t("portfolio.claims.buckets.cards.bank.detail", {
-            reserved: formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2, pendingLabel),
-            assets: formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2, pendingLabel)
+            reserved: formatTokenAmount(snapshot?.R, decimals, symbol, 2, pendingLabel),
+            assets: formatTokenAmount(snapshot?.G, decimals, symbol, 2, pendingLabel)
           })}
         />
       </div>

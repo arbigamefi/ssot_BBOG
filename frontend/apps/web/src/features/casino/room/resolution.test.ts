@@ -24,7 +24,7 @@ const baseBet: DomainBet = {
   betCount: 1,
   stopGain: 0n,
   stopLoss: 0n,
-  effectiveHouseEdgeBps: 200,
+  houseEdgeBps: 200,
   vrfFeePaid: 100n,
   vrfFeeCharged: 90n,
   vrfCallbackGasLimit: 320_000,

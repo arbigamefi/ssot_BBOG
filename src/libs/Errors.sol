@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 library Errors {
     error ZeroAddress();
@@ -7,6 +7,5 @@ library Errors {
     error InvalidConfig();
     error TransferFailed();
     error Unauthorized();
-    error InsufficientAllowance();
     error InsufficientBalance();
 }

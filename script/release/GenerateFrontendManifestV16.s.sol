@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.37;
 
 import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
@@ -89,7 +89,6 @@ contract GenerateFrontendManifestV16 is Script {
         address vrfHub = snap.readAddress(".vrfHub");
         address refRegistry = snap.readAddress(".refRegistry");
         address refEngine = snap.readAddress(".refEngine");
-        address adapter = snap.readAddress(".adapter");
         address sportsRiskEngine = snap.readAddress(".sportsRiskEngine");
         address sportsHub = snap.readAddress(".sportsHub");
 
@@ -130,9 +129,6 @@ contract GenerateFrontendManifestV16 is Script {
             "\",",
             "\"refEngine\":\"",
             vm.toString(refEngine),
-            "\",",
-            "\"adapter\":\"",
-            vm.toString(adapter),
             "\",",
             "\"moduleDice\":\"",
             vm.toString(moduleDice),
@@ -224,21 +220,35 @@ contract GenerateFrontendManifestV16 is Script {
 
         return string.concat(
             "[",
-            _gameJson(GAME_DICE, "dice", "Dice", moduleDice, "abi.encode(bool isOver, uint8 target)"),
+            _gameJson(snap, "DICE", GAME_DICE, "dice", "Dice", moduleDice, "abi.encode(bool isOver, uint8 target)"),
             ",",
-            _gameJson(GAME_COIN_TOSS, "coin-toss", "Coin Toss", moduleCoinToss, "abi.encode(bool isTails)"),
+            _gameJson(
+                snap, "COIN_TOSS", GAME_COIN_TOSS, "coin-toss", "Coin Toss", moduleCoinToss, "abi.encode(bool isTails)"
+            ),
             ",",
-            _gameJson(GAME_ROULETTE, "roulette", "Roulette", moduleRoulette, "abi.encode(uint8 kind, uint40 payload)"),
+            _gameJson(
+                snap,
+                "ROULETTE",
+                GAME_ROULETTE,
+                "roulette",
+                "Roulette",
+                moduleRoulette,
+                "abi.encode(uint8 kind, uint40 payload)"
+            ),
             ",",
-            _gameJson(GAME_KENO, "keno", "Keno", moduleKeno, "abi.encode(uint40 numbersPacked)"),
+            _gameJson(snap, "KENO", GAME_KENO, "keno", "Keno", moduleKeno, "abi.encode(uint40 numbersPacked)"),
             ",",
-            _gameJson(GAME_PLINKO, "plinko", "Plinko", modulePlinko, "abi.encode(uint8 risk)"),
+            _gameJson(snap, "PLINKO", GAME_PLINKO, "plinko", "Plinko", modulePlinko, "abi.encode(uint8 risk)"),
             ",",
-            _gameJson(GAME_SIC_BO, "sic-bo", "Sic Bo", moduleSicBo, "abi.encode(uint8 kind, uint8 value)"),
+            _gameJson(
+                    snap, "SIC_BO", GAME_SIC_BO, "sic-bo", "Sic Bo", moduleSicBo, "abi.encode(uint8 kind, uint8 value)"
+                ),
             ",",
-            _gameJson(GAME_SLOTS, "slots", "Slots", moduleSlots, "abi.encode(uint8 profile)"),
+            _gameJson(snap, "SLOTS", GAME_SLOTS, "slots", "Slots", moduleSlots, "abi.encode(uint8 profile)"),
             ",",
-            _gameJson(GAME_BACCARAT, "baccarat", "Baccarat", moduleBaccarat, "abi.encode(uint8 side)"),
+            _gameJson(
+                snap, "BACCARAT", GAME_BACCARAT, "baccarat", "Baccarat", moduleBaccarat, "abi.encode(uint8 side)"
+            ),
             "]"
         );
     }
@@ -273,6 +283,9 @@ contract GenerateFrontendManifestV16 is Script {
             ",",
             "\"asset\":\"",
             vm.toString(snap.readAddress(string.concat(".poolAsset_", suffix))),
+            "\",",
+            "\"vault\":\"",
+            vm.toString(snap.readAddress(string.concat(".poolVault_", suffix))),
             "\",",
             "\"bank\":\"",
             vm.toString(snap.readAddress(string.concat(".poolBank_", suffix))),
@@ -321,6 +334,8 @@ contract GenerateFrontendManifestV16 is Script {
     }
 
     function _gameJson(
+        string memory snap,
+        string memory name,
         bytes32 gameId,
         string memory slug,
         string memory label,
@@ -341,7 +356,11 @@ contract GenerateFrontendManifestV16 is Script {
             "\"module\":\"",
             _toHexAddr(module),
             "\",",
-            "\"paramsEncoding\":\"",
+            "\"maxBetCount\":",
+            vm.toString(snap.readUint(string.concat(".gameMaxBetCount_", name))),
+            ",\"callbackGasLimit\":",
+            vm.toString(snap.readUint(string.concat(".gameCallbackGasLimit_", name))),
+            ",\"paramsEncoding\":\"",
             paramsEncoding,
             "\"",
             "}"
@@ -353,7 +372,7 @@ contract GenerateFrontendManifestV16 is Script {
         sym = jsonReader.readString(snap, string.concat(".poolAssetSymbol_", suffix));
         require(bytes(sym).length != 0, "missing pool asset symbol");
 
-        uint256 d = jsonReader.readUint(snap, string.concat(".poolLpDecimals_", suffix));
+        uint256 d = jsonReader.readUint(snap, string.concat(".poolAssetDecimals_", suffix));
         require(d <= type(uint8).max, "pool asset decimals too large");
         dec = uint8(d);
     }

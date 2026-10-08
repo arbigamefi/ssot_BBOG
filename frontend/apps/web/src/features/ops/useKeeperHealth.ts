@@ -4,40 +4,8 @@ import * as React from "react";
 
 import type { OpsStatusTone } from "./types";
 
-export type KeeperHealthSnapshot = {
-  schemaVersion: 1;
-  status: "starting" | "running" | "degraded" | "stopped";
-  role: "primary" | "backup";
-  chainId: number;
-  gameHub: string;
-  vrfHub: string;
-  keeper: string;
-  startedAt: string;
-  updatedAt: string;
-  lastScannedBlock?: string;
-  queueDepth: number;
-  lastEnqueuedAt?: string;
-  lastEnqueued?: {
-    source: string;
-    betId: string;
-    requestId?: string;
-    blockNumber?: string;
-    txHash?: string;
-  };
-  lastFinalizeSuccessAt?: string;
-  lastFinalizeSuccess?: {
-    betId: string;
-    txHash: string;
-    latencyMs: number;
-  };
-  lastFinalizeFailureAt?: string;
-  lastFinalizeFailure?: {
-    betId: string;
-    reason: string;
-    retryable: boolean;
-  };
-  lastError?: string;
-};
+import type { KeeperHealthSnapshot } from "../../server/ops/keeper-health";
+export type { KeeperHealthSnapshot } from "../../server/ops/keeper-health";
 
 export type KeeperHealthView = {
   label: string;

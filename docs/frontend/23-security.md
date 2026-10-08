@@ -1,14 +1,19 @@
 # Security and privacy
 
+**2026-10-04: Core and application interfaces implemented; local integration verified, release qualification pending.** NFT LiquidityVault deposits, fixed 24-hour withdrawal locks
+and atomic VRF settlement attempts follow the [implementation plan](../design/lp-accounting-and-callback-implementation.md). Earlier candidate
+deployments, tests and operations do not establish that this replacement is implemented.
+
 Contract writes use the authenticated release and current SDK. Unknown release,
 RPC, or Bank state must block the affected write. Wallet actions require explicit
 user interaction and transaction preflight. Preserve selected chain and pool
 identity through reads and writes; token address alone does not identify a Bank.
 
 Display settlement separately from payment. A successful settlement may record a
-player payable instead of transferring tokens. Earn exposes the account's claim;
-it must not silently claim or authorize an operator for the user. See the
-[asynchronous redemption contract](../adr/0034-async-lp-redemption-continuous-betting.md).
+player payable instead of transferring tokens. A player-debt claim pays only that player; it is not
+an LP exit claim. Vault withdrawDeposit pays only the NFT owner; the official flow grants no NFT approval or keeper authority. NFT approval can transfer the deposit to another owner and therefore has economic consequences.
+Fresh state checks bind Bank/Vault, NFT owner, fixed maturity, node value, L-K, pause and recorded-result settlement state. A displayed amount is not an execution guarantee. LP asset approvals target Vault; betting approvals target Hub. See [NFT liquidity](../adr/0034-nft-liquidity-deposits.md)
+and [callback settlement](../adr/0006-vrf-callback-settlement.md).
 
 ## Environment and rendering
 

@@ -2,13 +2,6 @@ import { formatUnits, parseDecimalToUnits } from "../../betting/model/units";
 
 const DECIMAL_INPUT_PATTERN = /[^\d.]/g;
 
-export function getMinBetAmountRaw(minTotalStake: bigint, betCount: number): bigint {
-  if (minTotalStake <= 0n || !Number.isInteger(betCount) || betCount < 1 || betCount > 100)
-    return 0n;
-  const count = BigInt(betCount);
-  return (minTotalStake + count - 1n) / count;
-}
-
 export function getMinBetAmountInput(decimals: number, minRaw: bigint): string {
   return formatBetAmountRaw(minRaw, decimals);
 }

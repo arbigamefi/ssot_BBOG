@@ -1,11 +1,9 @@
 import { createPublicClient, getAddress, http, type Address } from "viem";
-import { getContractAbis } from "@ssot/ssot/abis";
+import { createSSOTSDK } from "@ssot/ssot/sdk";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 import { getPoolAssetContext } from "../../features/assets/pool-asset";
 import { resolveServerRpcUrl } from "../rpc";
-
-const { BankAbi } = getContractAbis();
 
 export type LandingAssetOverviewResponse = {
   schemaVersion: 1;
@@ -18,8 +16,8 @@ export type LandingAssetOverviewResponse = {
     bank: Address;
     symbol: string;
     decimals: number;
-    totalAssets: string;
-    totalReserved: string;
+    lpCapital: string;
+    lockedCapital: string;
     /** Lifetime turnover (Bank.getPerformance) — chain-read, verifiable. */
     turnover: string;
     /** Lifetime protocol fee accrued (Bank.getPerformance) — chain-read, verifiable. */
@@ -69,39 +67,30 @@ export async function queryLandingAssetOverview(
       chain: createChain(chainId, rpcUrl),
       transport: http(rpcUrl)
     });
+    const sdk = createSSOTSDK({ release, publicClient });
+    const blockNumber = await publicClient.getBlockNumber();
     const rows = await Promise.all(
       release.pools.map(async (pool) => {
         const poolAsset = getPoolAssetContext(release, pool);
         if (!poolAsset?.bank) return null;
         const bank = getAddress(poolAsset.bank);
-        const [ssot, perf] = await Promise.all([
-          publicClient.readContract({
-            address: bank,
-            abi: BankAbi,
-            functionName: "getSSOT",
-            args: []
-          }),
-          publicClient.readContract({
-            address: bank,
-            abi: BankAbi,
-            functionName: "getPerformance",
-            args: []
-          })
-        ]);
+        const snapshot = await sdk.bank.getSnapshot(pool.poolId, { blockNumber });
+        if (
+          !snapshot.accountingValid ||
+          snapshot.bank.toLowerCase() !== bank.toLowerCase() ||
+          snapshot.vault.toLowerCase() !== pool.vault.toLowerCase()
+        )
+          throw new Error("Invalid pool accounting identity");
 
         return {
           address: getAddress(poolAsset.asset.address),
           bank,
           symbol: poolAsset.asset.symbol,
           decimals: poolAsset.asset.decimals,
-          totalAssets: BigInt((ssot as { NAV: bigint }).NAV).toString(),
-          totalReserved: BigInt((ssot as { R: bigint }).R).toString(),
-          turnover: BigInt(
-            (perf as readonly [bigint, bigint, bigint, bigint, bigint, bigint])[0]
-          ).toString(),
-          protocolFee: BigInt(
-            (perf as readonly [bigint, bigint, bigint, bigint, bigint, bigint])[5]
-          ).toString()
+          lpCapital: snapshot.L.toString(),
+          lockedCapital: snapshot.K.toString(),
+          turnover: snapshot.totalTurnover.toString(),
+          protocolFee: snapshot.totalProtocolFeeAccrued.toString()
         };
       })
     );

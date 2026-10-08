@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
@@ -29,8 +29,6 @@ import {KenoModule} from "../src/modules/keno/KenoModule.sol";
 import {SicBoModule} from "../src/modules/sicbo/SicBoModule.sol";
 import {SlotsModule} from "../src/modules/slots/SlotsModule.sol";
 
-import {ChainlinkV2PlusWrapperAdapter} from "../src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol";
-
 interface IERC20MetadataLikeV16 {
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint8);
@@ -47,11 +45,12 @@ interface IERC20MetadataLikeV16 {
 ///   POOL_ID_i                         default i + 1
 ///   POOL_ASSET_i                      required
 ///   POOL_DOMAIN_i                     default 1; 1=Casino, 2=Sports, 3=Future
-///   BANK_RISK_RESERVE_BPS_i                default 1000
-///   BANK_WITHDRAWAL_BUFFER_BPS_i      default BANK_RISK_RESERVE_BPS_i
+///   BANK_MIN_BET_AMOUNT_i             required, minimum per casino round in asset units
+///   BANK_RISK_RESERVE_BPS_i                default 6000
+///   BANK_WITHDRAWAL_BUFFER_BPS_i      default 1000 (independent PF/XP outflow policy)
 ///   BANK_MIN_TURNOVER_FOR_UNLOCK_i    default 20 asset units
 ///   BANK_HOLDBACK_VESTING_SECONDS_i   default 86400
-///   LP_NAME_i / LP_SYMBOL_i / LP_DECIMALS_i
+///   Asset decimals are read from the token
 ///
 /// Required when any pool uses POOL_DOMAIN_i=2 (Sports):
 ///   SPORTS_MAX_STAKE, SPORTS_MAX_PAYOUT, SPORTS_MAX_MARKET_RESERVED,
@@ -133,14 +132,12 @@ contract DeployV16 is Script {
         address asset;
         address bank;
         SSOTTypes.PoolDomain domain;
-        uint256 minStake;
+        uint256 minBetAmount;
         uint16 riskReserveBps;
         uint16 withdrawalBufferBps;
         uint256 minTurnoverForUnlock;
         uint256 holdbackVestingSeconds;
-        string lpName;
-        string lpSymbol;
-        uint8 lpDecimals;
+        uint8 assetDecimals;
         uint256 sportsMaxStake;
         uint256 sportsMaxPayout;
         uint256 sportsMaxMarketReserved;
@@ -149,7 +146,6 @@ contract DeployV16 is Script {
     }
 
     struct Deployed {
-        ChainlinkV2PlusWrapperAdapter adapter;
         VRFHub vrf;
         PoolRegistry poolRegistry;
         SettlementRouter router;
@@ -190,13 +186,9 @@ contract DeployV16 is Script {
 
         Deployed memory d;
 
-        d.adapter = new ChainlinkV2PlusWrapperAdapter(cfg.vrfWrapper, cfg.gov);
-        d.vrf = new VRFHub(address(d.adapter), cfg.gov);
-        d.adapter.setVRFHub(address(d.vrf));
-        d.vrf.setAdapter(address(d.adapter));
-
         d.poolRegistry = new PoolRegistry(cfg.gov);
         d.router = new SettlementRouter(address(d.poolRegistry));
+        d.vrf = new VRFHub(cfg.vrfWrapper, address(d.router));
         d.refRegistry = new ReferralRegistry(cfg.gov);
         d.refEngine = new DefaultReferralEngine();
 
@@ -282,13 +274,7 @@ contract DeployV16 is Script {
 
         for (uint256 i = 0; i < pools.length; ++i) {
             Bank bank = new Bank(
-                pools[i].asset,
-                cfg.gov,
-                pools[i].riskReserveBps,
-                pools[i].lpName,
-                pools[i].lpSymbol,
-                pools[i].lpDecimals,
-                pools[i].minStake
+                pools[i].asset, cfg.gov, pools[i].riskReserveBps, pools[i].assetDecimals, pools[i].minBetAmount
             );
             pools[i].bank = address(bank);
             bank.setRiskInPaused(true);
@@ -296,6 +282,7 @@ contract DeployV16 is Script {
 
             d.poolRegistry.registerPool(pools[i].poolId, pools[i].asset, pools[i].bank, pools[i].domain);
             bank.setSettlementRouterOnce(address(d.router));
+            bank.setRandomnessConsumerOnce(address(d.vrf));
             bank.setMinPlayerTurnoverForUnlock(pools[i].minTurnoverForUnlock);
             bank.setHoldbackVestingSeconds(pools[i].holdbackVestingSeconds);
             if (pools[i].withdrawalBufferBps != pools[i].riskReserveBps) {
@@ -318,14 +305,14 @@ contract DeployV16 is Script {
         d.slots = new SlotsModule();
         d.baccarat = new BaccaratModule();
 
-        d.gameHub.registerGame(GAME_DICE, address(d.dice));
-        d.gameHub.registerGame(GAME_COIN, address(d.coin));
-        d.gameHub.registerGame(GAME_ROULETTE, address(d.roulette));
-        d.gameHub.registerGame(GAME_KENO, address(d.keno));
-        d.gameHub.registerGame(GAME_PLINKO, address(d.plinko));
-        d.gameHub.registerGame(GAME_SIC_BO, address(d.sicBo));
-        d.gameHub.registerGame(GAME_SLOTS, address(d.slots));
-        d.gameHub.registerGame(GAME_BACCARAT, address(d.baccarat));
+        _registerGame(d.gameHub, GAME_DICE, address(d.dice), "DICE");
+        _registerGame(d.gameHub, GAME_COIN, address(d.coin), "COIN_TOSS");
+        _registerGame(d.gameHub, GAME_ROULETTE, address(d.roulette), "ROULETTE");
+        _registerGame(d.gameHub, GAME_KENO, address(d.keno), "KENO");
+        _registerGame(d.gameHub, GAME_PLINKO, address(d.plinko), "PLINKO");
+        _registerGame(d.gameHub, GAME_SIC_BO, address(d.sicBo), "SIC_BO");
+        _registerGame(d.gameHub, GAME_SLOTS, address(d.slots), "SLOTS");
+        _registerGame(d.gameHub, GAME_BACCARAT, address(d.baccarat), "BACCARAT");
 
         _nominateGovernance(cfg, pools, d);
         vm.stopBroadcast();
@@ -377,7 +364,7 @@ contract DeployV16 is Script {
         );
         cfg.poolCount = vm.envOr("NUM_POOLS", uint256(1));
 
-        // The current referral schedule; affiliate markup starts disabled.
+        // The three-level referral schedule is funded by the operator half.
         cfg.refConfig.l0Bps = _bps("REF_L0_BPS", 1000);
         cfg.refConfig.l1Bps = _bps("REF_L1_BPS", 2000);
         cfg.refConfig.l2Bps = _bps("REF_L2_BPS", 500);
@@ -454,18 +441,21 @@ contract DeployV16 is Script {
         uint256 domainRaw = vm.envOr(string.concat("POOL_DOMAIN_", suffix), uint256(1));
         cfg.domain = _domainFromRaw(domainRaw);
 
-        cfg.minStake = vm.envUint(string.concat("BANK_MIN_STAKE_", suffix));
-        require(cfg.minStake > 0, "BANK_MIN_STAKE_i must be positive");
-        cfg.riskReserveBps = _bps(string.concat("BANK_RISK_RESERVE_BPS_", suffix), 1000);
-        cfg.withdrawalBufferBps = _bps(string.concat("BANK_WITHDRAWAL_BUFFER_BPS_", suffix), cfg.riskReserveBps);
+        cfg.minBetAmount = vm.envUint(string.concat("BANK_MIN_BET_AMOUNT_", suffix));
+        require(cfg.minBetAmount > 0, "BANK_MIN_BET_AMOUNT_i must be positive");
+        cfg.riskReserveBps = _bps(string.concat("BANK_RISK_RESERVE_BPS_", suffix), 6000);
+        cfg.withdrawalBufferBps = _bps(string.concat("BANK_WITHDRAWAL_BUFFER_BPS_", suffix), 1000);
         cfg.minTurnoverForUnlock =
             vm.envOr(string.concat("BANK_MIN_TURNOVER_FOR_UNLOCK_", suffix), uint256(20 * oneAssetUnit));
         cfg.holdbackVestingSeconds = vm.envOr(string.concat("BANK_HOLDBACK_VESTING_SECONDS_", suffix), uint256(86400));
-        cfg.lpName = vm.envOr(string.concat("LP_NAME_", suffix), string.concat("LP Share Pool #", suffix));
-        cfg.lpSymbol = vm.envOr(string.concat("LP_SYMBOL_", suffix), string.concat("LP", suffix));
-        uint256 lpDecimals = vm.envOr(string.concat("LP_DECIMALS_", suffix), uint256(assetDecimals));
-        require(lpDecimals == assetDecimals, "LP_DECIMALS_i must match asset decimals");
-        cfg.lpDecimals = uint8(lpDecimals);
+        cfg.assetDecimals = assetDecimals;
+    }
+
+    function _registerGame(GameHub hub, bytes32 gameId, address module, string memory name) internal {
+        uint256 count = vm.envUint(string.concat("GAME_MAX_BET_COUNT_", name));
+        uint256 gasLimit = vm.envUint(string.concat("GAME_CALLBACK_GAS_LIMIT_", name));
+        require(count > 0 && count <= hub.MAX_BET_COUNT() && gasLimit <= type(uint32).max, "invalid game admission");
+        hub.registerGame(gameId, module, uint32(count), uint32(gasLimit));
     }
 
     function _bps(string memory key, uint256 fallbackValue) internal view returns (uint16) {
@@ -489,7 +479,6 @@ contract DeployV16 is Script {
         console2.log("BOOTSTRAP_GOV", cfg.gov);
         console2.log("GOV", cfg.finalGovernance);
         console2.log("VRF_WRAPPER", cfg.vrfWrapper);
-        console2.log("adapter", address(d.adapter));
         console2.log("vrfHub", address(d.vrf));
         console2.log("poolRegistry", address(d.poolRegistry));
         console2.log("settlementRouter", address(d.router));
@@ -515,7 +504,7 @@ contract DeployV16 is Script {
         string memory obj = "ssot";
         string memory json;
 
-        json = vm.serializeString(obj, "architectureVersion", "v1.6-house-edge-allocation");
+        json = vm.serializeString(obj, "architectureVersion", "v1.6-nft-liquidity");
         json = vm.serializeUint(obj, "chainId", block.chainid);
         json = vm.serializeUint(obj, "blockNumber", block.number);
         json = vm.serializeUint(obj, "timestamp", block.timestamp);
@@ -533,7 +522,6 @@ contract DeployV16 is Script {
         json = vm.serializeAddress(obj, "treasury", cfg.treasury);
 
         json = vm.serializeAddress(obj, "vrfWrapper", cfg.vrfWrapper);
-        json = vm.serializeAddress(obj, "adapter", address(d.adapter));
         json = vm.serializeAddress(obj, "vrfHub", address(d.vrf));
 
         json = vm.serializeAddress(obj, "poolRegistry", address(d.poolRegistry));
@@ -553,7 +541,6 @@ contract DeployV16 is Script {
         json = vm.serializeAddress(obj, "moduleSlots", address(d.slots));
         json = vm.serializeAddress(obj, "moduleBaccarat", address(d.baccarat));
 
-        json = vm.serializeBytes32(obj, "codeHash_adapter", address(d.adapter).codehash);
         json = vm.serializeBytes32(obj, "codeHash_vrfHub", address(d.vrf).codehash);
         json = vm.serializeBytes32(obj, "codeHash_poolRegistry", address(d.poolRegistry).codehash);
         json = vm.serializeBytes32(obj, "codeHash_settlementRouter", address(d.router).codehash);
@@ -598,7 +585,6 @@ contract DeployV16 is Script {
     {
         json = vm.serializeUint(obj, "refundTimeoutSeconds", cfg.refundTimeoutSeconds);
         json = vm.serializeUint(obj, "defaultHouseEdgeBps", cfg.defaultHouseEdgeBps);
-        json = vm.serializeUint(obj, "maxAffiliateDeltaBps", 0);
         json = vm.serializeUint(obj, "lpShareBps", HouseEdgeLib.LP_SHARE_BPS);
         json = vm.serializeUint(obj, "refL0Bps", cfg.refConfig.l0Bps);
         json = vm.serializeUint(obj, "refL1Bps", cfg.refConfig.l1Bps);
@@ -627,8 +613,7 @@ contract DeployV16 is Script {
         internal
         returns (string memory)
     {
-        json = vm.serializeString(obj, "ctorArgs_adapter", vm.toString(abi.encode(cfg.vrfWrapper, cfg.gov)));
-        json = vm.serializeString(obj, "ctorArgs_vrfHub", vm.toString(abi.encode(address(d.adapter), cfg.gov)));
+        json = vm.serializeString(obj, "ctorArgs_vrfHub", vm.toString(abi.encode(cfg.vrfWrapper, address(d.router))));
         json = vm.serializeString(obj, "ctorArgs_poolRegistry", vm.toString(abi.encode(cfg.gov)));
         json = vm.serializeString(obj, "ctorArgs_settlementRouter", vm.toString(abi.encode(address(d.poolRegistry))));
         json = vm.serializeString(obj, "ctorArgs_refRegistry", vm.toString(abi.encode(cfg.gov)));
@@ -657,6 +642,15 @@ contract DeployV16 is Script {
     ) internal returns (string memory) {
         json = vm.serializeUint(obj, "numPools", pools.length);
 
+        string[8] memory games =
+            [string("DICE"), "COIN_TOSS", "ROULETTE", "KENO", "PLINKO", "SIC_BO", "SLOTS", "BACCARAT"];
+        for (uint256 g; g < games.length; ++g) {
+            bytes32 id = keccak256(bytes(games[g]));
+            json = vm.serializeUint(obj, string.concat("gameMaxBetCount_", games[g]), d.gameHub.gameMaxBetCount(id));
+            json = vm.serializeUint(
+                obj, string.concat("gameCallbackGasLimit_", games[g]), d.gameHub.gameCallbackGasLimit(id)
+            );
+        }
         for (uint256 i = 0; i < pools.length; ++i) {
             string memory suffix = vm.toString(i);
             (string memory assetSymbol, uint8 assetDecimals) = _tryAssetMetadata(pools[i].asset);
@@ -667,12 +661,18 @@ contract DeployV16 is Script {
             json = vm.serializeAddress(obj, string.concat("poolAsset_", suffix), pools[i].asset);
             json = vm.serializeString(obj, string.concat("poolAssetSymbol_", suffix), assetSymbol);
             json = vm.serializeAddress(obj, string.concat("poolBank_", suffix), pools[i].bank);
+            address vault = Bank(pools[i].bank).vault();
+            json = vm.serializeAddress(obj, string.concat("poolVault_", suffix), vault);
+            json = vm.serializeBytes32(obj, string.concat("codeHash_poolVault_", suffix), vault.codehash);
+            json = vm.serializeString(
+                obj, string.concat("ctorArgs_vault_", suffix), vm.toString(abi.encode(pools[i].asset, pools[i].bank))
+            );
             require(
-                pools[i].lpDecimals == assetDecimals && pools[i].lpDecimals == Bank(pools[i].bank).decimals(),
+                pools[i].assetDecimals == assetDecimals
+                    && pools[i].assetDecimals == Bank(pools[i].bank).assetDecimals(),
                 "pool precision mismatch"
             );
-            json = vm.serializeUint(obj, string.concat("poolBankMinStake_", suffix), pools[i].minStake);
-            json = vm.serializeUint(obj, string.concat("poolBankMinLiqBps_", suffix), pools[i].riskReserveBps);
+            json = vm.serializeUint(obj, string.concat("poolBankMinBetAmount_", suffix), pools[i].minBetAmount);
             json = vm.serializeUint(obj, string.concat("poolBankRiskReserveBps_", suffix), pools[i].riskReserveBps);
             json = vm.serializeUint(
                 obj, string.concat("poolBankWithdrawalBufferBps_", suffix), pools[i].withdrawalBufferBps
@@ -683,9 +683,7 @@ contract DeployV16 is Script {
             json = vm.serializeUint(
                 obj, string.concat("poolBankHoldbackVestingSeconds_", suffix), pools[i].holdbackVestingSeconds
             );
-            json = vm.serializeString(obj, string.concat("poolLpName_", suffix), pools[i].lpName);
-            json = vm.serializeString(obj, string.concat("poolLpSymbol_", suffix), pools[i].lpSymbol);
-            json = vm.serializeUint(obj, string.concat("poolLpDecimals_", suffix), pools[i].lpDecimals);
+            json = vm.serializeUint(obj, string.concat("poolAssetDecimals_", suffix), pools[i].assetDecimals);
             json = vm.serializeUint(obj, string.concat("poolActive_", suffix), 1);
             json = vm.serializeUint(obj, string.concat("poolSportsMaxStake_", suffix), pools[i].sportsMaxStake);
             json = vm.serializeUint(obj, string.concat("poolSportsMaxPayout_", suffix), pools[i].sportsMaxPayout);
@@ -709,13 +707,7 @@ contract DeployV16 is Script {
                 string.concat("ctorArgs_bank_", suffix),
                 vm.toString(
                     abi.encode(
-                        pools[i].asset,
-                        cfg.gov,
-                        pools[i].riskReserveBps,
-                        pools[i].lpName,
-                        pools[i].lpSymbol,
-                        pools[i].lpDecimals,
-                        pools[i].minStake
+                        pools[i].asset, cfg.gov, pools[i].riskReserveBps, pools[i].assetDecimals, pools[i].minBetAmount
                     )
                 )
             );
@@ -798,8 +790,6 @@ contract DeployV16 is Script {
     }
 
     function _nominateGovernance(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d) internal {
-        d.adapter.transferGovernance(cfg.finalGovernance);
-        d.vrf.transferGovernance(cfg.finalGovernance);
         d.poolRegistry.transferGovernance(cfg.finalGovernance);
         d.refRegistry.transferGovernance(cfg.finalGovernance);
         d.gameHub.transferGovernance(cfg.finalGovernance);

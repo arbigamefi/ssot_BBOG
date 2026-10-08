@@ -1,20 +1,44 @@
 # Release acceptance
 
-- Current source and generated ABIs agree; all contract and frontend package gates pass.
-- Every admitted game has a tested terminal path, including maximum-size inputs and timeout recovery.
-- Async LP requests, activation, historical recovery, batch allocation and claims reconcile with active NAV. Queued requests remain cancellable until actual activation, including after earliest eligibility; funded new bets continue during every ordinary redemption phase.
-- Active reserve (`getSSOT().R` / `activeReserved()`) plus historical remaining reserve equals global `totalReserved()`. New risk cannot spend historical backing; pricing and claims must not double-count liabilities or burn shares again.
-- Player-payable fallback and claims preserve the entitled recipient and debt during pause; the keeper claims payables for their players and backs off on refusals.
-- ADR-0035 holds on the audited source: permanently stuck old positions cannot gate later exits; historical risk/recovery rights survive transfers, full exits and later deposits. Complete external audit before outside LP funding.
-- Deployment addresses, Safe configuration, signer, bytecode and parameters match the signed release.
-- Complete Hub/pool and Sports role sets match the signed snapshot at the governance verification
-  block. Historical code and authorization logs cover contract creation; unavailable history rejects
-  the release. This evidence relies on a trusted RPC providing complete logs.
-- Web and keeper use the same current release; database starts with the current schema.
-- Each pool explicitly configures its minimum total stake in asset base units. USDC minimum is 1 USDC per position (100 rolls can use 0.01 USDC each). The default refund timeout remains 3600 seconds and accepted deadlines cannot change. The 60-second structural floor is not a target-network safety recommendation; any shorter deployment timeout needs measured VRF failure and latency acceptance.
-- Before outside LP funding, record the decision on module/hub/pool admission timelocks and independently controlled guardian multisig configuration. Rehearse governance replacing the guardian and unpausing, including loss of old guardian powers and actual claim recovery.
-- Capacity acceptance is pending a separately chosen business peak, burst rate, tail latency and cost threshold. Measure ready-to-terminal and missing-VRF refund recovery; refundable locked principal is not an attack-cost guarantee.
-- Network acceptance covers VRF, refunds, payout receipts, payable claims, restart/replay, health and alert delivery.
-- Compliance controls are enforced server-side before any real-money service: geo-blocking, sanctions screening and player limits.
+NFT-deposit/callback core and application interfaces are implemented and locally verified. Full gas qualification and this release checklist remain pending.
+Use the [detailed plan](../design/lp-accounting-and-callback-implementation.md) for scenario evidence.
 
-Follow [the deployment workflow](../deploy/v16-release.md).
+- Pin the original Azuro V3 tree/interface/math sources, provenance and license. Review every adapter
+  difference; run differential, lazy-propagation, sparse-tree and arithmetic-bound cases.
+- Prove feasibility first: complete wrapper-to-ack gas with tree and two custodians; Bank initcode,
+  Vault/runtime sizes and construction. Qualify each admitted game's round limit.
+- Verify L/K/G/P/R, both cash balances and all debt movements. Exclude pending principal from LP capital.
+  Prove exact asset receipt, non-capital surplus and the special empty-root protocol-capital branch.
+- Exercise new NFT per deposit, 24-hour exact boundary, partial-success relock, rollback on failure,
+  transferred deadlines, only-owner withdrawal, operator transfer authority and malicious receiver callbacks.
+- Check 1e12 withdrawal fractions, floor rounding, zero-percent/zero-amount partial rejection, mature
+  zero-value NFT closure and full burn. Bound available cash by L−K with no extra LP withdrawal buffer.
+- Prove immutable per-bet cutoffs and the original whole-tree fallback. A successful withdrawal immediately
+  reduces capital and has no future claim. No queue, batch, historical-right or ERC20 LP path remains.
+- Prove adequate-capital betting continues across LP actions. Keep the G-based bet-risk rule and separate
+  PF/XP outflow policy; K>0 prevents total capital withdrawal without a last-share rule.
+- Persist canonical randomness across whole-Hub failures; retry only that seed. Terminal state, both custody
+  updates and acknowledgment are atomic. Known-unbooked results gate LP funding; internal settlement still works.
+- Measure cold/sparse tree, loss/profit fallback, failed payout and failure-return overhead. Unknown
+  errors cannot convert winners to refunds. A known normal gas failure is not a keeper operating model.
+- Preserve the mature NFT transfer/exit and empty-prefix entry ordering witnesses. The user accepted
+  the existing rule; verify matching public disclosures. The 24-hour cooldown and atomic callback
+  do not remove this risk, and its acceptance does not close gas, external audit or network gates.
+- Preserve fixed refund deadlines, fixed-player debt and pause-safe settlement/retry/refund/payment paths.
+- Validate real Anvil SDK/browser and PostgreSQL/keeper flows, NFT ownership and cash ledgers, same-receipt
+  terminal events, WS reconnect, HTTP catch-up, duplicate/reorg and process restart. Report skips explicitly.
+- Remove obsolete source/tests/ABI/schema/tool fields. Regenerate one release format and exercise negative
+  drift/signature tests. No migration or compatibility deployment is required.
+- Freeze actual source/tree, vendored sources, ABIs, dependencies and configuration after integration.
+- Deploy fresh contracts. Authenticate Safe, signer, wrapper/Router, Bank↔Vault/asset, both codehashes,
+  amount precision, limits and matching web/keeper images. Verify Vault source and Bank child creation.
+- Replay complete Hub/pool/Sports authorization sets from creation at the signed verification block;
+  unavailable history rejects the release.
+- Explicitly confirm USDC minimum 0.01 per round and maximum 25 rounds (25 minimum-size rounds total
+  0.25 USDC; no additional position-total minimum), one-hour refund default, risk/PF-XP
+  buffers, constant 86,400-second cooldown and all-open capacity. Business peak is still unselected.
+- Before outside LP funds, decide module/Hub admission governance and guardian custody; rehearse Safe
+  guardian replacement/unpause. Complete independent/external audit and fresh network acceptance.
+- Apply the operational and service launch requirements in the [release guide](README.md).
+
+Wallet/Safe signatures and deployment execution are separate from local implementation tests.

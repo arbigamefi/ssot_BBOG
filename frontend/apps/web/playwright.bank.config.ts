@@ -14,7 +14,7 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
     actionTimeout: 15_000,
     baseURL: process.env.PLAYWRIGHT_BASE_URL,
-    trace: "retain-on-failure",
+    trace: "on",
     screenshot: "only-on-failure"
   }
 });

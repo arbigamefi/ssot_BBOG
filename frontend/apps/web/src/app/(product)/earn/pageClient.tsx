@@ -2,437 +2,288 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Address } from "@ssot/ssot/sdk";
-
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { DepositCursor } from "@ssot/ssot";
+import { toast } from "@ssot/ui";
 import { isLpDepositEnabledForChain } from "../../../app-shell/casino-access";
 import { PageTransition } from "../../../components/PageTransition";
 import { ProductStateCard } from "../../../components/ProductStateCard";
-import { BankProviderLedgerPanel } from "../../../features/earn/BankProviderLedgerPanel";
-import { BankrollPerformancePanel } from "../../../features/earn/BankrollPerformancePanel";
 import {
   EarnActionPanel,
   EarnMobileActions,
   type EarnFlowState
 } from "../../../features/earn/earn-action-panel";
-import {
-  EarnRedemptionPanel,
-  EarnPlayerPayable,
-  EarnDepositNotice,
-  getEarnRedemptionView
-} from "../../../features/earn/earn-redemption-panel";
+import { EarnNftPanel, parseWithdrawalPercent } from "../../../features/earn/earn-nft-panel";
 import { EarnBankDetails } from "../../../features/earn/earn-bank-details";
 import { EarnHero } from "../../../features/earn/earn-hero";
 import { buildEarnHeroMetrics } from "../../../features/earn/earn-hero-metrics";
-import { formatTokenAmount, getExplorerBaseUrl, shortHex } from "../../../features/earn/format";
-import type { EarnAmountMode, EarnBankData, EarnTab } from "../../../features/earn/types";
+import { BankProviderLedgerPanel } from "../../../features/earn/BankProviderLedgerPanel";
+import { BankrollPerformancePanel } from "../../../features/earn/BankrollPerformancePanel";
 import { useBankProviderLedger } from "../../../features/earn/useBankProviderLedger";
-import { useBankRecovery } from "../../../features/earn/useBankRecovery";
-import { useEarnAsyncActions } from "../../../features/earn/useEarnAsyncActions";
-import { EarnRecoveryPanel } from "../../../features/earn/earn-recovery-panel";
+import { formatTokenAmount, getExplorerBaseUrl, shortHex } from "../../../features/earn/format";
+import type { EarnTab } from "../../../features/earn/types";
 import { getPoolAssetContext, type PoolAssetContext } from "../../../features/assets/pool-asset";
 import { formatUnits, parseDecimalToUnits } from "../../../features/betting/model/units";
-import { useSequencedTxAction } from "../../../features/tx/useDirectTxAction";
+import { useDirectTxAction, useSequencedTxAction } from "../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../ssot/sdk";
-import { toast } from "@ssot/ui";
-
-const ZERO_ADDRESS = `0x${"0".repeat(40)}` as Address;
-const ALLOWANCE_NOT_CONFIRMED = "ALLOWANCE_NOT_CONFIRMED";
 
 export function EarnPageClient() {
   const t = useTranslations();
   const { release, readOnly, readOnlyReason, chainId } = useRelease();
-  const chainDepositsEnabled = isLpDepositEnabledForChain(chainId);
   const { sdk, ready } = useSSOTSDK();
   const queryClient = useQueryClient();
-  const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
-
-  const poolContexts = React.useMemo(
+  const contexts = React.useMemo(
     () =>
       release?.pools
         .filter((pool) => pool.domainId === 1 || pool.domain?.toLowerCase() === "casino")
         .map((pool) => getPoolAssetContext(release, pool))
-        .filter((context): context is PoolAssetContext => Boolean(context?.bank)) ?? [],
+        .filter((context): context is PoolAssetContext =>
+          Boolean(context?.bank && context.pool.vault)
+        ) ?? [],
     [release]
   );
-  const selectionScope = `${chainId}:${release?.releaseDigest ?? ""}`;
-  const [poolSelection, setPoolSelection] = React.useState<{ scope: string; key: string }>();
-  const contextKey = (context: PoolAssetContext) => `${context.poolId}:${context.bank}`;
-  const selectedContext =
-    (poolSelection?.scope === selectionScope
-      ? poolContexts.find((context) => contextKey(context) === poolSelection.key)
-      : undefined) ??
-    poolContexts[0] ??
-    null;
-  const poolId = selectedContext?.poolId;
-  const poolKey = selectedContext ? contextKey(selectedContext) : "";
-  const bankAddress = selectedContext?.bank;
-  const depositsEnabled = chainDepositsEnabled && selectedContext?.pool.active === true;
-  const writesSupportedForSelectedAsset = Boolean(
-    selectedContext &&
-    release?.pools
-      .filter((pool) => pool.poolId === poolId)
-      .every((pool) => pool.bank.toLowerCase() === bankAddress)
-  );
-  const asset = selectedContext?.asset.address ?? ZERO_ADDRESS;
-  const decimals = selectedContext?.asset.decimals ?? 18;
-  const symbol = selectedContext?.asset.symbol ?? t("earn.format.assetFallback");
-  const showIndexedHistory =
-    new Set(
-      poolContexts
-        .filter((context) => context.asset.address === asset)
-        .map((context) => context.bank)
-    ).size === 1;
-  const poolOptions = poolContexts.map((context) => ({
-    key: contextKey(context),
-    label: t("earn.pools.option", {
-      symbol: context.asset.symbol,
-      poolId: context.poolId,
-      bank: shortHex(context.bank)
-    })
-  }));
-
-  const {
-    data: bankData,
-    isLoading,
-    error: loadError
-  } = useQuery({
+  const scope = `${chainId}:${release?.releaseDigest ?? ""}:${sdk?.account ?? ""}`;
+  const [selection, setSelection] = React.useState<{ scope: string; key: string }>();
+  const keyOf = (context: PoolAssetContext) =>
+    `${context.poolId}:${context.bank}:${context.pool.vault}`;
+  const context =
+    (selection?.scope === scope
+      ? contexts.find((item) => keyOf(item) === selection.key)
+      : undefined) ?? contexts[0];
+  const poolId = context?.poolId;
+  const poolKey = context ? keyOf(context) : "";
+  const decimals = context?.asset.decimals ?? 6;
+  const symbol = context?.asset.symbol ?? t("earn.format.assetFallback");
+  const [tab, setTab] = React.useState<EarnTab>("deposit");
+  const [input, setInput] = React.useState({ scope: "", amount: "" });
+  const inputScope = `${scope}:${poolKey}`;
+  const amount = input.scope === inputScope ? input.amount : "";
+  const setAmount = (value: string) => setInput({ scope: inputScope, amount: value });
+  const [withdrawal, setWithdrawal] = React.useState<{
+    scope: string;
+    id: bigint;
+    percent: string;
+  }>();
+  const actionPanelRef = React.useRef<HTMLDivElement>(null);
+  const inFlight = React.useRef(false);
+  const [submitting, setSubmitting] = React.useState(false);
+  const enabled = Boolean(sdk && ready && poolId && context);
+  const snapshotQuery = useQuery({
+    queryKey: ["ssot", "earn", "snapshot", scope, poolKey],
+    enabled,
+    queryFn: async () => {
+      const value = await sdk!.bank.getSnapshot(poolId!);
+      if (
+        value.bank.toLowerCase() !== context!.bank ||
+        value.vault.toLowerCase() !== context!.pool.vault!.toLowerCase()
+      )
+        throw new Error(t("earn.nft.unavailable"));
+      return value;
+    },
+    staleTime: 10_000,
+    refetchInterval: 15_000
+  });
+  const snapshot = snapshotQuery.error ? undefined : snapshotQuery.data;
+  const deposits = useInfiniteQuery({
+    queryKey: ["ssot", "earn", "deposits", inputScope, snapshot?.updatedAtBlock.toString()],
+    enabled: Boolean(enabled && sdk?.account && snapshot),
+    initialPageParam: undefined as DepositCursor | undefined,
+    queryFn: ({ pageParam }) =>
+      sdk!.vault.getDeposits(poolId!, sdk!.account!, {
+        cursor: pageParam,
+        limit: 25,
+        blockNumber: snapshot!.updatedAtBlock
+      }),
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    staleTime: 10_000
+  });
+  const items = deposits.error ? [] : (deposits.data?.pages.flatMap((page) => page.items) ?? []);
+  const selected =
+    (withdrawal?.scope === inputScope
+      ? items.find((item) => item.depositId === withdrawal.id)
+      : undefined) ?? items[0];
+  const percent =
+    withdrawal?.scope === inputScope && selected?.depositId === withdrawal.id
+      ? withdrawal.percent
+      : "100";
+  const parsedPercent = parseWithdrawalPercent(percent);
+  const setPercent = (value: string) => {
+    if (selected) setWithdrawal({ scope: inputScope, id: selected.depositId, percent: value });
+  };
+  const quoteQuery = useQuery({
     queryKey: [
       "ssot",
       "earn",
-      "bank",
-      chainId,
-      poolId,
-      bankAddress,
-      release?.releaseDigest,
-      sdk?.account ?? "anonymous"
+      "withdrawQuote",
+      inputScope,
+      selected?.depositId.toString(),
+      parsedPercent?.toString(),
+      snapshot?.updatedAtBlock.toString()
     ],
-    enabled: Boolean(sdk && ready && writesSupportedForSelectedAsset && poolId),
-    queryFn: async (): Promise<EarnBankData> => {
-      if (!sdk) throw new Error(t("earn.errors.sdkUnavailable"));
-      if (!poolId || !writesSupportedForSelectedAsset)
-        throw new Error(t("earn.errors.poolUnavailable"));
-      const snapshot = await sdk.bank.getSnapshot(poolId);
-      if (snapshot.bank?.toLowerCase() !== bankAddress) throw new Error(t("earn.async.unknown"));
-      const position = sdk.account
-        ? await sdk.bank.getPosition(poolId, sdk.account, {
-            blockNumber: snapshot.updatedAtBlock
-          })
-        : null;
-      return { snapshot, position };
-    },
-    // Keep the snapshot stable while the holder pages through historical rights.
-    // Refresh controls and confirmed wallet actions invalidate this whole snapshot.
-    staleTime: Infinity,
-    refetchOnWindowFocus: false
+    enabled: Boolean(enabled && snapshot && selected && parsedPercent != null),
+    queryFn: () =>
+      sdk!.vault.quoteWithdrawal(poolId!, selected!.depositId, parsedPercent!, {
+        blockNumber: snapshot!.updatedAtBlock
+      }),
+    staleTime: 10_000
   });
-
-  const bankLoaded = Boolean(bankData && !loadError);
-  const bankPaused = bankData?.snapshot.riskInPaused !== false;
-  const redemptionState = loadError
-    ? null
-    : getEarnRedemptionView(bankData?.snapshot, bankData?.position);
-  const otherFlowBusyRef = React.useRef(false);
-  const asyncActions = useEarnAsyncActions({
+  const quote = quoteQuery.error || parsedPercent == null ? undefined : quoteQuery.data;
+  const wallet = useQuery({
+    queryKey: ["ssot", "earn", "wallet", inputScope],
+    enabled: Boolean(enabled && sdk?.account),
+    queryFn: () => sdk!.bank.getAssetBalance(context!.asset.address, sdk!.account!),
+    refetchInterval: 15_000
+  });
+  const playerDebt = useQuery({
+    queryKey: ["ssot", "earn", "playerDebt", inputScope, snapshot?.updatedAtBlock.toString()],
+    enabled: Boolean(enabled && sdk?.account && snapshot),
+    queryFn: () =>
+      sdk!.bank.getPlayerPayable(poolId!, sdk!.account!, { blockNumber: snapshot!.updatedAtBlock })
+  });
+  const ledger = useBankProviderLedger({
     sdk,
     poolId,
-    bankAddress,
-    enabled: !readOnly && writesSupportedForSelectedAsset && ready,
-    otherFlowBusy: otherFlowBusyRef
+    enabled: Boolean(snapshot),
+    endBlock: snapshot?.updatedAtBlock
   });
-  const asyncFlow = asyncActions.flow;
-  const asyncBusy = asyncActions.busy;
-  const handleAsyncAction = asyncActions.run;
-
-  const [tab, setTab] = React.useState<EarnTab>(() => (depositsEnabled ? "deposit" : "withdraw"));
-  const [amountMode, setAmountMode] = React.useState<EarnAmountMode>("assets");
-  const [amount, setAmount] = React.useState("");
-  const actionPanelRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useEffect(() => {
-    setAmount("");
-  }, [tab, amountMode, asset, poolKey, selectionScope]);
-
-  React.useEffect(() => {
-    if (!depositsEnabled) setTab("withdraw");
-  }, [depositsEnabled]);
-
-  const focusActionPanel = React.useCallback((nextTab: EarnTab) => {
-    setTab(nextTab);
-    window.requestAnimationFrame(() => {
-      actionPanelRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-      actionPanelRef.current?.focus({ preventScroll: true });
-    });
-  }, []);
-
   const depositFlow = useSequencedTxAction({
     finalAction: "DEPOSIT",
-    errorMessage: t("app.errors.transactionFailed"),
+    errorMessage: t("earn.toast.failed"),
     steps: [
-      {
-        key: "preflight",
-        title: t("earn.flows.preflight.title"),
-        description: t("earn.flows.deposit.preflight")
-      },
+      { key: "preflight", title: t("earn.flows.preflight.title") },
       {
         key: "approve",
         title: t("earn.flows.deposit.approveTitle"),
-        description: t("earn.flows.deposit.approveDescription"),
+        description: t("earn.nft.approveVault"),
         action: "APPROVE_DEPOSIT",
         optional: true
       },
-      {
-        key: "deposit",
-        title: t("earn.flows.deposit.depositTitle"),
-        description: t("earn.flows.deposit.depositDescription"),
-        action: "DEPOSIT"
-      }
+      { key: "deposit", title: t("earn.actions.submit.deposit"), action: "DEPOSIT" }
     ]
   });
-
-  const mintFlow = useSequencedTxAction({
-    finalAction: "MINT",
-    errorMessage: t("app.errors.transactionFailed"),
-    steps: [
-      {
-        key: "preflight",
-        title: t("earn.flows.preflight.title"),
-        description: t("earn.flows.mint.preflight")
-      },
-      {
-        key: "approve",
-        title: t("earn.flows.deposit.approveTitle"),
-        description: t("earn.flows.deposit.approveDescription"),
-        action: "APPROVE_MINT",
-        optional: true
-      },
-      {
-        key: "mint",
-        title: t("earn.flows.mint.mintTitle"),
-        description: t("earn.flows.mint.mintDescription"),
-        action: "MINT"
-      }
-    ]
-  });
-
-  const currentFlow =
-    tab === "withdraw" ? asyncFlow : amountMode === "shares" ? mintFlow : depositFlow;
-  otherFlowBusyRef.current = currentFlow.busy;
-  const flow: EarnFlowState = {
-    status: currentFlow.status,
-    steps: currentFlow.steps,
-    hasActivity: currentFlow.hasActivity,
-    busy: currentFlow.busy || asyncBusy,
-    error: currentFlow.error,
-    txHash: currentFlow.txHash,
-    blockNumber: currentFlow.journalEntry?.blockNumber,
-    reset: currentFlow.reset
+  const labels = {
+    preflight: t("earn.flows.preflight.title"),
+    submit: t("earn.nft.sign"),
+    confirm: t("earn.nft.confirm")
   };
-
-  const { data: walletBalance = null } = useQuery({
-    queryKey: ["ssot", "earn", "walletBalance", chainId, asset, sdk?.account],
-    enabled: Boolean(sdk?.account && selectedContext && ready),
-    queryFn: async () => {
-      if (!sdk?.account) return null;
-      return sdk.bank.getAssetBalance(asset, sdk.account);
-    },
-    refetchInterval: currentFlow.busy ? false : 15_000
+  const withdrawalFlow = useDirectTxAction({
+    action: "WITHDRAW",
+    labels,
+    errorMessage: t("earn.toast.failed")
   });
-
-  const { data: maxMintShares = null } = useQuery({
-    queryKey: ["ssot", "earn", "maxMintShares", selectionScope, poolKey, walletBalance?.toString()],
-    enabled: Boolean(
-      sdk?.account &&
-      poolId &&
-      walletBalance != null &&
-      tab === "deposit" &&
-      amountMode === "shares" &&
-      writesSupportedForSelectedAsset
-    ),
-    queryFn: async () => {
-      if (!poolId || walletBalance == null) return null;
-      return sdk!.bank.convertToShares(poolId, walletBalance);
-    },
-    refetchInterval: currentFlow.busy ? false : 15_000
+  const debtFlow = useDirectTxAction({
+    action: "CLAIM_PLAYER_PAYABLE",
+    labels,
+    errorMessage: t("earn.toast.failed")
   });
+  const currentFlow = tab === "deposit" ? depositFlow : withdrawalFlow;
+  const busy = submitting || depositFlow.busy || withdrawalFlow.busy || debtFlow.busy;
+  const flow: EarnFlowState = {
+    ...currentFlow,
+    busy,
+    blockNumber: currentFlow.journalEntry?.blockNumber
+  };
+  const depositsEnabled = isLpDepositEnabledForChain(chainId) && context?.pool.active === true;
+  const writable = Boolean(ready && sdk?.account && poolId && !readOnly);
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["ssot", "earn"] }),
+      queryClient.invalidateQueries({ queryKey: ["ssot", "account", "assets"] }),
+      queryClient.invalidateQueries({ queryKey: ["ssot", "landing", "asset-overview"] })
+    ]);
 
-  const providerLedger = useBankProviderLedger({
-    enabled: Boolean(ready && poolId && writesSupportedForSelectedAsset),
-    poolId,
-    sdk,
-    endBlock: bankData?.snapshot.updatedAtBlock
-  });
-  const recovery = useBankRecovery({
-    sdk,
-    poolId,
-    blockNumber: bankData?.snapshot.updatedAtBlock,
-    enabled: Boolean(bankLoaded && ready && writesSupportedForSelectedAsset)
-  });
-
-  const maxActionAmount = amountMode === "shares" ? maxMintShares : walletBalance;
-  const availableUnit = amountMode === "shares" ? t("earn.units.sharesLower") : symbol;
-  const availableLabel = t(
-    amountMode === "shares" ? "earn.actions.balance.mintable" : "earn.actions.balance.wallet"
-  );
-  const availableValue =
-    maxActionAmount == null
-      ? t("earn.actions.balance.pending")
-      : formatTokenAmount(maxActionAmount, decimals, availableUnit, 4);
-
-  const handleUseMax = React.useCallback(() => {
-    if (tab === "deposit" && amountMode === "assets" && walletBalance != null) {
-      setAmount(formatUnits(walletBalance, decimals));
-    }
-    if (tab === "deposit" && amountMode === "shares" && maxMintShares != null) {
-      setAmount(formatUnits(maxMintShares, decimals));
-    }
-  }, [amountMode, decimals, maxMintShares, tab, walletBalance]);
-
-  const handleSubmit = React.useCallback(async () => {
-    if (asyncActions.busyRef.current || !bankLoaded || bankPaused || tab !== "deposit") {
-      toast.error(t(!bankLoaded ? "earn.async.unknown" : "earn.async.paused"));
-      return;
-    }
-    if (tab === "deposit" && !depositsEnabled) {
-      toast.error(t("earn.actions.depositsClosed.title"));
-      return;
-    }
-    if (!sdk?.account) {
-      toast.error(t("earn.actions.connectWallet"));
-      return;
-    }
-    if (readOnly) {
-      toast.error(t("earn.actions.readOnly"));
-      return;
-    }
-
-    if (!writesSupportedForSelectedAsset || !poolId) {
-      toast.error(t("earn.errors.unsupportedWriteAsset"));
-      return;
-    }
-
+  const submit = async (action: "deposit" | "withdraw" | "player") => {
+    if (inFlight.current || busy || !writable || !sdk?.account || !poolId || !context) return;
+    inFlight.current = true;
+    setSubmitting(true);
     try {
-      const parsed = parseDecimalToUnits(amount, decimals);
-      if (parsed <= 0n) {
-        toast.error(t("earn.errors.positiveAmount"));
-        return;
-      }
-
       const account = sdk.account;
-      const freshWalletBalance = await sdk.bank.getAssetBalance(asset, account);
-      const freshAvailable =
-        amountMode === "shares"
-          ? await sdk.bank.convertToShares(poolId, freshWalletBalance)
-          : freshWalletBalance;
-      if (parsed > freshAvailable) {
-        toast.error(
-          t(
-            amountMode === "shares"
-              ? "earn.errors.exceedsMintable"
-              : "earn.errors.insufficientWalletBalance"
-          )
-        );
-        return;
-      }
-      const toastId = toast.loading(t("earn.toast.processing"));
       const result =
-        amountMode === "shares"
-          ? await mintFlow.execute(() => sdk.bank.mint(poolId, parsed, account))
-          : await depositFlow.execute(() => sdk.bank.deposit(poolId, parsed, account));
-
+        action === "deposit"
+          ? await depositFlow.execute(async () => {
+              if (!depositsEnabled) throw new Error(t("earn.actions.depositsClosed.title"));
+              const assets = parseDecimalToUnits(amount, decimals);
+              if (assets <= 0n) throw new Error(t("earn.errors.positiveAmount"));
+              const [fresh, balance] = await Promise.all([
+                sdk.bank.getSnapshot(poolId),
+                sdk.bank.getAssetBalance(context.asset.address, account)
+              ]);
+              if (fresh.lpStatus !== "ready")
+                throw new Error(t(`earn.nft.status.${fresh.lpStatus}`));
+              if (assets > balance) throw new Error(t("earn.errors.insufficientWalletBalance"));
+              return sdk.vault.addDeposit(poolId, assets, account);
+            })
+          : action === "withdraw"
+            ? await withdrawalFlow.execute(async () => {
+                if (!selected || parsedPercent == null)
+                  throw new Error(t("earn.nft.status.invalidPercent"));
+                const fresh = await sdk.vault.quoteWithdrawal(
+                  poolId,
+                  selected.depositId,
+                  parsedPercent
+                );
+                if (fresh.position.owner.toLowerCase() !== account.toLowerCase())
+                  throw new Error(t("earn.nft.ownerChanged"));
+                if (!fresh.executable)
+                  throw new Error(t(`earn.nft.status.${fresh.reason ?? fresh.position.status}`));
+                return sdk.vault.withdrawDeposit(poolId, selected.depositId, parsedPercent);
+              })
+            : await debtFlow.execute(() => sdk.bank.claimPlayerPayable(poolId, account));
       if (!result.ok) {
-        toast.dismiss(toastId);
-        toast.error(
-          result.error?.code === ALLOWANCE_NOT_CONFIRMED
-            ? t("earn.errors.allowanceNotConfirmed")
-            : (result.error?.message ?? t("earn.toast.failed"))
-        );
+        toast.error(result.error?.message ?? t("earn.toast.failed"));
         return;
       }
-
       toast.success(
-        amountMode === "shares"
-          ? t("earn.toast.minted", {
-              amount: formatUnits(parsed, decimals)
-            })
-          : t("earn.toast.deposited", {
-              amount: formatUnits(parsed, decimals),
-              symbol
-            }),
-        {
-          description:
-            explorerBaseUrl && result.txHash !== "0x0" ? (
-              <a
-                href={`${explorerBaseUrl}/tx/${result.txHash}`}
-                target="_blank"
-                rel="noreferrer"
-                className="font-bold text-brand hover:text-brand-hover"
-              >
-                {t("earn.toast.viewTransaction")}
-              </a>
-            ) : undefined,
-          id: toastId
-        }
+        t(
+          action === "deposit"
+            ? "earn.nft.deposited"
+            : action === "withdraw"
+              ? "earn.nft.withdrawn"
+              : "earn.nft.playerClaimed"
+        )
       );
-      setAmount("");
-      await queryClient.invalidateQueries({ queryKey: ["ssot", "earn"] });
+      if (action === "deposit") setAmount("");
+      await refresh();
     } catch (error) {
-      toast.error((error as Error)?.message ?? t("earn.toast.failed"));
+      toast.error(error instanceof Error ? error.message : t("earn.toast.failed"));
+    } finally {
+      inFlight.current = false;
+      setSubmitting(false);
     }
-  }, [
-    bankLoaded,
-    bankPaused,
-    amount,
-    amountMode,
-    asset,
-    decimals,
-    depositFlow,
-    depositsEnabled,
-    explorerBaseUrl,
-    mintFlow,
-    queryClient,
-    readOnly,
-    sdk,
-    symbol,
-    tab,
-    poolId,
-    t,
-    writesSupportedForSelectedAsset
-  ]);
-
-  if (!release) {
+  };
+  if (!release)
     return (
       <ProductStateCard
         title={t("earn.state.noRelease.title")}
         description={readOnlyReason ?? t("earn.state.noRelease.description")}
       />
     );
-  }
-
-  const snapshot = bankData?.snapshot;
-  const metrics = buildEarnHeroMetrics({ snapshot, decimals, symbol, t });
-
   return (
     <PageTransition pageKey="earn">
       <div className="space-y-8 pb-28 lg:pb-0">
-        <EarnHero symbol={symbol} bankAddress={shortHex(snapshot?.bank)} metrics={metrics} />
+        <EarnHero
+          symbol={symbol}
+          bankAddress={shortHex(snapshot?.vault)}
+          metrics={buildEarnHeroMetrics({ snapshot, decimals, symbol, t })}
+        />
         <BankrollPerformancePanel
-          assetAddress={asset}
+          assetAddress={context?.asset.address}
           assetDecimals={decimals}
           assetSymbol={symbol}
           chainPerformance={snapshot}
-          showIndexedHistory={showIndexedHistory}
-          sharePrice={snapshot?.assetsPerShare}
-          vaultAssets={snapshot?.totalAssets}
+          vaultAssets={snapshot?.L}
+          showIndexedHistory={
+            contexts.filter((item) => item.asset.address === context?.asset.address).length === 1
+          }
         />
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start">
           <EarnBankDetails
-            data={bankData}
+            data={snapshot ? { snapshot } : undefined}
             decimals={decimals}
             symbol={symbol}
-            loading={isLoading}
-            error={loadError ? t("earn.async.unknown") : undefined}
+            loading={snapshotQuery.isLoading}
+            error={snapshotQuery.error ? t("earn.nft.unavailable") : undefined}
             releaseDigest={release.releaseDigest}
           />
           <div
@@ -444,133 +295,121 @@ export function EarnPageClient() {
             <EarnActionPanel
               tab={tab}
               onTabChange={setTab}
-              amountMode={amountMode}
-              onAmountModeChange={setAmountMode}
-              pools={poolOptions}
+              pools={contexts.map((item) => ({
+                key: keyOf(item),
+                label: `${item.asset.symbol} · #${item.poolId}`
+              }))}
               poolKey={poolKey}
-              onPoolChange={(key) => {
-                if (poolOptions.some((option) => option.key === key))
-                  setPoolSelection({ scope: selectionScope, key });
-              }}
+              onPoolChange={(key) => setSelection({ scope, key })}
               amount={amount}
               onAmountChange={setAmount}
               symbol={symbol}
               disabled={
-                (tab === "deposit" && !depositsEnabled) ||
-                !bankLoaded ||
-                bankPaused ||
-                readOnly ||
-                flow.busy ||
-                !sdk?.account ||
-                !amount ||
-                !writesSupportedForSelectedAsset
+                !writable || !depositsEnabled || snapshot?.lpStatus !== "ready" || busy || !amount
               }
               readOnly={readOnly}
-              unsupportedAsset={!writesSupportedForSelectedAsset}
-              availableLabel={availableLabel}
-              availableValue={availableValue}
-              canUseMax={maxActionAmount != null && maxActionAmount > 0n && !flow.busy}
-              onUseMax={handleUseMax}
+              unsupportedAsset={!context}
+              availableLabel={t("earn.actions.balance.wallet")}
+              availableValue={formatTokenAmount(
+                wallet.error ? undefined : wallet.data,
+                decimals,
+                symbol,
+                6
+              )}
+              canUseMax={!wallet.error && wallet.data != null && wallet.data > 0n && !busy}
+              onUseMax={() => {
+                if (wallet.data != null) setAmount(formatUnits(wallet.data, decimals));
+              }}
               flow={flow}
-              onSubmit={() => void handleSubmit()}
+              onSubmit={() => void submit("deposit")}
               connected={Boolean(sdk?.account)}
               depositsClosed={!depositsEnabled}
               notice={
-                <EarnDepositNotice
-                  loaded={bankLoaded}
-                  inactive={selectedContext?.pool.active === false}
-                  paused={bankPaused && tab === "deposit"}
-                  busy={flow.busy}
-                  onRefresh={() =>
-                    void queryClient.invalidateQueries({ queryKey: ["ssot", "earn"] })
-                  }
-                />
+                <div className="space-y-2 text-sm leading-6 text-fg-muted">
+                  <p>{t("earn.nft.depositTerms")}</p>
+                  {snapshot?.lpStatus && snapshot.lpStatus !== "ready" ? (
+                    <p role="status" className="text-warn">
+                      {t(`earn.nft.status.${snapshot.lpStatus}`)}
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void refresh()}
+                    className="font-bold text-brand"
+                  >
+                    {t("earn.nft.refresh")}
+                  </button>
+                </div>
               }
               withdrawContent={
-                <EarnRedemptionPanel
-                  key={`${selectionScope}:${poolKey}:${sdk?.account}`}
-                  state={redemptionState}
+                <EarnNftPanel
+                  items={items}
+                  selectedId={selected?.depositId}
+                  onSelect={(id) => setWithdrawal({ scope: inputScope, id, percent: "100" })}
+                  percent={percent}
+                  onPercentChange={setPercent}
+                  quote={quote}
+                  quotePending={quoteQuery.isFetching}
+                  error={Boolean(deposits.error || quoteQuery.error || snapshotQuery.error)}
                   connected={Boolean(sdk?.account)}
+                  loading={deposits.isLoading}
+                  hasMore={Boolean(deposits.hasNextPage)}
+                  loadingMore={deposits.isFetchingNextPage}
+                  onLoadMore={() => void deposits.fetchNextPage()}
+                  onWithdraw={() => void submit("withdraw")}
+                  disabled={!writable || !snapshot}
+                  busy={busy}
                   decimals={decimals}
                   symbol={symbol}
-                  disabled={readOnly || !ready || !writesSupportedForSelectedAsset || !sdk?.account}
-                  busy={flow.busy}
-                  onRequest={(shares) => void handleAsyncAction("request", shares)}
-                  onCancel={() => void handleAsyncAction("cancel")}
-                  onClaim={() => void handleAsyncAction("claim")}
-                  receiver={sdk?.account}
                 />
               }
             />
-            <EarnPlayerPayable
-              amount={bankData?.position?.playerPayable ?? 0n}
-              decimals={decimals}
-              symbol={symbol}
-              disabled={
-                readOnly ||
-                !ready ||
-                flow.busy ||
-                !writesSupportedForSelectedAsset ||
-                !redemptionState
-              }
-              onClaim={() => void handleAsyncAction("player")}
-            />
+            {playerDebt.error ? (
+              <p role="alert" className="mt-3 text-warn">
+                {t("earn.nft.playerDebtUnavailable")}
+              </p>
+            ) : null}
+            {playerDebt.data != null && playerDebt.data > 0n ? (
+              <div className="mt-4 rounded-md border border-border bg-surface-1 p-4">
+                <h3 className="font-bold">{t("earn.nft.playerDebt")}</h3>
+                <p className="my-2 text-sm text-fg-muted">{t("earn.nft.playerDebtDetail")}</p>
+                <p>{formatTokenAmount(playerDebt.data, decimals, symbol, 6)}</p>
+                <button
+                  type="button"
+                  disabled={!writable || busy}
+                  onClick={() => void submit("player")}
+                  className="mt-2 font-bold text-brand"
+                >
+                  {t("earn.nft.claimPlayer")}
+                </button>
+              </div>
+            ) : null}
           </div>
-          <div className="min-w-0 space-y-6 xl:col-start-1 xl:row-start-2">
-            <EarnRecoveryPanel
-              items={recovery.items}
-              connected={Boolean(sdk?.account)}
-              receiver={sdk?.account}
-              snapshotBlock={bankData?.snapshot.updatedAtBlock}
-              snapshotTime={bankData?.snapshot.snapshotTimestamp}
-              complete={bankLoaded && recovery.complete}
-              loading={recovery.isLoading}
-              loadingMore={recovery.isFetchingNextPage}
-              hasMore={Boolean(recovery.hasNextPage)}
-              error={Boolean(recovery.error || loadError)}
-              paused={bankPaused}
-              disabled={
-                readOnly ||
-                !ready ||
-                !bankLoaded ||
-                !writesSupportedForSelectedAsset ||
-                !sdk?.account
-              }
-              busy={flow.busy}
-              decimals={decimals}
-              symbol={symbol}
-              onLoadMore={() => void recovery.fetchNextPage()}
-              onRefresh={() => void queryClient.invalidateQueries({ queryKey: ["ssot", "earn"] })}
-              onClaim={(epochId) => void handleAsyncAction("recovery", undefined, epochId)}
-            />
+          <div className="min-w-0 xl:col-start-1 xl:row-start-2">
             <BankProviderLedgerPanel
               connected={Boolean(sdk?.account)}
               decimals={decimals}
-              entries={providerLedger.entries}
-              error={(providerLedger.error as Error | undefined)?.message}
-              explorerBaseUrl={explorerBaseUrl}
-              hasMore={Boolean(providerLedger.hasNextPage)}
-              loading={providerLedger.isLoading}
-              loadingMore={providerLedger.isFetchingNextPage}
-              onLoadMore={() => void providerLedger.fetchNextPage()}
-              positionAssets={
-                bankLoaded && bankData?.position
-                  ? bankData.position.activeAndClaimableAssets + recovery.claimableAssets
-                  : undefined
-              }
-              positionShares={bankData?.position?.shares}
-              recoveryComplete={bankLoaded && recovery.complete}
-              hasUnsettledRecovery={
-                recovery.hasUnsettledRecovery ||
-                (bankData?.position?.queuedRecoveryAssets ?? 0n) > 0n
-              }
-              cashFlowComplete={providerLedger.coverageComplete}
+              entries={ledger.entries}
+              error={ledger.error ? t("earn.nft.unavailable") : undefined}
+              explorerBaseUrl={getExplorerBaseUrl(chainId)}
+              hasMore={Boolean(ledger.hasNextPage)}
+              loading={ledger.isLoading}
+              loadingMore={ledger.isFetchingNextPage}
+              onLoadMore={() => void ledger.fetchNextPage()}
+              cashFlowComplete={ledger.coverageComplete}
               symbol={symbol}
             />
           </div>
         </div>
       </div>
-      <EarnMobileActions tab={tab} onTabChange={focusActionPanel} />
+      <EarnMobileActions
+        tab={tab}
+        onTabChange={(value) => {
+          setTab(value);
+          actionPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      />
     </PageTransition>
   );
 }

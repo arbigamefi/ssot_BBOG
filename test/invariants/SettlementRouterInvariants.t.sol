@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {BankTestBase, TestRandomnessConsumer, DirectRouterFixture} from "../utils/BankTestBase.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 import "forge-std/StdInvariant.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
@@ -11,7 +13,7 @@ import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {HouseEdgeLib} from "../../src/libs/HouseEdgeLib.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
-contract SettlementRouterHandler is Test {
+contract SettlementRouterHandler is BankTestBase {
     MockERC20 public asset;
     Bank public casinoBank;
     Bank public sportsBank;
@@ -329,11 +331,10 @@ contract SettlementRouterHandler is Test {
         Bank rightBank = Bank(m.bank);
         Bank wrongBank = rightBank == casinoBank ? sportsBank : casinoBank;
 
-        (address player, uint256 stake, uint256 reserved, bytes32 snapshotHash, bool open) = rightBank.holds(positionId);
+        (address player, uint256 stake, uint256 reserved,, bool open) = rightBank.holds(positionId);
         assertEq(player, m.player, "right bank player mismatch");
         assertEq(stake, m.stake, "right bank stake mismatch");
         assertEq(reserved, m.reserved, "right bank reserved mismatch");
-        assertEq(snapshotHash, m.snapshotHash, "right bank snapshot mismatch");
         assertEq(open, m.state == SSOTTypes.PositionState.Held, "right bank open mismatch");
 
         (address wrongPlayer,,,, bool wrongOpen) = wrongBank.holds(positionId);
@@ -382,7 +383,7 @@ contract SettlementRouterHandler is Test {
     }
 }
 
-contract SettlementRouterInvariants is StdInvariant, Test {
+contract SettlementRouterInvariants is StdInvariant, BankTestBase {
     MockERC20 internal usdc;
     Bank internal casinoBank;
     Bank internal sportsBank;
@@ -397,8 +398,8 @@ contract SettlementRouterInvariants is StdInvariant, Test {
 
     function setUp() external {
         usdc = new MockERC20("USD Coin", "USDC", 6);
-        casinoBank = new Bank(address(usdc), gov, 0, "Casino LP USDC", "clpUSDC", 6, 1);
-        sportsBank = new Bank(address(usdc), gov, 0, "Sports LP USDC", "slpUSDC", 6, 1);
+        casinoBank = new Bank(address(usdc), gov, 0, 6, 1);
+        sportsBank = new Bank(address(usdc), gov, 0, 6, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
 
@@ -410,13 +411,15 @@ contract SettlementRouterInvariants is StdInvariant, Test {
         poolRegistry.setHubAllowedForPool(1, casinoHub, true);
         poolRegistry.setHubAllowedForPool(2, sportsHub, true);
         casinoBank.setSettlementRouterOnce(address(router));
+        _bindTestConsumer(casinoBank);
         sportsBank.setSettlementRouterOnce(address(router));
+        _bindTestConsumer(sportsBank);
 
         usdc.mint(gov, 20_000_000e6);
-        usdc.approve(address(casinoBank), type(uint256).max);
-        usdc.approve(address(sportsBank), type(uint256).max);
-        casinoBank.deposit(5_000_000e6, gov);
-        sportsBank.deposit(5_000_000e6, gov);
+        usdc.approve(address(casinoBank.vault()), type(uint256).max);
+        usdc.approve(address(sportsBank.vault()), type(uint256).max);
+        LiquidityVault(casinoBank.vault()).addDepositFor(gov, 5_000_000e6);
+        LiquidityVault(sportsBank.vault()).addDepositFor(gov, 5_000_000e6);
         vm.stopPrank();
 
         handler = new SettlementRouterHandler(

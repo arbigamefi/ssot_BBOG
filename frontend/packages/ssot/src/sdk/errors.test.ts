@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { BaseError } from "viem";
+import {
+  BaseError,
+  ContractFunctionRevertedError,
+  encodeErrorResult,
+  decodeErrorResult
+} from "viem";
+import { getContractAbis } from "../abis/index.mjs";
 import { toDomainError } from "./errors";
 
 // Minimal mock helpers — we construct objects that look like viem errors
@@ -57,13 +63,25 @@ describe("toDomainError", () => {
     expect(d.severity).toBe("warning");
   });
 
-  it("maps ContractFunctionRevertedError → mapRevert (UnknownAsset)", () => {
-    const err = makeBaseError("ContractFunctionRevertedError");
-    (err as any).data = { errorName: "UnknownAsset", args: ["0xDEAD"] };
-    const d = toDomainError(err);
-    expect(d.code).toBe("UNKNOWN_ASSET");
-    expect(d.details).toEqual({ asset: "0xDEAD" });
-  });
+  it.each(["GameHubAbi", "SportsHubAbi"] as const)(
+    "decodes real OpenHoldLimit bytes through %s into retryable capacity feedback",
+    (hub) => {
+      const abis = getContractAbis();
+      const abi = [...abis[hub], ...abis.BankAbi.filter((entry) => entry.type === "error")];
+      const data = encodeErrorResult({ abi: abis.BankAbi, errorName: "OpenHoldLimit" });
+      expect(decodeErrorResult({ abi, data }).errorName).toBe("OpenHoldLimit");
+      const reverted = new ContractFunctionRevertedError({
+        abi,
+        data,
+        functionName: hub === "GameHubAbi" ? "placeBet" : "placeTicket"
+      });
+      expect(toDomainError(new BaseError("wrapped", { cause: reverted }))).toMatchObject({
+        code: "OPEN_HOLD_LIMIT",
+        severity: "warning",
+        retryable: true
+      });
+    }
+  );
 
   it("maps ContractFunctionRevertedError → mapRevert (UnknownGame)", () => {
     const err = makeBaseError("ContractFunctionRevertedError");
@@ -87,14 +105,6 @@ describe("toDomainError", () => {
     const d = toDomainError(err);
     expect(d.code).toBe("HOUSE_EDGE_TOO_HIGH");
     expect(d.details).toEqual({ got: 500, maxAllowed: 300 });
-  });
-
-  it("maps ContractFunctionRevertedError → mapRevert (HouseEdgeTooLow)", () => {
-    const err = makeBaseError("ContractFunctionRevertedError");
-    (err as any).data = { errorName: "HouseEdgeTooLow", args: [10, 50] };
-    const d = toDomainError(err);
-    expect(d.code).toBe("HOUSE_EDGE_TOO_LOW");
-    expect(d.details).toEqual({ got: 10, minAllowed: 50 });
   });
 
   it("maps ContractFunctionRevertedError → mapRevert (RefundNotReady)", () => {

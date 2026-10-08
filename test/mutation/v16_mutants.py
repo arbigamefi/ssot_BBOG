@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Replayable mutation check for the v1.6 release unit: the house-edge allocation and the Bank's asynchronous
-redemptions and historical recovery (ADR-0034/0035, M20 on).
+"""Replayable mutation check for the v1.6 release unit: house-edge allocation, NFT capital custody and durable VRF settlement.
 
-Each mutant removes one guarantee of SSOT v1.6 or ADR-0034/0035 and names the tests that must catch it. The runner applies one
+Each mutant removes one guarantee of the current SSOT and NFT/callback decisions and names the tests that must catch it. The runner applies one
 mutant at a time, runs those tests with FOUNDRY_PROFILE=pr, restores the source and reports whether the mutant
 was killed (the named tests fail). It exits non-zero if a mutant survives, if a mutant does not compile, or if an
 anchor is not found exactly once, which means the source moved and the mutant needs updating.
@@ -27,219 +26,182 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-GH = "src/core/GameHub.sol"
-SR = "src/core/SettlementRouter.sol"
-EN = "src/engines/referral/DefaultReferralEngine.sol"
-SH = "src/core/SportsHub.sol"
-SNAP = "script/release/V16Snapshot.sol"
-BANK = "src/core/Bank.sol"
-
-V16 = "test/unit/HouseEdgeAllocationV16.t.sol"
-RT = "test/unit/SettlementRouter.t.sol"
-RINV = "test/invariants/SettlementRouterInvariants.t.sol"
-DIFF = "test/diff/StatefulSystemDiff.t.sol"
-DEPLOY = "test/unit/DeploymentV16.t.sol"
-ASYNC = "test/unit/BankAsyncRedemption.t.sol"
-PENDING = "test/unit/BankPendingExposure.t.sol"
-BINV = "test/invariants/BankInvariants.t.sol"
-GUARDS = "test/unit/BankRedemptionGuards.t.sol"
-
-MUTANTS = [
-    {"id": "M01", "guarantee": "the Router cap",
-     "patches": [(SR, "if (allocated > cap) revert", "if (allocated > cap && positionId == type(uint256).max) revert")],
-     "tests": [RT, RINV]},
-    {"id": "M02", "guarantee": "the Router edge bound",
-     "patches": [(SR, "if (edgeBps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS) revert",
-                  "if (edgeBps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS && player == address(1)) revert")],
-     "tests": [RT, RINV]},
-    {"id": "M03", "guarantee": "the LP share (the engine accrues the full edge)",
-     "patches": [(EN, "alloc.operatorShare = HouseEdgeLib.operatorShare(alloc.edge);", "alloc.operatorShare = alloc.edge;")],
-     "tests": [V16, "test/unit/GameHubRouter.t.sol"]},
-    {"id": "M04", "guarantee": "payee snapshot at acceptance",
-     "patches": [(GH, "ReferralPayees storage payees = betReferralPayees[betId];",
-                  "ReferralPayees memory payees; payees.l1 = IReferralRegistry(referralRegistry).referrerOf(b.player); "
-                  "if (payees.l1 != address(0)) payees.l2 = IReferralRegistry(referralRegistry).referrerOf(payees.l1);")],
-     "tests": [V16, DIFF]},
-    {"id": "M05", "guarantee": "no L0 without a referrer",
-     "patches": [(EN, "        if (input.l1 != address(0)) {\n            alloc.r0 = Math.mulDiv(baseEdge, uint256(input.l0Bps), BPS);",
-                  "        {\n            alloc.r0 = Math.mulDiv(baseEdge, uint256(input.l0Bps), BPS);"),
-                 (EN, "            alloc.r1 = Math.mulDiv(baseEdge, uint256(input.l1Bps), BPS);\n"
-                      "            n = _push(tmp, n, input.l1, input, alloc.r1, eligible, REASON_REF_L1);",
-                  "        }\n        if (input.l1 != address(0)) {\n"
-                  "            alloc.r1 = Math.mulDiv(baseEdge, uint256(input.l1Bps), BPS);\n"
-                  "            n = _push(tmp, n, input.l1, input, alloc.r1, eligible, REASON_REF_L1);")],
-     "tests": [V16, DIFF]},
-    {"id": "M06", "guarantee": "the 7-day delay",
-     "patches": [(GH, "if (block.timestamp < pending.activatesAt) revert EdgeChangeNotReady(pending.activatesAt);", "")],
-     "tests": [V16]},
-    {"id": "M07", "guarantee": "clamping stale affiliate edges to the cap",
-     "patches": [(GH, "if (heCur > maxAllowed) heCur = maxAllowed;", "")],
-     "tests": [V16, DIFF]},
-    {"id": "M08", "guarantee": "markup remainder to the protocol",
-     "patches": [(EN, "uint256 share = Math.mulDiv(budget, uint256(inc), sumInc);",
-                  "uint256 share = i == k - 1 ? budget - paid : Math.mulDiv(budget, uint256(inc), sumInc);")],
-     "tests": [V16, DIFF]},
-    {"id": "M09", "guarantee": "the 35% schedule cap",
-     "patches": [(GH, "if (rates > HouseEdgeLib.MAX_REFERRAL_BPS) revert Errors.InvalidBps(rates);",
-                  "if (rates > BPS) revert Errors.InvalidBps(rates);")],
-     "tests": [V16, "test/unit/SecurityFixes.t.sol"]},
-    {"id": "M10", "guarantee": "edge 0 for sports",
-     "patches": [(SH, "decision.reserved, oddsTicketHash, 0);", "decision.reserved, oddsTicketHash, 200);")],
-     "tests": ["test/unit/SportsHubTicket.t.sol"]},
-    {"id": "M11", "guarantee": "base edge fixed at acceptance",
-     "patches": [(GH, "baseEdgeBps: b.baseHouseEdgeBps,", "baseEdgeBps: defaultHouseEdgeBps,")],
-     "tests": [V16, DIFF]},
-    {"id": "M12", "guarantee": "schedule fixed at acceptance",
-     "patches": [(GH, "ReferralSchedule storage cfg = _refCfg[b.referralConfigId];",
-                  "ReferralSchedule storage cfg = _refCfg[activeReferralConfigId];")],
-     "tests": [V16, DIFF]},
-    {"id": "M13", "guarantee": "immediate markup-cap decreases",
-     "patches": [(GH, "if (param == EdgeParam.MaxAffiliateDelta && bps <= maxAffiliateDeltaBps) {",
-                  "if (param == EdgeParam.MaxAffiliateDelta && bps < 0) {")],
-     "tests": [V16]},
-    {"id": "M14", "guarantee": "cancel clears the queued change",
-     "patches": [(GH, "        delete _pendingEdgeChange[param];\n        emit EdgeChangeCancelled", "        emit EdgeChangeCancelled")],
-     "tests": [V16]},
-    {"id": "M15", "guarantee": "permissionless activation",
-     "patches": [(GH, "function activateEdgeChange(EdgeParam param) external override {",
-                  "function activateEdgeChange(EdgeParam param) external override onlyGov {")],
-     "tests": [V16]},
-    {"id": "M16", "guarantee": "the one-day refund timeout bound (audit O-06)",
-     "patches": [(GH, "seconds_ > MAX_REFUND_TIMEOUT_SECONDS", "false")],
-     "tests": [V16]},
-    # Caught only by the Router invariant suite on purpose: before its hardening (audit O-03) the handler
-    # swallowed refused settlements, so a Router that refused a claim of exactly the cap passed.
-    {"id": "M17", "guarantee": "a claim of exactly the cap is accepted (Router invariant, audit O-03)",
-     "patches": [(SR, "if (allocated > cap) revert", "if (allocated > cap || (allocated == cap && cap > 0)) revert")],
-     "tests": [RINV]},
-    {"id": "M18", "guarantee": "no pending edge change at release (audit F-01)",
-     "patches": [(SNAP, '            require(activatesAt == 0, "pending edge change is not part of the release");\n', "")],
-     "tests": [DEPLOY], "args": ["--threads", "1"]},
-    # Caught only by the stateful differential test on purpose: before its hardening (audit O-03) it treated
-    # every failed placement as a legitimate rejection, so bets refused for no reason went unnoticed.
-    {"id": "M19", "guarantee": "a correctly priced bet is not refused (differential test, audit O-03)",
-     "patches": [(GH, "if (stakeSpec.betCount == 0 || stakeSpec.betCount > MAX_BET_COUNT) revert Errors.InvalidConfig();",
-                  "if (stakeSpec.betCount == 0 || stakeSpec.betCount > MAX_BET_COUNT || stakeSpec.betCount == 3) "
-                  "revert Errors.InvalidConfig();")],
-     "tests": [DIFF]},
-    # ADR-0034/0035: immediate liquid pricing and independently owned historical recovery.
-    {"id": "M20", "guarantee": "an unfinished historical epoch never gates a later exit",
-     "patches": [(BANK, "        batchId = currentEpoch;\n", "        if (recoveryEpoch(1).remainingHolds != 0) revert SolvencyViolation();\n        batchId = currentEpoch;\n")],
-     "tests": [ASYNC, PENDING]},
-    {"id": "M21", "guarantee": "LP exits never independently stop betting",
-     "patches": [(BANK, "        if (reserved < stake) revert ReservedTooSmall(betId, reserved, stake);", "        if (recoveryBacking != 0) revert SolvencyViolation();\n        if (reserved < stake) revert ReservedTooSmall(betId, reserved, stake);")],
-     "tests": [ASYNC, BINV, "test/unit/GameHubE2E.t.sol"]},
-    {"id": "M22", "guarantee": "the all-real-supply curve cannot exceed real NAV",
-     "patches": [(BANK, "return Math.min(Math.mulDiv(supply, nav_ + _virtualOffset, supply + _virtualOffset), nav_);", "return Math.mulDiv(supply, nav_ + _virtualOffset, supply + _virtualOffset);")],
-     "tests": [ASYNC, PENDING, BINV]},
-    {"id": "M23", "guarantee": "every request controller is a real beneficiary, never Bank escrow",
-     "patches": [(BANK, "        _checkShareReceiver(controller);\n", "        if (controller == address(0)) revert Errors.ZeroAddress();\n")],
-     "tests": [GUARDS, ASYNC]},
-    {"id": "M24", "guarantee": "ordinary batch allocation releases its exact rounding remainder",
-     "patches": [(BANK, "            exitPayable -= dust;\n", "")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M25", "guarantee": "rescue cannot take escrowed shares",
-     "patches": [(BANK, "if (token == asset || token == address(this)) revert Errors.InvalidConfig();", "if (token == asset) revert Errors.InvalidConfig();")],
-     "tests": [GUARDS, ASYNC]},
-    {"id": "M26", "guarantee": "NAV subtracts player payables",
-     "patches": [(BANK, "return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal + recoveryBacking);", "return AccountingLib.nav(B, PF, XP + exitPayable + recoveryBacking);")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M27", "guarantee": "NAV subtracts priced exits",
-     "patches": [(BANK, "return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal + recoveryBacking);", "return AccountingLib.nav(B, PF, XP + playerPayableTotal + recoveryBacking);")],
-     "tests": [ASYNC, PENDING, BINV]},
-    {"id": "M28", "guarantee": "a refused payout does not block settlement",
-     "patches": [(BANK, "        if (_assetToken.trySafeTransfer(player, amount)) return;\n", "        _assetToken.safeTransfer(player, amount);\n        return;\n")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M29", "guarantee": "direct and nested token gas failures follow the same payable policy",
-     "patches": [(BANK, "        if (_assetToken.trySafeTransfer(player, amount)) return;\n", "        uint256 gasBefore = gasleft();\n        if (_assetToken.trySafeTransfer(player, amount)) return;\n        if (gasleft() < gasBefore / 63) revert Errors.InvalidConfig();\n")],
-     "tests": [ASYNC]},
-    {"id": "M30", "guarantee": "only the controller or its operator claims liquid exits",
-     "patches": [(BANK, "        _checkController(controller);\n        _syncRedeem(controller);\n        return _redeemAccounts", "        _syncRedeem(controller);\n        return _redeemAccounts")],
-     "tests": [GUARDS, ASYNC]},
-    {"id": "M31", "guarantee": "a withdrawal cannot strand assets",
-     "patches": [(BANK, "        if (shares_ == claimableShares && assets_ != claimableAssets) revert ClaimWouldStrandAssets();\n", "")],
-     "tests": [GUARDS, ASYNC, BINV]},
-    {"id": "M32", "guarantee": "a request spends a finite allowance",
-     "patches": [(BANK, "                allowance[owner][msg.sender] = allowed - shares_;\n", "")],
-     "tests": [GUARDS, ASYNC]},
-    {"id": "M33", "guarantee": "LP liquid claims stop while paused",
-     "patches": [(BANK, "returns (RedeemAccount storage a) {\n        if (paused()) revert RiskInPaused();\n", "returns (RedeemAccount storage a) {\n")],
-     "tests": [ASYNC, "test/unit/GameHubE2E.t.sol"]},
-    {"id": "M34", "guarantee": "ordinary claim assignment cannot delete historical controller rights",
-     "patches": [(BANK, "        a.batchId = 0;\n        a.claimableShares += s;", "        a.batchId = 0;\n        delete _requestShares[id][controller];\n        a.claimableShares += s;")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M35", "guarantee": "an overdue unactivated queue still accepts requests",
-     "patches": [(BANK, "        if (_batches[id].shares != 0) return id;", "        if (_batches[id].shares != 0) { if (block.timestamp >= _batches[id].cutoff) revert NoBatchDue(); return id; }")],
-     "tests": [GUARDS, ASYNC]},
-    {"id": "M36", "guarantee": "a player payable pays only the player",
-     "patches": [(BANK, "        _assetToken.safeTransfer(player, amount);\n        emit PlayerPayablePaid(", "        _assetToken.safeTransfer(msg.sender, amount);\n        emit PlayerPayablePaid(")],
-     "tests": [ASYNC]},
-    {"id": "M37", "guarantee": "player payables are claimable while paused",
-     "patches": [(BANK, "        amount = playerPayable[player];\n", "        if (paused()) revert RiskInPaused();\n        amount = playerPayable[player];\n")],
-     "tests": [GUARDS, ASYNC]},
-    {"id": "M38", "guarantee": "priced assets move to exitPayable",
-     "patches": [(BANK, "        exitPayable += liquid;\n", "")],
-     "tests": [ASYNC, PENDING, BINV]},
-    {"id": "M39", "guarantee": "views compute ordinary entitlements as synchronization does",
-     "patches": [(BANK, "            claimableAssets += Math.mulDiv(s, b.assets, b.shares);\n", "            claimableAssets += Math.mulDiv(s, b.assets, b.shares, Math.Rounding.Ceil);\n")],
-     "tests": [GUARDS, ASYNC, BINV]},
-    {"id": "M40", "guarantee": "a request synchronizes before reusing the controller slot",
-     "patches": [(BANK, "        uint256 id = _batchForRequest();\n        _syncRedeem(controller);\n", "        uint256 id = _batchForRequest();\n")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M41", "guarantee": "an empty queue is retired",
-     "patches": [(BANK, "        if (remaining == 0) {\n", "        if (remaining == 0 && remaining == 1) {\n")],
-     "tests": [GUARDS, ASYNC]},
-    {"id": "M42", "guarantee": "active NAV excludes all historical backing",
-     "patches": [(BANK, "return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal + recoveryBacking);", "return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal);")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M43", "guarantee": "staying reserve is released in the terminal transaction",
-     "patches": [(BANK, "        activeReserved -= r.activeUnits;\n        _activeHolds.remove(betId);", "        activeReserved -= 0;\n        _activeHolds.remove(betId);")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M44", "guarantee": "combined settlement cost fits its held reserve",
-     "patches": [(BANK, "        if (cost > reserved) revert ReservedTooSmall(betId, reserved, cost);\n", "")],
-     "tests": [GUARDS, ASYNC]},
-    {"id": "M45", "guarantee": "only activated request units receive frozen recovery rights",
-     "patches": [(BANK, "position.shares = q;", "position.shares = q + balanceOf[controller];")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M46", "guarantee": "claiming uses a cumulative entitlement rather than per-release rounding",
-     "patches": [(BANK, "        position.claimableAssets = entitlement - position.claimedAssets;", "        position.claimableAssets = entitlement;")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M47", "guarantee": "later activation never segregates historical reserve twice",
-     "patches": [(BANK, "        uint256 reserve = activeReserved;", "        uint256 reserve = totalReserved;")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M48", "guarantee": "assigned unpaid recovery remains backed after final synchronization",
-     "patches": [(BANK, "            uint256 dust = view_.recoveredAssets - e.finalizedAssets;", "            uint256 dust = view_.backingAssets;")],
-     "tests": [ASYNC, BINV]},
-    {"id": "M49", "guarantee": "only controller or operator can redirect historical recovery",
-     "patches": [(BANK, "        _checkController(controller);\n        RecoveryPosition memory position", "        RecoveryPosition memory position")],
-     "tests": [GUARDS, ASYNC]},
-    {"id": "M50", "guarantee": "full-exit liquid allocation dust never becomes a later depositor windfall",
-     "patches": [(BANK, "            if (b.fullExit) _accrueProtocolCapital(id, dust, 3);", "            if (b.fullExit && totalSupply == 0) _accrueProtocolCapital(id, dust, 3);")],
-     "tests": [GUARDS, ASYNC]},
-    {"id": "M51", "guarantee": "the virtual position is one thousandth of a token, so its residual stays negligible",
-     "patches": [(BANK, "_virtualOffset = decimals_ > 3 ? 10 ** uint256(decimals_ - 3) : 1;",
-                  "_virtualOffset = 10 ** uint256(decimals_);")],
-     "tests": [ASYNC, "test/unit/SecurityFixes.t.sol"]},
-
-    {"id": "M52", "guarantee": "Bank pulls only the authenticated hub's stake, not a player's deposit approval",
-     "patches": [(BANK, "_assetToken.safeTransferFrom(fundingHub, address(this), stake);",
-                  "_assetToken.safeTransferFrom(player, address(this), stake);")],
-     "tests": [RT, "test/unit/GameHubRouter.t.sol"]},
-    {"id": "M53", "guarantee": "accepted refund rights do not change with governance timeout updates",
-     "patches": [(GH, "uint256 readyAt = b.refundDeadline;",
-                  "uint256 readyAt = uint256(b.placedAt) + refundTimeoutSeconds;")],
-     "tests": ["test/unit/GameHubRouter.t.sol"]},
-    {"id": "M54", "guarantee": "minimum total stake is enforced on-chain before accepting a position",
-     "patches": [(BANK, "if (stake < minStake) revert StakeBelowMinimum(stake, minStake);", "")],
-     "tests": ["test/unit/GameHubRouter.t.sol"]},
-
-    {"id": "M55", "guarantee": "VRF execution uses the wrapper's actual transaction price, not a fixed-price estimate",
-     "patches": [("src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol",
-                  "return wrapper.calculateRequestPriceNative(callbackGasLimit, numWords);",
-                  "return wrapper.estimateRequestPriceNative(callbackGasLimit, numWords, 0);")],
-     "tests": ["test/unit/ChainlinkAdapter.t.sol"]},
-
-]
+MUTANTS = [{'id': 'M01',
+  'guarantee': 'the Router cap',
+  'patches': [('src/core/SettlementRouter.sol',
+               'if (allocated > cap) revert',
+               'if (allocated > cap && positionId == type(uint256).max) revert')],
+  'tests': ['test/unit/SettlementRouter.t.sol', 'test/invariants/SettlementRouterInvariants.t.sol']},
+ {'id': 'M02',
+  'guarantee': 'the Router edge bound',
+  'patches': [('src/core/SettlementRouter.sol',
+               'if (edgeBps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS) revert',
+               'if (edgeBps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS && player == address(1)) revert')],
+  'tests': ['test/unit/SettlementRouter.t.sol', 'test/invariants/SettlementRouterInvariants.t.sol']},
+ {'id': 'M03',
+  'guarantee': 'the LP share (the engine accrues the full edge)',
+  'patches': [('src/engines/referral/DefaultReferralEngine.sol',
+               'alloc.operatorShare = HouseEdgeLib.operatorShare(alloc.edge);',
+               'alloc.operatorShare = alloc.edge;')],
+  'tests': ['test/unit/HouseEdgeAllocationV16.t.sol', 'test/unit/GameHubRouter.t.sol']},
+ {'id': 'M04',
+  'guarantee': 'payee snapshot at acceptance',
+  'patches': [('src/core/GameHub.sol',
+               'ReferralPayees storage payees = betReferralPayees[betId];',
+               'ReferralPayees memory payees; payees.l1 = '
+               'IReferralRegistry(referralRegistry).referrerOf(b.player); if (payees.l1 != address(0)) '
+               'payees.l2 = IReferralRegistry(referralRegistry).referrerOf(payees.l1);')],
+  'tests': ['test/unit/HouseEdgeAllocationV16.t.sol', 'test/diff/StatefulSystemDiff.t.sol']},
+ {'id': 'M05',
+ 'guarantee': 'no L0 without an acceptance-time referrer',
+ 'patches': [('src/engines/referral/DefaultReferralEngine.sol',
+              'if (input.l1 != address(0)) {',
+              'if (true) {')],
+ 'tests': ['test/unit/HouseEdgeAllocationV16.t.sol', 'test/diff/StatefulSystemDiff.t.sol']},
+ {'id': 'M06',
+  'guarantee': 'the 7-day delay',
+  'patches': [('src/core/GameHub.sol',
+               'if (block.timestamp < pending.activatesAt) revert EdgeChangeNotReady(pending.activatesAt);',
+               '')],
+  'tests': ['test/unit/HouseEdgeAllocationV16.t.sol']},
+ {'id': 'M07',
+ 'guarantee': 'the user-signed house-edge ceiling is enforced',
+ 'patches': [('src/core/GameHub.sol',
+              'if (houseEdge > usedMaxHE) revert HouseEdgeTooHigh(houseEdge, usedMaxHE);',
+              '')],
+ 'tests': ['test/unit/HouseEdgeAllocationV16.t.sol', 'test/unit/GameHubRouter.t.sol']},
+ {'id': 'M08',
+ 'guarantee': 'missing referral rewards and rounding remain protocol fees',
+ 'patches': [('src/engines/referral/DefaultReferralEngine.sol',
+              'alloc.protocolFee = alloc.operatorShare - alloc.r0 - alloc.r1 - alloc.r2;',
+              'alloc.protocolFee = 0;')],
+ 'tests': ['test/unit/HouseEdgeAllocationV16.t.sol', 'test/diff/StatefulSystemDiff.t.sol']},
+ {'id': 'M09',
+  'guarantee': 'the 35% schedule cap',
+  'patches': [('src/core/GameHub.sol',
+               'if (rates > HouseEdgeLib.MAX_REFERRAL_BPS) revert Errors.InvalidBps(rates);',
+               'if (rates > BPS) revert Errors.InvalidBps(rates);')],
+  'tests': ['test/unit/HouseEdgeAllocationV16.t.sol', 'test/unit/SecurityFixes.t.sol']},
+ {'id': 'M10',
+  'guarantee': 'edge 0 for sports',
+  'patches': [('src/core/SportsHub.sol',
+               'decision.reserved, oddsTicketHash, 0);',
+               'decision.reserved, oddsTicketHash, 200);')],
+  'tests': ['test/unit/SportsHubTicket.t.sol']},
+ {'id': 'M11',
+ 'guarantee': 'settlement uses the accepted house-edge snapshot',
+ 'patches': [('src/core/GameHub.sol',
+              'houseEdgeBps: b.houseEdgeBps,',
+              'houseEdgeBps: defaultHouseEdgeBps,')],
+ 'tests': ['test/unit/HouseEdgeAllocationV16.t.sol', 'test/diff/StatefulSystemDiff.t.sol']},
+ {'id': 'M12',
+  'guarantee': 'schedule fixed at acceptance',
+  'patches': [('src/core/GameHub.sol',
+               'ReferralSchedule storage cfg = _refCfg[b.referralConfigId];',
+               'ReferralSchedule storage cfg = _refCfg[activeReferralConfigId];')],
+  'tests': ['test/unit/HouseEdgeAllocationV16.t.sol', 'test/diff/StatefulSystemDiff.t.sol']},
+ {'id': 'M13',
+ 'guarantee': 'new positions respect the 128-open-hold limit',
+ 'patches': [('src/core/Bank.sol', 'if (openHolds() >= MAX_OPEN_HOLDS) revert OpenHoldLimit();', '')],
+ 'tests': ['test/unit/BankNFTAccounting.t.sol']},
+ {'id': 'M14',
+ 'guarantee': 'cancelling the queued edge change clears it',
+ 'patches': [('src/core/GameHub.sol',
+              '        delete _pendingEdgeChange;\n        emit EdgeChangeCancelled',
+              '        emit EdgeChangeCancelled')],
+ 'tests': ['test/unit/HouseEdgeAllocationV16.t.sol']},
+ {'id': 'M15',
+ 'guarantee': 'only the immutable Bank may lock or settle Vault capital',
+ 'patches': [('src/core/LiquidityVault.sol', 'if (msg.sender != bank) revert OnlyBank();', '')],
+ 'tests': ['test/unit/LiquidityVaultAdversarial.t.sol', 'test/unit/BankNFTAccounting.t.sol']},
+ {'id': 'M16',
+  'guarantee': 'the one-day refund timeout bound (audit O-06)',
+  'patches': [('src/core/GameHub.sol', 'seconds_ > MAX_REFUND_TIMEOUT_SECONDS', 'false')],
+  'tests': ['test/unit/HouseEdgeAllocationV16.t.sol']},
+ {'id': 'M17',
+  'guarantee': 'a claim of exactly the cap is accepted (Router invariant, audit O-03)',
+  'patches': [('src/core/SettlementRouter.sol',
+               'if (allocated > cap) revert',
+               'if (allocated > cap || (allocated == cap && cap > 0)) revert')],
+  'tests': ['test/invariants/SettlementRouterInvariants.t.sol']},
+ {'id': 'M18',
+ 'guarantee': 'a pending edge change prevents release acceptance',
+ 'patches': [('script/release/V16Snapshot.sol',
+              '        require(activatesAt == 0, "pending edge change is not part of the release");\n',
+              '')],
+ 'tests': ['test/unit/DeploymentV16.t.sol'],
+ 'args': ['--threads', '1']},
+ {'id': 'M19',
+  'guarantee': 'a correctly priced bet is not refused (differential test, audit O-03)',
+  'patches': [('src/core/GameHub.sol',
+               'if (stakeSpec.betCount == 0 || stakeSpec.betCount > gameMaxBetCount[gameId]) revert '
+               'Errors.InvalidConfig();',
+               'if (stakeSpec.betCount == 0 || stakeSpec.betCount > gameMaxBetCount[gameId] || '
+               'stakeSpec.betCount == 3) revert Errors.InvalidConfig();')],
+  'tests': ['test/diff/StatefulSystemDiff.t.sol']},
+ {'id': 'M20',
+  'guarantee': "Bank pulls only the authenticated hub's stake, not a player's deposit approval",
+  'patches': [('src/core/Bank.sol',
+               '_assetToken.safeTransferFrom(fundingHub, address(this), stake);',
+               '_assetToken.safeTransferFrom(player, address(this), stake);')],
+  'tests': ['test/unit/SettlementRouter.t.sol', 'test/unit/GameHubRouter.t.sol']},
+ {'id': 'M21',
+  'guarantee': 'accepted refund rights do not change with governance timeout updates',
+  'patches': [('src/core/GameHub.sol',
+               'uint256 readyAt = b.refundDeadline;',
+               'uint256 readyAt = uint256(b.placedAt) + refundTimeoutSeconds;')],
+  'tests': ['test/unit/GameHubRouter.t.sol']},
+ {'id': 'M22',
+  'guarantee': 'minimum per-round amount cannot be bypassed by buying more rounds',
+  'patches': [('src/core/GameHub.sol',
+               'if (stakeSpec.amountPerRoll < minimum) {\n'
+               '            revert IBank.BetAmountBelowMinimum(stakeSpec.amountPerRoll, minimum);\n'
+               '        }', '')],
+  'tests': ['test/unit/GameHubRouter.t.sol']},
+ {'guarantee': 'NFT cash belongs to its current owner',
+  'patches': [('src/core/LiquidityVault.sol', 'if (owner != msg.sender) revert NotDepositOwner();', '')],
+  'tests': ['test/unit/LiquidityVaultAdversarial.t.sol'],
+  'id': 'M23'},
+ {'guarantee': 'the fixed deposit maturity is enforced',
+  'patches': [('src/core/LiquidityVault.sol',
+               'if (block.timestamp < withdrawAfter[id]) revert '
+               'LPUnavailable(ILiquidityVaultBank.LPStatus.CoolingDown);',
+               '')],
+  'tests': ['test/unit/LiquidityVaultAdversarial.t.sol'],
+  'id': 'M24'},
+ {'guarantee': 'NFT withdrawals preserve locked capital',
+  'patches': [('src/core/LiquidityVault.sol', 'if (assets > free) revert InsufficientFreeCapital();', '')],
+  'tests': ['test/unit/LiquidityVaultAdversarial.t.sol'],
+  'id': 'M25'},
+ {'guarantee': 'a position removes all pending principal exactly once',
+  'patches': [('src/core/Bank.sol', 'pendingStakeTotal -= h.stake;', '')],
+  'tests': ['test/unit/BankNFTAccounting.t.sol', 'test/unit/NftCallbackIntegration.t.sol'],
+  'id': 'M26'},
+ {'guarantee': 'received results fence LP operations until accounting',
+  'patches': [('src/core/VRFHub.sol', '++unbookedResultCount[r.bank];', '')],
+  'tests': ['test/unit/VRFHubDirect.t.sol', 'test/unit/NftCallbackIntegration.t.sol'],
+  'id': 'M27'},
+ {'guarantee': 'successful accounting clears its result fence',
+  'patches': [('src/core/VRFHub.sol', '--unbookedResultCount[r.bank];', '')],
+  'tests': ['test/unit/VRFHubDirect.t.sol', 'test/unit/NftCallbackIntegration.t.sol'],
+  'id': 'M28'},
+ {'guarantee': 'a seed cannot be replaced by a duplicate response',
+  'patches': [('src/core/VRFHub.sol',
+               'if (r.state != RequestState.Awaiting || words.length != 1) {',
+               'if (r.state == RequestState.None || words.length != 1) {')],
+  'tests': ['test/unit/VRFHubDirect.t.sol'],
+  'id': 'M29'},
+ {'guarantee': 'only the owning Hub can acknowledge a result',
+  'patches': [('src/core/VRFHub.sol',
+               'if (msg.sender != r.hub) revert NotOwningHub();\n'
+               '        if (r.state != RequestState.Received)',
+               'if (r.state != RequestState.Received)')],
+  'tests': ['test/unit/VRFHubDirect.t.sol'],
+  'id': 'M30'},
+ {'guarantee': 'native excess paid successfully does not create credit',
+  'patches': [('src/core/VRFHub.sol', 'if (!refunded) {', 'if (refunded) {')],
+  'tests': ['test/unit/VRFHubDirect.t.sol'],
+  'id': 'M31'}]
 
 
 def check_anchors(mutants):
@@ -255,7 +217,9 @@ def check_anchors(mutants):
 def forge_environment(out_dir):
     # Keep mutant artifacts and failing sequences separate from the canonical build. A later ABI export
     # or local integration test must never pick up a deliberately broken Bank from out/.
-    return {**os.environ, "FOUNDRY_PROFILE": "pr",
+    clean = {key: value for key, value in os.environ.items()
+             if not key.startswith(("FOUNDRY_", "DAPP_"))}
+    return {**clean, "FOUNDRY_PROFILE": "pr",
             "FOUNDRY_FUZZ_SEED": os.environ.get("FOUNDRY_FUZZ_SEED", "0x160035"),
             "FOUNDRY_OUT": str(out_dir / "build"),
             "FOUNDRY_CACHE_PATH": str(out_dir / "cache"),
@@ -299,14 +263,19 @@ def run_baseline(mutants, out_dir):
 
 def run_mutant(m, out_dir):
     backups = {}
+    patched = {}
     try:
         for path, old, new in m["patches"]:
             file = ROOT / path
             backups.setdefault(path, file.read_bytes())
-            file.write_text(file.read_text().replace(old, new, 1))
+            current = file.read_bytes().decode("utf-8")
+            if current.count(old) != 1:
+                raise RuntimeError(f"Source changed before mutation: {path}")
+            patched[path] = current.replace(old, new, 1).encode("utf-8")
+            file.write_bytes(patched[path])
         paths = m["tests"]
         match = paths[0] if len(paths) == 1 else "{" + ",".join(paths) + "}"
-        cmd = ["forge", "test", "--match-path", match] + m.get("args", [])
+        cmd = ["forge", "test", "--match-path", match, "--threads", "1"]
         started = time.time()
         result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=forge_environment(out_dir))
         output = result.stdout + result.stderr
@@ -316,8 +285,19 @@ def run_mutant(m, out_dir):
                 "failingTests": failing, "returncode": result.returncode,
                 "seconds": round(time.time() - started)}
     finally:
+        conflicts = []
         for path, content in backups.items():
-            (ROOT / path).write_bytes(content)
+            file = ROOT / path
+            if file.read_bytes() == patched.get(path, content):
+                file.write_bytes(content)
+            elif file.read_bytes() != content:
+                # Never overwrite concurrent user edits with the saved preimage.
+                recovery = out_dir / "source-preimages" / path
+                recovery.parent.mkdir(parents=True, exist_ok=True)
+                recovery.write_bytes(content)
+                conflicts.append(path)
+        if conflicts:
+            raise RuntimeError(f"Concurrent source changes preserved; mutation stopped: {conflicts}")
 
 
 def main(argv=None):

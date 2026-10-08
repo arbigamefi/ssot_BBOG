@@ -20,15 +20,12 @@ import {
   applyHouseEdgeToMultiplier,
   calculateGameWinChance,
   calculateGameReserveMultiplier,
+  calculateGameReserveRatio,
   type BaccaratSide,
   type PlinkoRisk,
   type SicBoKind
 } from "../../../../features/casino/room/params";
-import {
-  computePoolFreeLiquidity,
-  deriveGameRoomLimits,
-  resolveHouseEdgeBps
-} from "../../../../features/casino/room/presentation";
+import { deriveGameRoomLimits } from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
 import {
   useGameWalletBalance,
@@ -47,10 +44,7 @@ import { GameRoomShell } from "../../../../features/casino/room/game-room-shell"
 import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
 import { derivePlaceBetButtonPhase } from "../../../../features/casino/room/place-bet-button";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
-import {
-  betAmountInputToNumber,
-  getMinBetAmountRaw
-} from "../../../../features/casino/room/bet-amount";
+import { betAmountInputToNumber } from "../../../../features/casino/room/bet-amount";
 import { useReferralAffiliate } from "../../../../features/referral/useReferralAffiliate";
 import {
   GameRoomAuditLedger,
@@ -144,9 +138,10 @@ export function GamePageClient({ slug }: { slug: string }) {
       setIsPending(false);
       setTerminalBet(bet);
       refreshWalletBalance();
+      poolRead.refresh();
       void refetchRecentBets?.();
     },
-    [refetchRecentBets, refreshWalletBalance]
+    [refetchRecentBets, refreshWalletBalance, poolRead.refresh]
   );
   const clearStageRevealTimer = React.useCallback(() => {
     if (revealTimerRef.current) {
@@ -391,11 +386,10 @@ export function GamePageClient({ slug }: { slug: string }) {
       />
     );
 
-  const gameMeta = release?.gamesMeta?.find((m: any) => m.slug === game.slug);
   const assetDecimals = casinoPoolAsset.asset.decimals;
   const assetSymbol = casinoPoolAsset.asset.symbol;
 
-  const reserveMultiplier = calculateGameReserveMultiplier({
+  const reserveSelection = {
     slug: game.slug,
     diceTarget,
     diceDirection,
@@ -405,32 +399,33 @@ export function GamePageClient({ slug }: { slug: string }) {
     baccaratSide,
     sicBoKind,
     sicBoValue
-  });
-  const houseEdgeBps = resolveHouseEdgeBps(gameMeta, game.slug, release);
-  const multiplier = applyHouseEdgeToMultiplier(reserveMultiplier, houseEdgeBps);
+  };
+  const reserveMultiplier = calculateGameReserveMultiplier(reserveSelection);
+  const reserveRatio = calculateGameReserveRatio(reserveSelection);
+  const houseEdgeBps = casinoRound.houseEdgeBps;
+  const multiplier =
+    houseEdgeBps == null ? undefined : applyHouseEdgeToMultiplier(reserveMultiplier, houseEdgeBps);
   const betAmountNumber = betAmountInputToNumber(betAmount);
-  const expectedPayout = betAmountNumber * multiplier;
+  const expectedPayout = multiplier == null ? undefined : betAmountNumber * multiplier;
 
   // Live, asset-aware header limits derived from the selected pool's free
   // liquidity (chain-read → verifiable), replacing the old static config tiles.
-  const freeLiquidity = computePoolFreeLiquidity(poolSnapshot);
-  const { maxBet, maxBetRaw, maxBetState, maxPayout, maxPayoutState } = deriveGameRoomLimits({
-    freeLiquidity,
-    poolSnapshot,
-    reserveMultiplier,
-    assetDecimals,
-    assetSymbol
-  });
+  const { maxBet, maxBetRaw, maxTotal, maxBetState, maxPayout, maxPayoutState } =
+    deriveGameRoomLimits({
+      poolSnapshot,
+      reserveRatio,
+      betCount,
+      assetDecimals,
+      assetSymbol
+    });
   const maxBetLabel =
     maxBetState === "pending-selection"
       ? t("casino.room.shell.selectBetFirst")
       : maxBetState === "no-capacity"
         ? t("casino.room.shell.noCapacity")
-        : maxBet;
+        : t("casino.room.betPanel.maxSummary", { perRound: maxBet, total: maxTotal });
   const maxPayoutLabel =
     maxPayoutState === "no-capacity" ? t("casino.room.shell.noCapacity") : maxPayout;
-  const maxBetRawPerRoll =
-    maxBetRaw == null ? undefined : maxBetRaw / BigInt(Math.max(1, Math.floor(betCount)));
   const placeBetButtonPhase = derivePlaceBetButtonPhase({
     roundPhase: casinoRound.roundPhase,
     activeBetState: casinoRound.activeBet?.state,
@@ -441,14 +436,17 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   const actionProps = {
     betAmount,
-    maxBetRaw: maxBetRawPerRoll,
-    minBetRaw: getMinBetAmountRaw(poolSnapshot?.minStake ?? 0n, betCount),
+    maxBetRaw: houseEdgeBps == null ? undefined : maxBetRaw,
+    minBetRaw: poolSnapshot?.minBetAmount ?? 0n,
     onBetAmountChange: setBetAmount,
     hasAccount: Boolean(sdk?.account),
     isPending: isBetPanelPending,
     riskInDisabled: !isCasinoRiskInEnabledForChain(chainId),
-    poolAvailability: poolRead.status,
-    onRefreshPool: poolRead.refresh,
+    poolAvailability: casinoRound.availability,
+    onRefreshPool: () => {
+      poolRead.refresh();
+      casinoRound.refreshGame();
+    },
     onCheckTransaction: casinoRound.checkTransaction,
     checkingTransaction: casinoRound.checkingTransaction,
     manualSettleAvailable: casinoRound.manualSettleAvailable,
@@ -473,6 +471,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       maxPayoutLabel={maxPayoutLabel}
       maxPayoutIsHint={maxPayoutState !== "value"}
       betCount={betCount}
+      maxBetCount={casinoRound.maxBetCount}
       onBetCountChange={setBetCount}
       stopGain={stopGain}
       onStopGainChange={setStopGain}
@@ -512,56 +511,64 @@ export function GamePageClient({ slug }: { slug: string }) {
   const stageShowResult = Boolean(stageReveal || showResult);
   const stageIsRevealing = stageReveal?.phase === "revealing";
 
-  const RightPane = (
-    <GameRoomRightPane
-      gameSlug={game.slug}
-      coinSide={coinSide}
-      gameHistory={gameHistory}
-      recentBets={recentBets}
-      isPending={isStagePending}
-      controlsLocked={isBetPanelPending}
-      isRevealing={stageIsRevealing}
-      showResult={stageShowResult}
-      resultNum={resultNum}
-      diceDirection={diceDirection}
-      diceTarget={diceTarget}
-      houseEdgeBps={houseEdgeBps}
-      rouletteSpots={rouletteSpots}
-      kenoSpots={kenoSpots}
-      plinkoRisk={plinkoRisk}
-      baccaratSide={baccaratSide}
-      sicBoKind={sicBoKind}
-      sicBoValue={sicBoValue}
-      plinkoBuckets={plinkoBuckets}
-      slotsSymbols={slotsSymbols}
-      animatingKenoSpots={animatingKenoSpots}
-      kenoResultDrawn={kenoResultDrawn}
-      casinoOutcome={casinoOutcome}
-      resultProof={resultProof}
-      chainId={chainId}
-      assetSymbol={assetSymbol}
-      assetDecimals={assetDecimals}
-      onResultClose={handleResultClose}
-      onResultPlayAgain={handleResultPlayAgain}
-      onDiceRevealComplete={handleStageRevealComplete}
-      onCoinRevealComplete={handleStageRevealComplete}
-      onRouletteRevealComplete={handleStageRevealComplete}
-      onDiceDirectionChange={setDiceDirection}
-      onDiceTargetChange={setDiceTarget}
-      onCoinSideChange={setCoinSide}
-      onRouletteChange={setRouletteSpots}
-      onKenoChange={setKenoSpots}
-      onKenoResetResult={() => setKenoResultDrawn([])}
-      onKenoRevealComplete={handleStageRevealComplete}
-      onPlinkoRiskChange={setPlinkoRisk}
-      onPlinkoRevealComplete={handleStageRevealComplete}
-      onSlotsRevealComplete={handleStageRevealComplete}
-      onSicBoRevealComplete={handleStageRevealComplete}
-      onBaccaratRevealComplete={handleStageRevealComplete}
-      onBaccaratSideChange={setBaccaratSide}
-      onSicBoChange={handleSicBoChange}
-    />
-  );
+  const stageHouseEdgeBps =
+    terminalBet?.houseEdgeBps ?? casinoRound.activeBet?.houseEdgeBps ?? houseEdgeBps;
+  const RightPane =
+    stageHouseEdgeBps == null ? (
+      <ProductStateCard
+        title={t("casino.room.poolStatus.gameUnavailable")}
+        description={t("casino.room.errors.quoteFailed")}
+      />
+    ) : (
+      <GameRoomRightPane
+        gameSlug={game.slug}
+        coinSide={coinSide}
+        gameHistory={gameHistory}
+        recentBets={recentBets}
+        isPending={isStagePending}
+        controlsLocked={isBetPanelPending}
+        isRevealing={stageIsRevealing}
+        showResult={stageShowResult}
+        resultNum={resultNum}
+        diceDirection={diceDirection}
+        diceTarget={diceTarget}
+        houseEdgeBps={stageHouseEdgeBps}
+        rouletteSpots={rouletteSpots}
+        kenoSpots={kenoSpots}
+        plinkoRisk={plinkoRisk}
+        baccaratSide={baccaratSide}
+        sicBoKind={sicBoKind}
+        sicBoValue={sicBoValue}
+        plinkoBuckets={plinkoBuckets}
+        slotsSymbols={slotsSymbols}
+        animatingKenoSpots={animatingKenoSpots}
+        kenoResultDrawn={kenoResultDrawn}
+        casinoOutcome={casinoOutcome}
+        resultProof={resultProof}
+        chainId={chainId}
+        assetSymbol={assetSymbol}
+        assetDecimals={assetDecimals}
+        onResultClose={handleResultClose}
+        onResultPlayAgain={handleResultPlayAgain}
+        onDiceRevealComplete={handleStageRevealComplete}
+        onCoinRevealComplete={handleStageRevealComplete}
+        onRouletteRevealComplete={handleStageRevealComplete}
+        onDiceDirectionChange={setDiceDirection}
+        onDiceTargetChange={setDiceTarget}
+        onCoinSideChange={setCoinSide}
+        onRouletteChange={setRouletteSpots}
+        onKenoChange={setKenoSpots}
+        onKenoResetResult={() => setKenoResultDrawn([])}
+        onKenoRevealComplete={handleStageRevealComplete}
+        onPlinkoRiskChange={setPlinkoRisk}
+        onPlinkoRevealComplete={handleStageRevealComplete}
+        onSlotsRevealComplete={handleStageRevealComplete}
+        onSicBoRevealComplete={handleStageRevealComplete}
+        onBaccaratRevealComplete={handleStageRevealComplete}
+        onBaccaratSideChange={setBaccaratSide}
+        onSicBoChange={handleSicBoChange}
+      />
+    );
 
   const AuditLedger = (
     <GameRoomAuditLedger
@@ -573,8 +580,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       assetDecimals={assetDecimals}
       assetContexts={assetSelection.contexts}
       chainId={chainId}
-      gameMeta={gameMeta}
-      releaseMeta={release}
+      houseEdgeBps={houseEdgeBps}
     />
   );
 

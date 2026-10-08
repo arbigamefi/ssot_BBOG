@@ -22,8 +22,8 @@ const config: KeeperConfig = {
   betIndexWriteEnabled: true,
   betIndexDatabaseUrl: "postgres://unused.invalid",
   betIndexSsl: false,
-  bankProviderLedgerPools: [],
-  bankProviderLedgerScanIntervalMs: 0,
+  vaultProviderLedgerPools: [],
+  vaultProviderLedgerScanIntervalMs: 0,
 
   sportsTerminalizerMarketIds: [],
   sportsTicketScanStartBlock: 100n,

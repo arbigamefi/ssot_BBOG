@@ -42,15 +42,14 @@ const placed = (gameHub: `0x${string}`) =>
 const allocated = event(gameHub, "HouseEdgeAllocated", 3, {
   positionId: 1n,
   usedTurnover: 1_000_000n,
-  effectiveHouseEdgeBps: 200,
+  houseEdgeBps: 200,
   edge: 20_000n,
   operatorShare: 10_000n,
   lpRetained: 10_000n,
   protocolFee: 3_000n,
   r0: 2_000n,
   r1: 4_000n,
-  r2: 1_000n,
-  markup: 0n
+  r2: 1_000n
 });
 const finalized = (gameHub: `0x${string}`) =>
   event(gameHub, "BetFinalized", 4, {
@@ -61,15 +60,14 @@ const finalized = (gameHub: `0x${string}`) =>
   });
 const expectedHouseEdge = {
   usedTurnover: "1000000",
-  effectiveHouseEdgeBps: 200,
+  houseEdgeBps: 200,
   edge: "20000",
   operatorShare: "10000",
   lpRetained: "10000",
   protocolFee: "3000",
   r0: "2000",
   r1: "4000",
-  r2: "1000",
-  markup: "0"
+  r2: "1000"
 };
 
 for (const backend of ["memory", "postgres"] as const) {

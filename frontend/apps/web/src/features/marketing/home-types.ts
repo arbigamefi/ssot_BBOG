@@ -5,8 +5,8 @@ export type AssetOverview = {
   address: Address;
   symbol: string;
   decimals: number;
-  totalAssets: bigint;
-  totalReserved: bigint;
+  lpCapital: bigint;
+  lockedCapital: bigint;
   /** Lifetime asset turnover — chain-read (Bank.getPerformance.turnover), verifiable. */
   turnover: bigint;
   /** Accrued protocol fee payable — chain-read (Bank getSSOT.PF), verifiable. */

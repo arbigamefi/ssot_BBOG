@@ -27,7 +27,7 @@ function row(betId: number, override: Partial<BetRow> = {}): BetRow {
     asset,
     gameId,
     player: `0x${betId.toString().padStart(40, "0")}`,
-    pricingAffiliate: affiliate,
+    referrerL1: affiliate,
     state: "finalized",
     stake: "200000",
     payout: "196000",
@@ -69,6 +69,26 @@ for (const backend of ["memory", "postgres"] as const) {
       await sql?.end();
       await admin?.unsafe(`drop schema if exists "${schema}" cascade`);
       await admin?.end();
+    });
+
+    it("persists both acceptance payees but counts only L1 as a direct referral", async () => {
+      const otherReferrer = "0x7777777777777777777777777777777777777777" as const;
+      await store.writeBetRows([
+        row(1, { referrerL1: affiliate, referrerL2: otherReferrer }),
+        row(2, { referrerL1: otherReferrer, referrerL2: affiliate })
+      ]);
+      expect(await store.getBet({ chainId, gameHub, betId: 2 })).toMatchObject({
+        referrerL1: otherReferrer,
+        referrerL2: affiliate
+      });
+      expect(
+        await store.getAffiliateBets({ chainId, gameHub, affiliate, limit: 10 })
+      ).toMatchObject([{ betId: "1", referrerL1: affiliate, referrerL2: otherReferrer }]);
+      expect(await store.getAffiliateStats({ ...scope, gameHub, affiliate })).toMatchObject({
+        betCount: 1,
+        turnover: "200000",
+        payout: "196000"
+      });
     });
 
     it("reconciles partial win/loss, ordinary loss, full refund and pending stakes in every aggregate", async () => {

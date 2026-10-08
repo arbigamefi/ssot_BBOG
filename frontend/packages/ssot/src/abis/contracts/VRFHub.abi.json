@@ -4,12 +4,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "coordinator_",
+          "name": "wrapper_",
           "type": "address"
         },
         {
           "internalType": "address",
-          "name": "gov_",
+          "name": "settlementRouter_",
           "type": "address"
         }
       ],
@@ -17,32 +17,8 @@
       "type": "constructor"
     },
     {
-      "stateMutability": "payable",
-      "type": "receive"
-    },
-    {
       "inputs": [],
-      "name": "acceptGovernance",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "adapter",
-      "outputs": [
-        {
-          "internalType": "contract IVRFAdapter",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "baseFeeWei",
+      "name": "CALLBACK_COMPLETION_GAS",
       "outputs": [
         {
           "internalType": "uint256",
@@ -51,6 +27,71 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "EXCESS_REFUND_GAS",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_CALLBACK_GAS",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MIN_CALLBACK_GAS_LIMIT",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "requestId",
+          "type": "uint256"
+        }
+      ],
+      "name": "acknowledge",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "requestId",
+          "type": "uint256"
+        }
+      ],
+      "name": "cancel",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -68,7 +109,7 @@
     },
     {
       "inputs": [],
-      "name": "confirmationsFeeWei",
+      "name": "getBalance",
       "outputs": [
         {
           "internalType": "uint256",
@@ -81,56 +122,12 @@
     },
     {
       "inputs": [],
-      "name": "coordinator",
+      "name": "getLinkToken",
       "outputs": [
         {
-          "internalType": "address",
+          "internalType": "contract LinkTokenInterface",
           "name": "",
           "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "requestId",
-          "type": "uint256"
-        }
-      ],
-      "name": "detach",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "requestId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "randomWords",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "fulfillRandomWords",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "gasPriceWei",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -148,6 +145,11 @@
       "outputs": [
         {
           "components": [
+            {
+              "internalType": "address",
+              "name": "bank",
+              "type": "address"
+            },
             {
               "internalType": "address",
               "name": "hub",
@@ -174,9 +176,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "bool",
-              "name": "active",
-              "type": "bool"
+              "internalType": "uint256",
+              "name": "seed",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum IVRFHub.RequestState",
+              "name": "state",
+              "type": "uint8"
             }
           ],
           "internalType": "struct IVRFHub.RequestInfo",
@@ -189,36 +196,10 @@
     },
     {
       "inputs": [],
-      "name": "governance",
+      "name": "i_vrfV2PlusWrapper",
       "outputs": [
         {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "nextRequestId",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "pendingGovernance",
-      "outputs": [
-        {
-          "internalType": "address",
+          "internalType": "contract IVRFV2PlusWrapper",
           "name": "",
           "type": "address"
         }
@@ -234,16 +215,6 @@
           "type": "uint32"
         },
         {
-          "internalType": "uint16",
-          "name": "requestConfirmations",
-          "type": "uint16"
-        },
-        {
-          "internalType": "uint32",
-          "name": "numWords",
-          "type": "uint32"
-        },
-        {
           "internalType": "uint256",
           "name": "gasPriceBudget",
           "type": "uint256"
@@ -253,7 +224,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "fee",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -264,12 +235,12 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "requestId",
+          "name": "_requestId",
           "type": "uint256"
         },
         {
           "internalType": "uint256[]",
-          "name": "randomWords",
+          "name": "_randomWords",
           "type": "uint256[]"
         }
       ],
@@ -290,7 +261,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -300,13 +271,27 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "hub",
-          "type": "address"
-        },
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "requestIdForPosition",
+      "outputs": [
         {
           "internalType": "uint256",
-          "name": "betId",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "positionId",
           "type": "uint256"
         },
         {
@@ -316,18 +301,8 @@
         },
         {
           "internalType": "uint16",
-          "name": "requestConfirmations",
+          "name": "confirmations",
           "type": "uint16"
-        },
-        {
-          "internalType": "uint32",
-          "name": "numWords",
-          "type": "uint32"
-        },
-        {
-          "internalType": "address",
-          "name": "payer",
-          "type": "address"
         }
       ],
       "name": "requestRandomWords",
@@ -350,78 +325,37 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "requestId",
           "type": "uint256"
         }
       ],
-      "name": "seenRequestId",
+      "name": "retry",
       "outputs": [
         {
           "internalType": "bool",
-          "name": "",
+          "name": "settled",
           "type": "bool"
         }
       ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "adapter_",
-          "type": "address"
-        }
-      ],
-      "name": "setAdapter",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "baseFeeWei_",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "gasPriceWei_",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "wordFeeWei_",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "confirmationsFeeWei_",
-          "type": "uint256"
-        }
-      ],
-      "name": "setFeeParams",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "newGov",
-          "type": "address"
-        }
-      ],
-      "name": "transferGovernance",
-      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [],
-      "name": "wordFeeWei",
+      "name": "settlementRouter",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalRefundCredit",
       "outputs": [
         {
           "internalType": "uint256",
@@ -433,17 +367,36 @@
       "type": "function"
     },
     {
-      "anonymous": false,
       "inputs": [
         {
-          "indexed": true,
           "internalType": "address",
-          "name": "adapter",
+          "name": "",
           "type": "address"
         }
       ],
-      "name": "AdapterSet",
-      "type": "event"
+      "name": "unbookedResultCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "wrapper",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
     },
     {
       "anonymous": false,
@@ -455,138 +408,25 @@
           "type": "uint256"
         },
         {
-          "indexed": true,
-          "internalType": "address",
-          "name": "hub",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "betId",
-          "type": "uint256"
-        }
-      ],
-      "name": "Detached",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
           "indexed": false,
-          "internalType": "uint256",
-          "name": "baseFeeWei",
-          "type": "uint256"
+          "internalType": "bool",
+          "name": "delivered",
+          "type": "bool"
         },
         {
           "indexed": false,
-          "internalType": "uint256",
-          "name": "gasPriceWei",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "wordFeeWei",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "confirmationsFeeWei",
-          "type": "uint256"
-        }
-      ],
-      "name": "FeeParamsSet",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "requestId",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "hub",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "betId",
-          "type": "uint256"
+          "internalType": "enum IVRFHub.RequestState",
+          "name": "state",
+          "type": "uint8"
         },
         {
           "indexed": false,
           "internalType": "bytes32",
-          "name": "randomHash",
+          "name": "failurePrefix",
           "type": "bytes32"
         }
       ],
-      "name": "Fulfilled",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "oldGov",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "newGov",
-          "type": "address"
-        }
-      ],
-      "name": "GovernanceTransferStarted",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "oldGov",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "newGov",
-          "type": "address"
-        }
-      ],
-      "name": "GovernanceTransferred",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "requestId",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "revertData",
-          "type": "bytes"
-        }
-      ],
-      "name": "HubCallbackFailed",
+      "name": "CallbackAttempt",
       "type": "event"
     },
     {
@@ -599,7 +439,7 @@
           "type": "uint256"
         }
       ],
-      "name": "Ignored",
+      "name": "RequestCancelled",
       "type": "event"
     },
     {
@@ -622,9 +462,78 @@
           "internalType": "uint256",
           "name": "betId",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "bank",
+          "type": "address"
         }
       ],
       "name": "Requested",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "requestId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum IVRFHub.RequestState",
+          "name": "state",
+          "type": "uint8"
+        }
+      ],
+      "name": "ResponseIgnored",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "requestId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "bank",
+          "type": "address"
+        }
+      ],
+      "name": "ResultAcknowledged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "requestId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "bank",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "seed",
+          "type": "uint256"
+        }
+      ],
+      "name": "ResultReceived",
       "type": "event"
     },
     {
@@ -706,8 +615,35 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "uint32",
+          "name": "callbackGasLimit",
+          "type": "uint32"
+        }
+      ],
+      "name": "InvalidCallbackGas",
+      "type": "error"
+    },
+    {
       "inputs": [],
       "name": "InvalidConfig",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidConfirmations",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "positionId",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidRequestBinding",
       "type": "error"
     },
     {
@@ -722,8 +658,67 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "requestId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum IVRFHub.RequestState",
+          "name": "state",
+          "type": "uint8"
+        }
+      ],
+      "name": "InvalidRequestState",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "positionId",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidTerminalPosition",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidWrapperCharge",
+      "type": "error"
+    },
+    {
       "inputs": [],
       "name": "NotOwningHub",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "have",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "want",
+          "type": "address"
+        }
+      ],
+      "name": "OnlyVRFWrapperCanFulfill",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "positionId",
+          "type": "uint256"
+        }
+      ],
+      "name": "PositionAlreadyRequested",
       "type": "error"
     },
     {
@@ -734,16 +729,6 @@
     {
       "inputs": [],
       "name": "TransferFailed",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "Unauthorized",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ZeroAddress",
       "type": "error"
     }
   ],

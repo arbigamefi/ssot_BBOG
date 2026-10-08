@@ -153,6 +153,7 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
     betAmount: "10",
     onBetAmountChange: vi.fn(),
     betCount: 1,
+    maxBetCount: 25,
     onBetCountChange: vi.fn(),
     stopGain: 0,
     onStopGainChange: vi.fn(),
@@ -234,6 +235,29 @@ describe("GameRoomBetPanel", () => {
     expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
   });
 
+  it.each([1, 25])("keeps the Min shortcut at 0.01 USDC with %i rounds", (betCount) => {
+    const props = renderPanel({ hasAccount: true, betCount, betAmount: "0.01" });
+    fireEvent.click(screen.getByRole("button", { name: "Min" }));
+    expect(props.onBetAmountChange).toHaveBeenCalledWith("0.01");
+    expect((screen.getByRole("button", { name: "PLACE BET" }) as HTMLButtonElement).disabled).toBe(
+      false
+    );
+  });
+
+  it("caps a typed roll count at the game's advertised limit", () => {
+    const props = renderPanel({ hasAccount: true, maxBetCount: 25 });
+    fireEvent.change(screen.getByRole("textbox", { name: "Roll count" }), {
+      target: { value: "26" }
+    });
+    expect(props.onBetCountChange).toHaveBeenCalledWith(25);
+  });
+
+  it("disables Max when pool odds or liquidity are unknown despite a wallet balance", () => {
+    const props = renderPanel({ maxBetRaw: undefined });
+    expect(screen.getByRole("button", { name: "Max" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Max" }));
+    expect(props.onBetAmountChange).not.toHaveBeenCalled();
+  });
   it("caps the Max amount shortcut by wallet balance and current pool max bet", () => {
     const cappedByPool = renderPanel({
       hasAccount: true,
@@ -572,11 +596,25 @@ describe("GameRoomBetPanel", () => {
     });
 
     expect(props.onBetAmountChange).toHaveBeenCalledWith("25.5");
-    expect(props.onBetCountChange).toHaveBeenCalledWith(100);
+    expect(props.onBetCountChange).toHaveBeenCalledWith(25);
     expect(props.onStopGainChange).toHaveBeenCalledWith(30);
     expect(props.onStopLossChange).toHaveBeenCalledWith(0);
   });
 
+  it("uses the game-specific round limit for both shortcuts and typed input", () => {
+    const props = renderPanel({ maxBetCount: 3 });
+    expect(screen.getByRole("button", { name: "5x" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "10x" })).toBeDisabled();
+    fireEvent.change(screen.getByRole("textbox", { name: "Roll count" }), {
+      target: { value: "9" }
+    });
+    expect(props.onBetCountChange).toHaveBeenCalledWith(3);
+  });
+  it("does not permit selecting rounds while admission configuration is unavailable", () => {
+    renderPanel({ maxBetCount: undefined });
+    expect(screen.getByRole("textbox", { name: "Roll count" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "1x" })).toBeDisabled();
+  });
   it("routes manual settlement through the primary button", () => {
     const onManualSettle = vi.fn();
     renderPanel({
@@ -592,6 +630,33 @@ describe("GameRoomBetPanel", () => {
     expect(onManualSettle).toHaveBeenCalledTimes(1);
   });
 
+  it.each(["settle", "refund"])(
+    "preserves existing %s and refresh while live fee is unavailable",
+    (action) => {
+      const recovery = vi.fn(),
+        refresh = vi.fn();
+      renderPanel({
+        hasAccount: true,
+        poolAvailability: "gameUnavailable",
+        multiplier: undefined,
+        expectedPayout: undefined,
+        activeBetId: 7n,
+        roundPhase: action === "settle" ? "manual_settle_offered" : "refundable",
+        manualSettleAvailable: action === "settle",
+        manualRefundAvailable: action === "refund",
+        onManualSettle: recovery,
+        onManualRefund: recovery,
+        onRefreshPool: refresh
+      });
+      const button = screen.getByRole("button", {
+        name: action === "settle" ? "Settle result" : "Refund stake"
+      });
+      expect(button).not.toBeDisabled();
+      fireEvent.click(button);
+      expect(recovery).toHaveBeenCalledOnce();
+      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+    }
+  );
   it("routes refund fallback through the primary button", () => {
     const onManualRefund = vi.fn();
     renderPanel({

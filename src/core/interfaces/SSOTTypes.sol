@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 /// @notice Protocol-wide SSOT types shared across Bank, vertical hubs, VRFHub, and modules.
 ///         Keep dependency-light: no imports, only types/enums/structs.
@@ -52,27 +52,31 @@ library SSOTTypes {
         uint256 stopLoss;
     }
 
-    /// @notice Bank-side SSOT snapshot (accounting truth).
+    /// @notice Explicit two-custodian balances and liabilities; no share-price or legacy NAV aliases.
     struct SSOT {
-        uint256 B; // ASSET.balanceOf(Bank)
-        uint256 PF; // protocolFeesPayable
-        uint256 XP; // externalPayablesTotal (== xpAccruedTotal + xpLockedTotal + xpHoldbackTotal)
-        uint256 NAV; // active equity, excluding payables and historical recovery backing (ADR-0035)
-        uint256 R; // activeReserved: remaining active risk in old and new open positions
-        uint256 riskReserveBps; // [0..10_000], new-risk reserve buffer
-        uint256 riskReserve; // NAV * riskReserveBps / 10_000
-        uint256 riskFree; // NAV - R - riskReserve (clamped at 0)
-        uint256 withdrawalBufferBps; // [0..10_000], optional-outflow buffer
-        uint256 withdrawalBuffer; // NAV * withdrawalBufferBps / 10_000
-        uint256 withdrawable; // NAV - R - withdrawalBuffer (clamped at 0)
-        bool riskInPaused; // Risk-In + Optional outflow freeze
-
-        // XP bucket breakdown (E-class invariants)
+        uint256 bankCash;
+        uint256 vaultCash;
+        uint256 L; // NFT tree capital
+        uint256 P; // pending original player principal
+        uint256 R; // gross maximum costs of all open holds
+        uint256 K; // Vault locked capital, R-P
+        uint256 G; // betting basis, L+P
+        uint256 PF;
+        uint256 XP;
+        uint256 PP;
+        uint256 bankSurplus; // unallocated; never increases L or G
+        uint256 vaultSurplus;
+        bool accountingValid; // false marks a deficit/mismatch, never a healthy zero-NAV sentinel
+        uint256 riskReserveBps;
+        uint256 riskReserve; // floor(G*riskReserveBps/10000)
+        uint256 riskFree; // max(0, G-R-riskReserve)
+        uint256 withdrawalBufferBps; // only PF/XP optional outflows
+        uint256 withdrawalBuffer; // floor(G*withdrawalBufferBps/10000)
+        uint256 lpFreeCapital; // L-K; independent of optional-outflow percentage buffer
+        bool riskInPaused;
         uint256 xpAccruedTotal;
         uint256 xpLockedTotal;
         uint256 xpHoldbackTotal;
-
-        // Referral unlock/release rules (permissionless)
         uint256 holdbackVestingSeconds;
         uint256 minPlayerTurnoverForUnlock;
     }
@@ -135,14 +139,11 @@ library SSOTTypes {
         uint256 stopLoss;
 
         // pricing snapshot
-        address pricingAffiliate;
-        uint16 baseHouseEdgeBps;
-        uint16 effectiveHouseEdgeBps;
+        uint16 houseEdgeBps;
         uint16 maxHouseEdgeBps; // normalized; 0 implies defaultHouseEdgeBps at acceptance
 
         // referral snapshot
         uint32 referralConfigId;
-        bytes32 deltaSkylineHash;
 
         bytes32 snapshotHash;
         bytes32 paramsHash;

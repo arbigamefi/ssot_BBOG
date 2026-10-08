@@ -46,7 +46,7 @@ export type BuildGamePlaceBetInputArgs = {
   affiliate?: Address;
   /** Selected casino pool. Falls back to the default casino pool when omitted. */
   poolId?: number;
-  maxHouseEdgeBps?: number;
+  maxHouseEdgeBps: number | undefined;
   messages?: GamePlaceBetMessages;
 };
 
@@ -57,6 +57,7 @@ export type BuildGamePlaceBetInputResult =
 export type GamePlaceBetMessages = GameParamsMessages & {
   noActiveCasinoPool?: string;
   invalidCasinoPool?: string;
+  houseEdgeUnavailable?: string;
 };
 
 function toUnits(amount: string | number, decimals: number) {
@@ -90,9 +91,21 @@ export function buildGamePlaceBetInput({
   sicBoValue,
   affiliate,
   poolId,
-  maxHouseEdgeBps = 10000,
+  maxHouseEdgeBps,
   messages
 }: BuildGamePlaceBetInputArgs): BuildGamePlaceBetInputResult {
+  if (
+    maxHouseEdgeBps == null ||
+    !Number.isInteger(maxHouseEdgeBps) ||
+    maxHouseEdgeBps <= 0 ||
+    maxHouseEdgeBps > 500
+  )
+    return {
+      ok: false,
+      message:
+        messages?.houseEdgeUnavailable ??
+        "Current house edge is unavailable. Refresh before betting."
+    };
   const gameParams = buildGameParams({
     slug: game.slug,
     diceTarget,
@@ -156,7 +169,7 @@ export function buildGamePlaceBetInput({
       params: gameParams.params,
       stakeSpec,
       affiliate,
-      maxHouseEdgeBps: Math.max(0, Math.min(10000, Math.floor(maxHouseEdgeBps)))
+      maxHouseEdgeBps
     }
   };
 }

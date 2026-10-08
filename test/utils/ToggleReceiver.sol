@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 /// @notice Test helper: a contract that can toggle whether it accepts native token.
 /// @dev Used to force VRF overpay refund failures (so VRFHub credits can be exercised).

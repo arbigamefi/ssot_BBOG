@@ -48,7 +48,7 @@ export function BetAmountSection({
   const t = useTranslations();
   const maxRaw = resolveBetMaxRaw(walletBalanceRaw, maxBetRaw);
   const amountUnavailable = isBetAmountUnavailable(minBetRaw, maxRaw);
-  const maxShortcutUnavailable = maxRaw == null;
+  const maxShortcutUnavailable = maxBetRaw == null || maxRaw == null;
   const setBetAmount = (value: string) =>
     onBetAmountChange(clampBetAmountInput(value, assetDecimals, maxRaw, minBetRaw));
   const controlsDisabled = isPending || amountUnavailable;
@@ -145,6 +145,7 @@ export function BetAmountSection({
 export function BetRollsSection({
   betAmount,
   betCount,
+  maxBetCount,
   assetDecimals,
   assetSymbol,
   isPending,
@@ -152,6 +153,7 @@ export function BetRollsSection({
 }: {
   betAmount: string;
   betCount: number;
+  maxBetCount: number | undefined;
   assetDecimals: number;
   assetSymbol: string;
   isPending: boolean;
@@ -174,13 +176,18 @@ export function BetRollsSection({
           </span>
         )}
       </div>
+      <p className="mb-1 text-xs text-fg-muted">
+        {maxBetCount == null
+          ? t("casino.room.betPanel.rolls.loadingLimit")
+          : t("casino.room.betPanel.rolls.limit", { count: maxBetCount })}
+      </p>
       <div className="flex gap-1.5">
         {[1, 2, 5, 10].map((count) => (
           <button
             key={count}
             type="button"
             onClick={() => onBetCountChange(count)}
-            disabled={isPending}
+            disabled={isPending || !maxBetCount || count > maxBetCount}
             className={cn(
               "flex-1 rounded-lg border py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors",
               betCount === count
@@ -199,10 +206,10 @@ export function BetRollsSection({
           aria-label={t("casino.room.betPanel.rolls.aria")}
           value={String(betCount)}
           onChange={(event) => {
-            if (isPending) return;
-            onBetCountChange(parseWholeUnitInput(event.target.value, { min: 1, max: 100 }));
+            if (isPending || !maxBetCount) return;
+            onBetCountChange(parseWholeUnitInput(event.target.value, { min: 1, max: maxBetCount }));
           }}
-          disabled={isPending}
+          disabled={isPending || !maxBetCount}
           className="w-14 rounded-lg border border-border bg-surface-1 text-center font-mono text-xs text-fg focus:border-brand/40 focus:outline-none"
         />
       </div>
@@ -328,9 +335,9 @@ export function BetPayoutSummary({
   expectedPayout,
   assetSymbol
 }: {
-  multiplier: number;
+  multiplier: number | undefined;
   winChance: number;
-  expectedPayout: number;
+  expectedPayout: number | undefined;
   assetSymbol: string;
 }) {
   const t = useTranslations();
@@ -343,7 +350,7 @@ export function BetPayoutSummary({
           <InformationCircleIcon className="h-3 w-3" />
         </span>
         <span className="font-mono text-lg font-bold text-brand transition-colors">
-          {multiplier.toFixed(2)}x
+          {multiplier == null ? "—" : `${multiplier.toFixed(2)}x`}
         </span>
       </div>
       <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-2 shadow-inner-e1">
@@ -357,7 +364,7 @@ export function BetPayoutSummary({
           {t("casino.room.betPanel.summary.expectedPayout")}
         </span>
         <span className="flex shrink-0 items-baseline gap-1 whitespace-nowrap font-mono text-lg font-bold text-brand">
-          {expectedPayout.toFixed(2)}{" "}
+          {expectedPayout == null ? "—" : expectedPayout.toFixed(2)}{" "}
           <span className="text-xs font-bold text-fg-subtle">{assetSymbol}</span>
         </span>
       </div>

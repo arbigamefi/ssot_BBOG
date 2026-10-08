@@ -1,44 +1,36 @@
 # Casino finalization
 
-Identify each bet by chain, GameHub and bet ID. Read `getBet` and `getBetTerminal` at confirmed blocks;
-compare the relevant Router and Bank state rather than trusting a cached UI or missing event.
+Target runbook; the [callback core](../../adr/0006-vrf-callback-settlement.md) is implemented and locally
+verified together with corresponding local application integration. Final candidate binding and fresh network validation remain pending. Identify each bet by chain, GameHub and bet ID; read Hub, Router and canonical
+VRFHub together. Normal fulfillment saves the seed and terminalizes in one transaction.
 
-| Hub state     | Valid next action                                                                                    |
-| ------------- | ---------------------------------------------------------------------------------------------------- |
-| `PendingVRF`  | Wait for callback, or call public `refund` once chain time reaches the bet’s stored `refundDeadline` |
-| `RandomReady` | Call public `finalize` with the admitted execution budget                                            |
-| Terminal      | Reconcile the terminal proof and payment evidence; do not submit another settlement                  |
+| State                                                          | Valid next action                                                                    |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| PendingVRF and canonical seed absent                           | Wait; after the bet's fixed refundDeadline, submit eligible refund                   |
+| Canonical seed received, even if GameHub still says PendingVRF | Replay the saved seed through the authenticated path; never timeout-refund           |
+| RandomReady with original seed                                 | Retry the common finalize path using the admitted gas budget                         |
+| Terminal                                                       | Reconcile one terminal record, acknowledgment and payment proof; do not settle twice |
 
-The current refund timeout is mutable but capped at one day. Thus a PendingVRF bet placed before a
-batch cutoff is contract-eligible for refund no later than cutoff plus one day, if it remains
-PendingVRF. That eligibility bound does not guarantee RPC access, successful execution or pricing.
-A callback that changes it to RandomReady requires correct finalization, not a timeout refund.
+The default one-hour timeout means refunds become eligible after one hour, not that the right expires
+then. Governance updates cannot alter an accepted deadline. Missing randomness and failed delivery of
+already received randomness are different conditions. Late callbacks cannot reopen a refunded position.
 
-The keeper simulates and sends `finalize` with 3,050,000 transaction gas, covering the qualified
-3,000,000 execution budget and intrinsic allowance. Qualification applies to the admitted modules,
-assets and referral configuration. Additional configurations require their own full-path checks.
-An outer out-of-gas failure must roll back the entire operation and remain retryable.
+Use budgets measured for the complete wrapper callback, including seed persistence, failure handling,
+Router/Bank/Vault, complete 40-level tree allocation and acknowledgment. A standalone finalize gas result is insufficient. The callback uses a
+bounded attempt; failure preserves the seed outside the reverting subcall. Acknowledgment failure rolls
+back terminalization too, so the original result remains retryable.
 
-A module revert or invalid result tuple follows GameHub's defined refund fallback. Referral
-allocation failures and Router cap failures are not blanket refund conditions: investigate the
-actual error and preserve valid winner obligations. Never remove a cap to force progress. GameHub
-resolves through the currently registered module, so any governance change must account for existing
-bets and their original parameters.
+Unknown module reverts, invalid results, OOG and allocation failures do not become refunds. Use the
+module snapshotted at acceptance. Preserve the winner's entitlement; do not remove a cap or rerequest
+randomness to force progress. A genuine invalid implementation requires diagnosis, not an economic rewrite.
 
-For a stalled bet:
+For a stall, verify request ownership, original seed, Bank gate/count, reserve, fixed deadline and
+receipts, original deposit cutoff, L/K/G and both custody balances. Check nonce/replacement, RPC coverage, callback budget and keeper gas. Reconcile persisted
+history before moving cursors. After success verify exactly one reserve/principal release, one terminal
+counter change and one canonical acknowledgment. Tree P&L, cash movement, liabilities and K release
+must share the terminal subcall's rollback boundary. The onlyBank Vault path does not apply the LP
+received-result gate. Confirm any empty-root positive P&L was assigned once to protocol capital. A Bank pause does not prevent these debt-out paths.
 
-1. Read the current state, request, asset, reserve and player, then find its callback/finalization
-   receipts. Check RPC errors, transaction nonce/replacement and available signer gas.
-2. Allow the keeper's state-aware retry and independent history recovery to reconcile it. Database
-   failures must leave the recovery range retryable; do not fast-forward cursors.
-3. When a valid terminal call succeeds, verify a single Router/Bank terminal transition, reserve
-   release, the relevant counters and `openHolds`. A later callback or duplicate transaction must
-   not settle the same position again.
-4. Inspect the payment proof. `transferred` means the terminal receipt proves that asset transfer;
-   `payable` means it recorded debt at that historical moment; `none` means no payment was due;
-   `unknown` means evidence is incomplete. An aggregate current `playerPayable` cannot establish
-   which historical bet was later paid.
-5. Reconcile the due redemption batch using the [Bank runbook](bank-solvency.md).
-
-Settlement/refund and fixed-player debt claims remain callable while the Bank is paused. Token
-restrictions can still prevent cash transfer; contract finality alone is not proof of receipt.
+Payment proof distinguishes transferred, payable, none and unknown. A terminal event alone does not
+prove cash arrived; a current aggregate payable does not attribute a later payment to a historical bet.
+Reconcile LP availability using the [Bank runbook](bank-solvency.md).

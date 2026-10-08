@@ -1,7 +1,7 @@
 # Casino Keeper
 
-The keeper finalizes casino results, refunds expired pending VRF bets, activates
-eligible Bank redemption queues, monitors historical recovery and claims player payables
+The keeper retries received casino results, refunds expired unreceived VRF requests,
+indexes NFT liquidity deposits, observes pool accounting and claims player payables
 on the players' behalf. It uses the current generated contract ABIs
 from `@ssot/ssot/abis` and the addresses in `KEEPER_RELEASE_PATH`.
 
@@ -36,11 +36,13 @@ a file under `frontend/deploy/casino-keeper/` using `KEEPER_ENV_FILE`; they do n
 read repo-root or web-app environment files. `keeper:dev`, `dev:with-keeper`,
 and `dev:with-keepers` use those selected local configurations.
 
-## Casino settlement and LP pricing
+## Casino settlement and NFT liquidity
 
 With `KEEPER_RPC_WS` configured, contract watchers use `eth_subscribe` (`poll: false`).
-`GameHub.BetRandomReady` (using its `positionId` field) and `VRFHub.Fulfilled` both enqueue the
-position and immediately request a queue drain. Queue deduplication and the serialized
+`GameHub.BetRandomReady` (using its `positionId` field) and canonical VRFHub
+`ResultReceived` / `CallbackAttempt` wake the recovery queue. The VRF events are
+resolved through `getRequest`, restricted to this GameHub, so even failure of the
+entire Hub delivery can be recovered without a Hub event. Queue deduplication and the serialized
 write path prevent the two events from sending duplicate transactions. A ready event
 also brings forward a position that was waiting for its PendingVRF refund deadline.
 The 500 ms queue timer handles deferred work; normal ready delivery does not wait for
@@ -65,32 +67,29 @@ original source when a later WS event wakes it. Attribute settlement using the e
 and enqueue timeline, not the finalizer's source alone. Test this with an authorized
 testnet bet; a read-only `newHeads` probe alone does not prove settlement.
 
-Before every transaction, the keeper reads `GameHub.getBet`:
+Normal callbacks settle the full Hub/Router/Bank/Vault accounting and acknowledge the
+canonical seed in the same transaction. The keeper reads the current Hub state first;
+already terminal positions need no keeper transaction.
 
-- `RandomReady` calls `finalize` using **3,050,000 transaction gas** for both
-  simulation and send: the admitted 3,000,000 execution budget plus intrinsic
-  gas/calldata allowance. Additional modules, assets or referral configurations
-  require their own gas qualification.
-- `PendingVRF` stays queued until its stored `refundDeadline` is reached by chain time,
-  then calls public `refund`. Its deadline and the chain timestamp are reread on retries;
-  later global timeout changes do not affect it. A callback racing a
-  refund triggers another state read; a known result goes through finalization.
-- Terminal bets need no new transaction. Retryable errors use bounded backoff
-  without an attempt-count cutoff.
+For open positions, `getRequest` on the canonical VRFHub must bind the same Hub,
+Bank and bet ID. A `Received` request calls public `GameHub.finalize` using the same
+first seed, including when Hub delivery failed while its state stayed `PendingVRF`.
+A known seed is never turned into a timeout refund. Only canonical `Awaiting` plus
+Hub `PendingVRF` and chain time at or beyond the stored `refundDeadline` may call
+`refund`. Later timeout configuration changes do not alter that deadline. A race
+with callback or another caller is reconciled against the new on-chain state.
+Unavailable or inconsistent canonical data fails closed and retries with bounded
+backoff. A healthy Awaiting request remains queued and is checked at least once a minute.
 
-Every distinct Bank in the current release pools is reconciled at a single numbered
-block. The keeper reads `currentEpoch`, `redeemBatch(currentEpoch)`, and `riskInPaused`.
-An eligible nonempty queue on an unpaused Bank permits `activateBatch`; the keeper verifies
-that the epoch advanced. A race with another caller or a pause triggers a fresh read.
-Historical open positions never gate activation. Activation prices liquid assets immediately
-and retains the old reserve and recovery rights under that epoch.
+Public retry transactions currently use a 3,050,000 gas envelope for both simulation
+and submission. This setting is not proof of all-history tree gas sufficiency; further
+modules, assets, referral configurations and tree histories need their own qualification.
 
-Historical recovery monitoring discovers `RedeemBatchActivated` events from the release origin
-through finalized blocks and polls at most 50 known epochs per turn at that finalized block.
-Unvisited old alerts are retained; incomplete discovery reports degraded health rather than claiming
-complete coverage. Alerts can lag by chain finality; latest head and the finalized target are exposed
-separately. Finalized terminal epochs can be removed safely. This monitor does not gate betting or
-later exits; batch activation still reconciles the latest numbered block.
+Every active release pool must supply immutable Bank and Vault addresses. Read-only
+health checks verify their mutual binding, the asset, the two cash balances, L/P/R/K/G
+and PF/XP/PP buckets, `accountingValid`, `openHolds`, capacity and canonical LP status at
+one numbered block. NFT withdrawal maturity is enforced on chain. The keeper never
+advances an LP batch, withdraws an NFT, or holds user approval authority.
 
 Player payables are discovered from `PlayerPayableCreated` events from the release origin through
 finalized blocks, using a monotonic bounded cursor. Small budgets resume the unfinished range; there
@@ -109,9 +108,9 @@ send and receipt failures require attention: they degrade `payables` health and 
 backoff until a successful reconciliation clears them. An issuer rejection that cannot be identified
 narrowly also remains actionable; the keeper does not suppress arbitrary errors based on their text.
 
-Casino finalization, timeout refunds, batch activation and payable claims share a serialized write
+Casino finalization, timeout refunds and payable claims share a serialized write
 path. Pausing a Bank does not block settlement/refund debt-out or payable claims. The keeper does
-not request or cancel LP redemptions, claim LP funds, or set operators.
+not deposit or withdraw LP funds, transfer NFTs, or set operators.
 Shutdown stops scheduling, waits for in-flight scans and writes, then closes the
 database and marks health stopped.
 
@@ -120,8 +119,8 @@ database and marks health stopped.
 `BetIndexStore.initializeSchema()` creates the current schema and indexes.
 Initialization is idempotent; a transaction-scoped advisory lock serializes
 concurrent worker startup.
-Bets are identified by chain, GameHub and bet ID. LP ledger reads require Bank
-identity; pool display IDs cannot substitute for it.
+Bets are identified by chain, GameHub and bet ID. LP ledger reads require Vault
+identity; Bank is retained as custodian metadata and pool display IDs cannot substitute for it.
 
 The regular `gamehub-events` cursor serves recent indexing and settlement.
 Independent full lifecycle recovery starts at the release block, inclusive,
@@ -146,13 +145,16 @@ recovery cursors to suppress it. Adjust limits to the RPC provider and allow
 catch-up to complete. `KEEPER_RPC_MIN_INTERVAL_MS` spaces tracked RPC calls
 within a process; it does not coordinate separate workers or the web app.
 
-Bank `Deposit`/`Withdraw`/`RecoveryClaimed` cash-flow indexing runs independently at
-`KEEPER_BANK_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS` (default 60). Set it to zero
+Vault `DepositAdded` / `DepositWithdrawn` cash-flow and ERC-721 `Transfer` ownership indexing runs independently at
+`KEEPER_VAULT_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS` (default 60). Set it to zero
 only when provider-ledger indexing is intentionally disabled. It scans monotonically from the release
-origin through finalized blocks under `bank-provider-ledger-finalized`; an unrelated GameHub cursor
+origin through finalized blocks under `vault-provider-ledger-finalized`; an unrelated GameHub cursor
 cannot skip ledger history. Rows are persisted before the cursor advances. An unavailable or regressing
 finalized target fails the scan. Indexed cash flows can therefore lag on-chain claims by finality.
-Each casino scan and each Bank-ledger scan combines its event types into one log request per chunk;
+Mint/burn `Transfer` logs are excluded from ledger rows to avoid duplicating cash events. Ordinary
+transfers record ownership without inventing a payment. Each recent casino range uses one Hub log
+query and one canonical VRF receipt/delivery query; each Vault-ledger scan combines its event
+types into one log request per chunk;
 block timestamps and contract reads add RPC work.
 
 ## Sports recovery
@@ -180,16 +182,15 @@ coverage checks.
 
 ## Health
 
-Health JSON includes queue depth, scan progress, transaction outcomes, RPC
-usage, each Bank's current queue and pause state, and historical recovery epochs,
-remaining holds, backing and age. The
-existing health service consumes this file; the keeper does not deliver alerts.
-Keep the file outside the web app's public directory.
+Health JSON includes queue depth, scan progress, transaction outcomes, RPC usage,
+`pools` snapshots of Bank/Vault accounting, capacity and pause state, and outstanding
+player-payable reconciliation. The existing health service consumes this file;
+the keeper does not deliver alerts. Keep the file outside the web app's public directory.
 
 Each failure is cleared only by success on its own path. Finalization errors are retained
 per bet: another bet settling cannot clear them. The same bet settling, being observed
 terminal, or returning to a verified PendingVRF wait clears its error. A verified wait
-means its stored deadline and chain clock were read successfully and the deadline has
+means canonical Awaiting status, its stored deadline and chain clock were read successfully and the deadline has
 not passed; the bet remains queued and is not yet terminal. A skipped/unknown state does
 not clear an error. Queue depth alone is not an error because healthy bets can be waiting
 for randomness.
@@ -199,16 +200,11 @@ for randomness.
 | `scan` / `ledger` | Event or provider-ledger scan failed                                            |
 | `finalize`        | Casino terminalization failed                                                   |
 | `recovery`        | Lifecycle coverage is incomplete or persistence/read failed                     |
-| `redemption`      | Bank read or queue-activation reconciliation failed                             |
-| `pocket-recovery` | Historical epoch discovery is incomplete or failed                              |
-| `pocket`          | Historical recovery read failed or unresolved holds exceeded the age threshold  |
+| `pools`           | Bank/Vault identity, invariant or canonical LP-state read failed                |
 | `payables`        | Finalized payable discovery incomplete, or state/finality/claim delivery failed |
 | `stalled`         | Scan progress or lifecycle reconciliation stopped advancing                     |
 
-Historical recovery age uses chain timestamp minus activation time, including while
-paused. An overdue unactivated queue is not a historical recovery alert. Restart
-and unrelated successful settlements cannot reset historical age. Lifecycle
-reconciliation stalled for five minutes degrades health even if normal event
+Lifecycle reconciliation stalled for five minutes degrades health even if normal event
 scanning still works. Logs and health errors redact RPC URLs and credentials.
 
 ## Local checks
@@ -238,13 +234,14 @@ historical event ingestion command.
 
 Local integration: `bash script/ci/keeper_integration.sh` uses disposable Anvil and
 PostgreSQL. Its process-recovery case starts the compiled keeper CLI, waits for a durable
-PendingVRF row/cursor, kills that OS process with SIGKILL, mines the callback while it is
-offline, then starts a different PID against the same database. After terminal recovery,
+PendingVRF row/cursor, kills that OS process with SIGKILL, persists a canonical seed using a deliberately underfunded local diagnostic callback while it is
+offline (the Hub remains PendingVRF), then starts a different PID against the same database. After terminal recovery,
 a third distinct PID replays the durable state; the test requires one terminal event,
 one broadcast and exactly one nonzero Bank-to-player payment across the restarts.
 
-The subsequent in-process runtime case separately checks the stored refund deadline
+The subsequent in-process runtime case checks a normally funded callback completes with zero
+keeper broadcasts, then separately checks the stored refund deadline
 after a timeout configuration change, refund while paused, refused transfer becoming
-player payable debt, and later payment to that player after the transfer is allowed.
+player payable debt, later payment to that player after the transfer is allowed, and ignored late callback after cancellation.
 These checks are not additional OS-process restart evidence. The script owns and removes
 its test processes/container and never uses deployment wallets or an existing database.

@@ -4,22 +4,28 @@ Configure alerts against the [monitoring inventory](metrics.md) and test them be
 application. These rules describe operating requirements; they do not claim a deployed monitoring
 service exists.
 
-| Condition                                                                                              | Response                                                                                                               |
-| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| Active NAV below active reserve, or historical backing below its remaining reserve and unpaid recovery | Stop new risk through the authorized pause path; reconcile the [Bank](runbooks/bank-solvency.md) immediately           |
-| Unexplained governance, guardian, module, signer or pool binding change                                | Review the receipt and approved configuration using [pause/configuration rules](runbooks/pause-config-drift.md)        |
-| Historical epoch age > 600 chain seconds with unfinished holds                                         | Keeper marks `pocket` degraded; identify remaining old positions and pause state, preserving actual activation time    |
-| Lifecycle reconciliation stalled for five minutes                                                      | Keeper marks stalled health; repair coverage/RPC/persistence before trusting the live queue                            |
-| Finalization, refund or batch-activation read/write failure                                            | Investigate the specific error; retain state-aware retries and preserve valid player outcomes                          |
-| VRF delay or failed Hub callback                                                                       | Follow the [VRF runbook](runbooks/vrf-refundcredit.md); check actual bet state and refund eligibility                  |
-| Stale/missing health snapshot, RPC failure, signer gas shortage or stuck nonce                         | Restore the affected service path, then reconcile pending receipts and historical work                                 |
-| Database outage, stopped replay or backup failure                                                      | Follow [index recovery](runbooks/bet-index-production.md); do not mark an unpersisted range complete                   |
-| Sports result dispute, missing report or stalled ticket pages                                          | Assign the authorized reporter/arbitrator/governance action and follow [Sports operations](runbooks/sportsbook-ops.md) |
+The LP/callback signals below are target requirements; their implementation is pending with the
+[current plan](../design/lp-accounting-and-callback-implementation.md).
 
-The ten-minute historical-age threshold is not a promised recovery deadline. Incomplete historical
-discovery is reported as `pocket-recovery` degradation; it must not block later activation. Emergency
-pause blocks activation and LP claims. An old obligation delays only its own historical recovery,
-while adequately funded betting and later exits remain independent of that obligation.
+| Condition                                                            | Response                                                                                         |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Vault cash < L, Bank cash < P+PF+XP+PP, G < R, R < P or K ≠ R−P      | Use authorized pause if needed; reconcile both custodians, tree root and asset state immediately |
+| Canonical received result cannot terminalize                         | Retry the same seed, inspect errors/gas; retain LP pricing gate and winner obligations           |
+| Missing VRF past the fixed deadline                                  | Confirm canonical seed is absent before eligible refund                                          |
+| Unexpected governance, module or Bank/Vault/asset/VRF binding change | Compare receipt with authenticated release and approved configuration                            |
+| Lifecycle scanning stalled or incomplete                             | Restore coverage/RPC/persistence before trusting an empty queue                                  |
+| Finalize, refund or payable delivery failure                         | Preserve state-aware retries; do not replace valid outcomes with refunds                         |
+| Stale health, RPC failure, signer gas or nonce issue                 | Restore the affected path and reconcile pending receipts                                         |
+| Database/reorg/replay failure                                        | Do not advance unpersisted cursors; verify canonical history and cash evidence                   |
+| Sports missing/disputed result                                       | Use the separately authorized sports process                                                     |
+
+Tree-inclusive callback gas saturation, failure overhead and unsupported game/round settings also require
+alerts. Monitor surplus changes separately from deficits; surplus is not spendable LP headroom.
+
+Failed-result age is an incident signal, not a promised withdrawal deadline. Thresholds require measured
+network behavior; no old LP epoch monitor remains. Emergency pause blocks LP payments, but must leave
+valid callback/retry/settlement/refund/player-debt paths available. Complete result receipt and bookkeeping
+are distinct from successful cash delivery.
 
 ## Implemented health notifier
 

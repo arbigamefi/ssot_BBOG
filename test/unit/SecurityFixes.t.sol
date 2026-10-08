@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {BankTestBase, TestRandomnessConsumer} from "../utils/BankTestBase.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
+import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
 import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
@@ -92,7 +95,8 @@ contract SecurityOverPayoutModule is IGameModule {
     }
 }
 
-contract SecurityFixes is Test {
+contract SecurityFixes is BankTestBase {
+    MockVRFV2PlusWrapper internal wrapper;
     event BetReserveReleased(uint256 indexed betId, address indexed player, uint256 reserved);
 
     bytes32 internal constant GAME_STAKE = keccak256("SECURITY_STAKE");
@@ -103,41 +107,6 @@ contract SecurityFixes is Test {
     address internal gov = address(0xA11CE);
     address internal player = address(0xBEEF);
     address internal affiliate = address(0xAFF1);
-
-    function test_firstLpInflationAttackNoLongerProfitable() external {
-        MockERC20 asset = new MockERC20("USDC", "USDC", 6);
-        Bank bank = new Bank(address(asset), gov, 0, "B", "B", 6, 1);
-
-        address attacker = address(0xA);
-        address victim = address(0xB);
-        uint256 donation = 1_000_000e6;
-        asset.mint(attacker, donation + 1);
-        asset.mint(victim, 100e6);
-
-        vm.startPrank(attacker);
-        asset.approve(address(bank), type(uint256).max);
-        bank.deposit(1, attacker);
-        asset.transfer(address(bank), donation);
-        vm.stopPrank();
-
-        // A deposit that would round to zero shares reverts instead of silently losing the victim's funds.
-        vm.startPrank(victim);
-        asset.approve(address(bank), type(uint256).max);
-        vm.expectRevert(Errors.InsufficientBalance.selector);
-        bank.deposit(100e6, victim);
-        vm.stopPrank();
-        assertEq(asset.balanceOf(victim), 100e6, "the victim keeps its funds");
-
-        // The 0.001-token virtual position captures almost all of the donation: the attacker's one share exits
-        // for about a thousandth of it.
-        vm.prank(attacker);
-        bank.requestRedeem(1, attacker, attacker);
-        vm.warp(bank.redeemBatch(1).cutoff);
-        bank.activateBatch();
-        vm.prank(attacker);
-        uint256 swept = bank.redeem(1, attacker, attacker);
-        assertLt(swept, donation / 1000, "the attacker recovers under a thousandth of the donation");
-    }
 
     function test_referralConfigRejectsOverBudgetLevels() external {
         (,, GameHub hub,) = _deploy(200);
@@ -151,7 +120,8 @@ contract SecurityFixes is Test {
     function test_initialReferralConfigRejectsOverBudgetLevels() external {
         PoolRegistry poolRegistry = new PoolRegistry(gov);
         SettlementRouter router = new SettlementRouter(address(poolRegistry));
-        VRFHub vrf = new VRFHub(address(this), gov);
+        wrapper = new MockVRFV2PlusWrapper();
+        VRFHub vrf = new VRFHub(address(wrapper), address(router));
         ReferralRegistry refReg = new ReferralRegistry(gov);
         DefaultReferralEngine refEng = new DefaultReferralEngine();
 
@@ -159,19 +129,12 @@ contract SecurityFixes is Test {
         new GameHub(address(router), address(vrf), address(refReg), address(refEng), gov, 3600, 200, 0, 3_501, 0, 0);
     }
 
-    function test_zeroMaxAffiliateDeltaMeansDefaultOnly() external {
+    function test_referralHintCannotChangeHouseEdge() external {
         (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(200);
-
-        vm.prank(affiliate);
-        vm.expectRevert(abi.encodeWithSelector(IGameHub.HouseEdgeTooHigh.selector, 201, 200));
-        hub.setAffiliateHouseEdge(201);
-
-        vm.prank(affiliate);
-        hub.setAffiliateHouseEdge(200);
 
         SecurityStakePayoutModule module = new SecurityStakePayoutModule();
         vm.prank(gov);
-        hub.registerGame(GAME_STAKE, address(module));
+        hub.registerGame(GAME_STAKE, address(module), 25, 2_447_746);
 
         asset.mint(player, 10 ether);
         vm.deal(player, 10 ether);
@@ -180,29 +143,28 @@ contract SecurityFixes is Test {
 
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
+        (uint256 fee,) = hub.quoteVRFFee(GAME_STAKE, 1, tx.gasprice);
 
         vm.prank(player);
         uint256 betId = hub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, affiliate, 0);
 
         SSOTTypes.Bet memory b = hub.getBet(betId);
         assertEq(b.maxHouseEdgeBps, 200, "user maxHouseEdgeBps=0 should mean default HE");
-        assertEq(b.effectiveHouseEdgeBps, 200, "effective HE should stay at default");
+        assertEq(b.houseEdgeBps, 200, "effective HE should stay at default");
 
         uint256[] memory words = new uint256[](1);
         words[0] = 1;
-        vrf.fulfillRandomWords(b.requestId, words);
-        hub.finalize(betId);
+        wrapper.fulfillTo(address(vrf), b.requestId, words);
 
         assertEq(asset.balanceOf(player), 98 ether / 10, "player should receive 98% net payout");
     }
 
-    function test_badModuleRefundTooLargeFallsBackToFullRefund() external {
+    function test_badModuleRefundTooLargePreservesKnownOutcome() external {
         (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(200);
 
         SecurityRefundTooLargeModule module = new SecurityRefundTooLargeModule();
         vm.prank(gov);
-        hub.registerGame(GAME_BAD_REFUND, address(module));
+        hub.registerGame(GAME_BAD_REFUND, address(module), 25, 2_447_746);
 
         asset.mint(player, 10 ether);
         vm.deal(player, 10 ether);
@@ -211,7 +173,7 @@ contract SecurityFixes is Test {
 
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
+        (uint256 fee,) = hub.quoteVRFFee(GAME_BAD_REFUND, 1, tx.gasprice);
 
         vm.prank(player);
         uint256 betId = hub.placeBet{value: fee}(GAME_BAD_REFUND, 1, "", spec, address(0), 10_000);
@@ -219,18 +181,17 @@ contract SecurityFixes is Test {
         SSOTTypes.Bet memory b = hub.getBet(betId);
         uint256[] memory words = new uint256[](1);
         words[0] = 1;
-        vrf.fulfillRandomWords(b.requestId, words);
+        wrapper.fulfillTo(address(vrf), b.requestId, words);
 
-        hub.finalize(betId);
-
-        b = hub.getBet(betId);
-        SSOTTypes.BetTerminal memory terminal = hub.getBetTerminal(betId);
-        assertEq(uint256(b.state), uint256(SSOTTypes.BetState.Refunded), "invalid module output should debt-out refund");
-        assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.Refunded), "terminal receipt should be refunded");
-        assertEq(terminal.refundAmount, 10 ether, "terminal receipt should record the full fallback refund");
-        assertEq(terminal.payoutNet, 0, "fallback refund should not masquerade as payout");
-        assertEq(asset.balanceOf(player), 10 ether, "player stake should be returned");
-        assertEq(bank.totalReserved(), 0, "reserved capital should be released");
+        SSOTTypes.Bet memory failed = hub.getBet(betId);
+        assertEq(uint256(failed.state), uint256(SSOTTypes.BetState.RandomReady));
+        assertEq(uint256(hub.getBetTerminal(betId).state), uint256(SSOTTypes.BetState.None));
+        assertEq(asset.balanceOf(player), 0);
+        assertEq(bank.totalReserved(), failed.reserved);
+        assertEq(vrf.unbookedResultCount(address(bank)), 1);
+        vm.warp(block.timestamp + 2 days);
+        vm.expectRevert();
+        hub.refund(betId);
     }
 
     function test_registerGameRejectsOverwrite() external {
@@ -239,57 +200,65 @@ contract SecurityFixes is Test {
         SecurityRefundTooLargeModule replacement = new SecurityRefundTooLargeModule();
 
         vm.startPrank(gov);
-        hub.registerGame(GAME_STAKE, address(module));
+        hub.registerGame(GAME_STAKE, address(module), 25, 2_447_746);
         vm.expectRevert(Errors.InvalidConfig.selector);
-        hub.registerGame(GAME_STAKE, address(replacement));
+        hub.registerGame(GAME_STAKE, address(replacement), 25, 2_447_746);
         vm.stopPrank();
     }
 
-    function test_revertingModuleResolveFallsBackToFullRefund() external {
+    function test_revertingModulePreservesKnownOutcome() external {
         (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(200);
         SecurityRevertingResolveModule module = new SecurityRevertingResolveModule();
 
         vm.prank(gov);
-        hub.registerGame(GAME_REVERTING, address(module));
+        hub.registerGame(GAME_REVERTING, address(module), 25, 2_447_746);
 
         uint256 betId = _placeAndFulfill(asset, bank, hub, vrf, GAME_REVERTING);
-        hub.finalize(betId);
 
-        SSOTTypes.Bet memory b = hub.getBet(betId);
-        SSOTTypes.BetTerminal memory terminal = hub.getBetTerminal(betId);
-        assertEq(uint256(b.state), uint256(SSOTTypes.BetState.Refunded), "resolve revert should refund");
-        assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.Refunded), "terminal should be refunded");
-        assertEq(terminal.refundAmount, 10 ether, "full stake should be refunded");
-        assertEq(asset.balanceOf(player), 10 ether, "player stake should be returned");
-        assertEq(bank.totalReserved(), 0, "reserved capital should be released");
+        SSOTTypes.Bet memory failed = hub.getBet(betId);
+        assertEq(uint256(failed.state), uint256(SSOTTypes.BetState.RandomReady));
+        assertEq(uint256(hub.getBetTerminal(betId).state), uint256(SSOTTypes.BetState.None));
+        assertEq(asset.balanceOf(player), 0);
+        assertEq(bank.totalReserved(), failed.reserved);
+        assertEq(vrf.unbookedResultCount(address(bank)), 1);
+        vm.warp(block.timestamp + 2 days);
+        vm.expectRevert();
+        hub.refund(betId);
     }
 
-    function test_overPayoutModuleFallsBackToFullRefund() external {
+    function test_overPayoutModulePreservesKnownOutcome() external {
         (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(200);
         SecurityOverPayoutModule module = new SecurityOverPayoutModule();
 
         vm.prank(gov);
-        hub.registerGame(GAME_OVER_PAYOUT, address(module));
+        hub.registerGame(GAME_OVER_PAYOUT, address(module), 25, 2_447_746);
 
         uint256 betId = _placeAndFulfill(asset, bank, hub, vrf, GAME_OVER_PAYOUT);
-        hub.finalize(betId);
 
-        SSOTTypes.Bet memory b = hub.getBet(betId);
-        SSOTTypes.BetTerminal memory terminal = hub.getBetTerminal(betId);
-        assertEq(uint256(b.state), uint256(SSOTTypes.BetState.Refunded), "over-payout should refund");
-        assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.Refunded), "terminal should be refunded");
-        assertEq(terminal.refundAmount, 10 ether, "full stake should be refunded");
-        assertEq(asset.balanceOf(player), 10 ether, "player stake should be returned");
-        assertEq(bank.totalReserved(), 0, "reserved capital should be released");
+        SSOTTypes.Bet memory failed = hub.getBet(betId);
+        assertEq(uint256(failed.state), uint256(SSOTTypes.BetState.RandomReady));
+        assertEq(uint256(hub.getBetTerminal(betId).state), uint256(SSOTTypes.BetState.None));
+        assertEq(asset.balanceOf(player), 0);
+        assertEq(bank.totalReserved(), failed.reserved);
+        assertEq(vrf.unbookedResultCount(address(bank)), 1);
+        vm.warp(block.timestamp + 2 days);
+        vm.expectRevert();
+        hub.refund(betId);
     }
 
     function test_newHoldbackAwardDoesNotDelayExistingVesting() external {
         MockERC20 asset = new MockERC20("Asset", "AST", 18);
-        Bank bank = new Bank(address(asset), gov, 0, "LP", "LP", 18, 1);
+        Bank bank = new Bank(address(asset), gov, 0, 18, 1);
         address payee = address(0xCAFE);
 
         vm.prank(gov);
         bank.setSettlementRouterOnce(address(this));
+        _bindTestConsumer(bank);
+        asset.mint(gov, 1 ether);
+        vm.startPrank(gov);
+        asset.approve(bank.vault(), 1 ether);
+        LiquidityVault(bank.vault()).addDeposit(1 ether);
+        vm.stopPrank();
 
         asset.mint(player, 200 ether);
         vm.prank(player);
@@ -325,34 +294,18 @@ contract SecurityFixes is Test {
         assertEq(hub.referrerOf(player), affiliate, "duplicate bind must not mutate first touch");
     }
 
-    function test_detachClearsRequestStorage() external {
-        VRFHub vrf = new VRFHub(address(this), gov);
-        uint32 cbGas = 200_000;
-        uint16 conf = 3;
-        uint32 words = 1;
-        uint256 required = vrf.quote(cbGas, conf, words, tx.gasprice);
-
-        (uint256 requestId,) = vrf.requestRandomWords{value: required}(address(this), 123, cbGas, conf, words, player);
-
-        IVRFHub.RequestInfo memory beforeDetach = vrf.getRequest(requestId);
-        assertEq(beforeDetach.hub, address(this), "request should be stored");
-        assertTrue(beforeDetach.active, "request should start active");
-
-        vrf.detach(requestId);
-
-        IVRFHub.RequestInfo memory afterDetach = vrf.getRequest(requestId);
-        assertEq(afterDetach.hub, address(0), "request hub should be cleared");
-        assertEq(afterDetach.betId, 0, "request betId should be cleared");
-        assertEq(afterDetach.payer, address(0), "request payer should be cleared");
-        assertFalse(afterDetach.active, "request should be inactive");
-    }
-
     function test_refundBetEmitsReleasedReserve() external {
         MockERC20 asset = new MockERC20("Asset", "AST", 18);
-        Bank bank = new Bank(address(asset), gov, 0, "LP", "LP", 18, 1);
+        Bank bank = new Bank(address(asset), gov, 0, 18, 1);
 
         vm.prank(gov);
         bank.setSettlementRouterOnce(address(this));
+        _bindTestConsumer(bank);
+        asset.mint(gov, 1 ether);
+        vm.startPrank(gov);
+        asset.approve(bank.vault(), 1 ether);
+        LiquidityVault(bank.vault()).addDeposit(1 ether);
+        vm.stopPrank();
 
         asset.mint(player, 10 ether);
         vm.prank(player);
@@ -370,10 +323,11 @@ contract SecurityFixes is Test {
 
     function _deploy(uint16 defaultHE) internal returns (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) {
         asset = new MockERC20("Asset", "AST", 18);
-        bank = new Bank(address(asset), gov, 0, "LP", "LP", 18, 1);
+        bank = new Bank(address(asset), gov, 0, 18, 1);
         PoolRegistry poolRegistry = new PoolRegistry(gov);
         SettlementRouter router = new SettlementRouter(address(poolRegistry));
-        vrf = new VRFHub(address(this), gov);
+        wrapper = new MockVRFV2PlusWrapper();
+        vrf = new VRFHub(address(wrapper), address(router));
         ReferralRegistry refReg = new ReferralRegistry(gov);
         DefaultReferralEngine refEng = new DefaultReferralEngine();
 
@@ -386,13 +340,14 @@ contract SecurityFixes is Test {
         poolRegistry.setHubRegistered(address(hub), true);
         poolRegistry.setHubAllowedForPool(1, address(hub), true);
         bank.setSettlementRouterOnce(address(router));
+        bank.setRandomnessConsumerOnce(address(vrf));
         refReg.setBinderOnce(address(hub));
         vm.stopPrank();
 
         asset.mint(gov, 1_000_000 ether);
         vm.startPrank(gov);
-        asset.approve(address(bank), type(uint256).max);
-        bank.deposit(1_000_000 ether, gov);
+        asset.approve(address(bank.vault()), type(uint256).max);
+        LiquidityVault(bank.vault()).addDepositFor(gov, 1_000_000 ether);
         vm.stopPrank();
     }
 
@@ -407,7 +362,7 @@ contract SecurityFixes is Test {
 
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
+        (uint256 fee,) = hub.quoteVRFFee(gameId, 1, tx.gasprice);
 
         vm.prank(player);
         betId = hub.placeBet{value: fee}(gameId, 1, "", spec, address(0), 10_000);
@@ -415,7 +370,7 @@ contract SecurityFixes is Test {
         SSOTTypes.Bet memory b = hub.getBet(betId);
         uint256[] memory words = new uint256[](1);
         words[0] = 1;
-        vrf.fulfillRandomWords(b.requestId, words);
+        wrapper.fulfillTo(address(vrf), b.requestId, words);
     }
 
     function _settleDirectHoldback(Bank bank, uint256 betId, address player_, address payee, uint256 amount) internal {

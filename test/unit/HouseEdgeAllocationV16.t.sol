@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
+import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
@@ -18,7 +20,7 @@ import {DiceModule} from "../../src/modules/dice/DiceModule.sol";
 import {Errors} from "../../src/libs/Errors.sol";
 
 /// @notice ExecutableSSOT v1.6 obligations for the house-edge allocation (SSOT v1.6, ADR-0032).
-/// @dev LPs retain E - O of the turnover edge E, where O = floor(E / 2). Referral rewards and markup are paid
+/// @dev LPs retain E - O of the turnover edge E, where O = floor(E / 2). Referral rewards are paid
 ///      from O and the rest of O accrues as protocol fees. Worked-example numbers follow SSOT v1.6 section 9:
 ///      a 100-unit bet at a 2% edge under the schedule (L0, L1, L2) = (10%, 20%, 5%) of the base edge.
 contract HouseEdgeAllocationV16Test is Test {
@@ -40,6 +42,7 @@ contract HouseEdgeAllocationV16Test is Test {
     ReferralRegistry internal refRegistry;
     GameHub internal hub;
     VRFHub internal vrf;
+    MockVRFV2PlusWrapper internal wrapper;
 
     struct Allocated {
         uint256 usedTurnover;
@@ -51,7 +54,6 @@ contract HouseEdgeAllocationV16Test is Test {
         uint256 r0;
         uint256 r1;
         uint256 r2;
-        uint256 markup;
     }
 
     struct Outcome {
@@ -63,10 +65,11 @@ contract HouseEdgeAllocationV16Test is Test {
 
     function setUp() external {
         asset = new MockERC20("USD", "USD", 18);
-        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18, 1);
+        bank = new Bank(address(asset), gov, 1000, 18, 1);
         PoolRegistry reg = new PoolRegistry(gov);
         router = new SettlementRouter(address(reg));
-        vrf = new VRFHub(address(this), gov);
+        wrapper = new MockVRFV2PlusWrapper();
+        vrf = new VRFHub(address(wrapper), address(router));
         refRegistry = new ReferralRegistry(gov);
 
         hub = new GameHub(
@@ -88,12 +91,13 @@ contract HouseEdgeAllocationV16Test is Test {
         reg.setHubRegistered(address(hub), true);
         reg.setHubAllowedForPool(POOL, address(hub), true);
         bank.setSettlementRouterOnce(address(router));
+        bank.setRandomnessConsumerOnce(address(vrf));
         refRegistry.setBinderOnce(address(hub));
-        hub.registerGame(DICE, address(new DiceModule()));
-        hub.registerGame(COIN, address(new CoinTossModule()));
+        hub.registerGame(DICE, address(new DiceModule()), 25, 2_447_746);
+        hub.registerGame(COIN, address(new CoinTossModule()), 25, 2_447_746);
         asset.mint(gov, 100_000 ether);
-        asset.approve(address(bank), type(uint256).max);
-        bank.deposit(50_000 ether, gov);
+        asset.approve(address(bank.vault()), type(uint256).max);
+        LiquidityVault(bank.vault()).addDepositFor(gov, 50_000 ether);
         vm.stopPrank();
 
         asset.mint(alice, 10_000 ether);
@@ -109,7 +113,7 @@ contract HouseEdgeAllocationV16Test is Test {
     function test_workedExample_noReferrer() external {
         Outcome memory o = _play(STAKE, false);
 
-        _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 0, 1 ether);
+        _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 1 ether);
         assertEq(bank.xpAccruedOf(alice), 0, "no rakeback without a referrer");
     }
 
@@ -119,7 +123,7 @@ contract HouseEdgeAllocationV16Test is Test {
 
         Outcome memory o = _play(STAKE, false);
 
-        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0, 0, 0.4 ether);
+        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0, 0.4 ether);
         assertEq(bank.xpAccruedOf(alice), 0.2 ether, "L0 rakeback is immediately claimable");
         assertEq(bank.xpHoldbackOf(alice), 0, "L0 rakeback has no holdback");
         assertEq(bank.xpAccruedOf(bob) + bank.xpLockedOf(bob) + bank.xpHoldbackOf(bob), 0.4 ether);
@@ -134,7 +138,7 @@ contract HouseEdgeAllocationV16Test is Test {
 
         Outcome memory o = _play(STAKE, false);
 
-        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0.1 ether, 0, 0.3 ether);
+        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0.1 ether, 0.3 ether);
         assertEq(bank.xpAccruedOf(carol) + bank.xpLockedOf(carol) + bank.xpHoldbackOf(carol), 0.1 ether);
     }
 
@@ -142,7 +146,7 @@ contract HouseEdgeAllocationV16Test is Test {
         Outcome memory o = _playWithHint(STAKE, false, bob);
 
         assertEq(hub.referrerOf(alice), bob);
-        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0, 0, 0.4 ether);
+        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0, 0.4 ether);
     }
 
     function test_nothingIsPaidBeyondL2() external {
@@ -155,18 +159,18 @@ contract HouseEdgeAllocationV16Test is Test {
 
         Outcome memory o = _play(STAKE, false);
 
-        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0.1 ether, 0, 0.3 ether);
+        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0.1 ether, 0.3 ether);
         assertEq(bank.xpAccruedOf(dave) + bank.xpLockedOf(dave) + bank.xpHoldbackOf(dave), 0, "no L3");
     }
 
     /// Over a fair win/lose pair LPs keep half of the edge: E - O per bet. NAV is measured across the whole
     /// bet lifecycle, since the stake enters the pool at placement.
     function test_fairPair_lpKeepsHalfTheEdge() external {
-        int256 nav0 = int256(bank.totalAssets());
+        int256 nav0 = int256(bank.getSSOT().G);
         _play(STAKE, false);
-        int256 nav1 = int256(bank.totalAssets());
+        int256 nav1 = int256(bank.getSSOT().G);
         _play(STAKE, true);
-        int256 nav2 = int256(bank.totalAssets());
+        int256 nav2 = int256(bank.getSSOT().G);
 
         assertEq(nav1 - nav0, int256(STAKE - 1 ether), "losing bet: stake minus the operator share");
         // winning bet: pays 200 gross minus the 2% fee, and still accrues the operator share
@@ -203,7 +207,7 @@ contract HouseEdgeAllocationV16Test is Test {
 
         assertEq(o.a.usedTurnover, 20 ether);
         // E = 0.4, O = 0.2, R0 = 0.04, R1 = 0.08, PF = 0.08
-        _assertAllocation(o, 0.4 ether, 0.2 ether, 0.04 ether, 0.08 ether, 0, 0, 0.08 ether);
+        _assertAllocation(o, 0.4 ether, 0.2 ether, 0.04 ether, 0.08 ether, 0, 0.08 ether);
         assertEq(router.allocationCap(id, 80 ether), 0.2 ether);
     }
 
@@ -221,7 +225,7 @@ contract HouseEdgeAllocationV16Test is Test {
         hub.bindReferrer(bob);
 
         Outcome memory o = _finalize(id, _seedDice(id, false));
-        _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 0, 1 ether);
+        _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 1 ether);
         assertEq(bank.xpAccruedOf(alice) + bank.xpHoldbackOf(bob) + bank.xpAccruedOf(bob), 0);
     }
 
@@ -234,7 +238,7 @@ contract HouseEdgeAllocationV16Test is Test {
         refRegistry.bind(bob, carol);
 
         Outcome memory o = _finalize(id, _seedDice(id, false));
-        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0, 0, 0.4 ether);
+        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0, 0.4 ether);
         assertEq(bank.xpAccruedOf(carol) + bank.xpHoldbackOf(carol), 0);
     }
 
@@ -249,11 +253,11 @@ contract HouseEdgeAllocationV16Test is Test {
         vm.stopPrank();
 
         Outcome memory o = _finalize(id, _seedDice(id, false));
-        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0, 0, 0.4 ether);
+        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0, 0.4 ether);
 
         // The next bet uses the new schedule: L1 35% of the base edge, no rakeback.
         Outcome memory n = _play(STAKE, false);
-        _assertAllocation(n, 2 ether, 1 ether, 0, 0.7 ether, 0, 0, 0.3 ether);
+        _assertAllocation(n, 2 ether, 1 ether, 0, 0.7 ether, 0, 0.3 ether);
     }
 
     function test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive() external {
@@ -261,21 +265,21 @@ contract HouseEdgeAllocationV16Test is Test {
 
         uint256 queuedAt = block.timestamp;
         vm.prank(gov);
-        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 300);
-        (uint16 pendingBps, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+        hub.queueEdgeChange(300);
+        (uint16 pendingBps, uint64 activatesAt) = hub.pendingEdgeChange();
         assertEq(pendingBps, 300);
         assertEq(activatesAt, queuedAt + 7 days);
 
         vm.warp(activatesAt - 1);
         vm.expectRevert(abi.encodeWithSelector(IGameHub.EdgeChangeNotReady.selector, activatesAt));
-        hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+        hub.activateEdgeChange();
         assertEq(hub.defaultHouseEdgeBps(), 200);
 
         vm.warp(activatesAt);
         vm.prank(dave); // activation is permissionless once the delay has passed
-        hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+        hub.activateEdgeChange();
         assertEq(hub.defaultHouseEdgeBps(), 300);
-        (, activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+        (, activatesAt) = hub.pendingEdgeChange();
         assertEq(activatesAt, 0);
 
         // The bet accepted at 2% settles at 2% even though it is finalized after the change.
@@ -285,169 +289,96 @@ contract HouseEdgeAllocationV16Test is Test {
 
         Outcome memory n = _play(STAKE, false);
         assertEq(n.a.edgeBps, 300);
-        _assertAllocation(n, 3 ether, 1.5 ether, 0, 0, 0, 0, 1.5 ether);
+        _assertAllocation(n, 3 ether, 1.5 ether, 0, 0, 0, 1.5 ether);
     }
 
     function test_cancelledBaseEdgeChangeCannotActivate() external {
         vm.startPrank(gov);
-        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 300);
-        (, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
-        hub.cancelEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+        hub.queueEdgeChange(300);
+        (, uint64 activatesAt) = hub.pendingEdgeChange();
+        hub.cancelEdgeChange();
         vm.stopPrank();
 
         vm.warp(activatesAt);
         vm.expectRevert(IGameHub.NoPendingEdgeChange.selector);
-        hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+        hub.activateEdgeChange();
         assertEq(hub.defaultHouseEdgeBps(), 200);
     }
 
-    // ---------------------------------------------------------------------
-    // Affiliate markup (A1, A5, A8, G2)
-    // ---------------------------------------------------------------------
-
-    function test_markupStartsDisabled() external {
-        assertEq(hub.maxAffiliateDeltaBps(), 0);
-        vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(IGameHub.HouseEdgeTooHigh.selector, uint16(201), uint16(200)));
-        hub.setAffiliateHouseEdge(201);
-    }
-
-    function test_markupIncreaseWaitsForDelay_decreaseIsImmediate() external {
+    function test_playerMaxHouseEdgeProtectsAgainstBaseEdgeChange() external {
         vm.prank(gov);
-        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 100);
-        assertEq(hub.maxAffiliateDeltaBps(), 0, "an increase is only queued");
-        (uint16 pendingBps, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
-        assertEq(pendingBps, 100);
-
-        vm.expectRevert(abi.encodeWithSelector(IGameHub.EdgeChangeNotReady.selector, activatesAt));
-        hub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
-
+        hub.queueEdgeChange(300);
+        (, uint64 activatesAt) = hub.pendingEdgeChange();
         vm.warp(activatesAt);
-        hub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
-        assertEq(hub.maxAffiliateDeltaBps(), 100);
-
-        // A queued increase is superseded by a decrease, which applies at once.
-        vm.startPrank(gov);
-        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 300);
-        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 50);
-        vm.stopPrank();
-        assertEq(hub.maxAffiliateDeltaBps(), 50);
-        (, activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
-        assertEq(activatesAt, 0);
-    }
-
-    function test_markupOperatorHalfGoesToSkylinePayee() external {
-        _enableMarkup(100);
-        vm.prank(alice);
-        hub.bindReferrer(bob);
-        vm.prank(bob);
-        hub.setAffiliateHouseEdge(300);
-
-        Outcome memory o = _play(STAKE, false);
-
-        // E = 3, E_b = 2, O = 1.5; markup budget = floor(1 / 2) = 0.5 to bob
-        assertEq(o.a.edgeBps, 300);
-        _assertAllocation(o, 3 ether, 1.5 ether, 0.2 ether, 0.4 ether, 0, 0.5 ether, 0.4 ether);
-        assertEq(bank.xpAccruedOf(bob) + bank.xpLockedOf(bob) + bank.xpHoldbackOf(bob), 0.9 ether);
-    }
-
-    function test_markupSplitsAcrossSkylineInProportion() external {
-        _enableMarkup(100);
-        vm.prank(bob);
-        refRegistry.bind(bob, carol);
-        vm.prank(alice);
-        hub.bindReferrer(bob);
-        vm.prank(bob);
-        hub.setAffiliateHouseEdge(250);
-        vm.prank(carol);
-        hub.setAffiliateHouseEdge(300);
-
-        Outcome memory o = _play(STAKE, false);
-
-        // Two 50 bps increments share the 0.5 markup budget equally.
-        _assertAllocation(o, 3 ether, 1.5 ether, 0.2 ether, 0.4 ether, 0.1 ether, 0.5 ether, 0.3 ether);
-        assertEq(bank.xpAccruedOf(bob) + bank.xpHoldbackOf(bob), 0.4 ether + 0.25 ether);
-        assertEq(bank.xpAccruedOf(carol) + bank.xpHoldbackOf(carol), 0.1 ether + 0.25 ether);
-    }
-
-    function test_staleAffiliateEdgeIsClampedToTheCurrentCap() external {
-        _enableMarkup(100);
-        vm.prank(alice);
-        hub.bindReferrer(bob);
-        vm.prank(bob);
-        hub.setAffiliateHouseEdge(300);
-
-        vm.prank(gov);
-        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 0);
-
-        Outcome memory o = _play(STAKE, false);
-        assertEq(o.a.edgeBps, 200, "markup disabled: effective edge is the base edge");
-        assertEq(o.a.markup, 0);
-        assertEq(hub.getDeltaSkyline(o.id).length, 0);
-    }
-
-    function test_staleAffiliateEdgeIsClampedToALowerCap() external {
-        _enableMarkup(100);
-        vm.prank(alice);
-        hub.bindReferrer(bob);
-        vm.prank(bob);
-        hub.setAffiliateHouseEdge(300);
-
-        vm.prank(gov);
-        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 50);
-
-        Outcome memory o = _play(STAKE, false);
-        assertEq(o.a.edgeBps, 250, "a 300 bps setting prices at the 250 bps cap");
-        // E = 2.5, E_b = 2, O = 1.25, markup budget = 0.25
-        _assertAllocation(o, 2.5 ether, 1.25 ether, 0.2 ether, 0.4 ether, 0, 0.25 ether, 0.4 ether);
-    }
-
-    /// Every share is rounded down and remainders become protocol fees, never another payee's share.
-    function test_roundingRemaindersAccrueToProtocol() external {
-        _enableMarkup(100);
-        vm.prank(bob);
-        refRegistry.bind(bob, carol);
-        vm.prank(alice);
-        hub.bindReferrer(bob);
-        vm.prank(bob);
-        hub.setAffiliateHouseEdge(250); // +50 bps
-        vm.prank(carol);
-        hub.setAffiliateHouseEdge(270); // +20 bps
-
-        Outcome memory o = _play(1_234_567, false);
-
-        // E = floor(1234567 * 2.7%) = 33333, E_b = 24691, O = 16666, markup budget = floor(8642 / 2) = 4321.
-        // R0 = 2469, R1 = 4938, R2 = 1234; markup: bob floor(4321 * 50/70) = 3086, carol floor(4321 * 20/70) =
-        // 1234, one unit unallocated.
-        _assertAllocation(o, 33_333, 16_666, 2_469, 4_938, 1_234, 4_320, 3_705);
-        assertEq(bank.xpAccruedOf(carol) + bank.xpHoldbackOf(carol), 1_234 + 1_234);
-    }
-
-    function test_playerMaxHouseEdgeStillProtectsAgainstMarkup() external {
-        _enableMarkup(100);
-        vm.prank(alice);
-        hub.bindReferrer(bob);
-        vm.prank(bob);
-        hub.setAffiliateHouseEdge(300);
-
-        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: STAKE, betCount: 1, stopGain: 0, stopLoss: 0});
+        hub.activateEdgeChange();
+        (uint256 fee,) = hub.quoteVRFFee(DICE, 1, tx.gasprice);
+        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec(STAKE, 1, 0, 0);
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(IGameHub.HouseEdgeTooHigh.selector, uint16(300), uint16(250)));
         hub.placeBet{value: fee}(DICE, POOL, abi.encode(true, uint8(50)), spec, address(0), 250);
     }
 
-    function test_routerRecordsTheEffectiveEdge() external {
-        _enableMarkup(100);
+    function test_routerRecordsTheAcceptedHouseEdge() external {
+        uint256 id = _place(DICE, abi.encode(true, uint8(50)), STAKE, 1, 0, bob);
+        assertEq(router.getPosition(id).edgeBps, 200);
+        assertEq(hub.getBet(id).houseEdgeBps, 200);
+    }
+
+    function test_invalidSelfHintPaysNoRakebackAndDoesNotChangePrice() external {
+        Outcome memory o = _playWithHint(STAKE, false, alice);
+        assertEq(hub.referrerOf(alice), address(0));
+        _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 1 ether);
+        assertEq(o.a.edgeBps, 200);
+    }
+
+    function test_referralEventKeepsAcceptedPayeesWhenUplineBindsLater() external {
+        vm.recordLogs();
+        uint256 id = _place(DICE, abi.encode(true, uint8(50)), STAKE, 1, 0, bob);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        vm.prank(bob);
+        refRegistry.bind(bob, carol);
+        bool found;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter != address(hub) || logs[i].topics[0] != IGameHub.BetPlaced.selector) continue;
+            assertEq(uint256(logs[i].topics[1]), id);
+            // All non-indexed BetPlaced fields are static ABI words. L1/L2 follow paramsHash.
+            uint256[21] memory fields = abi.decode(logs[i].data, (uint256[21]));
+            assertEq(address(uint160(fields[15])), bob, "event L1 is accepted referral");
+            assertEq(address(uint160(fields[16])), address(0), "event L2 cannot use later upline");
+            assertEq(fields[17], 200, "event house edge");
+            found = true;
+        }
+        assertTrue(found, "BetPlaced emitted");
+        Outcome memory o = _finalize(id, _seedDice(id, false));
+        _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0, 0.4 ether);
+    }
+
+    function test_cycleHintFailureKeepsBetUnreferred() external {
+        vm.prank(bob);
+        refRegistry.bind(bob, alice);
+        Outcome memory o = _playWithHint(STAKE, false, bob);
+        assertEq(hub.referrerOf(alice), address(0));
+        _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 1 ether);
+    }
+
+    function test_boundReferrerCannotBeReplacedByAnotherHint() external {
         vm.prank(alice);
         hub.bindReferrer(bob);
-        vm.prank(bob);
-        hub.setAffiliateHouseEdge(275);
+        Outcome memory o = _playWithHint(STAKE, false, carol);
+        (address l1, address l2) = hub.getBetReferralPayees(o.id);
+        assertEq(l1, bob);
+        assertEq(l2, address(0));
+        assertEq(bank.xpAccruedOf(carol) + bank.xpLockedOf(carol) + bank.xpHoldbackOf(carol), 0);
+    }
 
-        uint256 id = _place(DICE, abi.encode(true, uint8(50)), STAKE, 1, 0, address(0));
-        assertEq(router.getPosition(id).edgeBps, 275);
-        assertEq(hub.getBet(id).effectiveHouseEdgeBps, 275);
+    function test_roundingRemaindersAccrueToProtocol() external {
+        vm.prank(bob);
+        refRegistry.bind(bob, carol);
+        vm.prank(alice);
+        hub.bindReferrer(bob);
+        Outcome memory o = _play(1_234_567, false);
+        // E=24691, O=12345, floor rewards=2469+4938+1234, remainder belongs to PF.
+        _assertAllocation(o, 24_691, 12_345, 2_469, 4_938, 1_234, 3_704);
     }
 
     // ---------------------------------------------------------------------
@@ -496,11 +427,9 @@ contract HouseEdgeAllocationV16Test is Test {
     function test_edgeBoundsAreEnforced() external {
         vm.startPrank(gov);
         vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, uint256(0)));
-        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 0);
+        hub.queueEdgeChange(0);
         vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, uint256(501)));
-        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 501);
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, uint256(501)));
-        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 501);
+        hub.queueEdgeChange(501);
         vm.stopPrank();
     }
 
@@ -523,7 +452,7 @@ contract HouseEdgeAllocationV16Test is Test {
         vm.prank(alice);
         hub.bindReferrer(bob);
         Outcome memory o = _play(STAKE, false);
-        _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 0, 1 ether);
+        _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 1 ether);
     }
 
     function test_onlyGovernanceChangesAllocationParameters() external {
@@ -532,13 +461,9 @@ contract HouseEdgeAllocationV16Test is Test {
 
         vm.startPrank(dave);
         vm.expectRevert(Errors.Unauthorized.selector);
-        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 300);
+        hub.queueEdgeChange(300);
         vm.expectRevert(Errors.Unauthorized.selector);
-        hub.cancelEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
-        vm.expectRevert(Errors.Unauthorized.selector);
-        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 0);
-        vm.expectRevert(Errors.Unauthorized.selector);
-        hub.cancelEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
+        hub.cancelEdgeChange();
         vm.expectRevert(Errors.Unauthorized.selector);
         hub.createReferralConfig(0, 3500, 0, 0);
         vm.expectRevert(Errors.Unauthorized.selector);
@@ -546,14 +471,12 @@ contract HouseEdgeAllocationV16Test is Test {
 
         // Activation is permissionless, but only applies what governance queued.
         vm.expectRevert(IGameHub.NoPendingEdgeChange.selector);
-        hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
-        vm.expectRevert(IGameHub.NoPendingEdgeChange.selector);
-        hub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
+        hub.activateEdgeChange();
         vm.stopPrank();
     }
 
     // ---------------------------------------------------------------------
-    // Conservation and bounds under random schedules, chains and markup
+    // Conservation and bounds under random schedules, chains and edges
     // ---------------------------------------------------------------------
 
     function testFuzz_allocationConservesTheEdge(
@@ -562,7 +485,7 @@ contract HouseEdgeAllocationV16Test is Test {
         uint16 l1,
         uint16 l2,
         uint8 depthRaw,
-        uint16 markupRaw,
+        uint16 edgeRaw,
         bool win
     ) external {
         uint256 stake = bound(stakeRaw, 1_000, 1_000 ether);
@@ -570,12 +493,16 @@ contract HouseEdgeAllocationV16Test is Test {
         l1 = uint16(bound(l1, 0, 3500 - uint256(l0)));
         l2 = uint16(bound(l2, 0, 3500 - uint256(l0) - uint256(l1)));
         uint256 depth = bound(depthRaw, 0, 2);
-        uint16 markup = uint16(bound(markupRaw, 0, 300));
+        uint16 edgeBps = uint16(bound(edgeRaw, 1, 500));
 
         vm.startPrank(gov);
         hub.setActiveReferralConfig(hub.createReferralConfig(l0, l1, l2, 3000));
         vm.stopPrank();
-        _enableMarkup(300);
+        vm.prank(gov);
+        hub.queueEdgeChange(edgeBps);
+        (, uint64 activatesAt) = hub.pendingEdgeChange();
+        vm.warp(activatesAt);
+        hub.activateEdgeChange();
         if (depth == 2) {
             vm.prank(bob);
             refRegistry.bind(bob, carol);
@@ -583,14 +510,12 @@ contract HouseEdgeAllocationV16Test is Test {
         if (depth >= 1) {
             vm.prank(alice);
             hub.bindReferrer(bob);
-            vm.prank(bob);
-            hub.setAffiliateHouseEdge(200 + markup);
         }
 
         Outcome memory o = _play(stake, win);
         Allocated memory a = o.a;
-        uint16 effective = depth >= 1 ? 200 + markup : 200;
-        uint256 baseEdge = stake * 200 / 10_000;
+        uint16 effective = edgeBps;
+        uint256 baseEdge = stake * edgeBps / 10_000;
 
         assertEq(a.edgeBps, effective);
         assertEq(a.edge, stake * effective / 10_000, "E");
@@ -599,13 +524,12 @@ contract HouseEdgeAllocationV16Test is Test {
         assertEq(a.r0, depth >= 1 ? baseEdge * l0 / 10_000 : 0, "R0");
         assertEq(a.r1, depth >= 1 ? baseEdge * l1 / 10_000 : 0, "R1");
         assertEq(a.r2, depth == 2 ? baseEdge * l2 / 10_000 : 0, "R2");
-        assertEq(a.markup, depth >= 1 ? (a.edge - baseEdge) / 2 : 0, "M (single skyline segment)");
         assertLe(a.r0 + a.r1 + a.r2, baseEdge * 3500 / 10_000, "A3 referral cap");
 
         // A1 + A5: the event reconciles and the bank accrued exactly the operator share
-        assertEq(a.lpRetained + a.protocolFee + a.r0 + a.r1 + a.r2 + a.markup, a.edge, "A1 conservation");
+        assertEq(a.lpRetained + a.protocolFee + a.r0 + a.r1 + a.r2, a.edge, "A1 conservation");
         assertEq(o.pf, a.protocolFee, "PF");
-        assertEq(o.xp, a.r0 + a.r1 + a.r2 + a.markup, "XP");
+        assertEq(o.xp, a.r0 + a.r1 + a.r2, "XP");
         assertEq(o.pf + o.xp, router.allocationCap(o.id, 0), "accrues exactly the Router cap");
     }
 
@@ -620,7 +544,6 @@ contract HouseEdgeAllocationV16Test is Test {
         uint256 r0,
         uint256 r1,
         uint256 r2,
-        uint256 markup,
         uint256 protocolFee
     ) internal pure {
         assertEq(o.a.edge, edge, "E");
@@ -629,18 +552,9 @@ contract HouseEdgeAllocationV16Test is Test {
         assertEq(o.a.r0, r0, "R0");
         assertEq(o.a.r1, r1, "R1");
         assertEq(o.a.r2, r2, "R2");
-        assertEq(o.a.markup, markup, "M");
         assertEq(o.a.protocolFee, protocolFee, "PF_new");
         assertEq(o.pf, protocolFee, "bank PF accrual");
-        assertEq(o.xp, r0 + r1 + r2 + markup, "bank XP accrual");
-    }
-
-    function _enableMarkup(uint16 bps) internal {
-        vm.prank(gov);
-        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, bps);
-        (, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
-        vm.warp(activatesAt);
-        hub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
+        assertEq(o.xp, r0 + r1 + r2, "bank XP accrual");
     }
 
     function _play(uint256 stake, bool win) internal returns (Outcome memory o) {
@@ -660,10 +574,10 @@ contract HouseEdgeAllocationV16Test is Test {
         uint256 stopGain,
         address hint
     ) internal returns (uint256 id) {
-        (uint256 fee,) = hub.quoteVRFFee(betCount, tx.gasprice);
+        (uint256 fee,) = hub.quoteVRFFee(game, betCount, tx.gasprice);
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: amountPerRoll, betCount: betCount, stopGain: stopGain, stopLoss: 0});
-        // The player accepts any edge up to the 5% cap; markup tests need more than the base edge.
+        // The player accepts any configured edge up to the 5% cap.
         vm.prank(alice);
         id = hub.placeBet{value: fee}(game, POOL, params, spec, hint, 500);
     }
@@ -674,9 +588,8 @@ contract HouseEdgeAllocationV16Test is Test {
 
         uint256[] memory words = new uint256[](1);
         words[0] = seed;
-        vrf.fulfillRandomWords(hub.getBet(id).requestId, words);
         vm.recordLogs();
-        hub.finalize(id);
+        wrapper.fulfillTo(address(vrf), hub.getBet(id).requestId, words);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         bool found;
@@ -686,21 +599,9 @@ contract HouseEdgeAllocationV16Test is Test {
             }
             assertEq(uint256(logs[i].topics[1]), id);
             Allocated memory a = o.a;
-            (
-                a.usedTurnover,
-                a.edgeBps,
-                a.edge,
-                a.operatorShare,
-                a.lpRetained,
-                a.protocolFee,
-                a.r0,
-                a.r1,
-                a.r2,
-                a.markup
-            ) =
+            (a.usedTurnover, a.edgeBps, a.edge, a.operatorShare, a.lpRetained, a.protocolFee, a.r0, a.r1, a.r2) =
                 abi.decode(
-                    logs[i].data,
-                    (uint256, uint16, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256)
+                    logs[i].data, (uint256, uint16, uint256, uint256, uint256, uint256, uint256, uint256, uint256)
                 );
             found = true;
         }
@@ -711,8 +612,8 @@ contract HouseEdgeAllocationV16Test is Test {
         o.xp = afterSettle.XP - before.XP;
 
         // B1 / B2
-        assertEq(bank.totalAssets(), afterSettle.NAV, "NAV identity");
-        assertGe(afterSettle.B, afterSettle.PF + afterSettle.XP, "solvency");
+        assertEq(bank.getSSOT().G, afterSettle.G, "NAV identity");
+        assertGe(afterSettle.bankCash, afterSettle.PF + afterSettle.XP, "solvency");
         assertEq(hub.getBetTerminal(id).protocolFeeAccrual, o.pf, "terminal PF");
     }
 

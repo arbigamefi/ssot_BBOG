@@ -1,5 +1,12 @@
 # ArbiGameFi Monorepo
 
+**2026-10-04: Core and application interfaces implemented; local integration verified, release qualification pending.** NFT LiquidityVault deposits, fixed 24-hour withdrawal locks
+and atomic VRF settlement attempts follow the [implementation plan](docs/design/lp-accounting-and-callback-implementation.md). Earlier candidate
+deployments, tests and operations do not establish that this replacement is implemented.
+The [core integration review](docs/audit/nft-core-integration-review.md) covers the actual Bank/Vault/VRFHub/GameHub path;
+[application integration review](docs/audit/nft-consumer-integration-review.md) covers the SDK, UI,
+keeper and index. Final per-game gas admission remains open.
+
 ArbiGameFi is designed as a single-brand B2C casino/sportsbook product built on
 a protocol-grade settlement kernel. It serves players, LPs, referrers and the
 operators of this deployment. The [product architecture commitment](docs/strategy/fullstack-product-architecture.md)
@@ -18,23 +25,30 @@ cooperation and resource decisions; the
 [technical whitepaper](docs/WHITEPAPER.zh-CN.md) explains mechanisms and trust
 assumptions. The [product roadmap](docs/roadmap.md) presents intended capability.
 
-The project has not launched. Only the current v1.6 implementation is supported: instant deposits,
-asynchronous redemptions with independently owned historical recovery, and a fixed 50% LP share of the turnover edge.
+The project has not launched. The accepted target uses a separate LiquidityVault, one ERC-721 NFT
+per deposit, LiquidityTree P&L and a fixed 24-hour withdrawal lock. Bank holds bettor principal and
+liabilities. Mature owner-only withdrawals pay the owner; partial success relocks remaining value,
+full withdrawal burns the NFT, and transfers preserve maturity. Withdrawn capital has no future
+P&L or recovery entitlement. No fungible LP share, daily exit queue or compatibility mode remains.
 Use the [current release workflow](docs/deploy/v16-release.md). No deployment manifests are embedded
 until a current release is verified and imported.
 
-Its core design follows a **Single Source of Truth (SSOT)** architecture:
+The accepted target follows a **Single Source of Truth (SSOT)** architecture:
 
-- **Per-pool Bank SSOT (Accounting Truth):** for each single-asset Bank, `active NAV = B - PF - XP - exitPayable - playerPayableTotal - recoveryBacking` and `totalAssets() == NAV`
+- **Bank / LiquidityVault SSOT (Accounting Truth):** Vault tree capital `L`; Bank pending principal `P` and gross reserve `R`; net lock `K=R-P`, betting solvency basis `G=L+P`
 - **PoolRegistry SSOT (Routing Truth):** pool -> asset/bank/domain/hub permissions
 - **SettlementRouter SSOT (Position Truth):** cross-vertical position lifecycle and Bank authority
-- **GameHub SSOT (Casino Lifecycle Truth):** casino `betId` registry + permissionless `finalize()` / `refund()`
+- **GameHub SSOT (Casino Lifecycle Truth):** casino `betId` registry + one settlement implementation, attempted in the callback and publicly retryable
 - **SportsHub SSOT (Sports Lifecycle Truth):** fixed-odds market/ticket lifecycle
-- **VRFHub SSOT (Casino RNG Transport Truth):** request mapping + `detach` + best-effort downstream callback handling
+- **VRFHub SSOT (Casino RNG Transport Truth):** direct wrapper consumer, canonical stored randomness and retryable same-result downstream settlement
 - **Modules (Game Semantics):** pure, deterministic payout logic (`IGameModule`)
 
-The current implementation additionally specifies **charged VRF fees in native token** ("多退少补") and a **Chainlink VRF v2.5+ Wrapper adapter**
-integration, while preserving SSOT liveness and a minimal trust surface.
+VRFHub is to use the existing **Chainlink VRF v2.5 wrapper consumer** directly. Native fees use the
+wrapper quote; failed excess-payment refunds remain claimable credit. The independent adapter and
+synthetic production fee mode are removed in the target. Full callback gas remains acceptance work.
+The user accepted the existing pre-fulfillment LP ordering risk, with explicit disclosure;
+atomic settlement and the 24-hour lock do not eliminate it. See the
+[current admission review](docs/audit/callback-and-lp-admission-review-2026-10-04.md).
 
 ## Repository layout
 
@@ -56,19 +70,19 @@ integration, while preserving SSOT liveness and a minimal trust surface.
 
 ### Contracts
 
-- `src/core/Bank.sol` — per-asset ERC-4626 deposits + ERC-7540 redemptions + accounting buckets (PF/XP/R) + bet funds API (**only SettlementRouter**)
+- `src/core/Bank.sol` — bettor principal, player/protocol/referral debt, gross reserve and per-bet deposit cutoff (**only SettlementRouter** for bet funds)
+- `src/core/LiquidityVault.sol` — LP custody, ERC-721 deposits, fixed 24-hour locks and pinned LiquidityTree, bound to its Bank
 - `src/core/PoolRegistry.sol` — pool registry for asset, Bank, domain, and hub permissions
 - `src/core/SettlementRouter.sol` — shared settlement authority between vertical hubs and Bank pools
-- `src/core/GameHub.sol` — casino bet registry SSOT + VRF orchestration + permissionless `finalize/refund`
+- `src/core/GameHub.sol` — casino registry + one settlement path for callback/public retry + eligible timeout refunds
 - `src/core/SportsHub.sol` — fixed-odds sports market/ticket lifecycle
 - `src/core/SportsRiskEngine.sol` — sports exposure and risk hash controls
-- `src/core/VRFHub.sol` — VRF transport + request mapping + `detach` + best-effort downstream callback handling
-- `src/adapters/*` — optional VRF provider adapters (e.g., Chainlink Wrapper)
+- `src/core/VRFHub.sol` — VRF transport + direct wrapper consumer, canonical stored randomness and retryable same-result downstream settlement
 - `src/modules/*` — pure game modules (`IGameModule`)
 - `src/engines/referral/*` — referral registry + deterministic referral engine (pure math)
 - `test/unit/*` — unit & end-to-end tests
-- `test/diff/*` — differential tests (module-level + system-level, incl. adapter mode)
-- `test/invariants/*` — **Executable SSOT** (Foundry invariants, incl. adapter ETH/credit invariants)
+- `test/diff/*` — differential tests (module-level and system-level; callback targets require new evidence)
+- `test/invariants/*` — **Executable SSOT** (Foundry accounting and native refund-credit invariants)
 
 ### Frontend
 
@@ -142,11 +156,8 @@ Run invariants only:
 forge test --match-path "test/invariants/*" -vvv
 ```
 
-Run adapter-mode gates only:
-
-```bash
-forge test --match-path "test/diff/StatefulSystemDiffAdapter.t.sol" -vvv
-```
+The [implementation plan](docs/design/lp-accounting-and-callback-implementation.md) defines the new
+Bank and callback gates. Earlier adapter-mode test results do not validate the direct consumer path.
 
 ## Frontend release artifacts
 
@@ -180,22 +191,39 @@ forge test --match-path "test/fork/*" -vvv
 
 ### Accounting SSOT (per Bank)
 
-For each Bank and its supported asset `a` (multiple pools may use the same asset):
+For each bound Bank/Vault pool:
 
-- `B[a]` = `asset.balanceOf(Bank(a))`
-- `PF[a]` = protocol fees payable (not LP backing)
-- `XP[a]` = external payables total (referral/kickback liabilities; not LP backing)
-- `NAV[a] = B[a] - PF[a] - XP[a] - exitPayable[a] - playerPayableTotal[a] - recoveryBacking[a]`
-- `R[a]` = `activeReserved` (active capital's part of pending risk); `totalReserved` additionally includes historical remaining reserves
+- `L` = LiquidityTree root (LP capital), not token balance minus liabilities.
+- `P` = Bank's unresolved bettor principal; `R` = its gross maximum payout reserve.
+- `K = R - P` = net LP lock; `G = L + P` = betting solvency basis.
+- `PF`, `XP`, `PP` = Bank's protocol, referral and player payables, separate from L.
 
-And **MUST** satisfy:
+Require `R >= P` and `L >= K`. Existing betting percentages remain unchanged: after accepting stake
+`s`, `R + newReserve + floor((G+s) * riskReserveBps / 10000) <= G+s`. Zero tree capital rejects
+new bets. A mature NFT's cash limit is `min(nodeValue, max(L-K,0))`; no additional LP withdrawal
+buffer or last-NFT guard applies. K=0 permits all mature capital to exit even with open bets when
+other guards allow it.
 
-- `totalAssets() == NAV`
-- `NAV >= R`
+A bet snapshots `lastDepositId`. P&L targets that prefix; an insufficient prefix sends the **whole
+loss** to the current tree, while an empty prefix sends profit to the current tree. New deposits can
+therefore participate in old outcomes. If the whole root is zero at settlement, profit goes to
+protocol capital. Donation surplus stays outside the tree and is diagnostic, not a new cash-out API.
+
+Vault cash operations check Bank pause/busy/accounting state and canonical Router-to-VRF recorded
+results. Unbooked randomness blocks additions/withdrawals; NFT views are custom, not ERC-4626 max
+functions. Full mature withdrawal burns even a zero-value NFT; zero percent and zero-value partial
+withdrawals revert. NFT operator approval can transfer ownership, so it remains economic authority;
+the official withdrawal flow asks for no NFT approval. LP asset approval targets Vault, betting Hub.
+
+Deposits and new bets also bound `G <= 2^108-1` for the original tree arithmetic.
+The adopted 40-level tree has been measured through the real core callback; some 100-round paths
+exceed the provider budget. Every admitted configuration still needs worst-input qualification;
+see the [current measurements](docs/audit/nft-core-integration-review.md). Earlier 100-round support
+is not a promise for this path.
 
 ### Charged VRF fee (native)
 
-- `GameHub.quoteVRFFee(betCount)` gives a deterministic quote `(fee, callbackGasLimit)`.
+- `GameHub.quoteVRFFee` quotes wrapper-native request/callback costs for the current gas budget; final callback limits require measurement.
 - `GameHub.placeBet(...)` is `payable` and requires `msg.value >= fee`.
 - Any overpayment is refunded best-effort; failed refunds accrue `refundCredit` claimable later.
 
@@ -219,4 +247,6 @@ See `SECURITY.md` for the vulnerability disclosure process.
 
 ## License
 
-MIT — see `LICENSE`.
+Project files use their SPDX identifiers; see `LICENSE` for the MIT-licensed portions.
+The pinned Azuro tree and the derived LiquidityVault use GPL-3.0; their provenance,
+source hashes and license text are in [the vendor directory](src/vendor/azuro-v3/README.md).

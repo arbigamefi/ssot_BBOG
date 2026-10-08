@@ -1,132 +1,106 @@
-export interface DomainRedeemBatch {
-  batchId: bigint;
-  /** Earliest activation time; queued requests remain cancellable after this time. */
-  cutoff: bigint;
-  priced: boolean;
-  shares: bigint;
-  assets: bigint;
-  assignedShares: bigint;
-  assignedAssets: bigint;
-  /** Actual risk boundary; zero while the batch is still queued. */
-  activatedAt: bigint;
-  fullExit: boolean;
-}
+export type LPStatus =
+  | "ready"
+  | "paused"
+  | "busy"
+  | "unbookedResult"
+  | "invalidAccounting"
+  | "unavailable"
+  | "coolingDown"
+  | "noLiquidity";
 
-export interface DomainControllerRedeemBatch extends DomainRedeemBatch {
-  controllerShares: bigint;
-  cancellableShares: bigint;
-  liquidAssets: bigint;
-  /** Additional recovery upper bound for queued shares; not claimable cash. */
-  recoveryAssets: bigint;
-}
-
-export interface DomainRecoveryPosition {
-  epochId: bigint;
-  activatedAt: bigint;
-  shares: bigint;
-  claimableAssets: bigint;
-  claimedAssets: bigint;
-  /** Additional future assets if all remaining positions have zero terminal cost. */
-  pendingAssets: bigint;
-  finalSynced: boolean;
-  remainingHolds: bigint;
-  remainingReserve: bigint;
-  updatedAtBlock: bigint;
-  snapshotTimestamp: bigint;
-}
-
-/** Opaque continuation pinned to one canonical chain snapshot and one Bank/controller. */
-export interface BankRecoveryCursor {
-  bank: `0x${string}`;
-  controller: `0x${string}`;
-  chainId: number;
-  blockNumber: bigint;
-  blockHash: `0x${string}`;
-  beforeEpoch: bigint;
-}
-
-export interface DomainRecoveryPage {
-  items: DomainRecoveryPosition[];
-  nextCursor?: BankRecoveryCursor;
-  /** True only after discovery reaches the first sealed epoch. */
-  complete: boolean;
-  updatedAtBlock: bigint;
-  snapshotTimestamp: bigint;
-}
-
+/** Authoritative two-custodian accounting at one block; NFT counts are not capital. */
 export interface DomainBankSnapshot {
   chainId: number;
   poolId: number;
   asset: `0x${string}`;
   bank: `0x${string}`;
-  totalAssets: bigint; // active NAV; excludes recovery backing and fixed payables
-  totalSupply: bigint; // active LP share supply; queued shares burn at activation
-  assetsPerShare: bigint; // assets represented by one whole share unit
-  /** Global reserve includes all historical recovery pockets. */
-  totalReserved: bigint;
-  activeReserved: bigint;
-  recoveryBacking: bigint;
-  activeOpenHolds: bigint;
-  maxActiveHolds: bigint;
-  minStake: bigint;
-  currentEpoch: bigint;
+  vault: `0x${string}`;
+  L: bigint;
+  P: bigint;
+  R: bigint;
+  K: bigint;
+  G: bigint;
+  bankCash: bigint;
+  vaultCash: bigint;
+  bankSurplus: bigint;
+  vaultSurplus: bigint;
+  accountingValid: boolean;
+  lpStatus: LPStatus;
+  unbookedResultCount: bigint;
   openHolds: bigint;
-  /** Liabilities already excluded from totalAssets; do not subtract them again. */
-  exitPayable: bigint;
+  maxOpenHolds: bigint;
+  minBetAmount: bigint;
+  lpFreeCapital: bigint;
   playerPayableTotal: bigint;
-  batchPeriod: bigint;
-  queuedBatch: DomainRedeemBatch | null;
-  snapshotTimestamp: bigint;
-  /** Live Bank pause state; read with the rest of the snapshot. */
   riskInPaused: boolean;
   riskReserveBps: number;
   riskReserve: bigint;
   riskFree: bigint;
+  /** These buffers govern optional PF/XP outflows, never NFT withdrawal quotes. */
   withdrawalBufferBps: number;
   withdrawalBuffer: bigint;
-  withdrawable: bigint;
   protocolFeesPayable: bigint;
   externalPayablesTotal: bigint;
-  /** Lifetime asset turnover recorded by the Bank, net of refunded stake. */
   totalTurnover: bigint;
-  /** Lifetime gross payout before the house-edge deduction. */
   totalPayoutGross: bigint;
-  /** Lifetime net payout owed to players, including recorded deferred payments. */
   totalPayoutNet: bigint;
-  /** Lifetime refunded stake. */
   totalRefunded: bigint;
-  /** Lifetime house-edge amount deducted from gross payouts; distinct from PF accrual. */
   totalFeeOnPayout: bigint;
-  /** Lifetime protocol fee accrued by settlement. */
   totalProtocolFeeAccrued: bigint;
-  /** Lifetime count of bet holds opened against this Bank. */
   totalBetsHeld: bigint;
-  /** Lifetime count of terminal settled bets. */
   totalBetsSettled: bigint;
-  /** Lifetime count of refunded bets. */
   totalBetsRefunded: bigint;
+  snapshotTimestamp: bigint;
   updatedAtBlock: bigint;
 }
 
-export interface DomainBankPosition {
+export interface DomainDepositPosition {
   poolId: number;
-  user: `0x${string}`;
-  shares: bigint;
-  assetsEquivalent: bigint;
-  /** Queued shares remain active until the actual activation transaction. */
-  queuedShares: bigint;
-  queuedLiquidAssets: bigint;
-  queuedRecoveryAssets: bigint;
-  queuedBatch: DomainControllerRedeemBatch | null;
-  claimableShares: bigint;
-  claimableAssets: bigint;
-  cancellableShares: bigint;
-  /** Separate player debt; excluded from LP equity. */
-  playerPayable: bigint;
-  /** Wallet indicative equity + queued liquid quote + fixed liquid claims. Excludes recovery rights. */
-  activeAndClaimableAssets: bigint;
+  asset: `0x${string}`;
+  bank: `0x${string}`;
+  vault: `0x${string}`;
+  depositId: bigint;
+  owner: `0x${string}`;
+  assets: bigint;
+  withdrawAfter: bigint;
+  /** Protocol precision: 1e12 = 100%. */
+  maxPercent: bigint;
+  maxAssets: bigint;
+  status: LPStatus;
   snapshotTimestamp: bigint;
   updatedAtBlock: bigint;
+}
+
+/** Enumeration indexes are meaningful only at this authenticated owner/block snapshot. */
+export interface DepositCursor {
+  chainId: number;
+  poolId: number;
+  vault: `0x${string}`;
+  owner: `0x${string}`;
+  blockNumber: bigint;
+  blockHash: `0x${string}`;
+  nextIndex: bigint;
+  nftCount: bigint;
+}
+
+export interface DomainDepositPage {
+  items: DomainDepositPosition[];
+  /** ERC721 balanceOf: number of NFTs, not an asset value. */
+  nftCount: bigint;
+  nextCursor?: DepositCursor;
+  complete: boolean;
+  snapshotTimestamp: bigint;
+  updatedAtBlock: bigint;
+}
+
+export interface DomainDepositWithdrawalQuote {
+  position: DomainDepositPosition;
+  percent: bigint;
+  assets: bigint;
+  executable: boolean;
+  closeOnly: boolean;
+  /** Includes percentage/rounding rejection; ownership is checked again before writing. */
+  reason?: LPStatus | "invalidPercent" | "zeroWithdrawal" | "insufficientFreeCapital";
 }
 
 export interface DomainXPBuckets {

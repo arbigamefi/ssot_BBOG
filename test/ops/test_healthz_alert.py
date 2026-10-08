@@ -26,11 +26,11 @@ class Handler(BaseHTTPRequestHandler):
         mode = Handler.mode if self.path == "/public" else "ok"
         self.send_response(522 if mode == "http_error" else 200)
         self.end_headers()
-        if mode in ("pocket", "pocket-recovery"):
+        if mode in ("unbooked-result", "invalid-accounting"):
             self.wfile.write(json.dumps({"status": "degraded", "checks": {"keeper": {
-                "status": "degraded", "degradedBy": [mode],
-                "pockets": [{"epochId": "1", "remainingHolds": "1", "ageSeconds": 601}],
-                "pocketDiscovery": [{"caughtUp": mode != "pocket-recovery"}]
+                "status": "degraded", "degradedBy": ["pools"],
+                "pools": [{"lpStatus": 3 if mode == "unbooked-result" else 4,
+                           "accountingValid": mode != "invalid-accounting"}]
             }}}).encode())
         elif mode == "degraded":
             self.wfile.write(b'{"status":"degraded","checks":{"keeper":{"status":"degraded"}}}')
@@ -131,9 +131,9 @@ class HealthzAlertPolicyTests(unittest.TestCase):
         self.assertRegex(recovered[0], r"^\[RECOVERED\] arbigamefi healthz \| status is ok again \(was degraded; episode began .* UTC\)$")
         self.assertEqual(self.run_probe("ok"), [])
 
-    def test_pocket_alerts_and_incomplete_discovery_use_the_existing_degraded_episode(self):
+    def test_pool_result_and_accounting_alerts_use_the_existing_degraded_episode(self):
         self.configure(ALERT_AFTER_FAILURES=1)
-        for reason in ("pocket", "pocket-recovery"):
+        for reason in ("unbooked-result", "invalid-accounting"):
             with self.subTest(reason=reason):
                 self.state.unlink(missing_ok=True)
                 alert = self.run_probe(reason)
@@ -141,7 +141,7 @@ class HealthzAlertPolicyTests(unittest.TestCase):
                 self.assertIn("healthz = degraded", alert[0])
                 observation = json.loads(Path(str(self.state) + ".probe.json").read_text())
                 self.assertEqual(observation["public"]["checks"]["keeper"], "degraded")
-                self.assertNotIn("pocketDiscovery", alert[0])  # retain the probe's bounded status-only diagnostics
+                self.assertNotIn("accountingValid", alert[0])  # retain the probe's bounded status-only diagnostics
                 self.assertEqual(self.state_fields()[4], "degraded")
                 self.assertEqual(self.run_probe(reason), [])
                 self.assertIn("[RECOVERED]", self.run_probe("ok")[0])

@@ -29,8 +29,8 @@ const baseConfig: KeeperConfig = {
   startupScanEnabled: true,
   betIndexSsl: false,
   betIndexWriteEnabled: false,
-  bankProviderLedgerPools: [],
-  bankProviderLedgerScanIntervalMs: 60_000,
+  vaultProviderLedgerPools: [],
+  vaultProviderLedgerScanIntervalMs: 60_000,
   sportsTicketIndexEnabled: false,
   sportsTerminalizerEnabled: false,
   sportsTerminalizerScanChunkBlocks: 2_000n,
@@ -477,65 +477,26 @@ describe("KeeperHealthReporter failure recovery", () => {
   });
 });
 
-describe("redemption health", () => {
-  it("keeps old pocket alerts across unrelated successes and new batch activations", async () => {
+describe("pool health", () => {
+  it("keeps accounting failures across unrelated successful scans", async () => {
     const health = new KeeperHealthReporter({ config: baseConfig, keeper });
+    const pool = { bank: baseConfig.gameHub, vault: baseConfig.gameHub };
     await health.recordRunning(100n, 0);
-    const bank = baseConfig.gameHub;
-    await health.recordPockets(
-      [{ bank, epochId: "3", openedAt: "1100", ageSeconds: 601, remainingHolds: "1" }],
-      [{ bank, caughtUp: true }],
-      0
-    );
-    expect(health.snapshot().degradedBy).toEqual(["pocket"]);
-    expect(health.snapshot().lastError).toContain("opened at 1100");
-    await health.recordFinalizeOutcome({ betId: 5n }, { kind: "raced", state: "settled" }, 0);
+    await health.recordPools([{ ...pool, accountingValid: false, error: "Cash deficit" }], 0);
     await health.recordScan(101n, 0);
-    await health.recordRedemptions([{ bank }], 0);
-    expect(health.snapshot().degradedBy).toEqual(["pocket"]);
-    await health.recordPockets(
-      [{ bank, epochId: "3", openedAt: "1100", ageSeconds: 700, remainingHolds: "0" }],
-      [{ bank, caughtUp: true }],
-      0
-    );
+    await health.recordFinalizeOutcome({ betId: 5n }, { kind: "raced", state: "settled" }, 0);
+    expect(health.snapshot().degradedBy).toEqual(["pools"]);
+    await health.recordPools([{ ...pool, accountingValid: true }], 0);
     expect(health.snapshot().status).toBe("running");
   });
-  it("keeps incomplete pocket discovery degraded independently of casino recovery", async () => {
+  it("clears only pool read errors and preserves recovery failures", async () => {
     const health = new KeeperHealthReporter({ config: baseConfig, keeper });
-    const bank = baseConfig.gameHub;
-    await health.recordRunning(100n, 0);
-    await health.recordPockets([], [{ bank, caughtUp: false, scannedThrough: "90" }], 0);
-    await health.recordRecoveryScan(100n, 0, true);
-    await health.recordRedemptions([{ bank }], 0);
-    expect(health.snapshot().degradedBy).toEqual(["pocket-recovery"]);
-    await health.recordPockets([], [{ bank, caughtUp: true, scannedThrough: "100" }], 0);
-    expect(health.snapshot().status).toBe("running");
-  });
-  it("does not alert for an overdue queued batch that has not activated", async () => {
-    const health = new KeeperHealthReporter({ config: baseConfig, keeper });
-    await health.recordRunning(100n, 0);
-    await health.recordRedemptions(
-      [
-        {
-          bank: baseConfig.gameHub,
-          batchId: "1",
-          cutoff: "1",
-          activationDue: true,
-          paused: true
-        }
-      ],
-      0
-    );
-    expect(health.snapshot().status).toBe("running");
-    expect(health.snapshot().degradedBy).toBeUndefined();
-  });
-  it("flags Bank read errors and preserves other failure paths", async () => {
-    const health = new KeeperHealthReporter({ config: baseConfig, keeper });
+    const pool = { bank: baseConfig.gameHub, vault: baseConfig.gameHub };
     await health.recordRunning(100n, 0);
     await health.recordError("index unavailable", 0, "recovery");
-    await health.recordRedemptions([{ bank: baseConfig.gameHub, error: "RPC unavailable" }], 0);
-    expect(health.snapshot().degradedBy).toEqual(["recovery", "redemption"]);
-    await health.recordRedemptions([{ bank: baseConfig.gameHub }], 0);
+    await health.recordPools([{ ...pool, error: "RPC unavailable" }], 0);
+    expect(health.snapshot().degradedBy).toEqual(["recovery", "pools"]);
+    await health.recordPools([pool], 0);
     expect(health.snapshot().degradedBy).toEqual(["recovery"]);
     await health.recordRecoveryScan(100n, 0, true);
     expect(health.snapshot().status).toBe("running");

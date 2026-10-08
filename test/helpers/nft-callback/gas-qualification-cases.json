@@ -1,0 +1,245 @@
+[
+  {
+    "name": "keno25-thin",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "TREE": 1
+  },
+  {
+    "name": "keno25-thin-seed12",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "TREE": 1,
+    "SEED": 12
+  },
+  {
+    "name": "plinko25-thin",
+    "GAME": 1,
+    "ROUNDS": 25,
+    "TREE": 1,
+    "SEED": 0
+  },
+  {
+    "name": "baccarat25-thin",
+    "GAME": 2,
+    "VARIANT": 2,
+    "ROUNDS": 25,
+    "TREE": 1,
+    "SEED": 2869
+  },
+  {
+    "name": "baccarat25-thin-player-seed12",
+    "GAME": 2,
+    "VARIANT": 1,
+    "ROUNDS": 25,
+    "TREE": 1,
+    "SEED": 12
+  },
+  {
+    "name": "keno1-maxwin-thin",
+    "GAME": 0,
+    "VARIANT": 5272,
+    "ROUNDS": 1,
+    "TREE": 1,
+    "SEED": 0
+  },
+  {
+    "name": "keno25-pp-thin",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "TREE": 1,
+    "BLACKLIST": true,
+    "SEED": 12
+  },
+  {
+    "name": "keno25-empty",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "TREE": 2,
+    "SEED": 12
+  },
+  {
+    "name": "keno25-eligible",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "TREE": 1,
+    "ELIGIBLE": true,
+    "SEED": 12
+  },
+  {
+    "name": "keno25-matureholdback",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "TREE": 1,
+    "PRIOR_HOLDBACK": true,
+    "SEED": 12
+  },
+  {
+    "name": "keno25-stoprefund",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "TREE": 1,
+    "STOP_GAIN": 1,
+    "STOP_LOSS": 1,
+    "SEED": 12
+  },
+  {
+    "name": "baccarat1-loss-thin",
+    "GAME": 2,
+    "VARIANT": 2,
+    "ROUNDS": 1,
+    "TREE": 1,
+    "SEED": 0
+  },
+  {
+    "name": "baccarat1-tie-pp-thin",
+    "GAME": 2,
+    "VARIANT": 2,
+    "ROUNDS": 1,
+    "TREE": 1,
+    "BLACKLIST": true,
+    "SEED": 2869
+  },
+  {
+    "name": "keno10-empty",
+    "GAME": 0,
+    "ROUNDS": 10,
+    "TREE": 2,
+    "SEED": 12
+  },
+  {
+    "name": "keno10-empty-pp",
+    "GAME": 0,
+    "ROUNDS": 10,
+    "TREE": 2,
+    "SEED": 12,
+    "BLACKLIST": true
+  },
+  {
+    "name": "keno20-empty",
+    "GAME": 0,
+    "ROUNDS": 20,
+    "TREE": 2,
+    "SEED": 12
+  },
+  {
+    "name": "plinko25-empty",
+    "GAME": 1,
+    "ROUNDS": 25,
+    "TREE": 2,
+    "SEED": 0
+  },
+  {
+    "name": "baccarat25-empty",
+    "GAME": 2,
+    "VARIANT": 2,
+    "ROUNDS": 25,
+    "TREE": 2,
+    "SEED": 2869
+  },
+  {
+    "name": "baccarat10-empty",
+    "GAME": 2,
+    "VARIANT": 2,
+    "ROUNDS": 10,
+    "TREE": 2,
+    "SEED": 2869
+  },
+  {
+    "name": "keno1-maxwin-empty",
+    "GAME": 0,
+    "VARIANT": 5272,
+    "ROUNDS": 1,
+    "TREE": 2,
+    "SEED": 0
+  },
+  {
+    "name": "keno1-maxwin-empty-pp",
+    "GAME": 0,
+    "VARIANT": 5272,
+    "ROUNDS": 1,
+    "TREE": 2,
+    "SEED": 0,
+    "BLACKLIST": true
+  },
+  {
+    "name": "keno10-1023-empty",
+    "GAME": 0,
+    "ROUNDS": 10,
+    "TREE": 2,
+    "SEED": 12,
+    "OLD_LEAVES": 1023,
+    "LATE_LEAVES": 1024
+  },
+  {
+    "name": "plinko10-1023-empty-pp",
+    "GAME": 1,
+    "ROUNDS": 10,
+    "TREE": 2,
+    "SEED": 0,
+    "OLD_LEAVES": 1023,
+    "LATE_LEAVES": 1024,
+    "BLACKLIST": true
+  },
+  {
+    "name": "coin25-empty",
+    "GAME": 3,
+    "ROUNDS": 25,
+    "TREE": 2,
+    "SEED": 12
+  },
+  {
+    "name": "dice25-empty",
+    "GAME": 4,
+    "ROUNDS": 25,
+    "TREE": 2,
+    "SEED": 12
+  },
+  {
+    "name": "roulette25-empty",
+    "GAME": 5,
+    "ROUNDS": 25,
+    "TREE": 2,
+    "SEED": 12
+  },
+  {
+    "name": "sicbo25-empty",
+    "GAME": 6,
+    "ROUNDS": 25,
+    "TREE": 2,
+    "SEED": 2
+  },
+  {
+    "name": "slots25-empty",
+    "GAME": 7,
+    "ROUNDS": 25,
+    "TREE": 2,
+    "SEED": 433
+  },
+  {
+    "name": "keno10-1023-empty-pp",
+    "GAME": 0,
+    "ROUNDS": 10,
+    "TREE": 2,
+    "SEED": 12,
+    "OLD_LEAVES": 1023,
+    "LATE_LEAVES": 1024,
+    "BLACKLIST": true
+  },
+  {
+    "name": "plinko10-empty-pp",
+    "GAME": 1,
+    "ROUNDS": 10,
+    "TREE": 2,
+    "SEED": 0,
+    "BLACKLIST": true
+  },
+  {
+    "name": "baccarat10-empty-pp",
+    "GAME": 2,
+    "ROUNDS": 10,
+    "TREE": 2,
+    "SEED": 2869,
+    "BLACKLIST": true
+  }
+]

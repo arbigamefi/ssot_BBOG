@@ -20,14 +20,14 @@ const MOCK_RELEASE: SSOTRelease = {
     sportsRiskEngine: "0x8888888888888888888888888888888888888888",
     vrfHub: "0x9999999999999999999999999999999999999999",
     refRegistry: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    refEngine: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    adapter: "0xcccccccccccccccccccccccccccccccccccccccc"
+    refEngine: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   assets: [
     {
       symbol: "USDC",
       decimals: 6,
       address: "0x4444444444444444444444444444444444444444",
+      vault: "0xcccccccccccccccccccccccccccccccccccccccc",
       bank: "0x5555555555555555555555555555555555555555"
     }
   ],
@@ -40,6 +40,8 @@ const MOCK_RELEASE: SSOTRelease = {
       gameId: "0x0000000000000000000000000000000000000000000000000000000000000001",
       slug: "dice",
       label: "Dice",
+      maxBetCount: 25,
+      callbackGasLimit: 2447746,
       module: "0x6666666666666666666666666666666666666666"
     }
   ],
@@ -63,13 +65,19 @@ const MOCK_RELEASE: SSOTRelease = {
       domain: "Casino",
       active: true,
       asset: "0x4444444444444444444444444444444444444444",
+      vault: "0xcccccccccccccccccccccccccccccccccccccccc",
       bank: "0x5555555555555555555555555555555555555555",
       symbol: "USDC",
       decimals: 6,
       sportsRisk: null
     }
   ],
-  meta: { blockNumber: 100, schemaVersion: 2 }
+  meta: {
+    blockNumber: 100,
+    schemaVersion: 2,
+    architectureVersion: "v1.6-nft-liquidity",
+    releaseLock: { schema: "SSOT_RELEASE_DIGEST_V16" }
+  }
 };
 
 // ——— Mock publicClient ———

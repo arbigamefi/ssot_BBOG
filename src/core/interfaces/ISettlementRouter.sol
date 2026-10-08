@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import {SSOTTypes} from "./SSOTTypes.sol";
 
@@ -9,6 +9,16 @@ interface ISettlementRouter {
     function poolRegistry() external view returns (address);
     function nextPositionId() external view returns (uint256);
     function getPosition(uint256 positionId) external view returns (SSOTTypes.Position memory);
+
+    /// @notice Immutable-after-binding canonical randomness consumer for one Bank.
+    function settlementConsumer(address bank) external view returns (address);
+    /// @dev Called only by the Bank for its own identity, through its governance-only one-time wiring.
+    function bindRandomnessConsumer(address consumer) external;
+    /// @notice Fails closed when the Bank is not wired or its consumer cannot be read.
+    function unbookedResultCount(address bank) external view returns (uint256);
+
+    event RandomnessConsumerBound(address indexed bank, address indexed consumer);
+    error InvalidConsumerBinding();
 
     /// @notice Open a position. `edgeBps` is the house edge the hub prices the position with; casino hubs pass
     ///         the effective edge and sports hubs pass 0. It bounds what the position may later accrue.

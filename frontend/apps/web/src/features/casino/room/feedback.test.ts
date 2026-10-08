@@ -11,8 +11,9 @@ describe("game room feedback", () => {
     "INSUFFICIENT_NATIVE_BALANCE",
     "INSUFFICIENT_LIQUIDITY",
     "POOL_CAPACITY_FULL",
-    "ACTIVE_HOLD_LIMIT",
+    "OPEN_HOLD_LIMIT",
     "STAKE_BELOW_MINIMUM",
+    "HOUSE_EDGE_TOO_HIGH",
     "CHAIN_MISMATCH",
     "RPC_ERROR",
     "TX_TIMEOUT",
@@ -28,8 +29,12 @@ describe("game room feedback", () => {
   });
   it("explains capacity and minimum stake failures before or during simulation", () => {
     expect(getStepperErrorMessage({ code: "POOL_CAPACITY_FULL" }, undefined, t)).toContain("满额");
-    expect(getStepperErrorMessage({ code: "ACTIVE_HOLD_LIMIT" }, undefined, t)).toContain("满额");
+    expect(getStepperErrorMessage({ code: "OPEN_HOLD_LIMIT" }, undefined, t)).toContain("满额");
     expect(getStepperErrorMessage({ code: "STAKE_BELOW_MINIMUM" }, undefined, t)).toContain("最低");
+  });
+  it("prompts a new fee review after a governance change", () => {
+    expect(getStepperErrorMessage({ code: "HOUSE_EDGE_TOO_HIGH" }, undefined, t)).toContain("费率");
+    expect(getStepperErrorMessage({ code: "HOUSE_EDGE_TOO_HIGH" }, undefined, t)).toContain("刷新");
   });
   it("distinguishes rejection from an unconfirmed transaction", () => {
     expect(isBetSubmissionUnconfirmed({ code: "USER_REJECTED" })).toBe(false);

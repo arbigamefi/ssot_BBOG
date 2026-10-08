@@ -217,8 +217,8 @@ describe("HomePage", () => {
         bank: "0x02",
         symbol: "USDC",
         decimals: 6,
-        totalAssets: 1_000_000n,
-        totalReserved: 250_000n,
+        lpCapital: 1_000_000n,
+        lockedCapital: 250_000n,
         turnover: 12_500_000n,
         protocolFee: 25_000n,
         freeLiquidity: 750_000n,
@@ -229,8 +229,8 @@ describe("HomePage", () => {
         bank: "0x04",
         symbol: "WETH",
         decimals: 18,
-        totalAssets: 3_000_000_000_000_000_000n,
-        totalReserved: 1_000_000_000_000_000_000n,
+        lpCapital: 3_000_000_000_000_000_000n,
+        lockedCapital: 1_000_000_000_000_000_000n,
         turnover: 6_000_000_000_000_000_000n,
         protocolFee: 50_000_000_000_000_000n,
         freeLiquidity: 2_000_000_000_000_000_000n,
@@ -289,8 +289,8 @@ describe("HomePage", () => {
         address: "0x01",
         symbol: "USDC",
         decimals: 6,
-        totalAssets: 1000000n,
-        totalReserved: 0n,
+        lpCapital: 1000000n,
+        lockedCapital: 0n,
         turnover: 0n,
         protocolFee: 0n
       }
@@ -301,7 +301,7 @@ describe("HomePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry bank balances" }));
     expect(refetchOverview).toHaveBeenCalledOnce();
     state.overviewError = null;
-    state.assetOverviews[0].totalAssets = 0n;
+    state.assetOverviews[0].lpCapital = 0n;
     rerender(<HomePage />);
     expect(screen.getAllByText("0 USDC")).toHaveLength(3);
     expect(screen.queryByRole("status")).toBeNull();

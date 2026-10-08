@@ -10,8 +10,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 import hashlib
 import time
 
@@ -25,8 +26,6 @@ REQUIRED_CONTRACTS = [
     ("SportsHub", "src/core/SportsHub.sol:SportsHub", "sportsHub"),
     ("ReferralRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "refRegistry"),
     ("DefaultReferralEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "refEngine"),
-    # adapter
-    ("ChainlinkV2PlusWrapperAdapter", "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", "adapter"),
     # modules
     ("DiceModule", "src/modules/dice/DiceModule.sol:DiceModule", "moduleDice"),
     ("CoinTossModule", "src/modules/cointoss/CoinTossModule.sol:CoinTossModule", "moduleCoinToss"),
@@ -38,6 +37,7 @@ REQUIRED_CONTRACTS = [
     ("BaccaratModule", "src/modules/baccarat/BaccaratModule.sol:BaccaratModule", "moduleBaccarat"),
     # bank (type)
     ("Bank", "src/core/Bank.sol:Bank", "__bank_type__"),
+    ("LiquidityVault", "src/core/LiquidityVault.sol:LiquidityVault", "__vault_type__"),
     ("IGameModule", "src/core/interfaces/IGameModule.sol:IGameModule", "__interface__"),
 ]
 
@@ -83,13 +83,43 @@ def _load_abi_from_artifact(artifact_path: Path) -> List[Dict[str, Any]]:
         raise ValueError(f"Artifact {artifact_path} missing 'abi' array")
     return abi
 
-def _contract_key_to_address(addresses: Dict[str, str], key: str) -> Optional[str]:
-    v = addresses.get(key)
-    if v is None:
-        return None
-    if not isinstance(v, str):
-        return None
-    return v
+def _address(value: Any, field: str, *, nonzero: bool = False) -> str:
+    if not isinstance(value, str) or not re.fullmatch(r"0x[0-9a-fA-F]{40}", value):
+        raise SystemExit(f"invalid address: {field}")
+    if nonzero and int(value, 16) == 0:
+        raise SystemExit(f"zero address: {field}")
+    return value.lower()
+
+
+def pool_instances(manifest: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Inventory identities derive from authenticated per-pool routes, never ABI input."""
+    pools = manifest.get("pools")
+    if not isinstance(pools, list) or not 1 <= len(pools) <= 32:
+        raise SystemExit("manifest.pools must contain 1..32 pools")
+    rows, ids, contracts = [], set(), set()
+    for pool in pools:
+        if not isinstance(pool, dict):
+            raise SystemExit("invalid pool")
+        pool_id = pool.get("poolId")
+        if type(pool_id) is not int or not 0 <= pool_id < 2**64 or pool_id in ids:
+            raise SystemExit("invalid or duplicate poolId")
+        ids.add(pool_id)
+        domain = pool.get("domain")
+        if domain not in ("Casino", "Sports"):
+            raise SystemExit("invalid pool domain")
+        asset = _address(pool.get("asset"), "pool.asset", nonzero=True)
+        bank = _address(pool.get("bank"), "pool.bank", nonzero=True)
+        vault = _address(pool.get("vault"), "pool.vault", nonzero=True)
+        if bank == vault or bank in contracts or vault in contracts:
+            raise SystemExit("duplicate Bank/Vault address")
+        contracts.update((bank, vault))
+        for name, address, abi_file in (("BankInstance", bank, "Bank.abi.json"),
+                                        ("VaultInstance", vault, "LiquidityVault.abi.json")):
+            rows.append({"name": name, "poolId": pool_id, "domain": domain,
+                         "asset": asset, "bank": bank, "vault": vault,
+                         "address": address, "abiFile": abi_file})
+    return rows
+
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -104,7 +134,7 @@ def main() -> None:
     manifest = {}
     if not args.source_only:
         manifest = _read_json(manifest_path)
-        if manifest.get("schemaVersion") != 2 or manifest.get("architectureVersion") != "v1.6-house-edge-allocation":
+        if manifest.get("schemaVersion") != 2 or manifest.get("architectureVersion") != "v1.6-nft-liquidity":
             raise SystemExit("manifest must describe the current v1.6 architecture and schemaVersion=2")
         if manifest.get("chainId") is None or manifest.get("blockNumber") is None:
             raise SystemExit("manifest missing chainId/blockNumber")
@@ -117,7 +147,10 @@ def main() -> None:
     out_dir = Path(args.out)
     if not out_dir.exists():
         raise SystemExit(f"missing out/ directory: {out_dir} (run: forge build)")
-    # Resolve every artifact before replacing the generated source.
+    instances = [] if args.source_only else pool_instances(manifest)
+    contract_addresses = {key: _address(addresses.get(key), key)
+                          for _, _, key in REQUIRED_CONTRACTS if not key.startswith("__")} if not args.source_only else {}
+    # Resolve every artifact and identity before replacing the generated source.
     source_abis = [(name, key, _load_abi_from_artifact(_find_artifact(out_dir, qualified)))
                    for name, qualified, key in REQUIRED_CONTRACTS]
     dest_dir = Path(args.dest or ("frontend/packages/ssot/src/abis/contracts" if args.source_only else "deployments/abis-v16"))
@@ -146,7 +179,7 @@ def main() -> None:
         exported.append({
             "name": file_name,
             "addressKey": addr_key,
-            "address": _contract_key_to_address(addresses, addr_key) if not addr_key.startswith("__") else None,
+            "address": contract_addresses.get(addr_key),
             "abiFile": abi_file,
             "abiSha256": _sha256_hex((dest_dir / abi_file).read_bytes()),
         })
@@ -156,28 +189,11 @@ def main() -> None:
         print(f"Wrote {len(exported)} current source ABIs and JS/TS entrypoints: {dest_dir}")
         return
 
-    # Add per-pool banks (addresses from manifest.pools[]).
-    pools = manifest.get("pools") or []
-    if isinstance(pools, list):
-        for p in pools:
-            if not isinstance(p, dict):
-                continue
-            bank = p.get("bank")
-            asset = p.get("asset")
-            pool_id = p.get("poolId")
-            domain = p.get("domain")
-            if isinstance(bank, str) and isinstance(asset, str):
-                exported.append({
-                    "name": "BankInstance",
-                    "poolId": pool_id,
-                    "domain": domain,
-                    "asset": asset,
-                    "address": bank,
-                    "abiFile": "Bank.abi.json",
-                })
+    exported.extend(instances)
 
     index = {
         "schemaVersion": 2,
+        "architectureVersion": "v1.6-nft-liquidity",
         "generatedAt": int(time.time()),
         "chainId": chain_id,
         "blockNumber": block_number,

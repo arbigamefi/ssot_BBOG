@@ -1,18 +1,8 @@
-import type { DomainError } from "@ssot/ssot";
-
 import { getAppChain } from "../../app-shell/chain-registry";
 import { formatUnits } from "../betting/model/units";
 
 export function getExplorerBaseUrl(chainId: number) {
   return getAppChain(chainId)?.explorerUrl;
-}
-
-export function formatBps(value?: number) {
-  return value == null ? "—" : `${value} bps`;
-}
-
-export function formatPctFromBps(value?: number) {
-  return value == null ? "—" : `${(value / 100).toFixed(value % 100 === 0 ? 0 : 2)}%`;
 }
 
 export function shortHex(value?: string) {
@@ -47,13 +37,4 @@ export function formatMultiple(numerator: bigint | undefined, denominator?: bigi
   if (numerator == null || !denominator || denominator <= 0n) return null;
   const hundredths = Number((numerator * 100n) / denominator) / 100;
   return `${hundredths.toFixed(2)}x`;
-}
-
-export function serializeErrorDetails(error?: DomainError) {
-  if (!error?.details) return undefined;
-  return JSON.stringify(
-    error.details,
-    (_key, value) => (typeof value === "bigint" ? value.toString() : value),
-    2
-  );
 }

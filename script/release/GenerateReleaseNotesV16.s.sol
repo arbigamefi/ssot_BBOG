@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
@@ -117,9 +117,6 @@ contract GenerateReleaseNotesV16 is Script {
             "- VRF Wrapper: `",
             vm.toString(snap.readAddress(".vrfWrapper")),
             "`\n",
-            "- Adapter: `",
-            vm.toString(snap.readAddress(".adapter")),
-            "`\n",
             "- VRFHub: `",
             vm.toString(snap.readAddress(".vrfHub")),
             "`\n",
@@ -185,9 +182,6 @@ contract GenerateReleaseNotesV16 is Script {
             "\n",
             "- defaultHouseEdgeBps: ",
             vm.toString(snap.readUint(".defaultHouseEdgeBps")),
-            "\n",
-            "- maxAffiliateDeltaBps: ",
-            vm.toString(snap.readUint(".maxAffiliateDeltaBps")),
             "\n",
             "- lpShareBps: ",
             vm.toString(snap.readUint(".lpShareBps")),

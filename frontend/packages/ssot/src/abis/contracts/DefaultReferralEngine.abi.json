@@ -11,12 +11,7 @@
             },
             {
               "internalType": "uint16",
-              "name": "baseEdgeBps",
-              "type": "uint16"
-            },
-            {
-              "internalType": "uint16",
-              "name": "effectiveEdgeBps",
+              "name": "houseEdgeBps",
               "type": "uint16"
             },
             {
@@ -68,11 +63,6 @@
           "internalType": "struct IReferralEngine.AllocationInput",
           "name": "input",
           "type": "tuple"
-        },
-        {
-          "internalType": "bytes",
-          "name": "skyline",
-          "type": "bytes"
         }
       ],
       "name": "allocate",
@@ -102,11 +92,6 @@
             {
               "internalType": "uint256",
               "name": "r2",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "markup",
               "type": "uint256"
             },
             {
@@ -169,11 +154,6 @@
         }
       ],
       "name": "InvalidBps",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidConfig",
       "type": "error"
     }
   ],

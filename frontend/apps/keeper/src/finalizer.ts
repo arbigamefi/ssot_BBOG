@@ -1,10 +1,11 @@
 import type { Hex } from "viem";
 import { describeError } from "./errors.js";
 import { isTerminalState, shouldFinalize } from "./state.js";
-import type { BetRead, FinalizeOutcome, KeeperEvent, KeeperLogger } from "./types.js";
+import type { BetRead, FinalizeOutcome, RequestRead, KeeperEvent, KeeperLogger } from "./types.js";
 
 export type FinalizerDeps = {
   readBet: (betId: bigint) => Promise<BetRead>;
+  readRequest: (bet: BetRead) => Promise<RequestRead>;
   simulateFinalize: (betId: bigint) => Promise<void>;
   writeFinalize: (betId: bigint) => Promise<Hex>;
   readRefundClock?: () => Promise<{ timestamp: bigint }>;
@@ -61,7 +62,17 @@ export async function finalizeIfReady(
 
   try {
     let action: "finalize" | "refund" = "finalize";
-    if (before.state === "pendingVrf") {
+    // Hub delivery can fail before it changes PendingVRF. The consumer's durable
+    // first seed, never the Hub label alone, decides whether refund is legal.
+    const request = await deps.readRequest(before);
+    if (request.state !== "received" && request.state !== "awaiting") {
+      const raced = await deps.readBet(event.betId);
+      if (isTerminalState(raced.state)) return { kind: "raced", state: raced.state };
+      throw new Error(`Canonical VRF ${request.state} disagrees with open Hub position`);
+    }
+    if (request.state === "awaiting") {
+      if (before.state !== "pendingVrf")
+        throw new Error("Hub result has no canonical received seed");
       if (
         before.refundDeadline == null ||
         before.refundDeadline <= 0n ||

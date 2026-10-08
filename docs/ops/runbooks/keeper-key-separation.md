@@ -1,8 +1,11 @@
 # Keeper signer custody
 
-The keeper submits permissionless settlement, refund and batch-pricing transactions. Give it a
+Under the [implemented design](../../design/lp-accounting-and-callback-implementation.md), locally verified with final release qualification pending,
+the keeper submits exceptional settlement retries, eligible refunds and fixed-player debt payments. Give it a
 dedicated funded signer; it must not hold governance, guardian, odds-signing, result-reporting or
-LP operator authority. Use independent signer credentials for redundant workers.
+LP NFT approval/operator authority. An ERC721 operator can transfer a user's NFT to itself and
+then withdraw as owner; it is not a harmless convenience permission. The official Earn flow requires
+no NFT approval for withdrawal. Use independent signer credentials for redundant workers.
 
 Configure `KEEPER_PRIVATE_KEY` only in the keeper's secret environment file. Keep file permissions
 restricted and exclude the file from source control, deploy bundles and logs. Never pass a key as a

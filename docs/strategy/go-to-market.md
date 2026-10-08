@@ -1,5 +1,9 @@
 # ArbiGameFi GTM execution plan
 
+**2026-10-04: Core and application interfaces implemented; local integration verified, release qualification pending.** NFT LiquidityVault deposits, fixed 24-hour withdrawal locks
+and atomic VRF settlement attempts follow the [implementation plan](../design/lp-accounting-and-callback-implementation.md). Earlier candidate
+deployments, tests and operations do not establish that this replacement is implemented.
+
 The project has not launched. This plan defines how to validate the product and its operating model; it claims no users, retention, revenue, deployment or capital commitments. The [master plan](project-master-plan.zh-CN.md) sets scope and the [release guide](../release/README.md) governs release evidence.
 
 ## Audience and scope
@@ -10,33 +14,33 @@ The hypothesis is that enjoyable familiar games, understandable total costs, ins
 
 ## Work packages
 
-| Work       | Required result                                                                                                                            |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Product    | Rules, authorization, submission, results, receipts and recovery work on intended wallet and mobile paths                                  |
-| Capital    | NAV includes all liabilities; LP request, cutoff, pricing and claim states are clear; cash history reconciles                              |
-| Operations | Finalization, eligible refunds, batch activation and historical recovery, alerts and restart recovery are exercised with bounded resources |
-| Economics  | Current 50% LP allocation, referral costs, player costs and operating budget reconcile across outcome and stress scenarios                 |
-| Research   | Defined participants, observation window and decision criteria precede usage or channel experiments                                        |
-| Sports     | Independent rulebook, provider evidence, deadlines, bankroll and operation acceptance                                                      |
+| Work       | Required result                                                                                                                          |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Product    | Rules, authorization, submission, results, receipts and recovery work on intended wallet and mobile paths                                |
+| Capital    | Vault tree equity, Bank principal/debts, net lock, NFT maturity and per-deposit cash/ownership history reconcile                         |
+| Operations | Atomic callback, same-result retry, eligible refunds, payables, alerts and restart/WS/HTTP recovery are exercised with bounded resources |
+| Economics  | Current 50% LP allocation, referral costs, player costs and operating budget reconcile across outcome and stress scenarios               |
+| Research   | Defined participants, observation window and decision criteria precede usage or channel experiments                                      |
+| Sports     | Independent rulebook, provider evidence, deadlines, bankroll and operation acceptance                                                    |
 
 The [economic design](economic-design.md) fixes the allocation model. Calibration adjusts permitted parameters within it, not LP's fixed share. The [architecture](fullstack-product-architecture.md) defines implementation ownership.
 
 ## Demand research
 
-Observe participants completing a test task from rules to receipt. Record abandonment, misunderstood costs and recovery friction. Ask prospective LPs to explain exposure before activation, priced cash, retained historical risk and the absence of a guaranteed full-payment time. Feedback is not a capital commitment.
+Observe participants completing a test task from rules to receipt. Record abandonment, misunderstood costs and recovery friction. Ask prospective LPs to explain the 24-hour lock, partial-withdraw relock, unchanged transfer deadline, net free-capital limit, old-prefix P&L fallbacks and absence of a guaranteed full-exit time. Feedback is not a capital commitment.
 
 Study voluntary return separately from incentive-driven activity. For channels, compare attributable completed use and retained contribution against actual rewards and acquisition spending. Set a campaign's scope and budget before execution.
 
 ## Measurement
 
-| Question                  | Evidence                                                                                            |
-| ------------------------- | --------------------------------------------------------------------------------------------------- |
-| Did interest become use?  | Rules viewed, wallet connection, authorization and accepted bet, by source and device               |
-| Did payment finish?       | Terminal state and actual transfer or player payable tracked separately                             |
-| Was service reliable?     | Accepted-to-terminal delay, unresolved age, historical-recovery age, recoveries and index freshness |
-| Did users return?         | Fixed-window cohorts, with subsidized and unsubsidized use separated                                |
-| Was capital compensated?  | Pool NAV and shares reconciled with cash flows, donations and every external liability              |
-| Did a channel contribute? | Attributable protocol income less its service and acquisition costs                                 |
+| Question                  | Evidence                                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Did interest become use?  | Rules viewed, wallet connection, authorization and accepted bet, by source and device                       |
+| Did payment finish?       | Terminal state and actual transfer or player payable tracked separately                                     |
+| Was service reliable?     | Accepted-to-terminal delay, unresolved and recorded-result-unbooked age, retries and index freshness        |
+| Did users return?         | Fixed-window cohorts, with subsidized and unsubsidized use separated                                        |
+| Was capital compensated?  | NFT node values and owner-at-event cash flows reconciled with tree P&L; transfers and surplus kept separate |
+| Did a channel contribute? | Attributable protocol income less its service and acquisition costs                                         |
 
 Wallet addresses are not unique people. Test funds are not real turnover or TVL. Partial history cannot establish investor returns. Targets, denominators and financial limits are fixed before the observation window.
 

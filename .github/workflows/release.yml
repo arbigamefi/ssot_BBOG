@@ -20,9 +20,33 @@ permissions:
   contents: read
 
 jobs:
+  # The tree equivalence and differential suites at 4,096 fuzz runs (ADR-0034 amendment 2026-10-07). They take
+  # about 36 minutes on a 16-core workstation; the runner time is not measured yet, hence a separate job.
+  tree-equivalence-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install pinned dependencies
+        run: |
+          bash script/ci/install_deps.sh
+
+      - name: Tree equivalence gates (release profile, 4,096 fuzz runs)
+        run: |
+          make tree-equivalence-release
+
   release-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 150
     env:
       RELEASE_SIGNER: ${{ vars.V16_RELEASE_SIGNER }}
     steps:
@@ -100,3 +124,11 @@ jobs:
           name: source-audit
           path: dist/ssot-audit-*.tar.gz
           if-no-files-found: error
+
+  # The release is ready only when both gates pass: judge the release on this job, not on either gate alone.
+  release-ready:
+    runs-on: ubuntu-latest
+    needs: [tree-equivalence-gate, release-gate]
+    steps:
+      - name: Both release gates passed
+        run: echo "tree-equivalence-gate and release-gate passed for ${{ inputs.release_tag }}"

@@ -1,33 +1,8 @@
-import type { DomainBankPosition, DomainBankSnapshot } from "@ssot/ssot";
+import type { DomainBankSnapshot } from "@ssot/ssot";
+import type { VaultProviderLedgerEntry } from "@ssot/ssot/sdk";
 
 export type EarnTab = "deposit" | "withdraw";
-
-export type EarnAmountMode = "assets" | "shares";
-
-export type EarnBankData = {
-  snapshot: DomainBankSnapshot;
-  position: DomainBankPosition | null;
-};
-
-export type EarnMetric = {
-  label: string;
-  value: string;
-  detail: string;
-};
-
-export type EarnProviderLedgerAction = "deposit" | "withdraw" | "recovery" | "donation";
-
-export type EarnProviderLedgerEntry = {
-  id: string;
-  action: EarnProviderLedgerAction;
-  txHash: `0x${string}`;
-  blockNumber: number;
-  logIndex: number;
-  timestamp?: number;
-  assets?: bigint;
-  shares: bigint;
-  sharePrice?: bigint;
-  receiver?: `0x${string}`;
-  caller?: `0x${string}`;
-  epochId?: bigint;
-};
+export type EarnBankData = { snapshot: DomainBankSnapshot };
+export type EarnMetric = { label: string; value: string; detail: string };
+export type EarnProviderLedgerEntry = VaultProviderLedgerEntry;
+export type EarnProviderLedgerAction = EarnProviderLedgerEntry["action"];

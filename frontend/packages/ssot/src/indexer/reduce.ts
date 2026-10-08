@@ -45,7 +45,8 @@ export function applyGameHubEventToBet(
     if (ev.args.gameId) next.gameId = ev.args.gameId as Hex;
     if (ev.args.asset) next.asset = ev.args.asset as Address;
     if (ev.args.player) next.player = ev.args.player as Address;
-    if (ev.args.pricingAffiliate) next.pricingAffiliate = ev.args.pricingAffiliate as Address;
+    if (ev.args.referrerL1) next.referrerL1 = ev.args.referrerL1 as Address;
+    if (ev.args.referrerL2) next.referrerL2 = ev.args.referrerL2 as Address;
     if (ev.args.stake != null) next.stake = toBigintString(ev.args.stake);
     if (ev.args.requestId != null) next.requestId = toBigintString(ev.args.requestId);
     next.placedBlock = ev.blockNumber;

@@ -1,16 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import {SSOTTypes} from "./SSOTTypes.sol";
 
 /// @notice Casino-game vertical hub interface for the SettlementRouter architecture.
 interface IGameHub {
-    /// @notice Allocation parameters whose changes go through EDGE_CHANGE_DELAY.
-    enum EdgeParam {
-        BaseHouseEdge, // h_b; every change is delayed
-        MaxAffiliateDelta // markup cap above h_b; increases are delayed, decreases apply at once
-    }
-
     function settlementRouter() external view returns (address);
     function vrfHub() external view returns (address);
     function referralRegistry() external view returns (address);
@@ -27,23 +21,16 @@ interface IGameHub {
     function MAX_HOUSE_EDGE_BPS() external view returns (uint16);
     function EDGE_CHANGE_DELAY() external view returns (uint256);
 
-    /// @notice Active base house edge h_b, applied to bets accepted from now on.
+    /// @notice Active house edge, applied to bets accepted from now on.
     function defaultHouseEdgeBps() external view returns (uint16);
-    /// @notice Active cap on the affiliate markup above the base edge. 0 disables markup.
-    function maxAffiliateDeltaBps() external view returns (uint16);
-    function affiliateHouseEdgeBps(address affiliate) external view returns (uint16);
-    function getAffiliateHouseEdge(address affiliate) external view returns (uint16);
-    function setAffiliateHouseEdge(uint16 houseEdgeBps) external;
-
-    /// @notice Queued change of `param`; `activatesAt == 0` means none.
-    function pendingEdgeChange(EdgeParam param) external view returns (uint16 bps, uint64 activatesAt);
-    /// @notice Governance: queue a change for EDGE_CHANGE_DELAY. A MaxAffiliateDelta decrease applies at once and
-    ///         discards any queued increase.
-    function queueEdgeChange(EdgeParam param, uint16 bps) external;
-    /// @notice Anyone: apply a queued change once its delay has passed.
-    function activateEdgeChange(EdgeParam param) external;
-    /// @notice Governance: discard a queued change.
-    function cancelEdgeChange(EdgeParam param) external;
+    /// @notice Queued house-edge change; activatesAt == 0 means none.
+    function pendingEdgeChange() external view returns (uint16 bps, uint64 activatesAt);
+    /// @notice Governance queues a house-edge change for EDGE_CHANGE_DELAY.
+    function queueEdgeChange(uint16 bps) external;
+    /// @notice Anyone may apply the queued change after its delay.
+    function activateEdgeChange() external;
+    /// @notice Governance discards the queued change.
+    function cancelEdgeChange() external;
 
     /// @notice Referral schedules are immutable once created; bets snapshot the active id at acceptance.
     function activeReferralConfigId() external view returns (uint32);
@@ -60,7 +47,12 @@ interface IGameHub {
         returns (uint16 l0Bps, uint16 l1Bps, uint16 l2Bps, uint16 holdbackBps);
 
     function gameModule(bytes32 gameId) external view returns (address);
-    function registerGame(bytes32 gameId, address module) external;
+    function MAX_BET_COUNT() external view returns (uint32);
+    function gameMaxBetCount(bytes32 gameId) external view returns (uint32);
+    function gameCallbackGasLimit(bytes32 gameId) external view returns (uint32);
+    function betModule(uint256 positionId) external view returns (address);
+    /// @notice Register one explicitly qualified workload envelope. No implicit default gas or round count.
+    function registerGame(bytes32 gameId, address module, uint32 maxBetCount, uint32 callbackGasLimit) external;
 
     function bindReferrer(address referrer) external;
     function referrerOf(address player) external view returns (address);
@@ -69,12 +61,12 @@ interface IGameHub {
     function getBet(uint256 positionId) external view returns (SSOTTypes.Bet memory);
     function getBetTerminal(uint256 positionId) external view returns (SSOTTypes.BetTerminal memory);
     function getBetParams(uint256 positionId) external view returns (bytes memory);
+    /// @notice Canonical received word, including failed Hub delivery and terminal bets; empty before receipt/cancelled.
     function getBetRandomWords(uint256 positionId) external view returns (uint256[] memory);
-    function getDeltaSkyline(uint256 positionId) external view returns (bytes memory);
     /// @notice Referral payees snapshotted when the bet was accepted. Zero means none.
     function getBetReferralPayees(uint256 positionId) external view returns (address l1, address l2);
 
-    function quoteVRFFee(uint32 betCount, uint256 gasPriceBudget)
+    function quoteVRFFee(bytes32 gameId, uint32 betCount, uint256 gasPriceBudget)
         external
         view
         returns (uint256 fee, uint32 callbackGasLimit);
@@ -92,15 +84,13 @@ interface IGameHub {
     function finalize(uint256 positionId) external;
     function refund(uint256 positionId) external;
 
-    event AffiliateHouseEdgeSet(address indexed affiliate, uint16 oldBps, uint16 newBps);
-    event GameRegistered(bytes32 indexed gameId, address indexed module);
+    event GameRegistered(bytes32 indexed gameId, address indexed module, uint32 maxBetCount, uint32 callbackGasLimit);
     event ReferrerBound(address indexed player, address indexed referrer);
-    event RiskInPausedSet(uint64 indexed poolId, bool paused);
     event RefundTimeoutSet(uint256 seconds_);
 
-    event EdgeChangeQueued(EdgeParam indexed param, uint16 oldBps, uint16 newBps, uint64 activatesAt);
-    event EdgeChangeApplied(EdgeParam indexed param, uint16 oldBps, uint16 newBps);
-    event EdgeChangeCancelled(EdgeParam indexed param, uint16 activeBps, uint16 cancelledBps);
+    event EdgeChangeQueued(uint16 oldBps, uint16 newBps, uint64 activatesAt);
+    event EdgeChangeApplied(uint16 oldBps, uint16 newBps);
+    event EdgeChangeCancelled(uint16 activeBps, uint16 cancelledBps);
     event ReferralConfigCreated(uint32 indexed id, uint16 l0Bps, uint16 l1Bps, uint16 l2Bps, uint16 holdbackBps);
     event ActiveReferralConfigSet(uint32 oldId, uint32 newId);
 
@@ -123,16 +113,16 @@ interface IGameHub {
         uint256 requestId,
         bytes32 snapshotHash,
         bytes32 paramsHash,
-        address pricingAffiliate,
-        uint16 baseHouseEdgeBps,
-        uint16 effectiveHouseEdgeBps,
+        address referrerL1,
+        address referrerL2,
+        uint16 houseEdgeBps,
         uint16 maxHouseEdgeBps,
         uint32 referralConfigId,
-        bytes32 deltaSkylineHash,
         uint64 refundDeadline
     );
 
     event BetRandomReady(uint256 indexed positionId, uint256 indexed requestId, bytes32 randomHash);
+    event CallbackSettlementFailed(uint256 indexed positionId, bytes32 errorPrefix);
     event BetFinalized(
         uint256 indexed positionId,
         uint256 payoutGross,
@@ -143,19 +133,18 @@ interface IGameHub {
     event BetRefunded(uint256 indexed positionId, uint256 refundAmount);
 
     /// @notice Allocation of the turnover edge for one settled bet (SSOT v1.6 section 7).
-    ///         lpRetained + protocolFee + r0 + r1 + r2 + markup == edge.
+    ///         lpRetained + protocolFee + r0 + r1 + r2 == edge.
     event HouseEdgeAllocated(
         uint256 indexed positionId,
         uint256 usedTurnover,
-        uint16 effectiveHouseEdgeBps,
+        uint16 houseEdgeBps,
         uint256 edge,
         uint256 operatorShare,
         uint256 lpRetained,
         uint256 protocolFee,
         uint256 r0,
         uint256 r1,
-        uint256 r2,
-        uint256 markup
+        uint256 r2
     );
 
     error RiskInPaused(uint64 poolId);
@@ -167,8 +156,10 @@ interface IGameHub {
     error RefundNotReady(uint256 positionId, uint256 nowTs, uint256 readyAt);
     error InvalidRefundTimeout(uint256 seconds_);
     error NotVRFHub();
+    error NotSelf();
+    error InvalidRandomReceipt();
+    error InvalidModuleResult();
     error InsufficientVRFFee(uint256 paid, uint256 required);
-    error HouseEdgeTooLow(uint16 got, uint16 minAllowed);
     error HouseEdgeTooHigh(uint16 got, uint16 maxAllowed);
     error NoPendingEdgeChange();
     error EdgeChangeNotReady(uint64 activatesAt);

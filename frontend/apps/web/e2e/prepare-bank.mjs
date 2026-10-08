@@ -1,6 +1,13 @@
 // Isolated money-flow fixture. Invoked only by script/ci/bank_wallet_e2e.sh.
 import { readFileSync, writeFileSync } from "node:fs";
-import { createPublicClient, createWalletClient, defineChain, http } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  defineChain,
+  http,
+  keccak256,
+  toBytes
+} from "viem";
 const rpc = process.env.BANK_ANVIL_RPC;
 if (!rpc || new URL(rpc).hostname !== "127.0.0.1") throw new Error("Local Anvil required");
 const chain = defineChain({
@@ -28,7 +35,54 @@ async function deploy(name, args) {
   return { address: receipt.contractAddress, abi: a.abi };
 }
 const token = await deploy("MockERC20", ["Local asset", "LOCAL", 6]);
-const bank = await deploy("Bank", [token.address, owner, 0n, "Local share", "LBS", 6, 1n]);
+const bank = await deploy("Bank", [token.address, owner, 6_000n, 6, 10_000n]);
+const poolRegistry = await deploy("PoolRegistry", [owner]);
+const router = await deploy("SettlementRouter", [poolRegistry.address]);
+const wrapper = await deploy("MockVRFV2PlusWrapper", []);
+const vrf = await deploy("VRFHub", [wrapper.address, router.address]);
+const referrals = await deploy("ReferralRegistry", [owner]);
+const engine = await deploy("DefaultReferralEngine", []);
+const hub = await deploy("GameHub", [
+  router.address,
+  vrf.address,
+  referrals.address,
+  engine.address,
+  owner,
+  3_600n,
+  200,
+  1_000,
+  2_000,
+  500,
+  3_000
+]);
+async function write(contract, functionName, args) {
+  const hash = await wallet.writeContract({ ...contract, account: owner, functionName, args });
+  if ((await publicClient.waitForTransactionReceipt({ hash })).status !== "success")
+    throw new Error(`${functionName} failed`);
+}
+await write(bank, "setSettlementRouterOnce", [router.address]);
+await write(bank, "setRandomnessConsumerOnce", [vrf.address]);
+await write(poolRegistry, "registerPool", [1n, token.address, bank.address, 1]);
+await write(poolRegistry, "setHubRegistered", [hub.address, true]);
+await write(poolRegistry, "setHubAllowedForPool", [1n, hub.address, true]);
+await write(referrals, "setBinderOnce", [hub.address]);
+const modules = {};
+for (const [id, name] of [
+  ["DICE", "DiceModule"],
+  ["COIN_TOSS", "CoinTossModule"],
+  ["ROULETTE", "RouletteModule"],
+  ["KENO", "KenoModule"],
+  ["PLINKO", "PlinkoModule"],
+  ["SIC_BO", "SicBoModule"],
+  ["SLOTS", "SlotsModule"],
+  ["BACCARAT", "BaccaratModule"]
+]) {
+  const module = await deploy(name, []);
+  const gameId = keccak256(toBytes(id));
+  await write(hub, "registerGame", [gameId, module.address, 25, 2_447_746]);
+  modules[gameId] = module.address;
+}
+const vault = await publicClient.readContract({ ...bank, functionName: "vault" });
 const hash = await wallet.writeContract({
   ...token,
   account: owner,
@@ -61,7 +115,18 @@ Object.assign(fixture, {
   chainId: 84532,
   name: "Isolated browser test",
   isPlaceholder: false,
-  assets: [{ symbol: "LOCAL", decimals: 6, address: token.address, bank: bank.address }],
+  architectureVersion: "v1.6-nft-liquidity",
+  refundTimeoutSeconds: 3_600,
+  contracts: {
+    ...fixture.contracts,
+    gameHub: hub.address,
+    refRegistry: referrals.address,
+    refEngine: engine.address,
+    vrfHub: vrf.address,
+    settlementRouter: router.address,
+    poolRegistry: poolRegistry.address
+  },
+  assets: [{ symbol: "LOCAL", decimals: 6, address: token.address, bank: bank.address, vault }],
   pools: [
     {
       poolId: 1,
@@ -70,11 +135,14 @@ Object.assign(fixture, {
       active: true,
       asset: token.address,
       bank: bank.address,
+      vault,
       symbol: "LOCAL",
       decimals: 6
     }
   ]
 });
+fixture.games = modules;
+fixture.gamesMeta = fixture.gamesMeta.map((game) => ({ ...game, module: modules[game.gameId] }));
 // All consumers stay confined to the owned localhost node; this fixture is not an authenticated release.
 writeFileSync(
   new URL("../../../packages/ssot/src/release/embedded/index.ts", import.meta.url),
@@ -82,5 +150,13 @@ writeFileSync(
 );
 writeFileSync(
   process.env.BANK_E2E_STATE,
-  JSON.stringify({ owner, token: token.address, bank: bank.address })
+  JSON.stringify({
+    owner,
+    token: token.address,
+    bank: bank.address,
+    vault,
+    hub: hub.address,
+    vrf: vrf.address,
+    wrapper: wrapper.address
+  })
 );

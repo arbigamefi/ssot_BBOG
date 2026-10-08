@@ -1,12 +1,13 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export type KeeperHealthSnapshot = {
   schemaVersion: 1;
-  status: string;
-  role: string;
+  status: "starting" | "running" | "degraded" | "stopped";
+  role: "primary" | "backup";
   chainId: number;
   gameHub: string;
   vrfHub: string;
@@ -14,7 +15,46 @@ export type KeeperHealthSnapshot = {
   startedAt: string;
   updatedAt: string;
   queueDepth: number;
-  [key: string]: unknown;
+  lastScannedBlock?: string;
+  lastScanAt?: string;
+  lastEnqueuedAt?: string;
+  lastEnqueued?: {
+    source: string;
+    betId: string;
+    requestId?: string;
+    blockNumber?: string;
+    txHash?: string;
+  };
+  lastFinalizeSuccessAt?: string;
+  lastFinalizeSuccess?: { betId: string; txHash: string; latencyMs: number };
+  lastFinalizeFailureAt?: string;
+  lastFinalizeFailure?: { betId: string; reason: string; retryable: boolean };
+  lastError?: string;
+  pools?: KeeperPoolHealth[];
+  lastPoolScanAt?: string;
+  payables?: Array<{
+    bank: string;
+    scannedThrough?: string;
+    finalizedBlock?: string;
+    headBlock?: string;
+    caughtUp: boolean;
+    pending: number;
+    readError?: string;
+    claimError?: string;
+    error?: string;
+  }>;
+  casinoRecoveryScannedThrough?: string;
+  degradedBy?: Array<
+    "scan" | "ledger" | "finalize" | "recovery" | "pools" | "payables" | "stalled"
+  >;
+  rpc?: {
+    errorsLastMinute: Record<string, number>;
+    lastMinute: Record<string, number>;
+    total: Record<string, number>;
+    totalErrors: Record<string, number>;
+    windowStartedAt: string;
+    updatedAt: string;
+  };
 };
 
 function repoRoot() {
@@ -74,11 +114,140 @@ async function readJsonFile(filePath: string) {
   }
 }
 
-async function readReleaseFallback(chainId: number) {
-  const release = await readJsonFile(
-    path.resolve(process.cwd(), `../../packages/ssot/src/release/embedded/chain-${chainId}.json`)
+export type KeeperPoolHealth = {
+  bank: string;
+  vault: string;
+  observedBlock?: string;
+  openHolds?: string;
+  maxOpenHolds?: string;
+  capacityHeadroom?: string;
+  minBetAmount?: string;
+  bankCash?: string;
+  vaultCash?: string;
+  L?: string;
+  P?: string;
+  R?: string;
+  K?: string;
+  G?: string;
+  PF?: string;
+  XP?: string;
+  PP?: string;
+  accountingValid?: boolean;
+  paused?: boolean;
+  lpStatus?: number;
+  error?: string;
+};
+const SNAPSHOT_KEYS = new Set([
+  "schemaVersion",
+  "status",
+  "role",
+  "chainId",
+  "gameHub",
+  "vrfHub",
+  "keeper",
+  "startedAt",
+  "updatedAt",
+  "queueDepth",
+  "lastScannedBlock",
+  "lastScanAt",
+  "lastEnqueuedAt",
+  "lastEnqueued",
+  "lastFinalizeSuccessAt",
+  "lastFinalizeSuccess",
+  "lastFinalizeFailureAt",
+  "lastFinalizeFailure",
+  "lastError",
+  "pools",
+  "lastPoolScanAt",
+  "payables",
+  "casinoRecoveryScannedThrough",
+  "degradedBy",
+  "rpc"
+]);
+const POOL_NUMBERS = [
+  "observedBlock",
+  "openHolds",
+  "maxOpenHolds",
+  "capacityHeadroom",
+  "minBetAmount",
+  "bankCash",
+  "vaultCash",
+  "L",
+  "P",
+  "R",
+  "K",
+  "G",
+  "PF",
+  "XP",
+  "PP"
+] as const;
+const POOL_KEYS = new Set([
+  "bank",
+  "vault",
+  ...POOL_NUMBERS,
+  "accountingValid",
+  "paused",
+  "lpStatus",
+  "error"
+]);
+function record(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function address(value: unknown) {
+  return typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value);
+}
+function validSnapshot(value: unknown, chainId: number): value is KeeperHealthSnapshot {
+  if (
+    !record(value) ||
+    Object.keys(value).some((key) => !SNAPSHOT_KEYS.has(key)) ||
+    value.schemaVersion !== 1 ||
+    value.chainId !== chainId ||
+    !["starting", "running", "degraded", "stopped"].includes(String(value.status)) ||
+    !["primary", "backup"].includes(String(value.role)) ||
+    !address(value.gameHub) ||
+    !address(value.vrfHub) ||
+    !address(value.keeper) ||
+    typeof value.startedAt !== "string" ||
+    typeof value.updatedAt !== "string" ||
+    typeof value.queueDepth !== "number" ||
+    !Number.isSafeInteger(value.queueDepth) ||
+    value.queueDepth < 0
+  )
+    return false;
+  if (
+    value.degradedBy !== undefined &&
+    (!Array.isArray(value.degradedBy) ||
+      value.degradedBy.some(
+        (item) =>
+          !["scan", "ledger", "finalize", "recovery", "pools", "payables", "stalled"].includes(
+            String(item)
+          )
+      ))
+  )
+    return false;
+  return (
+    value.pools === undefined ||
+    (Array.isArray(value.pools) &&
+      value.pools.every(
+        (pool) =>
+          record(pool) &&
+          Object.keys(pool).every((key) => POOL_KEYS.has(key)) &&
+          address(pool.bank) &&
+          address(pool.vault) &&
+          POOL_NUMBERS.every(
+            (key) =>
+              pool[key] === undefined ||
+              (typeof pool[key] === "string" && /^\d+$/.test(pool[key] as string))
+          ) &&
+          (pool.accountingValid === undefined || typeof pool.accountingValid === "boolean") &&
+          (pool.paused === undefined || typeof pool.paused === "boolean") &&
+          (pool.lpStatus === undefined ||
+            (typeof pool.lpStatus === "number" &&
+              Number.isInteger(pool.lpStatus) &&
+              pool.lpStatus >= 0 &&
+              pool.lpStatus <= 7))
+      ))
   );
-  return release && typeof release === "object" ? (release as any) : undefined;
 }
 
 export async function readKeeperHealthSnapshot({
@@ -88,12 +257,13 @@ export async function readKeeperHealthSnapshot({
 } = {}): Promise<KeeperHealthSnapshot> {
   for (const candidate of healthPathCandidates(chainId)) {
     const snapshot = await readJsonFile(candidate);
-    if (snapshot) {
+    if (validSnapshot(snapshot, chainId)) {
       return snapshot as KeeperHealthSnapshot;
     }
   }
 
-  const release = await readReleaseFallback(chainId);
+  const loaded = loadEmbeddedRelease(chainId);
+  const release = loaded.ok ? loaded.release : undefined;
   const now = new Date().toISOString();
   return {
     schemaVersion: 1,

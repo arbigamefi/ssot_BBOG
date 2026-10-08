@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { BankProviderLedgerPool } from "./bank-provider-ledger.js";
+import type { VaultProviderLedgerPool } from "./vault-provider-ledger.js";
 
 export type BetStateName = "none" | "held" | "pendingVrf" | "randomReady" | "settled" | "refunded";
 
@@ -41,8 +41,8 @@ export type KeeperConfig = {
   betIndexDatabaseUrl?: string;
   betIndexSsl: boolean;
   betIndexWriteEnabled: boolean;
-  bankProviderLedgerPools: BankProviderLedgerPool[];
-  bankProviderLedgerScanIntervalMs: number;
+  vaultProviderLedgerPools: VaultProviderLedgerPool[];
+  vaultProviderLedgerScanIntervalMs: number;
   sportsTicketIndexEnabled: boolean;
   sportsTerminalizerEnabled: boolean;
   sportsTerminalizerScanChunkBlocks: bigint;
@@ -59,6 +59,7 @@ export type BetRead = {
   requestId: bigint;
   state: BetStateName;
   refundDeadline?: bigint;
+  bank?: Address;
 };
 
 export type FinalizeOutcome =
@@ -83,3 +84,6 @@ export type KeeperLogger = {
   warn: (message: string, fields?: KeeperLogFields) => void;
   error: (message: string, fields?: KeeperLogFields) => void;
 };
+
+export type RequestStateName = "none" | "awaiting" | "received" | "terminal" | "cancelled";
+export type RequestRead = { bank: Address; hub: Address; betId: bigint; state: RequestStateName };

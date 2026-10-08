@@ -23,10 +23,18 @@ fs_permissions = [
   { access = "read-write", path = "./dist" }
 ]
 
+# Complete and explicit: build metadata, and with it every runtime codehash (the certified module codehashes in
+# script/release/first-callback-domain-*.json), must not depend on how lib/ is materialized (checkout, symlink
+# or CI install). Auto-detection would record environment-specific paths.
+auto_detect_remappings = false
 remappings = [
-  "@openzeppelin/=lib/openzeppelin-contracts/",
   "@chainlink/=lib/chainlink-brownie-contracts/",
-  "forge-std/=lib/forge-std/src/"
+  "@openzeppelin/=lib/openzeppelin-contracts/",
+  "chainlink-brownie-contracts/=lib/chainlink-brownie-contracts/",
+  "erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/",
+  "forge-std/=lib/forge-std/src/",
+  "halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/",
+  "openzeppelin-contracts/=lib/openzeppelin-contracts/"
 ]
 
 # Fast-but-meaningful PR gate profile.
@@ -97,3 +105,8 @@ arbitrum_sepolia = { key = "${ETHERSCAN_V2_API_KEY}", chain = 421614, url = "htt
 lint_on_build = false
 severity = ["high", "med"]
 ignore = ["test/**", "script/**"]
+
+# Preserve the pinned upstream baseline and its documented RANGE_SUM and UNUSED_SUFFIX patches;
+# MANIFEST.sha256 pins the applied files and both patch files, which record the deltas.
+[fmt]
+ignore = ["src/vendor/azuro-v3/**"]

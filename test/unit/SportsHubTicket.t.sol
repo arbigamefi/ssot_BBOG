@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {BankTestBase, TestRandomnessConsumer, DirectRouterFixture} from "../utils/BankTestBase.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
@@ -38,7 +40,7 @@ contract MockSportsRiskEngine is ISportsRiskEngine {
     }
 }
 
-contract SportsHubTicketTest is Test {
+contract SportsHubTicketTest is BankTestBase {
     address internal gov = address(0xA11CE);
     address internal player = address(0xB0B);
     uint256 internal oddsSignerKey = 0xA11CE1;
@@ -69,7 +71,7 @@ contract SportsHubTicketTest is Test {
         oddsSigner = vm.addr(oddsSignerKey);
 
         usdc = new MockERC20("USD Coin", "USDC", 6);
-        sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6, 1);
+        sportsBank = new Bank(address(usdc), gov, 1000, 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
         riskEngine = new MockSportsRiskEngine();
@@ -80,13 +82,14 @@ contract SportsHubTicketTest is Test {
         registry.setHubRegistered(address(sportsHub), true);
         registry.setHubAllowedForPool(SPORTS_POOL_ID, address(sportsHub), true);
         sportsBank.setSettlementRouterOnce(address(router));
+        _bindTestConsumer(sportsBank);
         sportsHub.setOddsSigner(oddsSigner, true);
         vm.stopPrank();
 
         usdc.mint(gov, 1_000_000e6);
         vm.startPrank(gov);
-        usdc.approve(address(sportsBank), type(uint256).max);
-        sportsBank.deposit(500_000e6, gov);
+        usdc.approve(address(sportsBank.vault()), type(uint256).max);
+        LiquidityVault(sportsBank.vault()).addDepositFor(gov, 500_000e6);
         vm.stopPrank();
 
         usdc.mint(player, 10_000e6);
@@ -147,7 +150,7 @@ contract SportsHubTicketTest is Test {
     }
 
     function test_placeTicket_tracksEventExposurePerPool() external {
-        Bank secondSportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports B", "lpUSDC-SB", 6, 1);
+        Bank secondSportsBank = new Bank(address(usdc), gov, 1000, 6, 1);
 
         vm.startPrank(gov);
         registry.registerPool(
@@ -155,8 +158,9 @@ contract SportsHubTicketTest is Test {
         );
         registry.setHubAllowedForPool(SECOND_SPORTS_POOL_ID, address(sportsHub), true);
         secondSportsBank.setSettlementRouterOnce(address(router));
-        usdc.approve(address(secondSportsBank), type(uint256).max);
-        secondSportsBank.deposit(500_000e6, gov);
+        _bindTestConsumer(secondSportsBank);
+        usdc.approve(address(secondSportsBank.vault()), type(uint256).max);
+        LiquidityVault(secondSportsBank.vault()).addDepositFor(gov, 500_000e6);
         vm.stopPrank();
 
         vm.prank(player);

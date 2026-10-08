@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
 import "forge-std/StdJson.sol";
@@ -16,6 +16,7 @@ import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
 import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
+import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {Errors} from "../../src/libs/Errors.sol";
 
@@ -133,10 +134,16 @@ contract DeploymentV16Test is Test {
             )
         );
         vm.setEnv("SAFE_OWNERS_HASH", vm.toString(keccak256(abi.encode(safe.getOwners(), uint256(2)))));
-        vm.setEnv("VRF_WRAPPER", vm.toString(address(asset)));
+        vm.setEnv("VRF_WRAPPER", vm.toString(address(new MockVRFV2PlusWrapper())));
+        string[8] memory games =
+            [string("DICE"), "COIN_TOSS", "ROULETTE", "KENO", "PLINKO", "SIC_BO", "SLOTS", "BACCARAT"];
+        for (uint256 i; i < games.length; ++i) {
+            vm.setEnv(string.concat("GAME_MAX_BET_COUNT_", games[i]), "25");
+            vm.setEnv(string.concat("GAME_CALLBACK_GAS_LIMIT_", games[i]), "2447746");
+        }
         vm.setEnv("NUM_POOLS", "2");
-        vm.setEnv("BANK_MIN_STAKE_0", "1000000");
-        vm.setEnv("BANK_MIN_STAKE_1", "1000000");
+        vm.setEnv("BANK_MIN_BET_AMOUNT_0", "10000");
+        vm.setEnv("BANK_MIN_BET_AMOUNT_1", "10000");
         vm.setEnv("POOL_ASSET_0", vm.toString(address(asset)));
         vm.setEnv("POOL_ASSET_1", vm.toString(address(asset)));
         vm.setEnv("POOL_DOMAIN_0", "1");
@@ -153,6 +160,37 @@ contract DeploymentV16Test is Test {
         deployer.run();
         snap = deployer.snapshot();
         targets = V16Snapshot.targets(snap);
+    }
+
+    function testDefaultDeploymentSeparatesRiskReserveFromOptionalOutflowBuffer() public isolatedEnv {
+        (string memory snap,) = _deploy();
+        for (uint256 i; i < 2; ++i) {
+            string memory suffix = vm.toString(i);
+            Bank bank = Bank(snap.readAddress(string.concat(".poolBank_", suffix)));
+            assertEq(bank.riskReserveBps(), 6000);
+            assertEq(bank.withdrawalBufferBps(), 1000);
+            assertEq(snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix)), 6000);
+            assertEq(snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix)), 1000);
+        }
+        verifier.verify(snap, false);
+    }
+
+    function testExplicitPoolRiskAndOptionalOutflowOverridesRemainIndependent() public isolatedEnv {
+        // Use an extra pool so the process-wide override cannot contaminate default-pool tests.
+        vm.setEnv("NUM_POOLS", "3");
+        vm.setEnv("POOL_ID_2", "4");
+        vm.setEnv("POOL_ASSET_2", vm.toString(address(asset)));
+        vm.setEnv("POOL_DOMAIN_2", "1");
+        vm.setEnv("BANK_MIN_BET_AMOUNT_2", "10000");
+        vm.setEnv("BANK_RISK_RESERVE_BPS_2", "1000");
+        vm.setEnv("BANK_WITHDRAWAL_BUFFER_BPS_2", "2500");
+        (string memory snap,) = _deploy();
+        Bank bank = Bank(snap.readAddress(".poolBank_2"));
+        assertEq(bank.riskReserveBps(), 1000);
+        assertEq(bank.withdrawalBufferBps(), 2500);
+        assertEq(snap.readUint(".poolBankRiskReserveBps_2"), 1000);
+        assertEq(snap.readUint(".poolBankWithdrawalBufferBps_2"), 2500);
+        verifier.verify(snap, false);
     }
 
     function testGeneratedGoldenVectorsAreAcceptedByAllEightModules() public isolatedEnv {
@@ -192,7 +230,7 @@ contract DeploymentV16Test is Test {
 
     function testNominationIsNotAcceptanceAndOldSignerLosesAuthority() public isolatedEnv {
         (string memory snap, address[] memory list) = _deploy();
-        assertEq(list.length, 7);
+        assertEq(list.length, 5);
         assertEq(snap.readAddress(".gov"), address(safe));
         assertEq(snap.readAddress(".bootstrapGovernance"), bootstrap);
         verifier.verify(snap, false);
@@ -210,7 +248,7 @@ contract DeploymentV16Test is Test {
             Governable(list[i]).transferGovernance(bootstrap);
         }
         verifier.verify(snap, true);
-        Bank bank = Bank(list[5]);
+        Bank bank = Bank(list[3]);
         assertTrue(bank.paused());
         assertEq(bank.guardian(), guardian);
         vm.prank(guardian);
@@ -240,7 +278,7 @@ contract DeploymentV16Test is Test {
 
     function testRuntimeMutationFailsEvenWithCorrectGovernance() public isolatedEnv {
         (string memory snap, address[] memory list) = _deploy();
-        vm.etch(list[4], hex"60006000fd");
+        vm.etch(list[2], hex"60006000fd");
         vm.expectRevert("runtime code mismatch");
         verifier.verify(snap, false);
     }
@@ -257,11 +295,11 @@ contract DeploymentV16Test is Test {
         (string memory snap,) = _deploy();
         verifier.verify(snap, false);
         vm.serializeJson("bad-precision", snap);
-        string memory changed = vm.serializeUint("bad-precision", "poolLpDecimals_0", 9);
+        string memory changed = vm.serializeUint("bad-precision", "poolAssetDecimals_0", 9);
         vm.expectRevert("bank precision mismatch");
         verifier.verify(changed, false);
         // Full uint comparison: values that truncate to the correct uint8 also fail.
-        changed = vm.serializeUint("bad-precision", "poolLpDecimals_0", 262);
+        changed = vm.serializeUint("bad-precision", "poolAssetDecimals_0", 262);
         vm.expectRevert("bank precision mismatch");
         verifier.verify(changed, false);
         // Preserve all Bank state and the signed precision, changing only the
@@ -273,11 +311,11 @@ contract DeploymentV16Test is Test {
 
     function testSnapshotEmitsOnlyAuthenticatedPrecision() public isolatedEnv {
         (string memory snap,) = _deploy();
-        assertEq(snap.readUint(".poolLpDecimals_0"), 6);
+        assertEq(snap.readUint(".poolAssetDecimals_0"), 6);
         DigestHarnessV16 digest = new DigestHarnessV16();
         bytes32 original = digest.digest(snap);
         vm.serializeJson("precision-digest", snap);
-        string memory changed = vm.serializeUint("precision-digest", "poolLpDecimals_0", 9);
+        string memory changed = vm.serializeUint("precision-digest", "poolAssetDecimals_0", 9);
         assertNotEq(digest.digest(changed), original);
         vm.serializeJson("precision-digest", snap);
         changed = vm.serializeString("precision-digest", "poolAssetSymbol_0", "OTHER");
@@ -287,7 +325,7 @@ contract DeploymentV16Test is Test {
     function testBankRiskDriftBlocksAcceptancePreparation() public isolatedEnv {
         (string memory snap, address[] memory list) = _deploy();
         vm.prank(bootstrap);
-        Bank(list[5]).setWithdrawalBufferBps(777);
+        Bank(list[3]).setWithdrawalBufferBps(777);
         vm.expectRevert("bank risk configuration mismatch");
         verifier.verify(snap, false);
     }
@@ -303,7 +341,7 @@ contract DeploymentV16Test is Test {
     function testBankRuntimeMutationFails() public isolatedEnv {
         (string memory snap, address[] memory list) = _deploy();
         // Keep getters accessible while changing bytecode, to exercise the explicit runtime binding.
-        vm.etch(list[5], bytes.concat(list[5].code, hex"00"));
+        vm.etch(list[3], bytes.concat(list[3].code, hex"00"));
         vm.expectRevert("bank code mismatch");
         verifier.verify(snap, false);
     }
@@ -386,14 +424,14 @@ contract DeploymentV16Test is Test {
         vm.setEnv("SPORTS_ODDS_SIGNER_SET_HASH", vm.toString(bytes32(uint256(1))));
         vm.setEnv("SPORTS_RESULT_REPORTER_SET_HASH", vm.toString(bytes32(uint256(2))));
         (string memory snap, address[] memory list) = _deploy();
-        assertEq(list.length, 9);
+        assertEq(list.length, 7);
         (,,, bytes32 initialOdds, bytes32 initialReporters) =
             abi.decode(snap.readBytes(".ctorArgs_sportsHub"), (address, address, address, bytes32, bytes32));
         assertEq(initialOdds, bytes32(uint256(1)));
         assertEq(initialReporters, bytes32(uint256(2)));
         assertNotEq(snap.readBytes32(".sportsOddsSignerSetHash"), initialOdds);
-        assertEq(list[7], snap.readAddress(".sportsRiskEngine"));
-        assertEq(list[8], snap.readAddress(".sportsHub"));
+        assertEq(list[5], snap.readAddress(".sportsRiskEngine"));
+        assertEq(list[6], snap.readAddress(".sportsHub"));
         verifier.verify(snap, false);
         for (uint256 i; i < list.length; ++i) {
             vm.prank(address(safe));
@@ -411,31 +449,26 @@ contract DeploymentV16Test is Test {
 
     // A change queued between the acceptance package and the Safe's acceptance keeps the current values intact,
     // so only the check after acceptance can see it (audit finding F-01).
-    function _assertQueueInHandoffWindowBlocksRelease(IGameHub.EdgeParam param, uint16 bps) internal {
+    function _assertQueueInHandoffWindowBlocksRelease(uint16 bps) internal {
         (string memory snap, address[] memory list) = _deploy();
         GameHub hub = GameHub(snap.readAddress(".gameHub"));
         verifier.verify(snap, false);
         vm.prank(bootstrap);
-        hub.queueEdgeChange(param, bps);
+        hub.queueEdgeChange(bps);
         _acceptAll(list);
         assertEq(hub.defaultHouseEdgeBps(), snap.readUint(".defaultHouseEdgeBps"));
-        assertEq(hub.maxAffiliateDeltaBps(), snap.readUint(".maxAffiliateDeltaBps"));
         vm.expectRevert("pending edge change is not part of the release");
         verifier.verify(snap, true);
     }
 
     function testBaseEdgeQueuedInHandoffWindowBlocksRelease() public isolatedEnv {
-        _assertQueueInHandoffWindowBlocksRelease(IGameHub.EdgeParam.BaseHouseEdge, 500);
-    }
-
-    function testMarkupIncreaseQueuedInHandoffWindowBlocksRelease() public isolatedEnv {
-        _assertQueueInHandoffWindowBlocksRelease(IGameHub.EdgeParam.MaxAffiliateDelta, 100);
+        _assertQueueInHandoffWindowBlocksRelease(500);
     }
 
     function testQueuedEdgeChangeFailsTheAcceptancePackageCheck() public isolatedEnv {
         (string memory snap,) = _deploy();
         vm.prank(bootstrap);
-        GameHub(snap.readAddress(".gameHub")).queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 300);
+        GameHub(snap.readAddress(".gameHub")).queueEdgeChange(300);
         vm.expectRevert("pending edge change is not part of the release");
         verifier.verify(snap, false);
     }
@@ -444,20 +477,15 @@ contract DeploymentV16Test is Test {
         (string memory snap, address[] memory list) = _deploy();
         GameHub hub = GameHub(snap.readAddress(".gameHub"));
         vm.startPrank(bootstrap);
-        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 500);
-        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 100);
+        hub.queueEdgeChange(500);
         vm.stopPrank();
         _acceptAll(list);
         vm.prank(address(safe));
-        hub.cancelEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
-        vm.expectRevert("pending edge change is not part of the release");
-        verifier.verify(snap, true);
-        vm.prank(address(safe));
-        hub.cancelEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
+        hub.cancelEdgeChange();
         verifier.verify(snap, true);
         vm.prank(bootstrap);
         vm.expectRevert(IGameHub.NoPendingEdgeChange.selector);
-        hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+        hub.activateEdgeChange();
     }
 
     function testRefundTimeoutAboveOneDayIsRefusedBeforeBroadcast() public isolatedEnv {

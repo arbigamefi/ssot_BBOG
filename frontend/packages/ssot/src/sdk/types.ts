@@ -1,9 +1,9 @@
 import type {
-  DomainBankPosition,
   DomainBankSnapshot,
-  DomainRecoveryPosition,
-  DomainRecoveryPage,
-  BankRecoveryCursor,
+  DomainDepositPosition,
+  DomainDepositPage,
+  DomainDepositWithdrawalQuote,
+  DepositCursor,
   DomainBet,
   DomainError,
   DomainSportsMarket,
@@ -96,22 +96,31 @@ export interface TxResult {
   error?: DomainError;
 }
 
-export type BankProviderLedgerAction = "deposit" | "withdraw" | "recovery" | "donation";
-
-export type BankProviderLedgerEntry = {
+export type VaultProviderLedgerEntry = {
   id: string;
-  action: BankProviderLedgerAction;
+  action: "deposit" | "withdraw" | "transfer";
+  depositId: bigint;
   txHash: Hex;
   blockNumber: number;
   logIndex: number;
   timestamp?: number;
   assets?: bigint;
-  shares: bigint;
-  sharePrice?: bigint;
-  receiver?: Address;
-  caller?: Address;
-  epochId?: bigint;
+  payer?: Address;
+  owner?: Address;
+  from?: Address;
+  to?: Address;
+  percent?: bigint;
+  withdrawAfter?: bigint;
 };
+
+export interface GameConfig {
+  /** Current on-chain fee, read at the same block as the admission configuration. */
+  houseEdgeBps: number;
+  gameId: Hex;
+  module: Address;
+  maxBetCount: number;
+  callbackGasLimit: number;
+}
 
 export type GameHubSettlementProof = {
   /** Historical terminal transaction delivery; payable does not imply still unclaimed today. */
@@ -152,7 +161,8 @@ export type BindPlaceBetTxResult =
   | { ok: false; error: DomainError };
 
 export interface SSOTGameHubAPI {
-  quoteVRFFee(betCount: number): Promise<bigint>;
+  getGameConfig(gameId: Hex, opts?: { blockNumber?: bigint }): Promise<GameConfig>;
+  quoteVRFFee(gameId: Hex, betCount: number, gasPriceBudget?: bigint): Promise<bigint>;
   planPlaceBet(input: PlaceBetInput): Promise<PlaceBetPlan | { error: DomainError }>;
   executePlan(
     plan: PlaceBetPlan,
@@ -175,8 +185,7 @@ export interface SSOTGameHubAPI {
   refund(betId: bigint): Promise<TxResult>;
 
   /**
-   * Finalize a bet that is in `randomReady` state.
-   * This pushes the bet from randomReady → finalized (settled).
+   * Retry settlement using the canonical received seed, including an undelivered Hub receipt.
    * Anyone can call this (not just the bet owner).
    */
   finalize(betId: bigint): Promise<TxResult>;
@@ -199,33 +208,28 @@ export interface SSOTGameHubAPI {
   getTerminalProof(betId: bigint): Promise<GameHubTerminalProof | null>;
 }
 
-export interface SSOTBankAPI {
-  getSnapshot(poolId: number, opts?: { blockNumber?: bigint }): Promise<DomainBankSnapshot>;
-  getPosition(
+export interface SSOTLiquidityVaultAPI {
+  getDeposit(
     poolId: number,
-    user: Address,
+    depositId: bigint,
     opts?: { blockNumber?: bigint }
-  ): Promise<DomainBankPosition>;
-  getRecovery(
+  ): Promise<DomainDepositPosition>;
+  getDeposits(
     poolId: number,
-    epochId: bigint,
-    controller: Address,
+    owner: Address,
+    opts?: { cursor?: DepositCursor; limit?: number; blockNumber?: bigint }
+  ): Promise<DomainDepositPage>;
+  quoteWithdrawal(
+    poolId: number,
+    depositId: bigint,
+    percent: bigint,
     opts?: { blockNumber?: bigint }
-  ): Promise<DomainRecoveryPosition>;
-  getRecoveryPage(
-    poolId: number,
-    controller: Address,
-    opts?: { cursor?: BankRecoveryCursor; limit?: number; blockNumber?: bigint }
-  ): Promise<DomainRecoveryPage>;
-  syncRecovery(poolId: number, epochId: bigint, controller?: Address): Promise<TxResult>;
-  claimRecovery(
-    poolId: number,
-    epochId: bigint,
-    receiver?: Address,
-    controller?: Address
-  ): Promise<TxResult>;
-  convertToShares(poolId: number, assets: bigint): Promise<bigint>;
-  convertToAssets(poolId: number, shares: bigint): Promise<bigint>;
+  ): Promise<DomainDepositWithdrawalQuote>;
+  getAllowance(poolId: number, owner: Address): Promise<bigint>;
+  /** Creates a new NFT. Asset approval targets the Vault, never the Bank. */
+  addDeposit(poolId: number, assets: bigint, owner?: Address): Promise<TxResult>;
+  /** Only the current NFT owner may withdraw; assets are paid to that owner. */
+  withdrawDeposit(poolId: number, depositId: bigint, percent: bigint): Promise<TxResult>;
   getProviderLedger(
     poolId: number,
     owner: Address,
@@ -236,45 +240,20 @@ export interface SSOTBankAPI {
       beforeLogIndex?: number;
       limit?: number;
     }
-  ): Promise<BankProviderLedgerEntry[]>;
+  ): Promise<VaultProviderLedgerEntry[]>;
+}
+
+export interface SSOTBankAPI {
+  getSnapshot(poolId: number, opts?: { blockNumber?: bigint }): Promise<DomainBankSnapshot>;
   getAssetBalance(asset: Address, user: Address): Promise<bigint>;
-  getAllowance(poolId: number, owner: Address): Promise<bigint>;
-  /** Defaults to the connected wallet. Does not grant any operator or share allowance. */
-  requestRedeem(
+  getPlayerPayable(
     poolId: number,
-    shares: bigint,
-    controller?: Address,
-    owner?: Address
-  ): Promise<TxResult>;
-  cancelRedeemRequest(poolId: number, controller?: Address): Promise<TxResult>;
-  syncRedeem(poolId: number, controller?: Address): Promise<TxResult>;
+    player: Address,
+    opts?: { blockNumber?: bigint }
+  ): Promise<bigint>;
   /** Permissionless trigger; payment goes only to the specified player. */
   claimPlayerPayable(poolId: number, player?: Address): Promise<TxResult>;
 
-  // ERC4626-like vault operations
-  deposit(
-    poolId: number,
-    assets: bigint,
-    receiver: Address
-  ): Promise<TxResult & { shares?: bigint }>;
-  withdraw(
-    poolId: number,
-    assets: bigint,
-    receiver?: Address,
-    owner?: Address
-  ): Promise<TxResult & { shares?: bigint }>;
-  redeem(
-    poolId: number,
-    shares: bigint,
-    receiver?: Address,
-    owner?: Address
-  ): Promise<TxResult & { assets?: bigint }>;
-  mint(poolId: number, shares: bigint, receiver: Address): Promise<TxResult & { assets?: bigint }>;
-
-  /** Assets claimable now for async Banks; excludes pending requests and wallet equity. */
-  maxWithdraw(poolId: number, owner: Address): Promise<bigint>;
-  /** Claimable request shares for async Banks; excludes pending and wallet shares. */
-  maxRedeem(poolId: number, owner: Address): Promise<bigint>;
   /** Player's cumulative turnover (used for XP unlock eligibility check). */
   playerTurnover(poolId: number, player: Address): Promise<bigint>;
 

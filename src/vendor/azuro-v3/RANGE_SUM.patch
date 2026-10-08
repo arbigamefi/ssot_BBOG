@@ -1,0 +1,78 @@
+--- a/utils/LiquidityTree.sol
++++ b/utils/LiquidityTree.sol
+@@ -316,7 +316,7 @@
+                 uint256 lAmount = treeNode[node * 2].amount;
+                 // get right amount excluding unused leaves
+                 uint256 rAmount = treeNode[node * 2 + 1].amount -
+-                    _getLeavesAmount(node * 2 + 1, mid + 1, end, r + 1, end);
++                    _getLeavesAmount(r + 1, end);
+                 uint256 sumAmounts = lAmount + rAmount;
+ 
+                 if (sumAmounts == 0) {
+@@ -525,7 +525,7 @@
+                 uint256 sumAmounts = lAmount +
+                     // get right amount excluding unused leaves
+                     (rAmount -
+-                        _getLeavesAmount(lChild + 1, mid + 1, end, r + 1, end));
++                        _getLeavesAmount(r + 1, end));
+                 if (sumAmounts == 0) return true;
+                 uint128 forLeftAmount = uint128(
+                     (amount * lAmount).div(sumAmounts) / FixedMath.ONE
+@@ -603,46 +603,22 @@
+     }
+ 
+     /**
+-     * @dev for current node get sum amount of exact leaves list
+-     * @param node node to get sum amount
+-     * @param start - node left element
+-     * @param end - node right element
+-     * @param l - left leaf of the list
+-     * @param r - right leaf of the list
+-     * @return amount sum of leaves list
++     * @dev Sum the same maximal covered nodes as the upstream recursive query.
++     *      l/r are global leaf indices. Do not push lazy amounts: stale covered
++     *      node values are intentionally part of the original allocation rule.
++     *      Walking up from the boundaries avoids repeatedly descending from an
++     *      ancestor for small excluded suffixes (including a single last leaf).
+      */
+     function _getLeavesAmount(
+-        uint48 node,
+-        uint48 start,
+-        uint48 end,
+         uint48 l,
+         uint48 r
+     ) internal view returns (uint128 amount) {
+-        if ((start == l && end == r) || (start == end)) {
+-            // if node leafs equal to leaf interval then stop and return amount value
+-            return (treeNode[node].amount);
+-        }
+-
+-        uint48 mid = (start + end) / 2;
+-
+-        if (start <= l && l <= mid) {
+-            if (start <= r && r <= mid) {
+-                amount += _getLeavesAmount(node * 2, start, mid, l, r);
+-            } else {
+-                amount += _getLeavesAmount(node * 2, start, mid, l, mid);
+-                amount += _getLeavesAmount(
+-                    node * 2 + 1,
+-                    mid + 1,
+-                    end,
+-                    mid + 1,
+-                    r
+-                );
+-            }
+-        } else {
+-            amount += _getLeavesAmount(node * 2 + 1, mid + 1, end, l, r);
+-        }
+-
+-        return amount;
++        while (l <= r) {
++            if (l & 1 != 0) amount += treeNode[l++].amount;
++            if (r & 1 == 0) amount += treeNode[r--].amount;
++            l >>= 1;
++            r >>= 1;
++        }
+     }
+ 
+     /**

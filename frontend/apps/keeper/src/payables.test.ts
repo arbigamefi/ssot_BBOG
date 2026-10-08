@@ -238,7 +238,7 @@ it.each([
   const health = new KeeperHealthReporter({
     config: {
       pollIntervalMs: 15_000,
-      bankProviderLedgerPools: [],
+      vaultProviderLedgerPools: [],
       chainId: 84532,
       role: "primary",
       gameHub: bank,

@@ -584,7 +584,7 @@ function shouldStop(
 function financials(bet: DomainBet, payoutGross: bigint, refundAmount: bigint): OutcomeFinancials {
   const safeRefund = refundAmount > bet.stake ? bet.stake : refundAmount;
   const feeOnPayout =
-    payoutGross > 0n ? mulDiv(payoutGross, BigInt(bet.effectiveHouseEdgeBps), 10_000n) : 0n;
+    payoutGross > 0n ? mulDiv(payoutGross, BigInt(bet.houseEdgeBps), 10_000n) : 0n;
   const payoutNet = payoutGross > feeOnPayout ? payoutGross - feeOnPayout : 0n;
   const playerOwed = payoutNet + safeRefund;
   return {

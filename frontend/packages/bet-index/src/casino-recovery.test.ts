@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createMemoryBetIndexStore,
   type BetIndexEvent,
-  type BankProviderLedgerRow
+  type VaultProviderLedgerRow
 } from "./index.js";
 
 const HUB = "0x1111111111111111111111111111111111111111" as const;
@@ -48,36 +48,37 @@ describe("casino recovery and Bank deployment identity", () => {
     expect(await store.getUnresolvedBetIds(query)).toEqual([10n, 2n ** 255n]);
   });
 
-  it("scopes LP cash flows to the actual Bank across reused pool IDs and Bank aliases", async () => {
+  it("scopes LP cash flows to the actual Vault across reused pool IDs and Vault aliases", async () => {
     const store = createMemoryBetIndexStore();
-    const row: BankProviderLedgerRow = {
+    const row: VaultProviderLedgerRow = {
       chainId: 84532,
       poolId: "1",
       owner: OWNER,
-      bank: BANK,
+      vault: BANK,
+      bank: HUB,
       asset: OWNER,
       id: "unused",
       action: "withdraw",
       assets: "10",
-      shares: "10",
+      depositId: "10",
       txHash: "0xaa",
       blockNumber: 20,
       logIndex: 1,
       updatedAt: 0
     };
-    await store.writeBankProviderLedgerRows([
+    await store.writeVaultProviderLedgerRows([
       row,
-      { ...row, txHash: "0xbb", bank: OTHER_BANK, blockNumber: 21, assets: "999" },
+      { ...row, txHash: "0xbb", vault: OTHER_BANK, blockNumber: 21, assets: "999" },
       { ...row, txHash: "0xcc", poolId: "9", blockNumber: 22, assets: "20" },
       { ...row, txHash: "0xdd", chainId: 8453, blockNumber: 23 }
     ]);
-    const query = { chainId: 84532, owner: OWNER, bank: BANK, limit: 10 };
-    expect((await store.getBankProviderLedger(query)).map((entry) => entry.assets)).toEqual([
+    const query = { chainId: 84532, owner: OWNER, vault: BANK, limit: 10 };
+    expect((await store.getVaultProviderLedger(query)).map((entry) => entry.assets)).toEqual([
       "20",
       "10"
     ]);
     expect(
-      (await store.getBankProviderLedger({ ...query, beforeBlock: 22, beforeLogIndex: 1 })).map(
+      (await store.getVaultProviderLedger({ ...query, beforeBlock: 22, beforeLogIndex: 1 })).map(
         (entry) => entry.assets
       )
     ).toEqual(["10"]);

@@ -437,7 +437,7 @@ describe("createTxPipeline", () => {
       const args = pipeline.extractEventArgs({
         abi: GameHubAbi,
         receiptLogs: [
-          eventLog("HouseEdgeAllocated", [100n, 200, 2n, 1n, 1n, 1n, 0n, 0n, 0n, 0n]),
+          eventLog("HouseEdgeAllocated", [100n, 200, 2n, 1n, 1n, 1n, 0n, 0n, 0n]),
           eventLog("BetFinalized", [200n, 196n, 4n, 1n])
         ],
         eventName: "BetFinalized"

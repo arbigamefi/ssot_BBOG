@@ -692,71 +692,28 @@
       "unsupportedWriteAsset": "Yazma akışları seçili varlık için aktif bir casino havuzu gerektirir.",
       "positiveAmount": "Tutar pozitif olmalı.",
       "insufficientWalletBalance": "Tutar bağlı cüzdan bakiyesini aşıyor.",
-      "exceedsMintable": "Pay miktarı, bağlı cüzdan bakiyesiyle basılabilecek miktarı aşıyor.",
-      "exceedsWithdrawable": "Tutar şu anda çekilebilir bakiyeyi aşıyor.",
-      "exceedsRedeemable": "Tutar şu anda geri alınabilir payları aşıyor.",
-      "allowanceNotConfirmed": "Onay doğrulandı, ancak Bank allowance henüz güncellenmedi. Birkaç saniye sonra yatırmayı tekrar deneyin."
+      "exceedsWithdrawable": "Tutar şu anda çekilebilir bakiyeyi aşıyor."
     },
     "toast": {
       "processing": "Bank işlemi işleniyor...",
-      "minted": "{amount} pay basıldı",
-      "redeemed": "{amount} pay itfa edildi",
       "deposited": "{amount} {symbol} yatırıldı",
       "withdrew": "{amount} {symbol} çekildi",
       "viewTransaction": "İşlemi görüntüle",
       "failed": "İşlem başarısız"
-    },
-    "units": {
-      "shares": "Paylar",
-      "sharesLower": "pay"
     },
     "format": {
       "assetFallback": "Varlık"
     },
     "hero": {
       "eyebrow": "Bankroll sağlayıcısı",
-      "bankAddress": "Banka adresi"
-    },
-    "metrics": {
-      "sharePrice": {
-        "label": "1k pay değeri"
-      },
-      "totalShares": {
-        "label": "Aktif paylar",
-        "detail": "Aktif LP payları; fiyatlanmış çıkış payları yakılmıştır."
-      }
+      "bankAddress": "Vault adresi",
+      "disclosure": "Sermaye ve yükümlülükler, Vault ve Bank sözleşmelerinin zincir üzerindeki anlık verilerinden alınır. Oyun istatistikleri tek bir NFT’nin getirisini göstermez. Günlük grafikler indekslenmiş verilere dayanır ve gecikmeli olabilir."
     },
     "summary": {
       "capitalPosture": {
         "title": "Doğrulanabilir rezerv defteri",
         "readModel": "zincir üstü okuma",
-        "totalAssets": "Aktif kasa NAV değeri",
-        "loading": "En son Bank anlık görüntüsü okunuyor…",
-        "detail": "Aktif payların güncel sermayesi; geçmiş teminat ve borçlar hariçtir.",
-        "totalAssetsDetail": "Aktif payların güncel sermayesi; geçmiş teminat ve borçlar hariçtir."
-      },
-      "freeReserve": {
-        "label": "Serbest rezerv",
-        "detail": "Açık pozisyonlar için ayrılmamış aktif sermaye."
-      },
-      "sharePrice": {
-        "label": "Pay fiyatı"
-      },
-      "totalShares": {
-        "label": "Aktif paylar",
-        "detail": "Aktif LP payları; fiyatlanmış çıkış payları yakılmıştır."
-      },
-      "position": {
-        "label": "Pozisyonunuz",
-        "detail": "Bağlı cüzdan için varlık karşılığı."
-      },
-      "liquidity": {
-        "label": "Risk rezervi politikası",
-        "detail": "Risk rezervi {floor} · Bank {bank}"
-      },
-      "reserved": {
-        "label": "Aktif sermayenin ayrılmış yükümlülükleri",
-        "detail": "Serbest rezerv {freeReserve} · Risk rezervi {riskReserve}"
+        "loading": "En son Bank anlık görüntüsü okunuyor…"
       }
     },
     "actions": {
@@ -773,13 +730,8 @@
         },
         "withdraw": {
           "label": "Çek",
-          "description": "Varlık tutarı veya pay miktarı girerek çıkın."
+          "description": "Bir likidite NFT’si ve çekim yüzdesi seçin."
         }
-      },
-      "amountMode": {
-        "label": "Giriş modu",
-        "assets": "Varlığa göre",
-        "shares": "Paya göre"
       },
       "max": {
         "walletBalance": "Cüzdan bakiyesi",
@@ -789,29 +741,24 @@
       "submit": {
         "executing": "Yürütülüyor",
         "deposit": "Varlık yatır",
-        "mint": "Pay bas",
-        "withdraw": "Varlık çek",
-        "redeem": "Payları geri al"
+        "withdraw": "Varlık çek"
       },
       "balance": {
         "wallet": "Cüzdan bakiyesi",
-        "mintable": "Basılabilir pay",
         "withdrawable": "Çekilebilir",
-        "redeemable": "Geri alınabilir pay",
         "pending": "Yükleniyor",
         "useMax": "Maks."
       },
       "trace": {
         "deposit": "Yatırma izi",
         "withdraw": "Çekme izi",
-        "redeem": "Geri alma izi",
         "view": "İşlem durumunu görüntüle",
         "close": "Kapat",
         "statusDialog": "Bank işlem durumu"
       },
       "depositsClosed": {
         "title": "Yeni mevduat kabul edilmiyor",
-        "body": "Bu havuz yeni mevduat kabul etmiyor. LP çıkış talepleri ve alacak ödemeleri havuz kurallarına göre kullanılabilir."
+        "body": "Bu havuz yeni para yatırma işlemlerini kabul etmiyor. Mevcut NFT’lerden para çekme işlemleri sözleşme kurallarına tabidir."
       }
     },
     "flows": {
@@ -820,27 +767,16 @@
       },
       "deposit": {
         "preflight": "Girdileri doğrula ve akışı simüle et.",
-        "approveTitle": "Bank onayı",
+        "approveTitle": "Vault’a izin ver",
         "approveDescription": "ERC20 allowance ayarla.",
         "depositTitle": "Varlık yatır",
-        "depositDescription": "Bank.deposit gönder."
-      },
-      "mint": {
-        "preflight": "Pay miktarını ve gereken varlıkları doğrula.",
-        "mintTitle": "Pay bas",
-        "mintDescription": "Bank.mint gönder."
+        "depositDescription": "Ayrı bir likidite NFT’si oluşturun."
       },
       "direct": {
         "submit": "Gönder",
         "confirm": "Onayla",
         "validate": "Kısıtları doğrula.",
         "receipt": "Makbuzu bekle."
-      },
-      "withdraw": {
-        "submit": "Bank.withdraw gönder."
-      },
-      "redeem": {
-        "submit": "Bank.redeem gönder."
       }
     },
     "trace": {
@@ -855,26 +791,9 @@
     "risk": {
       "title": "Risk kontrolleri",
       "readModel": "karma kaynak",
-      "custody": {
-        "label": "Saklama sınırı",
-        "title": "Saklamasız Bank.",
-        "detail": "Sağlayıcı sermayesi Bank sözleşmesinde durur. UI doğrulanabilir rezervleri indekslenmiş performans tahminlerinden ayırır."
-      },
-      "buffer": {
-        "label": "Ödeme tamponu",
-        "detail": "Rezerve yükümlülüklerden ({reserved}) sonra kalan serbest rezerv. Genel mevduat açılmadan önce maksimum ödeme kontrolleriyle karşılaştırın."
-      },
-      "liquidityFloor": {
-        "label": "Çekim tamponu",
-        "detail": "Protokol ve yönlendirme alacakları için {bps} tampon; şu anda {amount}. Fiyatlanmış LP alacakları ve oyuncu borcu ödemeleri muaftır."
-      },
       "release": {
         "label": "Release özeti",
         "detail": "Varlık kimliği, Bank adresi ve UI okumaları aktif release manifest'e bağlıdır."
-      },
-      "payables": {
-        "label": "Borçlar",
-        "detail": "Harici borçlar {externalPayables} · Varlıklar {assets}"
       }
     },
     "performance": {
@@ -891,8 +810,6 @@
       "players": "Oyuncular",
       "activityTrend": "Günlük kasa etkinliği",
       "volumeTrend": "Günlük hacim",
-      "sharePriceReference": "Pay fiyatı",
-      "currentSharePrice": "Güncel pay fiyatı",
       "empty": "Bu ağda henüz kasa etkinliği yok.",
       "pending": "Zincir üstü performans verileri henüz mevcut değil.",
       "windowLabel": "Zaman aralığı",
@@ -904,95 +821,89 @@
       },
       "peak": "Zirve",
       "trough": "Dip",
-      "maxDrawdown": "Maksimum düşüş"
+      "maxDrawdown": "Maksimum düşüş",
+      "note": "Brüt oyun geliri, Bank üzerinden geçen toplam bahis tutarından brüt ödemelerin çıkarılmasıyla hesaplanır; tek bir NFT’nin getirisi değildir. Yatırılan sermaye, kayıtlı likidite aralığına göre oyun sonuçlarından etkilenir. Günlük indekslenmiş veriler gecikmeli olabilir; getiri taahhüt edilmez."
     },
     "ledger": {
-      "eyebrow": "Sağlayıcı defteri",
-      "title": "Yatırımlar, çıkışlar ve geri kazanım",
-      "readModel": "Bank nakit akışı olayları",
-      "connectWallet": "Bank sağlayıcı defterinizi görmek için cüzdan bağlayın.",
-      "loading": "Sağlayıcı defteri yükleniyor…",
       "loadingMore": "Daha fazlası yükleniyor…",
-      "loadMore": "Daha fazla yükle",
-      "loadedRows": "{count} satır yüklendi",
-      "end": "Defter sonu",
-      "empty": "Bu cüzdan için LP nakit akışı bulunamadı.",
-      "note": "Yalnızca gerçek yatırımlar, çıkış ve geçmiş geri kazanım ödemeleri nakit akışıdır. Talepler, etkinleştirme ve alınabilir geri kazanım birer ödeme değildir. Bank bağışları alınmış nakde dahil edilmez. Pay fiyatı yalnızca pay içeren olaylarda gösterilir.",
-      "block": "Blok {blockNumber}",
-      "actions": {
-        "deposit": "Yatırma",
-        "withdraw": "Çekme",
-        "recovery": "Geri kazanım",
-        "donation": "Bağış"
-      },
-      "summary": {
-        "deposited": "Yüklenen yatırmalar",
-        "withdrawn": "Yüklenen çekmeler",
-        "openValue": "Bilinen LP değeri",
-        "shares": "Paylar"
-      },
-      "columns": {
-        "type": "Tür",
-        "time": "Zaman",
-        "assets": "Varlıklar",
-        "shares": "Paylar",
-        "sharePrice": "Pay fiyatı",
-        "tx": "Tx"
-      },
-      "incomplete": "Nakit akışı geçmişi eksik. Toplamlar yalnızca yüklenen kayıtları kapsar."
+      "loadMore": "Daha fazla yükle"
     },
-    "overview": {
-      "totalAssets": {
-        "label": "Geçerli kasa NAV",
-        "detail": "Aktif release üzerinden seçili Bank kasası için doğrulanabilir NAV."
+    "nft": {
+      "poolCapital": "LP sermayesi",
+      "poolCapitalDetail": "Vault’taki likidite NFT’lerinin güncel toplam değeri.",
+      "freeCapital": "Çekilebilir sermaye",
+      "freeCapitalDetail": "Tüm yatırımların ortak kullanımındadır; ayrı NFT’lerin çekim limitleri toplanamaz.",
+      "lockedCapital": "Açık bahislerin teminatı olan sermaye",
+      "lockedCapitalDetail": "Mevcut bahisler sonuçlandırılana kadar ayrılan net LP sermayesi.",
+      "pendingPrincipal": "Bekleyen oyuncu anaparası",
+      "pendingPrincipalDetail": "Bank’ta ayrı tutulan, henüz sonuçlandırılmamış bahis tutarları.",
+      "grossReserve": "Bekleyen azami ödemeler",
+      "grossReserveDetail": "Tüm açık pozisyonlar için ayrılan brüt karşılık.",
+      "bettingCapital": "Bahis sermayesi",
+      "bettingCapitalDetail": "LP sermayesi ile bekleyen oyuncu anaparasının toplamıdır; bahis risk limiti bu tutarı esas alır.",
+      "gameHoldDetail": "Oyun geliri, tek bir NFT’nin elde ettiği getiri değildir.",
+      "vaultCash": "Vault token bakiyesi",
+      "bankCash": "Bank token bakiyesi",
+      "playerDebt": "Oyuncuya ödenecek tutar",
+      "protocolDebt": "Ödenecek protokol ücretleri",
+      "referralDebt": "Ödenecek referans ödülleri",
+      "vaultSurplus": "Dağıtılmamış Vault fazlası",
+      "bankSurplus": "Dağıtılmamış Bank fazlası",
+      "surplusDetail": "Beklenmedik token transferleri NFT sermayesine dahil edilmez ve buradan çekilemez.",
+      "riskTerms": "Hesaplaşma sırasında önceki mevduat aralığı, yalnızca mevcut sermayesi bahsin başlangıçtaki azami LP zararını karşılıyorsa hem kârı hem zararı alır. Aksi hâlde iki sonuç da sonraki mevduatlar dâhil mevcut havuza dağıtılır. Risksiz bahislerde boş aralık kuralı korunur. Beklenen getiri ve risk bu dağılıma bağlıdır; hesaplaşma sırası dağılımı değiştirebilir. Çekilen sermaye artık katılmaz. İhraççı kısıtlamaları ödemeyi engelleyebilir. LP sermayesi kalmadığında sonraki kâr protokol sermayesine gider.",
+      "orderingRisk": "Kilidi dolmuş ve kullanılabilir sermaye, bir bahsin sonucu zincire kaydedilmeden önce çekilebilir. Havuzda kalan veya sonradan yatırılan sermaye, önceki bahislerin kazanç ya da kayıplarına katılabilir. 24 saatlik kilit, işlem sırasından doğan riski ortadan kaldırmaz.",
+      "depositTerms": "Her para yatırma işlemi ayrı bir NFT oluşturur ve kendi 24 saatlik çekim kilidini başlatır. Sermaye bu süre boyunca oyun sonuçlarına katılır. NFT transferi mevcut kilit bitiş zamanını değiştirmez.",
+      "withdrawTerms": "Bir likidite NFT’si ve güncel değerinin çekmek istediğiniz yüzdesini seçin. Başarılı bir çekim, ödemeyi NFT’nin mevcut sahibine anında yapar. Önceden çekim talebi göndermeniz veya sonradan ayrıca ödeme talep etmeniz gerekmez.",
+      "partialRelock": "Kısmi çekim, kalan tutarı yeniden 24 saat kilitler. Tam çekim NFT’yi kapatır. Gösterilen tutar tahminidir; imzaladığınız işlem bir yüzde belirtir ve güncel zincir durumuna göre yeniden kontrol edilir.",
+      "sharedLimit": "Tüm NFT’ler havuzun kullanılabilir sermayesini paylaşır. Bahisler veya başka çekimler gerçekleştikçe hesaplanan tutarlar değişebilir; ödemenin tamamının yapılacağı bir tarih garanti edilmez.",
+      "loading": "Zincirdeki güncel durum okunuyor…",
+      "unavailable": "Havuzun veya yatırılan tutarın güncel durumu alınamıyor. İmzalamadan önce yenileyin.",
+      "empty": "Mevcut verilere göre bu cüzdana ait likidite NFT’si yok.",
+      "deposits": "Likidite NFT’leriniz",
+      "owner": "Mevcut sahibi",
+      "initialOwner": "İlk sahibi",
+      "payer": "Ödeyen adres",
+      "receiver": "Ödemeyi alan adres",
+      "withdrawAfter": "Çekim kilidinin bitişi",
+      "maxNow": "Şu anda çekilebilir",
+      "percent": "Bu NFT’nin yüzdesi (%)",
+      "estimated": "Tahmini ödeme",
+      "close": "Boş NFT’yi kapat",
+      "withdraw": "Şimdi çek",
+      "sign": "İşlemi imzala",
+      "confirm": "İşlem onayını doğrula",
+      "refresh": "Zincirdeki durumu yenile",
+      "approveVault": "Bu varlıkları transfer etmesi için bağlı LiquidityVault sözleşmesine izin verin. NFT veya keeper yetkisi istenmez.",
+      "ownerChanged": "Bu cüzdan artık seçilen NFT’nin sahibi değil. Likidite NFT’leri listesini yenileyin.",
+      "deposited": "Para yatırma işlemi onaylandı. Yeni NFT için ayrı bir 24 saatlik kilit başladı.",
+      "withdrawn": "Çekim onaylandı. Kalan sermaye güncelleniyor.",
+      "playerClaimed": "Oyuncu ödemesi onaylandı.",
+      "playerDebtDetail": "Oyuncuya henüz ödenmemiş bu kazanç, LP sermayesinden ayrıdır. Ödeme yalnızca oyuncunun adresine yapılır. Havuz duraklatılmışken de alınabilir; tokenı ihraç eden kuruluşun kısıtlamaları geçerlidir.",
+      "playerDebtUnavailable": "Oyuncuya olan borç okunamadı; sıfır olduğu varsayılmıyor.",
+      "claimPlayer": "Oyuncu ödemesini al",
+      "history": "Para yatırma, çekme ve NFT transferleri",
+      "historyDetail": "NFT transferleri, NFT’nin temsil ettiği tokenlar hareket etmeden sahipliği değiştirir. NFT’yi alan kişinin getirisi, edinme maliyeti bilinmeden hesaplanamaz. Ödeyen kişi, ilk sahip ve çekim ödemesini alan kişi ayrı gösterilir.",
+      "historyEmpty": "Yüklenen aralıkta likidite NFT’leriyle ilgili bir işlem bulunamadı.",
+      "historyIncomplete": "Geçmiş eksik. Yüklenen kayıtlar cüzdanın toplam getirisini belirlemek için yeterli değildir.",
+      "noCashFlow": "NFT transferi · nakit akışı yok",
+      "action": {
+        "deposit": "Para yatırma",
+        "withdraw": "Para çekme",
+        "transfer": "NFT transferi"
+      },
+      "status": {
+        "ready": "Hazır",
+        "paused": "Havuz duraklatıldı; LP para yatırma ve çekme işlemleri kullanılamıyor.",
+        "busy": "Sonuçlandırma işlemi sürüyor. Birazdan yenileyin.",
+        "unbookedResult": "Alınan bir oyun sonucu henüz muhasebeleştirilmedi. LP para yatırma ve çekme işlemleri geçici olarak kullanılamıyor.",
+        "invalidAccounting": "Muhasebe kontrolleri kullanılamıyor veya tutarsız. LP işlemleri engellendi.",
+        "unavailable": "Yetkili kaynaktaki durum okunamadı. İmzalamadan önce yenileyin.",
+        "coolingDown": "24 saatlik çekim kilidi henüz sona ermedi.",
+        "noLiquidity": "Şu anda çekilebilecek bir tutar yok.",
+        "invalidPercent": "0’dan büyük ve en fazla 100 olan bir yüzde girin.",
+        "zeroWithdrawal": "Bu yüzde, yuvarlama sonucunda sıfır tutara karşılık geliyor. Yüzdeyi artırın veya kilit süresi dolmuş boş bir NFT’yi %100 ile kapatın.",
+        "insufficientFreeCapital": "Bu yüzde kullanılabilir sermayeyi aşıyor. Güncel azami tutarı kullanın veya yenileyin."
       }
-    },
-    "async": {
-      "inactivePool": "Bu havuz etkin değil; yeni bahis ve mevduat kabul etmiyor. Çıkış talepleri, uygun iptaller ve mevcut alacakların ödenmesi sözleşme kurallarına göre kullanılabilir.",
-      "requestDetail": "Cüzdan paylarıyla çıkış isteyin. Etkinleştirme kullanılabilir nakdi hemen fiyatlar ve geçmiş geri kazanım haklarını ayrı tutar. Çözülmemiş eski bahisler sonraki grupları engellemez.",
-      "pendingRisk": "Sıradaki paylar aktif havuz riskini taşır. Etkinleştirme yalnız çıkan payların eski riskini ve geri kazanımını ayırır. Kalan paylar bahisleri finanse etmeye devam eder. Nakit sıfır olabilir; geri kazanım belirsizdir.",
-      "queuedTitle": "Sıradaki talep",
-      "queuedDetail": "Paylar etkinleşmeye kadar aktif kalır. Çözülmemiş eski bahisler bu grubu engellemez. Nakit fiyatı etkinleşmede sabitlenir; geçmiş haklar ayrı kalır. Kullanılabilir teminat ve acil duraklatma kuralları geçerlidir; tam nakit ödeme süresi taahhüt edilmez.",
-      "eligibleAt": "En erken etkinleşme: {time}. Bu, kesin etkinleşme veya ödeme zamanı değildir.",
-      "remainingHolds": "Hâlâ açık önceki bahisler: {count}",
-      "cancelDetail": "Grup etkinleşmeden önce, en erken etkinleşme zamanı geçmiş olsa bile tüm sıradaki payları iptal ederek geri alın. Etkinleşen talepler iptal edilemez. İşlem güncel zincir durumunu kontrol eder.",
-      "cancel": "Sıradaki payları iptal et",
-      "paused": "Havuz duraklatıldı. Talepler ve sıra iptalleri açık; yatırımlar, çıkış nakdi ve geri kazanım ödemeleri yeniden başlamayı bekler.",
-      "depositTerms": "Yatırımlar kalan eski ve yeni açık riskleri içeren tam defter değeriyle aktif sermaye alır. Önceden ayrılmış çıkış hakları dahil değildir.",
-      "claimDetail": "Bu nakit çıkışınız için ayrılmıştır. Fiyatlanmış tüm payları almak, atanmış nakdi öder ve geçmiş geri kazanım haklarını korur.",
-      "totalEquityDetail": "Cüzdan değeri + sıra tahmini + fiyatlanmış nakit. Geçmiş geri kazanım ayrı gösterilir ve bu tahmine dahil değildir.",
-      "queuedEquity": "Sıradaki paylar / nakit tahmini",
-      "requested": "Çıkış talebi onaylandı. Sıradaki paylar grup etkinleşene kadar aktif kalır.",
-      "shareUnitDetail": "LP payı başına güncel aktif defter değeri. Geçmiş haklar aktif paylardan ayrıdır.",
-      "totalEquity": "Aktif ve fiyatlanmış LP değeri (tahmin)",
-      "queuedQuoteDetail": "Şimdi etkinleştirilse alınacak zincir üstü nakit kotasyonu; geçmiş geri kazanımı içermez ve değişebilir.",
-      "receiver": "Nakit alıcısı: {receiver}",
-      "exitLiabilities": "Ayrılmış çıkış nakdi ve oyuncu borçları"
-    },
-    "recovery": {
-      "title": "Geçmiş geri kazanım hakları",
-      "detail": "Bu haklar etkinleştirilmiş çıkış taleplerine aittir. Kalan payların sermayesi hesaplaşmada otomatik serbest kalır. Sıfır cüzdan bakiyesi çıkış haklarını silmez.",
-      "loading": "Geçmiş haklar aranıyor…",
-      "incomplete": "Geçmiş hak araması tamamlanmadı. Tüm pozisyonu değerlendirmeden önce kalan sayfaları yükleyin.",
-      "error": "Geçmiş haklar yüklenemedi. Haklarınız sıfır kabul edilmez.",
-      "empty": "Tam aramada geçmiş hak bulunamadı.",
-      "epoch": "Dönem {epoch}",
-      "units": "Etkinleştirilmiş çıkış payları",
-      "claimable": "Alınabilir geri kazanım nakdi",
-      "upperBound": "Kalan geri kazanım üst sınırı",
-      "upperBoundDetail": "Üst sınır şu an alınabilir nakit veya ödeme taahhüdü değildir.",
-      "remainingHolds": "Açık kalan eski bahisler: {count}",
-      "settled": "Bu dönem tamamen sonuçlandı. Atanmış ve alınmamış nakit size aittir.",
-      "claim": "Geri kazanımı al",
-      "claimed": "Geri kazanım ödemesi onaylandı.",
-      "loadMore": "Daha fazla geçmiş hak yükle",
-      "refresh": "Geçmiş hakları yenile",
-      "receiver": "Nakit {receiver} adresine gönderilir. Bu işlem keeper için sizin adınıza talep yetkisi vermez.",
-      "incompleteReturn": "Geçmiş haklar henüz sonuçlanmadı veya tarama tamamlanmadı; gösterilen pozisyon eksik.",
-      "backing": "Geçmiş hak teminatı",
-      "backingDetail": "Aktif sermayeye dahil değildir; eski borçları ve alınmamış geri kazanımı karşılar.",
-      "donationNote": "Bank bağışları hak sahibinin aldığı harici nakit sayılmaz.",
-      "snapshot": "Anlık görüntü: blok {block}, {time}. Yeni etkinlikler için yenileyin."
     }
   },
   "casino": {
@@ -1195,7 +1106,9 @@
         "rolls": {
           "label": "Atışlar",
           "total": "Toplam: {amount} {symbol}",
-          "aria": "Atış sayısı"
+          "aria": "Atış sayısı",
+          "limit": "Bu oyunda pozisyon başına en fazla {count} tur",
+          "loadingLimit": "Bu oyunun tur sınırı okunuyor"
         },
         "advanced": {
           "label": "Gelişmiş",
@@ -1226,7 +1139,8 @@
           "preparing": "TUR HAZIRLANIYOR...",
           "placeBet": "BAHİS YAP",
           "revealing": "Açılıyor..."
-        }
+        },
+        "maxSummary": "Tur başına {perRound} · toplam {total}"
       },
       "roundStatus": {
         "title": "Tur durumu",
@@ -1867,6 +1781,21 @@
             }
           ]
         }
+      },
+      "poolStatus": {
+        "full": "Havuz açık pozisyon sınırına ulaştı. Mevcut bir bahis sonuçlandırıldıktan sonra yenileyin.",
+        "fullLabel": "Havuz kapasitesi dolu",
+        "noLiquidity": "Havuzda şu anda yeni bahisleri kabul edecek LP sermayesi yok.",
+        "noLiquidityLabel": "LP sermayesi yok",
+        "invalidAccounting": "Havuz muhasebesi kullanılamıyor veya tutarsız. Yeni bahisler devre dışı.",
+        "invalidAccountingLabel": "Muhasebe verileri alınamıyor",
+        "gameUnavailable": "Oyunun kabul koşulları veya ücret teklifi doğrulanamadı. Bahis yapmadan önce yenileyin.",
+        "gameUnavailableLabel": "Oyun ayarları alınamıyor",
+        "invalidCount": "Seçilen tur sayısı bu oyunun güncel sınırını aşıyor. Daha az tur seçin.",
+        "invalidCountLabel": "Tur sayısını ayarlayın"
+      },
+      "feedback": {
+        "houseEdgeChanged": "Güncel kasa payı kabul ettiğiniz oranı aşıyor. Yeniden bahis yapmadan önce yenileyip oranı kontrol edin."
       }
     }
   },
@@ -2853,7 +2782,7 @@
         },
         "bankPosition": {
           "label": "Kasa değeri",
-          "detail": "Bankroll paylarınızın güncel değeri."
+          "detail": "Likidite NFT’lerinin güncel değeri; yalnızca bir sayfadaki kayıtlar hiçbir zaman toplam pozisyon olarak gösterilmez."
         },
         "refundCredit": {
           "label": "İade bakiyesi",
@@ -2894,13 +2823,14 @@
         "eyebrow": "Varlıklar",
         "title": "Cüzdan varlıkları",
         "loading": "Bakiyeler yükleniyor.",
-        "shares": "{amount} pay",
         "columns": {
           "asset": "Varlık",
           "wallet": "Cüzdan",
           "bankPosition": "Kasa değeri",
-          "allowance": "Onaylandı"
-        }
+          "allowance": "Vault harcama izni"
+        },
+        "nftCount": "{count} likidite NFT’si",
+        "incomplete": "Pozisyonun tamamını görmek için Earn’ü açın"
       },
       "refund": {
         "title": "İade bakiyesi",

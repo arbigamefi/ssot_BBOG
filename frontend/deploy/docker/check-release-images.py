@@ -19,10 +19,11 @@ const rows=[];
  const files=fs.readdirSync('/app/release-manifests').filter(f=>/^chain-\d+\.json$/.test(f));
  if(files.length!==1||files[0]!=='chain-'+chainId+'.json')process.exit(1);
  const r=JSON.parse(fs.readFileSync('/app/release-manifests/chain-'+chainId+'.json','utf8'));
- if(r.chainId!==chainId||r.isPlaceholder||r.meta?.releaseLock?.schema!=='SSOT_RELEASE_DIGEST_V16')process.exit(1);
+ if(r.chainId!==chainId||r.isPlaceholder||r.meta?.releaseLock?.schema!=='SSOT_RELEASE_DIGEST_V16'||r.meta?.architectureVersion!=='v1.6-nft-liquidity')process.exit(1);
+ if(!Array.isArray(r.pools)||!r.pools.length||r.pools.some(p=>!/^0x[0-9a-fA-F]{40}$/.test(p.vault)||/^0x0{40}$/i.test(p.vault)))process.exit(1);
  if(r.meta.releaseLock.chainId!==chainId||!/^0x[0-9a-fA-F]{64}$/.test(r.releaseDigest)||r.releaseDigest!==r.meta.releaseLock.digest)process.exit(1);
  if(r.releaseDigest!==expectedDigest)process.exit(1);
- rows.push({chainId,digest:r.releaseDigest,gameHub:r.contracts.gameHub,banks:r.assets.map(a=>a.bank)});
+ rows.push({chainId,digest:r.releaseDigest,gameHub:r.contracts.gameHub,banks:r.pools.map(p=>p.bank),vaults:r.pools.map(p=>p.vault)});
 }
 console.log(JSON.stringify(rows));
 """

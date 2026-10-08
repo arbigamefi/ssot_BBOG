@@ -23,7 +23,7 @@ describe("memory bet index store", () => {
           asset: ASSET,
           gameId: GAME_ID,
           player: PLAYER,
-          pricingAffiliate: AFFILIATE,
+          referrerL1: AFFILIATE,
           positionId: 7n,
           requestId: 77n,
           stake: 10n
@@ -75,7 +75,7 @@ describe("memory bet index store", () => {
       betId: "7",
       gameId: GAME_ID,
       player: PLAYER,
-      pricingAffiliate: AFFILIATE,
+      referrerL1: AFFILIATE,
       payout: "19",
       payoutGross: "20",
       stake: "10",
@@ -103,7 +103,7 @@ describe("memory bet index store", () => {
           asset: ASSET,
           gameId: GAME_ID,
           player: PLAYER,
-          pricingAffiliate: AFFILIATE,
+          referrerL1: AFFILIATE,
           positionId: 7n,
           stake: 10n
         },
@@ -119,7 +119,7 @@ describe("memory bet index store", () => {
           asset: ASSET_TWO,
           gameId: GAME_ID_TWO,
           player: PLAYER_TWO,
-          pricingAffiliate: AFFILIATE,
+          referrerL1: AFFILIATE,
           positionId: 8n,
           stake: 99n
         },
@@ -209,7 +209,7 @@ describe("memory bet index store", () => {
         placedAt: 1_700_000_000_000,
         placedBlock: 100,
         player: PLAYER,
-        pricingAffiliate: AFFILIATE,
+        referrerL1: AFFILIATE,
         randomHash: `0x${"99".repeat(32)}`,
         requestId: "123",
         stake: "1000000",
@@ -363,89 +363,88 @@ describe("memory bet index store", () => {
     ).resolves.toEqual([12n]);
   });
 
-  it("stores and queries bank provider ledger rows by owner and pool", async () => {
+  it("stores and queries vault provider ledger rows by owner and pool", async () => {
     const store = createMemoryBetIndexStore();
 
-    await store.writeBankProviderLedgerRows([
+    await store.writeVaultProviderLedgerRows([
       {
         action: "deposit",
+        bank: BANK,
         asset: ASSET,
         assets: "1000000",
-        bank: BANK,
+        vault: BANK,
         blockNumber: 80,
         chainId: 84532,
         id: "custom-id-1",
         logIndex: 1,
         owner: PLAYER,
         poolId: "1",
-        sharePrice: "1000000",
-        shares: "1000000",
+        depositId: "1000000",
         timestamp: 1_700_000_000_000,
         txHash: "0xabc",
         updatedAt: 1_700_000_000_000
       },
       {
         action: "withdraw",
+        bank: BANK,
         asset: ASSET,
         assets: "250000",
-        bank: BANK,
+        vault: BANK,
         blockNumber: 82,
         chainId: 84532,
         id: "custom-id-2",
         logIndex: 2,
         owner: PLAYER,
         poolId: "1",
-        sharePrice: "1250000",
-        shares: "200000",
+        depositId: "200000",
         timestamp: 1_700_000_001_000,
         txHash: "0xdef",
         updatedAt: 1_700_000_001_000
       },
       {
         action: "deposit",
+        bank: BANK,
         asset: ASSET,
-        bank: "0x0000000000000000000000000000000000000099",
+        vault: "0x0000000000000000000000000000000000000099",
         blockNumber: 83,
         chainId: 84532,
         id: "other-pool",
         logIndex: 1,
         owner: PLAYER,
         poolId: "2",
-        shares: "1",
+        depositId: "1",
         txHash: "0xaaa",
         updatedAt: 1_700_000_002_000
       }
     ]);
 
     await expect(
-      store.getBankProviderLedger({ chainId: 84532, limit: 10, owner: PLAYER, bank: BANK })
+      store.getVaultProviderLedger({ chainId: 84532, limit: 10, owner: PLAYER, vault: BANK })
     ).resolves.toMatchObject([
       {
         action: "withdraw",
         assets: "250000",
         blockNumber: 82,
         poolId: "1",
-        sharePrice: "1250000",
-        shares: "200000"
+        depositId: "200000"
       },
       {
         action: "deposit",
         assets: "1000000",
         blockNumber: 80,
         poolId: "1",
-        sharePrice: "1000000",
-        shares: "1000000"
+        depositId: "1000000"
       }
     ]);
 
     await expect(
-      store.getBankProviderLedger({
+      store.getVaultProviderLedger({
         beforeBlock: 82,
         beforeLogIndex: 2,
         chainId: 84532,
         limit: 10,
         owner: PLAYER,
-        bank: BANK
+        vault: BANK
       })
     ).resolves.toMatchObject([
       {
@@ -960,75 +959,76 @@ describe("memory bet index store", () => {
 });
 
 describe("provider ledger canonical range replacement", () => {
-  it("atomically removes orphan cash rows including empty ranges, without crossing chain or Bank", async () => {
+  it("atomically removes orphan cash rows including empty ranges, without crossing chain or Vault", async () => {
     const store = createMemoryBetIndexStore();
     const row = {
       chainId: 84532,
       poolId: "1",
       owner: PLAYER,
+      vault: BANK,
       bank: BANK,
       asset: ASSET,
       id: "ignored",
-      action: "recovery" as const,
+      action: "withdraw" as const,
       assets: "8",
-      shares: "0",
+      depositId: "0",
       txHash: "0xaa" as const,
       blockNumber: 20,
       logIndex: 1,
       updatedAt: 0,
       receiver: ASSET,
       caller: PLAYER,
-      epochId: "1"
+      withdrawAfter: "1"
     };
-    await store.writeBankProviderLedgerRows([
+    await store.writeVaultProviderLedgerRows([
       row,
-      { ...row, txHash: "0xbb", bank: ASSET },
+      { ...row, txHash: "0xbb", vault: ASSET },
       { ...row, txHash: "0xcc", chainId: 1 }
     ]);
-    const query = { chainId: 84532, bank: BANK, owner: PLAYER, limit: 10 };
+    const query = { chainId: 84532, vault: BANK, owner: PLAYER, limit: 10 };
     await expect(
-      store.replaceBankProviderLedgerRange({
+      store.replaceVaultProviderLedgerRange({
         chainId: 84532,
-        bank: BANK,
+        vault: BANK,
         fromBlock: 20n,
         toBlock: 20n,
         rows: [{ ...row, blockNumber: 21 }]
       })
     ).rejects.toThrow("outside replacement");
-    expect(await store.getBankProviderLedger(query)).toHaveLength(1);
-    await store.replaceBankProviderLedgerRange({
+    expect(await store.getVaultProviderLedger(query)).toHaveLength(1);
+    await store.replaceVaultProviderLedgerRange({
       chainId: 84532,
-      bank: BANK,
+      vault: BANK,
       fromBlock: 20n,
       toBlock: 20n,
       rows: []
     });
-    expect(await store.getBankProviderLedger(query)).toEqual([]);
-    expect(await store.getBankProviderLedger({ ...query, bank: ASSET })).toHaveLength(1);
-    expect(await store.getBankProviderLedger({ ...query, chainId: 1 })).toHaveLength(1);
+    expect(await store.getVaultProviderLedger(query)).toEqual([]);
+    expect(await store.getVaultProviderLedger({ ...query, vault: ASSET })).toHaveLength(1);
+    expect(await store.getVaultProviderLedger({ ...query, chainId: 1 })).toHaveLength(1);
     const canonical = {
       ...row,
       txHash: "0xdd" as const,
-      action: "donation" as const,
+      action: "deposit" as const,
       receiver: BANK
     };
-    await store.replaceBankProviderLedgerRange({
+    await store.replaceVaultProviderLedgerRange({
       chainId: 84532,
-      bank: BANK,
+      vault: BANK,
       fromBlock: 20n,
       toBlock: 20n,
       rows: [canonical]
     });
-    await store.replaceBankProviderLedgerRange({
+    await store.replaceVaultProviderLedgerRange({
       chainId: 84532,
-      bank: BANK,
+      vault: BANK,
       fromBlock: 20n,
       toBlock: 20n,
       rows: [canonical]
     });
-    expect(await store.getBankProviderLedger(query)).toMatchObject([
-      { action: "donation", caller: PLAYER, receiver: BANK, epochId: "1" }
+    expect(await store.getVaultProviderLedger(query)).toMatchObject([
+      { action: "deposit", caller: PLAYER, receiver: BANK, withdrawAfter: "1" }
     ]);
-    expect(await store.getBankProviderLedger({ ...query, endBlock: 19 })).toEqual([]);
+    expect(await store.getVaultProviderLedger({ ...query, endBlock: 19 })).toEqual([]);
   });
 });

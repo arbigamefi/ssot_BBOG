@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.37;
 
 import "forge-std/StdJson.sol";
 import {Governable} from "../../src/access/Governable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
-import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
+import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {SportsHub} from "../../src/core/SportsHub.sol";
 import {SportsRiskEngine} from "../../src/core/SportsRiskEngine.sol";
-import {ChainlinkV2PlusWrapperAdapter} from "../../src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol";
 import {SafeGovernance} from "../common/SafeGovernance.sol";
 
 /// @dev Shared target enumeration prevents acceptance packages and release checks diverging.
@@ -21,24 +20,21 @@ library V16Snapshot {
 
     function targets(string memory snap) internal pure returns (address[] memory list) {
         require(
-            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.6-house-edge-allocation"),
-            "not v1.6"
+            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.6-nft-liquidity"), "not v1.6"
         );
         uint256 pools = snap.readUint(".numPools");
         require(pools > 0 && pools <= 32, "bad pool count");
         bool sports = snap.readUint(".sportsEnabled") == 1;
-        list = new address[](5 + pools + (sports ? 2 : 0));
-        list[0] = snap.readAddress(".adapter");
-        list[1] = snap.readAddress(".vrfHub");
-        list[2] = snap.readAddress(".poolRegistry");
-        list[3] = snap.readAddress(".refRegistry");
-        list[4] = snap.readAddress(".gameHub");
+        list = new address[](3 + pools + (sports ? 2 : 0));
+        list[0] = snap.readAddress(".poolRegistry");
+        list[1] = snap.readAddress(".refRegistry");
+        list[2] = snap.readAddress(".gameHub");
         for (uint256 i; i < pools; ++i) {
-            list[5 + i] = snap.readAddress(string.concat(".poolBank_", vm.toString(i)));
+            list[3 + i] = snap.readAddress(string.concat(".poolBank_", vm.toString(i)));
         }
         if (sports) {
-            list[5 + pools] = snap.readAddress(".sportsRiskEngine");
-            list[6 + pools] = snap.readAddress(".sportsHub");
+            list[3 + pools] = snap.readAddress(".sportsRiskEngine");
+            list[4 + pools] = snap.readAddress(".sportsHub");
         }
         for (uint256 i; i < list.length; ++i) {
             require(list[i] != address(0), "zero governance target");
@@ -59,9 +55,8 @@ library V16Snapshot {
         );
         address bootstrap = snap.readAddress(".bootstrapGovernance");
         require(bootstrap != safe && bootstrap != address(0), "invalid bootstrap");
-        string[17] memory keys = [
-            string("adapter"),
-            "vrfHub",
+        string[16] memory keys = [
+            string("vrfHub"),
             "poolRegistry",
             "settlementRouter",
             "refRegistry",
@@ -81,7 +76,7 @@ library V16Snapshot {
         for (uint256 i; i < keys.length; ++i) {
             address target = snap.readAddress(string.concat(".", keys[i]));
             if (target == address(0)) {
-                require((i == 7 || i == 8) && snap.readUint(".sportsEnabled") == 0, "missing contract");
+                require((i == 6 || i == 7) && snap.readUint(".sportsEnabled") == 0, "missing contract");
             } else {
                 require(
                     target.code.length != 0
@@ -103,7 +98,7 @@ library V16Snapshot {
         require(registry.poolCount() == pools, "pool count mismatch");
         _verifyConfiguration(snap);
         for (uint256 i; i < pools; ++i) {
-            Bank bank = Bank(list[5 + i]);
+            Bank bank = Bank(list[3 + i]);
             string memory suffix = vm.toString(i);
             uint64 poolId = uint64(snap.readUint(string.concat(".poolId_", suffix)));
             require(
@@ -131,15 +126,25 @@ library V16Snapshot {
             require(bank.guardian() == snap.readAddress(".guardian"), "guardian mismatch");
             require(bank.paused(), "risk-in must remain paused until launch");
             require(bank.asset() == snap.readAddress(string.concat(".poolAsset_", vm.toString(i))), "asset mismatch");
-            uint256 decimals = snap.readUint(string.concat(".poolLpDecimals_", suffix));
-            require(bank.decimals() == decimals, "bank precision mismatch");
+            uint256 decimals = snap.readUint(string.concat(".poolAssetDecimals_", suffix));
+            require(bank.assetDecimals() == decimals, "bank precision mismatch");
             require(IERC20Metadata(bank.asset()).decimals() == decimals, "asset precision mismatch");
             require(bank.settlementRouter() == snap.readAddress(".settlementRouter"), "router mismatch");
+            require(bank.vault() == snap.readAddress(string.concat(".poolVault_", suffix)), "vault mismatch");
+            require(
+                bank.vault().codehash == snap.readBytes32(string.concat(".codeHash_poolVault_", suffix)),
+                "vault code mismatch"
+            );
+            require(
+                SettlementRouter(bank.settlementRouter()).settlementConsumer(address(bank))
+                    == snap.readAddress(".vrfHub"),
+                "consumer mismatch"
+            );
             require(
                 bank.riskReserveBps() == snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix))
                     && bank.withdrawalBufferBps()
                         == snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix))
-                    && bank.minStake() == snap.readUint(string.concat(".poolBankMinStake_", suffix))
+                    && bank.minBetAmount() == snap.readUint(string.concat(".poolBankMinBetAmount_", suffix))
                     && bank.minPlayerTurnoverForUnlock()
                         == snap.readUint(string.concat(".poolBankMinTurnoverForUnlock_", suffix))
                     && bank.holdbackVestingSeconds()
@@ -153,7 +158,6 @@ library V16Snapshot {
         GameHub hub = GameHub(snap.readAddress(".gameHub"));
         require(
             hub.defaultHouseEdgeBps() == snap.readUint(".defaultHouseEdgeBps")
-                && hub.maxAffiliateDeltaBps() == snap.readUint(".maxAffiliateDeltaBps")
                 && hub.refundTimeoutSeconds() == snap.readUint(".refundTimeoutSeconds"),
             "game configuration mismatch"
         );
@@ -161,10 +165,8 @@ library V16Snapshot {
         // A change the bootstrap queued while it still governed would activate after the Safe takes over, and
         // anyone may activate it. The release approves only the values above, so nothing may be pending, both
         // before acceptance and in the final check after it.
-        for (uint8 p; p <= uint8(type(IGameHub.EdgeParam).max); ++p) {
-            (, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam(p));
-            require(activatesAt == 0, "pending edge change is not part of the release");
-        }
+        (, uint64 activatesAt) = hub.pendingEdgeChange();
+        require(activatesAt == 0, "pending edge change is not part of the release");
         (uint16 l0, uint16 l1, uint16 l2, uint16 holdback) = hub.getReferralConfig(hub.activeReferralConfigId());
         require(
             l0 == snap.readUint(".refL0Bps") && l1 == snap.readUint(".refL1Bps") && l2 == snap.readUint(".refL2Bps")
@@ -188,11 +190,18 @@ library V16Snapshot {
                 hub.gameModule(keccak256(bytes(games[i]))) == snap.readAddress(string.concat(".", modules[i])),
                 "game module mismatch"
             );
+            require(
+                hub.gameMaxBetCount(keccak256(bytes(games[i])))
+                        == snap.readUint(string.concat(".gameMaxBetCount_", games[i]))
+                    && hub.gameCallbackGasLimit(keccak256(bytes(games[i])))
+                        == snap.readUint(string.concat(".gameCallbackGasLimit_", games[i])),
+                "game admission mismatch"
+            );
         }
-        ChainlinkV2PlusWrapperAdapter adapter = ChainlinkV2PlusWrapperAdapter(payable(snap.readAddress(".adapter")));
+        VRFHub vrf = VRFHub(payable(snap.readAddress(".vrfHub")));
         require(
-            adapter.vrfHub() == snap.readAddress(".vrfHub")
-                && address(VRFHub(payable(snap.readAddress(".vrfHub"))).adapter()) == address(adapter),
+            vrf.wrapper() == snap.readAddress(".vrfWrapper")
+                && vrf.settlementRouter() == snap.readAddress(".settlementRouter"),
             "VRF configuration mismatch"
         );
         if (snap.readUint(".sportsEnabled") == 1) {

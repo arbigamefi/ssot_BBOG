@@ -156,39 +156,45 @@ function findRevert(err: unknown): any | undefined {
 function mapRevert(errorName: string, args?: unknown[]): DomainError {
   // Hub errors (subset)
   switch (errorName) {
-    case "ExceedsClaimable":
+    case "LPUnavailable":
       return {
-        code: "EXCEEDS_CLAIMABLE",
-        message: "The claimable amount changed. Refresh your position and try again.",
+        code: "LP_UNAVAILABLE",
+        message: "LP operation is unavailable. Refresh the deposit status.",
         severity: "warning",
-        retryable: true
+        details: { status: Number(args?.[0]) }
       };
-    case "ClaimWouldStrandAssets":
+    case "NotDepositOwner":
       return {
-        code: "CLAIM_WOULD_STRAND_ASSETS",
-        message:
-          "This partial withdrawal would leave assets without claim shares. Claim all assets or redeem fewer shares.",
+        code: "NOT_DEPOSIT_OWNER",
+        message: "Only the current NFT owner may withdraw.",
         severity: "warning"
       };
-    case "NothingToCancel":
+    case "InsufficientFreeCapital":
       return {
-        code: "NOTHING_TO_CANCEL",
-        message: "No unactivated redemption request can be cancelled. Refresh your position.",
+        code: "INSUFFICIENT_FREE_CAPITAL",
+        message: "Free LP capital changed. Refresh the percentage quote.",
         severity: "warning",
         retryable: true
+      };
+    case "IncorrectPercent":
+    case "ZeroWithdrawal":
+      return {
+        code: "INVALID_NFT_WITHDRAWAL",
+        message:
+          "Choose a valid percentage with a nonzero payment, or close a matured zero-value NFT in full.",
+        severity: "warning"
+      };
+    case "CapitalLimit":
+      return {
+        code: "CAPITAL_LIMIT",
+        message: "The deposit exceeds the pool's admitted capital bound.",
+        severity: "warning"
       };
     case "RiskInPaused":
       return {
         code: "RISK_IN_PAUSED",
         message: "New bets and optional withdrawals are currently paused for this asset.",
         severity: "warning",
-        details: { asset: args?.[0] }
-      };
-    case "UnknownAsset":
-      return {
-        code: "UNKNOWN_ASSET",
-        message: "This asset is not supported by the current Hub release.",
-        severity: "error",
         details: { asset: args?.[0] }
       };
     case "UnknownGame":
@@ -208,16 +214,9 @@ function mapRevert(errorName: string, args?: unknown[]): DomainError {
     case "HouseEdgeTooHigh":
       return {
         code: "HOUSE_EDGE_TOO_HIGH",
-        message: "The max house edge tolerance is too high.",
+        message: "The current house edge exceeds the accepted fee ceiling. Refresh the quote.",
         severity: "error",
         details: { got: args?.[0], maxAllowed: args?.[1] }
-      };
-    case "HouseEdgeTooLow":
-      return {
-        code: "HOUSE_EDGE_TOO_LOW",
-        message: "The max house edge tolerance is too low.",
-        severity: "error",
-        details: { got: args?.[0], minAllowed: args?.[1] }
       };
     case "RefundNotReady":
       return {
@@ -274,16 +273,16 @@ function mapRevert(errorName: string, args?: unknown[]): DomainError {
         severity: "error"
       };
     // Bank errors
-    case "StakeBelowMinimum":
+    case "BetAmountBelowMinimum":
       return {
         code: "STAKE_BELOW_MINIMUM",
-        message: "Total stake is below this pool’s minimum.",
+        message: "The bet amount is below this pool’s per-round minimum.",
         severity: "warning",
-        details: { stake: args?.[0], minimum: args?.[1] }
+        details: { amount: args?.[0], minimum: args?.[1] }
       };
-    case "ActiveHoldLimit":
+    case "OpenHoldLimit":
       return {
-        code: "ACTIVE_HOLD_LIMIT",
+        code: "OPEN_HOLD_LIMIT",
         message: "This pool is at its open-bet capacity. Try again after a bet settles.",
         severity: "warning",
         retryable: true
@@ -300,12 +299,6 @@ function mapRevert(errorName: string, args?: unknown[]): DomainError {
         message:
           "Optional outflow blocked: insufficient liquidity after the withdrawal buffer and reserves.",
         severity: "warning"
-      };
-    case "NotHub":
-      return {
-        code: "NOT_HUB",
-        message: "Only the Hub contract can call this function.",
-        severity: "error"
       };
     case "BetAlreadyExists":
       return {

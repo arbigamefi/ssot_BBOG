@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import {Governable} from "../access/Governable.sol";
 import {Errors} from "../libs/Errors.sol";

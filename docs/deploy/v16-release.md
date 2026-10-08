@@ -1,16 +1,25 @@
 # Deploy the current contracts
 
-The project is in development and has not launched. v1.6 is the only supported contract and release
+The project is in development and has not launched. The [NFT-deposit/callback target](../design/lp-accounting-and-callback-implementation.md)
+is implemented in the core contracts and application interfaces; release qualification is pending.
+See the [current implementation evidence](../audit/nft-core-integration-review.md). v1.6 is the only supported contract and release
 format. Start with a fresh deployment, a fresh database schema, and the current application build.
-The [controlled Sepolia candidate](v16-sepolia-acceptance.md) has been deployed and partly accepted.
-Its receipts apply to its recorded source; subsequent fixes require a newly frozen candidate.
+Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualify the fresh NFT candidate.
+
+The [2026-10-05 fresh-deployment preflight](fresh-base-sepolia-preflight-2026-10-05.md) records the current
+paused testnet candidate, completed local checks and remaining signing/deployment steps. The owner stopped
+the universal callback gas proof; its incomplete status is preserved separately from this deployment preparation.
 
 ## Before deployment
 
-- Complete the current contract, SDK, keeper and frontend tests, including casino admission and batch
-  redemption. Implement and verify ADR-0035's accepted requirement: old stuck positions cannot block
-  later exits, and historical risk/recovery rights remain owned. Verify the exact release source and
-  generated ABIs, then freeze the resulting final audit scope.
+- Implement and verify NFT deposits, original-tree allocation and dual-custody accounting, durable same-callback settlement and every required
+  consumer change. Remove abandoned interfaces and adapter fields, regenerate one ABI/release schema,
+  then run the complete scenario matrix and independent review before freezing the final audit scope.
+- Pin and license the verified tree sources; verify Bank constructor/initcode and Vault runtime size.
+  Measure the full wrapper/tree callback and re-read coordinator limits; qualify every admitted game/round
+  limit. Preserve the accepted LP ordering tradeoff and verify its public disclosure before outside funding.
+  A previous standalone finalize
+  budget or deployed test receipt is not evidence for this candidate.
 - Configure the final Safe governance, guardian, keeper, signer, assets and VRF wrapper explicitly.
   Use `v16/chain-84532.env.example` as a template, replacing every placeholder.
   The first deployment is Base Sepolia with exactly one USDC casino pool.
@@ -20,18 +29,42 @@ Its receipts apply to its recorded source; subsequent fixes require a newly froz
 ## Deployment and application setup
 
 1. Run `make deploy-dryrun` with the intended configuration and network RPC. Review all addresses,
-   pool domains, reserve and withdrawal buffers, game limits, edge allocation and refund timeouts.
+   pool domains, Bank-created Vault bindings, risk and PF/XP outflow buffers, constant 24-hour NFT
+   cooldown, game limits, edge allocation and refund timeouts. LP free capital is L−K with no extra
+   percentage withdrawal buffer. The official deployment defaults are `riskReserveBps=6000` (60% retained
+   for new-risk admission) and independent `withdrawalBufferBps=1000` (10% PF/XP collection buffer).
+   Reject missing Vault metadata instead of falling back to Bank.
 2. Run `make deploy-v16` with the approved keystore account. Set `SNAPSHOT_PATH` to the generated
    snapshot. The command generates the verification helper from that snapshot using
    `script/tools/gen_verify_helpers.py`. Set `ETHERSCAN_V2_API_KEY` for verification;
    the helper uses the Etherscan V2 endpoint for the snapshot's chain and the default
-   compilation profile. Review and execute `make safe-acceptance-v16` with the Safe owners.
+   compilation profile. Include LiquidityVault source/constructor verification and authenticate
+   Bank↔Vault/asset addresses and both codehashes in the signed snapshot. Review and execute `make safe-acceptance-v16` with the Safe owners.
 3. Run `make release-governance-check`, `make release-v16` and `make verify-v16` with the configured
    signer and network. A release contains a signed digest, manifest, ABIs and encoding vectors.
    Governance verification requires an RPC with historical code and complete authorization logs.
    The signed start block must precede Registry/SportsHub creation. The verifier replays all Hub/pool
    and Sports role grants, rejects undeclared members and checks the same frozen block in Forge.
    A zero optional Sports role declares an empty set; provider or coverage failure rejects the release.
+   Release verification also checks the first-callback certificate domain for the snapshot's chain
+   (`script/release/first-callback-domain-<chainId>.json`). `make release-v16` runs this check before anything is
+   signed, as `release-domain-check`.
+   - `VerifyCallbackDomainV16` works offline. It fails unless:
+     - the certificate status is `CERTIFIED`;
+     - each game uses the certified callback gas and at most the certified round count;
+     - each module runtime matches the certified codehash;
+     - each casino pool's minimum bet is at least the floor that keeps k > 0, and its asset is the certified token;
+     - the VRF wrapper is the certified one.
+   - `verify_callback_provider.py`, also part of `release-domain-check`, checks the live token and provider at
+     one frozen block. It fails unless the USDC implementation and code, the coordinator and its gas parameters
+     are the certified ones.
+   - The governance check (`verify_governance.py`) replays `GameRegistered` and fails unless the registered game
+     set is exactly the certified eight.
+
+   The domain file is `CERTIFIED` for chain 84532 since 2026-10-08, citing certificate v4 (seal
+   `d67a7083…`), its erratum and the independent review (`d6c1619c…`) in its `certificateSeal` block. Any
+   recertification trigger in ADR-0006 sets it back to `PENDING_INDEPENDENT_REVIEW`, after which every release
+   attempt fails by design until a new certificate is accepted. Each chain needs its own certificate.
 4. Run the authenticated **Frontend Docker Images** workflow on the same source commit with the
    signed bundle's release tag, exact filename, approved SHA-256, and `chain_id=84532`. Configure the
    independent `V16_RELEASE_SIGNER` repository variable. The workflow verifies the archive's source
@@ -43,32 +76,31 @@ Its receipts apply to its recorded source; subsequent fixes require a newly froz
    Use [Docker deployment instructions](../../frontend/deploy/docker/README.md) to pin both immutable
    image digests, the reviewed source revision, chain ID and expected release digest before startup.
    Browser RPC remains public. Casino and LP deposit feature flags default off on both supported
-   chains until the appropriate acceptance stage; the controlled Sepolia acceptance image explicitly
-   enables them. Contract pause and available capital remain independent admission checks.
+   chains until the appropriate acceptance stage; enable them only in the reviewed acceptance image. Contract pause and available capital remain independent admission checks.
 
 ## Network acceptance
 
-Verify deposits; redemption requests and cancellation until actual activation, including after
-earliest eligibility; and continued new betting before and after activation when active capital is
-sufficient and the 128 active-risk-position capacity is not full. Redemption must not trigger a betting pause. Verify that settlement makes staying capital available in that same transaction. With an old recovery epoch still unresolved,
-verify later activation and liquid claims, historical recovery ownership after transfers and full exits,
-and correct recovery cash-flow indexing. Test payout-transfer failure and player-payable recovery.
-Reconcile active NAV and active reserve separately from historical pocket backing, fixed liabilities and
-global `totalReserved()` across activation, settlement and claims. New risk must not spend historical
-backing; insufficient active funds and an independent emergency pause still reject new bets.
-Every admitted casino game must finalize, and timed-out PendingVRF bets must refund. Reconcile
-HouseEdgeAllocated events, actual cash transfers, XP and PF liabilities. Exercise restart/replay,
-reorg handling, alert delivery, Safe pause and governance-only unpause.
-Verify the new keeper's WS subscription and a real ready event through its final transaction receipt;
-exercise disconnect/reconnect and HTTP catch-up.
-Bank payable discovery, historical-risk monitoring and provider cash-flow indexing advance through
-finalized blocks. Verify the target RPC supports this tag and monitor finalized coverage separately
-from the latest head. Automatic payable discovery, risk alerts and indexed LP cash flows may lag by
-chain finality; betting, batch activation and on-chain user claims do not wait for these scanners.
+Verify addDeposit/addDepositFor and mature withdrawDeposit by NFT ID and 1e12 fraction. Asset
+approval targets Vault; withdrawal requires the current owner and pays that owner. Check per-deposit
+24-hour maturity, partial-success relock, transfer-preserved deadlines, full burn, zero-value close,
+liquidity limits and same-receipt payment. Verify the browser immediately reduces capital/max bet.
+No withdrawal schedules a betting pause. Reconcile Vault root L, K=R−P, G=L+P, both cash balances,
+surplus and PF/XP/player debts at one block. Exited capital has no subsequent claim. Exercise fixed
+cutoff allocation, full-tree fallback and empty-root protocol capital, not just a happy-path withdrawal.
 
-Sports admission has its own terminal-path gate. Do not accept outside LP capital until the ADR-0035
-implementation and external audit gates have been met. Local mocks cannot prove signer custody,
-network availability or the actual Safe execution.
+Normal wrapper fulfillment must persist the seed and settle without a keeper transaction. Force a
+callback failure, verify the canonical LP gate and retained seed, then retry to one terminal payment
+and one acknowledgment. Verify genuine missing-randomness timeout refunds and refusal to refund a
+received result. Exercise failed token payment, original-player debt claim and native fee credits.
+
+Keep Infura HTTP and Alchemy WS; prove real subscription ingestion, disconnect/reconnect, HTTP catch-up,
+terminal event indexing, duplicate/reorg handling, process restart, alert delivery and Safe pause/unpause.
+Payable discovery and provider cash history may wait for finalized blocks; monitor this coverage separately
+from live Bank reads. Normal callback completion and live capital refresh do not wait for those scanners.
+
+Sports admission is separate. Complete external audit, accepted ordering-risk disclosures, callback gas and chosen
+business-load qualification before outside LP funding. Local mocks cannot prove signer custody, actual
+Safe execution, provider availability or deployed-network behavior.
 
 ## Reproducible source and deployment inputs
 
@@ -92,3 +124,10 @@ strict snapshot/signature/manifest/ABI checks, proof gates and live governance/f
 gate. Required repository signer and RPC settings remain mandatory. A tag push
 alone does not validate a release without its deployment bundle. Source audit
 packaging is not a replacement for these deployment checks.
+
+The fork gate explicitly enables `NftDirectWrapperFork.t.sol` and requires all four tests to
+execute and pass. It uses the authenticated snapshot's wrapper, USDC and CoinToss gas limit at the
+fresh block returned by governance verification. Historical block/wrapper overrides are rejected.
+This gate currently supports the first single-USDC casino pool; it checks real wrapper/token
+integration for one round, not every game's maximum-complexity callback gas. The standalone test
+without explicit targets is a separate reproducible historical reference and cannot qualify a release.

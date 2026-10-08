@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import {
   createPostgresBetIndexStore,
-  type BankProviderLedgerRow,
+  type VaultProviderLedgerRow,
   type BetIndexStore
 } from "@ssot/bet-index";
 import { createSSOTSDK, type Address } from "@ssot/ssot/sdk";
-import type { BankProviderLedgerEntry } from "@ssot/ssot/sdk";
+import type { VaultProviderLedgerEntry } from "@ssot/ssot/sdk";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 import { parseRequestChainId } from "../../../../server/chain";
@@ -107,21 +107,21 @@ async function getReadyDurableBetIndexStore() {
   return store;
 }
 
-function toBankProviderLedgerRow({
+function toVaultProviderLedgerRow({
   asset,
   bank,
+  vault,
   chainId,
   entry,
-  owner,
   poolId
 }: {
   asset: Address;
   bank: Address;
+  vault: Address;
   chainId: number;
-  entry: BankProviderLedgerEntry;
-  owner: Address;
+  entry: VaultProviderLedgerEntry;
   poolId: number;
-}): BankProviderLedgerRow {
+}): VaultProviderLedgerRow {
   return {
     action: entry.action,
     asset,
@@ -129,22 +129,23 @@ function toBankProviderLedgerRow({
     bank,
     blockNumber: entry.blockNumber,
     chainId,
-    id: `${chainId}:bank-provider:${entry.txHash.toLowerCase()}:${entry.logIndex}`,
+    vault,
+    depositId: entry.depositId.toString(),
+    id: `${chainId}:vault-provider:${entry.txHash.toLowerCase()}:${entry.logIndex}`,
     logIndex: entry.logIndex,
-    owner: owner.toLowerCase() as Address,
+    owner: (entry.action === "transfer" ? entry.from! : entry.owner!).toLowerCase() as Address,
     poolId: String(poolId),
-    sharePrice: entry.sharePrice?.toString(),
-    receiver: entry.receiver,
-    caller: entry.caller,
-    epochId: entry.epochId?.toString(),
-    shares: entry.shares.toString(),
+    receiver: entry.action === "transfer" ? entry.to : entry.owner,
+    caller: entry.action === "deposit" ? entry.payer : undefined,
+    percent: entry.percent?.toString(),
+    withdrawAfter: entry.withdrawAfter?.toString(),
     timestamp: entry.timestamp,
     txHash: entry.txHash.toLowerCase() as `0x${string}`,
     updatedAt: Date.now()
   };
 }
 
-function rowToJson(row: BankProviderLedgerRow) {
+function rowToJson(row: VaultProviderLedgerRow) {
   return {
     id: row.id,
     action: row.action,
@@ -153,15 +154,17 @@ function rowToJson(row: BankProviderLedgerRow) {
     logIndex: row.logIndex,
     timestamp: row.timestamp,
     assets: row.assets,
-    sharePrice: row.sharePrice,
-    receiver: row.receiver,
-    caller: row.caller,
-    epochId: row.epochId,
-    shares: row.shares
+    depositId: row.depositId,
+    owner: row.action === "transfer" ? undefined : row.owner,
+    payer: row.action === "deposit" ? row.caller : undefined,
+    from: row.action === "transfer" ? row.owner : undefined,
+    to: row.action === "transfer" ? row.receiver : undefined,
+    percent: row.percent,
+    withdrawAfter: row.withdrawAfter
   };
 }
 
-function pageFromRows(rows: BankProviderLedgerRow[], limit: number) {
+function pageFromRows(rows: VaultProviderLedgerRow[], limit: number) {
   const visibleRows = rows.slice(0, limit);
   const lastRow = visibleRows.at(-1);
   return {
@@ -226,15 +229,16 @@ export async function GET(request: Request) {
     if (!releaseResult.ok) throw new Error(releaseResult.error);
     const pool = releaseResult.release.pools.find((item) => item.poolId === poolId);
     if (!pool) throw new Error(`No pool found for poolId ${poolId}.`);
-    const requestedBank = url.searchParams.get("bank");
+    const requestedVault = url.searchParams.get("vault");
     if (
-      requestedBank &&
-      normalizeProviderLedgerAddress(requestedBank, "bank").toLowerCase() !==
-        pool.bank.toLowerCase()
-    )
+      requestedVault &&
+      normalizeProviderLedgerAddress(requestedVault, "vault").toLowerCase() !==
+        pool.vault.toLowerCase()
+    ) {
       throw new Error(
-        "bank does not match the selected release pool; refresh before reading its ledger."
+        "vault does not match the selected release pool; refresh before reading its ledger."
       );
+    }
     const rpcUrl = resolveServerRpcUrl(chainId);
     if (!rpcUrl) throw new Error(`No RPC URL configured for chainId=${chainId}.`);
 
@@ -242,14 +246,14 @@ export async function GET(request: Request) {
     const endBlock = requestedEndBlock ?? Number(await publicClient.getBlockNumber());
     const sdk = createSSOTSDK({ release: releaseResult.release, publicClient });
     let store: BetIndexStore | null = null;
-    let durableRows: BankProviderLedgerRow[] = [];
+    let durableRows: VaultProviderLedgerRow[] = [];
     try {
       store = await getReadyDurableBetIndexStore();
       durableRows =
         store == null
           ? []
-          : await store.getBankProviderLedger({
-              bank: normalizeProviderLedgerAddress(pool.bank, "pool bank"),
+          : await store.getVaultProviderLedger({
+              vault: normalizeProviderLedgerAddress(pool.vault, "pool vault"),
               beforeBlock,
               beforeLogIndex,
               endBlock,
@@ -270,7 +274,7 @@ export async function GET(request: Request) {
     const scanStart = Math.max(origin, scanEnd - 1_899);
     const scannedEntries =
       shouldScan && scanEnd >= origin
-        ? await sdk.bank.getProviderLedger(poolId, owner, {
+        ? await sdk.vault.getProviderLedger(poolId, owner, {
             limit: queryLimit,
             startBlock: scanStart,
             endBlock: scanEnd,
@@ -279,12 +283,12 @@ export async function GET(request: Request) {
           })
         : [];
     const scannedRows = scannedEntries.map((entry) =>
-      toBankProviderLedgerRow({
+      toVaultProviderLedgerRow({
         asset: normalizeProviderLedgerAddress(pool.asset, "pool asset"),
         bank: normalizeProviderLedgerAddress(pool.bank, "pool bank"),
+        vault: normalizeProviderLedgerAddress(pool.vault, "pool vault"),
         chainId,
         entry,
-        owner,
         poolId
       })
     );
@@ -321,7 +325,7 @@ export async function GET(request: Request) {
     const message = error instanceof Error ? error.message : "Failed to query provider ledger.";
     const status =
       message.includes("owner") ||
-      message.includes("bank") ||
+      message.includes("vault") ||
       message.includes("poolId") ||
       message.includes("startBlock") ||
       message.includes("endBlock") ||

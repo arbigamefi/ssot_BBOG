@@ -132,7 +132,7 @@ describe("recent bets server aggregation", () => {
             asset: "0x4444444444444444444444444444444444444444",
             gameId: GAME_ID,
             player: PLAYER,
-            pricingAffiliate: AFFILIATE,
+            referrerL1: AFFILIATE,
             positionId: 7n,
             requestId: 99n,
             stake: 10n
@@ -166,7 +166,7 @@ describe("recent bets server aggregation", () => {
       payout: "19",
       payoutGross: "20",
       player: PLAYER,
-      pricingAffiliate: AFFILIATE,
+      referrerL1: AFFILIATE,
       randomHash: `0x${"55".repeat(32)}`,
       requestId: "99",
       state: "finalized",
@@ -435,7 +435,7 @@ describe("recent bets server aggregation", () => {
             asset: ASSET,
             gameId: GAME_ID,
             player: PLAYER,
-            pricingAffiliate: AFFILIATE,
+            referrerL1: AFFILIATE,
             positionId: 8n,
             stake: 10n
           },
@@ -448,7 +448,7 @@ describe("recent bets server aggregation", () => {
             asset: ASSET_TWO,
             gameId: GAME_ID,
             player: PLAYER,
-            pricingAffiliate: AFFILIATE,
+            referrerL1: AFFILIATE,
             positionId: 10n,
             stake: 99n
           },
@@ -460,7 +460,9 @@ describe("recent bets server aggregation", () => {
           args: {
             gameId: GAME_ID,
             player: "0x6666666666666666666666666666666666666666",
-            pricingAffiliate: "0x7777777777777777777777777777777777777777",
+            referrerL1: "0x7777777777777777777777777777777777777777",
+            referrerL2: AFFILIATE,
+            asset: ASSET,
             positionId: 9n,
             stake: 33n
           },
@@ -522,7 +524,7 @@ describe("recent bets server aggregation", () => {
     expect(response.rows[0]).toMatchObject({
       betId: "8",
       payout: "19",
-      pricingAffiliate: AFFILIATE,
+      referrerL1: AFFILIATE,
       stake: "10",
       state: "finalized"
     });

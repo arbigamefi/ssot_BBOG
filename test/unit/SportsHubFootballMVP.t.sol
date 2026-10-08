@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {BankTestBase, TestRandomnessConsumer, DirectRouterFixture} from "../utils/BankTestBase.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
@@ -11,7 +13,7 @@ import {SportsRiskEngine} from "../../src/core/SportsRiskEngine.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
-contract SportsHubFootballMVPTest is Test {
+contract SportsHubFootballMVPTest is BankTestBase {
     address internal gov = address(0xA11CE);
     address internal player = address(0xB0B);
     address internal reporter = address(0xBEEF);
@@ -48,7 +50,7 @@ contract SportsHubFootballMVPTest is Test {
         oddsSigner = vm.addr(oddsSignerKey);
 
         usdc = new MockERC20("USD Coin", "USDC", 6);
-        sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6, 1);
+        sportsBank = new Bank(address(usdc), gov, 1000, 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
         riskEngine = new SportsRiskEngine(gov, 1_000e6, 2_000e6, 10_000e6, 5_000e6, 20_000e6);
@@ -59,14 +61,15 @@ contract SportsHubFootballMVPTest is Test {
         registry.setHubRegistered(address(sportsHub), true);
         registry.setHubAllowedForPool(SPORTS_POOL_ID, address(sportsHub), true);
         sportsBank.setSettlementRouterOnce(address(router));
+        _bindTestConsumer(sportsBank);
         sportsHub.setOddsSigner(oddsSigner, true);
         sportsHub.setResultReporter(reporter, true);
         vm.stopPrank();
 
         usdc.mint(gov, 1_000_000e6);
         vm.startPrank(gov);
-        usdc.approve(address(sportsBank), type(uint256).max);
-        sportsBank.deposit(500_000e6, gov);
+        usdc.approve(address(sportsBank.vault()), type(uint256).max);
+        LiquidityVault(sportsBank.vault()).addDepositFor(gov, 500_000e6);
         vm.stopPrank();
 
         usdc.mint(player, 10_000e6);

@@ -409,7 +409,9 @@
         "rolls": {
           "label": "Rolls",
           "total": "Total: {amount} {symbol}",
-          "aria": "Roll count"
+          "aria": "Roll count",
+          "limit": "Up to {count} rounds per position for this game",
+          "loadingLimit": "Reading this game’s round limit"
         },
         "advanced": {
           "label": "Advanced",
@@ -440,7 +442,8 @@
           "preparing": "PREPARING ROUND...",
           "placeBet": "PLACE BET",
           "revealing": "Revealing..."
-        }
+        },
+        "maxSummary": "{perRound} per round · {total} total"
       },
       "selection": {
         "dice": {
@@ -711,7 +714,8 @@
         "facts": {
           "game": "Game",
           "player": "Player",
-          "affiliate": "Referrer",
+          "referrerL1": "Direct referrer",
+          "referrerL2": "Second-level referrer",
           "asset": "Asset",
           "betId": "Bet ID",
           "requestId": "VRF request",
@@ -728,9 +732,8 @@
           "lps": "Kept by LPs",
           "playerRakeback": "Rakeback",
           "referrers": "Referrers",
-          "affiliateMarkup": "Referrer markup",
           "protocol": "Protocol fee",
-          "note": "LPs keep half of the edge. The other half pays referral rewards and any referrer markup; what remains is the protocol fee. Amounts come from this bet's HouseEdgeAllocated event."
+          "note": "LPs keep half of the edge. The other half pays referral rewards; what remains is the protocol fee. Amounts come from this bet's HouseEdgeAllocated event."
         },
         "actions": {
           "play": "Play this game",
@@ -978,7 +981,8 @@
         "cost": "Total {total} {symbol} · Randomness fee budget ≈ {fee}; gas extra.",
         "contextChanged": "Your wallet, network or bet settings changed. The next step was stopped; review the current settings before continuing.",
         "capacity": "This pool is temporarily full. Try again after an open bet settles.",
-        "minimumStake": "Total stake is below the pool minimum. Refresh pool state and adjust the amount or roll count."
+        "minimumStake": "The amount per round is below the pool minimum. Refresh pool state and increase the amount per round.",
+        "houseEdgeChanged": "The current house edge exceeds the rate you accepted. Refresh and review the fee before betting again."
       },
       "poolStatus": {
         "loading": "Checking the {symbol} pool before new bets…",
@@ -987,7 +991,17 @@
         "loadingLabel": "Checking pool…",
         "unavailableLabel": "Pool status unavailable",
         "pausedLabel": "Pool paused",
-        "refresh": "Check pool status"
+        "refresh": "Check pool status",
+        "full": "The pool is at its open-position limit. Refresh after an existing bet settles.",
+        "fullLabel": "Pool at capacity",
+        "noLiquidity": "The pool currently has no LP capital to accept new bets.",
+        "noLiquidityLabel": "No LP capital",
+        "invalidAccounting": "Pool accounting is unavailable or inconsistent. New betting is disabled.",
+        "invalidAccountingLabel": "Accounting unavailable",
+        "gameUnavailable": "Game admission or its fee quote could not be confirmed. Refresh before betting.",
+        "gameUnavailableLabel": "Game settings unavailable",
+        "invalidCount": "The selected round count exceeds this game’s current limit. Choose fewer rounds.",
+        "invalidCountLabel": "Adjust round count"
       },
       "payment": {
         "transferred": "This settlement transaction transferred the settlement amount to the player wallet.",
@@ -2159,7 +2173,7 @@
         },
         "bankPosition": {
           "label": "Vault value",
-          "detail": "Current value of your bankroll shares."
+          "detail": "Current value of deposit NFTs; a partial page is never shown as the full position."
         },
         "refundCredit": {
           "label": "Refund balance",
@@ -2200,13 +2214,14 @@
         "eyebrow": "Assets",
         "title": "Wallet assets",
         "loading": "Loading balances.",
-        "shares": "{amount} shares",
         "columns": {
           "asset": "Asset",
           "wallet": "Wallet",
           "bankPosition": "Vault value",
-          "allowance": "Approved"
-        }
+          "allowance": "Vault allowance"
+        },
+        "nftCount": "{count} deposit NFTs",
+        "incomplete": "Open Earn for the complete position"
       },
       "refund": {
         "title": "Refund balance",
@@ -2692,7 +2707,7 @@
       },
       "activity": {
         "title": "Referred play",
-        "description": "Track casino bets that carried your affiliate address through the durable bet index.",
+        "description": "Track bets that recorded you as the direct (L1) referrer when accepted. L2 referrals are not included in these activity totals.",
         "loading": "Loading referred bets...",
         "empty": "No referred casino bets indexed yet.",
         "stats": {
@@ -2734,10 +2749,7 @@
       "unsupportedWriteAsset": "Write flows require an active casino pool for the selected asset.",
       "positiveAmount": "Amount must be positive.",
       "insufficientWalletBalance": "Amount exceeds the connected wallet balance.",
-      "exceedsMintable": "Share amount exceeds the shares mintable from the connected wallet balance.",
-      "exceedsWithdrawable": "Amount exceeds the currently withdrawable balance.",
-      "exceedsRedeemable": "Amount exceeds the currently redeemable shares.",
-      "allowanceNotConfirmed": "Approval is confirmed, but the Bank allowance has not updated yet. Retry deposit in a few seconds."
+      "exceedsWithdrawable": "Amount exceeds the currently withdrawable balance."
     },
     "format": {
       "assetFallback": "Asset"
@@ -2746,49 +2758,14 @@
       "eyebrow": "Bankroll provider",
       "title": "Provide payout capital to the {symbol} pool.",
       "description": "LPs back casino payouts and carry the variance of game results. Under the v1.6 rules, LPs keep half of every settled bet's house edge; the other half funds referral rewards and protocol fees.",
-      "disclosure": "Reserve, share price, and lifetime performance (gross gaming revenue, hold, velocity) are read on-chain from the Bank contract and are verifiable. Only the daily trend chart and max drawdown are indexed and may lag.",
-      "bankAddress": "Bank address"
-    },
-    "metrics": {
-      "sharePrice": {
-        "label": "Value / 1k shares"
-      },
-      "totalShares": {
-        "label": "Active shares",
-        "detail": "Active LP share supply; priced exit shares have been burned."
-      }
+      "disclosure": "Capital and liabilities come from Vault and Bank chain snapshots. Gaming statistics are not individual NFT returns. Daily charts use indexed data and may lag.",
+      "bankAddress": "Vault address"
     },
     "summary": {
       "capitalPosture": {
         "title": "Verifiable reserve ledger",
         "readModel": "on-chain read",
-        "totalAssets": "Active vault NAV",
-        "loading": "Reading the latest bank snapshot…",
-        "detail": "Current capital backing active shares; historical backing and payables are excluded.",
-        "totalAssetsDetail": "Current capital backing active shares; historical backing and payables are excluded."
-      },
-      "freeReserve": {
-        "label": "Free reserve",
-        "detail": "Active capital not reserved for open positions."
-      },
-      "sharePrice": {
-        "label": "Share price"
-      },
-      "totalShares": {
-        "label": "Active shares",
-        "detail": "Active LP share supply; priced exit shares have been burned."
-      },
-      "position": {
-        "label": "Your position",
-        "detail": "Assets equivalent for the connected wallet."
-      },
-      "liquidity": {
-        "label": "Risk reserve policy",
-        "detail": "Risk reserve {floor} · Bank {bank}"
-      },
-      "reserved": {
-        "label": "Active reserved liabilities",
-        "detail": "Free reserve {freeReserve} · Risk reserve {riskReserve}"
+        "loading": "Reading the latest bank snapshot…"
       }
     },
     "actions": {
@@ -2796,7 +2773,7 @@
       "title": "Deposit or exit",
       "asset": "Asset",
       "amount": "Amount",
-      "connectWallet": "Connect a wallet to run bank actions.",
+      "connectWallet": "Connect a wallet to deposit or withdraw.",
       "readOnly": "Read-only mode — switch chains to take actions.",
       "tabs": {
         "deposit": {
@@ -2805,13 +2782,8 @@
         },
         "withdraw": {
           "label": "Withdraw",
-          "description": "Exit by entering either an asset amount or a share amount."
+          "description": "Select a deposit NFT and a withdrawal percentage."
         }
-      },
-      "amountMode": {
-        "label": "Input mode",
-        "assets": "By assets",
-        "shares": "By shares"
       },
       "max": {
         "walletBalance": "Wallet balance",
@@ -2820,30 +2792,25 @@
       },
       "balance": {
         "wallet": "Wallet balance",
-        "mintable": "Mintable shares",
         "withdrawable": "Available to withdraw",
-        "redeemable": "Redeemable shares",
         "pending": "Pending",
         "useMax": "Max"
       },
       "submit": {
         "executing": "Executing",
         "deposit": "Deposit assets",
-        "mint": "Mint shares",
-        "withdraw": "Withdraw assets",
-        "redeem": "Redeem shares"
+        "withdraw": "Withdraw assets"
       },
       "trace": {
         "deposit": "Deposit trace",
         "withdraw": "Withdraw trace",
-        "redeem": "Redeem trace",
         "view": "View transaction status",
         "close": "Close",
         "statusDialog": "Bank transaction status"
       },
       "depositsClosed": {
         "title": "New deposits are closed",
-        "body": "This pool is not accepting new deposits. Existing LP requests and claims remain available under the pool’s rules."
+        "body": "This pool accepts no new deposits. Existing NFT withdrawals follow the contract rules."
       }
     },
     "flows": {
@@ -2852,27 +2819,16 @@
       },
       "deposit": {
         "preflight": "Validate inputs and simulate flow.",
-        "approveTitle": "Approve Bank",
+        "approveTitle": "Approve Vault",
         "approveDescription": "Set ERC20 allowance.",
         "depositTitle": "Deposit Assets",
-        "depositDescription": "Broadcast Bank.deposit."
-      },
-      "mint": {
-        "preflight": "Validate share amount and required assets.",
-        "mintTitle": "Mint Shares",
-        "mintDescription": "Broadcast Bank.mint."
+        "depositDescription": "Create an independent NFT deposit."
       },
       "direct": {
         "submit": "Submit",
         "confirm": "Confirm",
         "validate": "Validate constraints.",
         "receipt": "Wait for receipt."
-      },
-      "withdraw": {
-        "submit": "Broadcast Bank.withdraw."
-      },
-      "redeem": {
-        "submit": "Broadcast Bank.redeem."
       }
     },
     "trace": {
@@ -2887,40 +2843,17 @@
     "risk": {
       "title": "Risk checks",
       "readModel": "mixed source",
-      "custody": {
-        "label": "Custody boundary",
-        "title": "Non-custodial Bank.",
-        "detail": "Provider capital sits in the Bank contract. The UI separates verifiable reserves from indexed performance estimates."
-      },
-      "buffer": {
-        "label": "Payout buffer",
-        "detail": "Free reserve after reserved liabilities ({reserved}). Compare this with max-payout controls before opening deposits publicly."
-      },
-      "liquidityFloor": {
-        "label": "Withdrawal buffer",
-        "detail": "{bps} buffer for protocol and referral claims, currently {amount}. Priced LP claims and player payables are exempt."
-      },
       "release": {
         "label": "Release digest",
         "detail": "Asset identity, bank address, and UI reads are anchored to the active release manifest."
-      },
-      "payables": {
-        "label": "Payables",
-        "detail": "External payables {externalPayables} · Assets {assets}"
       }
     },
     "toast": {
       "processing": "Processing bank transaction...",
-      "minted": "Minted {amount} shares",
-      "redeemed": "Redeemed {amount} shares",
       "deposited": "Deposited {amount} {symbol}",
       "withdrew": "Withdrew {amount} {symbol}",
       "viewTransaction": "View transaction",
       "failed": "Transaction failed"
-    },
-    "units": {
-      "shares": "Shares",
-      "sharesLower": "shares"
     },
     "performance": {
       "title": "Vault performance",
@@ -2938,8 +2871,6 @@
       "activityTrend": "Daily vault activity",
       "pnlTrend": "Daily gross gaming revenue",
       "volumeTrend": "Daily volume",
-      "sharePriceReference": "Share price",
-      "currentSharePrice": "Current share price",
       "empty": "No vault activity yet on this chain.",
       "pending": "On-chain performance is not available yet.",
       "windowLabel": "Time range",
@@ -2949,124 +2880,97 @@
         "d7": "7d",
         "d30": "30d"
       },
-      "note": "Lifetime gross gaming revenue comes from Bank.getPerformance() on-chain (turnover minus gross payouts). It is not LP profit: the LP share price also reflects the payout fees the pool keeps and the referral rewards and protocol fees accrued against it, which together take at most half of each bet's house edge. Capital velocity is lifetime turnover divided by current chain-read vault assets. The daily chart below is indexed and may lag. Not promised yield.",
+      "note": "Gross gaming revenue is Bank turnover minus gross payouts, not the return of an individual NFT. Deposits receive results according to the recorded liquidity range. Daily indexed data may lag; no yield is promised.",
       "equityTitle": "Cumulative gross gaming revenue",
       "peak": "Peak",
       "trough": "Trough",
       "maxDrawdown": "Max drawdown"
     },
     "ledger": {
-      "eyebrow": "Provider ledger",
-      "title": "Deposits, exits and recovery",
-      "readModel": "Bank cash-flow events",
-      "connectWallet": "Connect a wallet to view your bank provider ledger.",
-      "loading": "Loading provider ledger…",
       "loadingMore": "Loading more…",
-      "loadMore": "Load more",
-      "loadedRows": "{count} rows loaded",
-      "end": "End of ledger",
-      "empty": "No LP cash flows found for this wallet.",
-      "note": "Only actual deposits, exit payments and historical recovery payments are cash flows. Requests, activation and available recovery are not receipts. Donations to the Bank are excluded from cash received. Share price is shown only when the event has shares.",
-      "block": "Block {blockNumber}",
-      "actions": {
-        "deposit": "Deposit",
-        "withdraw": "Withdraw",
-        "recovery": "Recovery",
-        "donation": "Donation"
-      },
-      "summary": {
-        "deposited": "Loaded deposits",
-        "withdrawn": "Loaded withdrawals",
-        "openValue": "Known LP value",
-        "shares": "Wallet shares"
-      },
-      "columns": {
-        "type": "Type",
-        "time": "Time",
-        "assets": "Assets",
-        "shares": "Shares",
-        "sharePrice": "Share price",
-        "tx": "Tx"
-      },
-      "incomplete": "Cash-flow history is incomplete. Totals cover the loaded entries only."
-    },
-    "overview": {
-      "totalAssets": {
-        "label": "Current vault NAV",
-        "detail": "Verifiable NAV for the selected Bank vault from the active release."
-      }
-    },
-    "async": {
-      "title": "Request and claim an exit",
-      "requestDetail": "Request an exit using wallet shares. Activation prices available cash immediately and preserves historical recovery rights separately. Unresolved old bets do not block later batches.",
-      "requestAmount": "Shares to request",
-      "wallet": "Wallet: {amount} shares",
-      "pendingRisk": "Queued shares still bear active pool results. Activation freezes only the exiting request’s earlier risk and recovery rights. Staying shares keep underwriting. Cash can be zero and recovery is uncertain.",
-      "request": "Request redemption",
-      "cancelDetail": "Cancel returns all your queued shares while the batch remains unactivated, including after the earliest activation time. Activated requests cannot be cancelled. The transaction checks current chain state.",
-      "cancel": "Cancel queued shares",
-      "claimableTitle": "Priced assets to claim",
-      "claimDetail": "These assets are reserved for your exit. Claiming all priced shares pays the assigned cash and preserves every historical recovery right.",
-      "claimAll": "Claim all exit assets",
-      "clearZero": "Clear zero-value exit shares",
-      "paused": "The pool is paused. Requests and queued cancellations remain available; deposits, exit cash claims and recovery payments wait until it resumes.",
-      "unknown": "Pool status is temporarily unavailable. Refresh before trying again.",
-      "refresh": "Refresh pool state",
-      "depositTerms": "Deposits immediately buy active capital at full book value, including its remaining old and new unsettled risk. Already segregated exit recovery rights are excluded. New deposits also bear revealed but unsettled payouts. Displayed data may lag and does not prove there is no pending risk.",
-      "issuerRisk": "Issuer freezes, confiscation or destruction of pool assets can prevent payment and cause insolvency. Recorded claims do not guarantee full payment.",
-      "totalEquity": "Active and priced LP value (estimate)",
-      "totalEquityDetail": "Wallet value + queued estimate + priced cash. Historical recovery is shown separately and is not included in this estimate.",
-      "walletEquity": "Wallet shares / book value",
-      "claimableEquity": "Priced exit assets",
-      "playerTitle": "Player award awaiting payment",
-      "playerDetail": "A settled or refunded bet has recorded an unpaid award. This is separate from LP equity. Claim pays only your player address and remains available while the pool is paused; issuer restrictions may still prevent delivery.",
-      "claimPlayer": "Claim player award",
-      "requested": "Redemption request confirmed. Queued shares remain active until batch activation.",
-      "cancelled": "Eligible shares returned to your wallet.",
-      "claimed": "Exit claim confirmed.",
-      "playerClaimed": "Player payment confirmed.",
-      "sharePriceDetail": "Current book value per 1,000 LP shares; this is not a priced exit entitlement.",
-      "shareUnitDetail": "Current active book value per LP share. Historical recovery rights are separate from active shares.",
-      "exitLiabilities": "Reserved exit cash and player payables",
-      "exitLiabilitiesDetail": "LP exits: {exits}. Unpaid player awards: {players}. Both are already excluded from NAV.",
-      "inactivePool": "This pool is inactive and closed to new bets and deposits. Existing redemption requests, eligible cancellations and claims remain available under the contract rules.",
-      "queuedTitle": "Queued request",
-      "queuedDetail": "Shares remain active until activation. Earlier unresolved bets do not block this batch. Its cash price is fixed at activation; historical recovery remains separate. Available backing and emergency pauses still apply; no deadline for a full cash payment is promised.",
-      "eligibleAt": "Earliest activation: {time}. This is not a guaranteed activation or payment time.",
-      "remainingHolds": "Earlier bets still open: {count}",
-      "queuedEquity": "Queued shares / liquid cash estimate",
-      "queuedQuoteDetail": "Current on-chain cash quote if activated now; historical recovery is excluded and the quote can change.",
-      "receiver": "Cash receiver: {receiver}"
+      "loadMore": "Load more"
     },
     "pools": {
       "label": "Pool",
       "option": "{symbol} · Pool #{poolId} · {bank}",
       "historyUnavailable": "The historical chart cannot isolate this pool. Cumulative figures above come from the selected pool’s on-chain records."
     },
-    "recovery": {
-      "title": "Historical recovery rights",
-      "detail": "These rights belong to activated exit requests. Staying shares keep active risk and recover capital automatically at settlement. A zero wallet balance does not erase exited rights.",
-      "loading": "Discovering historical rights…",
-      "incomplete": "Historical discovery is incomplete. Load the remaining pages before assessing your full position.",
-      "error": "Historical recovery could not be loaded. Your rights are not assumed to be zero.",
-      "empty": "No historical rights found in the complete discovery.",
-      "epoch": "Epoch {epoch}",
-      "units": "Activated exit shares",
-      "claimable": "Available recovery cash",
-      "upperBound": "Remaining recovery upper bound",
-      "upperBoundDetail": "An upper bound is not cash available now or a promised payout.",
-      "remainingHolds": "Earlier bets still open: {count}",
-      "settled": "This epoch is fully settled. Assigned but unclaimed cash remains yours.",
-      "claim": "Claim recovery",
-      "claimed": "Recovery payment confirmed.",
-      "loadMore": "Load more historical rights",
-      "refresh": "Refresh historical rights",
-      "receiver": "Cash is sent to {receiver}. This action does not grant a keeper permission to claim for you.",
-      "incompleteReturn": "Historical rights remain unresolved or discovery is unfinished; the displayed position is incomplete.",
-      "backing": "Historical backing",
-      "backingDetail": "Excluded from active capital; supports earlier obligations and unclaimed recovery.",
-      "donationNote": "Donations to the Bank are not external cash received by the holder.",
-      "snapshot": "Snapshot: block {block}, {time}. Refresh to load newer activity."
+    "nft": {
+      "poolCapital": "LP capital",
+      "poolCapitalDetail": "Current total value of deposit NFTs in the Vault.",
+      "freeCapital": "Available for withdrawal",
+      "freeCapitalDetail": "Shared by all deposits; individual withdrawal limits cannot be added together.",
+      "lockedCapital": "Capital backing open bets",
+      "lockedCapitalDetail": "Net LP capital reserved until existing bets settle.",
+      "pendingPrincipal": "Pending player principal",
+      "pendingPrincipalDetail": "Unsettled stakes held separately in the Bank.",
+      "grossReserve": "Maximum pending payouts",
+      "grossReserveDetail": "Gross reserve for all open positions.",
+      "bettingCapital": "Betting capital",
+      "bettingCapitalDetail": "LP capital plus pending player principal; used by the betting risk limit.",
+      "gameHoldDetail": "Gaming revenue is not the return earned by an individual NFT.",
+      "vaultCash": "Vault token balance",
+      "bankCash": "Bank token balance",
+      "playerDebt": "Player payment due",
+      "protocolDebt": "Protocol fees due",
+      "referralDebt": "Referral rewards due",
+      "vaultSurplus": "Unallocated Vault surplus",
+      "bankSurplus": "Unallocated Bank surplus",
+      "surplusDetail": "Unexpected token transfers are not NFT capital and are not withdrawable here.",
+      "riskTerms": "At settlement, an earlier deposit range keeps both profit and loss only if its current capital covers that bet’s original maximum LP loss. Otherwise both are shared by the current pool, including later deposits. Zero-risk bets retain the empty-range fallback. Expected returns and risks follow this allocation; settlement order can change it. Withdrawn capital no longer participates. Issuer restrictions may prevent payment. If no LP capital remains, later profit goes to protocol capital.",
+      "orderingRisk": "Once its lock expires, available capital may be withdrawn before a bet's result is recorded on-chain. Capital that remains or arrives later may share gains or absorb losses from earlier bets. The 24-hour lock does not remove this transaction-ordering risk.",
+      "depositTerms": "Every deposit creates a separate NFT and starts its own 24-hour withdrawal lock. Capital participates in game results during this period. Transferring an NFT keeps its existing deadline.",
+      "withdrawTerms": "Select a deposit NFT and a percentage of its current value. A successful withdrawal pays its current owner immediately. No withdrawal request or later claim is required.",
+      "partialRelock": "A partial withdrawal locks the remaining deposit for another 24 hours. A full withdrawal closes the NFT. The amount is an estimate; your transaction signs a percentage and is checked again against current chain state.",
+      "sharedLimit": "All NFTs share the pool’s available capital. Quotes may change as bets or other withdrawals execute; no full-payment deadline is guaranteed.",
+      "loading": "Reading current on-chain state…",
+      "unavailable": "Current pool or deposit state is unavailable. Refresh before signing.",
+      "empty": "No deposit NFTs are owned by this wallet at this snapshot.",
+      "deposits": "Your deposit NFTs",
+      "owner": "Current owner",
+      "initialOwner": "Initial owner",
+      "payer": "Asset payer",
+      "receiver": "Cash receiver",
+      "withdrawAfter": "Withdraw after",
+      "maxNow": "Executable now",
+      "percent": "Percentage of this NFT (%)",
+      "estimated": "Estimated payment",
+      "close": "Close empty NFT",
+      "withdraw": "Withdraw now",
+      "sign": "Sign transaction",
+      "confirm": "Confirm receipt",
+      "refresh": "Refresh on-chain state",
+      "approveVault": "Approve the bound LiquidityVault to transfer these assets. No NFT or keeper approval is requested.",
+      "ownerChanged": "This wallet no longer owns the selected NFT. Refresh the deposit list.",
+      "deposited": "Deposit confirmed. A new NFT has its own 24-hour lock.",
+      "withdrawn": "Withdrawal confirmed. Refreshing the remaining capital.",
+      "playerClaimed": "Player payment confirmed.",
+      "playerDebtDetail": "This unpaid player award is separate from LP capital. Payment goes only to the player address. It can be claimed while the pool is paused, subject to issuer restrictions.",
+      "playerDebtUnavailable": "Player debt could not be read; it is not assumed to be zero.",
+      "claimPlayer": "Claim player payment",
+      "history": "Deposits, withdrawals and NFT transfers",
+      "historyDetail": "NFT transfers change ownership without transferring the underlying tokens. An NFT recipient’s return cannot be calculated without its acquisition cost. Payer, initial owner and withdrawal recipient are shown separately.",
+      "historyEmpty": "No deposit activity found in the loaded range.",
+      "historyIncomplete": "History is incomplete. Loaded entries do not establish a complete wallet return.",
+      "noCashFlow": "NFT transfer · no asset cash flow",
+      "action": {
+        "deposit": "Deposit",
+        "withdraw": "Withdrawal",
+        "transfer": "NFT transfer"
+      },
+      "status": {
+        "ready": "Ready",
+        "paused": "Pool paused; LP deposits and withdrawals are unavailable.",
+        "busy": "Settlement is in progress. Refresh shortly.",
+        "unbookedResult": "A received game result is awaiting accounting. LP deposits and withdrawals are temporarily unavailable.",
+        "invalidAccounting": "Accounting checks are unavailable or inconsistent. LP operations are blocked.",
+        "unavailable": "Authoritative state could not be read. Refresh before signing.",
+        "coolingDown": "The 24-hour withdrawal lock has not ended.",
+        "noLiquidity": "No executable amount is currently available.",
+        "invalidPercent": "Enter a percentage greater than 0 and no more than 100.",
+        "zeroWithdrawal": "This percentage rounds to zero assets. Increase it or close a mature empty NFT at 100%.",
+        "insufficientFreeCapital": "This percentage exceeds the available capital. Use the current maximum or refresh."
+      }
     }
   },
   "ops": {

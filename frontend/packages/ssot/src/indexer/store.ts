@@ -24,11 +24,11 @@ export interface GameHubEventRow {
 
 /**
  * How a settled bet's house edge was allocated (v1.6 HouseEdgeAllocated). Amounts are bigint strings
- * in the bet's asset; lpRetained + protocolFee + r0 + r1 + r2 + markup = edge.
+ * in the bet's asset; lpRetained + protocolFee + r0 + r1 + r2 = edge.
  */
 export interface BetHouseEdgeAllocation {
   usedTurnover: string;
-  effectiveHouseEdgeBps: number;
+  houseEdgeBps: number;
   edge: string;
   operatorShare: string;
   lpRetained: string;
@@ -39,8 +39,6 @@ export interface BetHouseEdgeAllocation {
   r1: string;
   /** Second-level referrer (L2). */
   r2: string;
-  /** Affiliate markup share. */
-  markup: string;
 }
 
 export interface BetRow {
@@ -53,7 +51,10 @@ export interface BetRow {
   gameId?: Hex;
   asset?: Address;
   player?: Address;
-  pricingAffiliate?: Address;
+  /** Immutable direct referrer recorded when this bet was accepted. */
+  referrerL1?: Address;
+  /** Immutable second-level referrer recorded at the same time. */
+  referrerL2?: Address;
   stake?: string;
   payout?: string;
   payoutGross?: string;
@@ -129,15 +130,20 @@ export interface XPSnapshotRow {
   createdAt: number;
 }
 
+export interface VaultEventRow extends BankEventRow {
+  vault: Address;
+}
+
 export class SSOTDb extends Dexie {
   gameHubEvents!: Table<GameHubEventRow, string>;
   bets!: Table<BetRow, string>;
   cursors!: Table<CursorRow, string>;
   txJournal!: Table<TxJournalRow, string>;
   bankEvents!: Table<BankEventRow, string>;
+  vaultEvents!: Table<VaultEventRow, string>;
   xpSnapshots!: Table<XPSnapshotRow, string>;
 
-  constructor(name = "ssot_frontend") {
+  constructor(name = "arbigamefi_liquidity") {
     super(name);
     this.version(1).stores({
       gameHubEvents: "id, chainId, gameHub, blockNumber, txHash, logIndex, eventName",
@@ -145,6 +151,7 @@ export class SSOTDb extends Dexie {
       cursors: "id, chainId, source",
       txJournal: "id, chainId, txHash, createdAt, ok, action",
       bankEvents: "id, chainId, bank, blockNumber, txHash, logIndex, eventName",
+      vaultEvents: "id, chainId, vault, bank, blockNumber, txHash, logIndex, eventName",
       xpSnapshots: "id, [chainId+payee+blockNumber], payee, eventType, blockNumber"
     });
   }
@@ -158,7 +165,7 @@ const _dbs = new Map<string, SSOTDb>();
  * IMPORTANT: Only call this in the browser (client components).
  */
 export function getSSOTDb(name?: string): SSOTDb {
-  const key = name ?? "ssot_frontend";
+  const key = name ?? "arbigamefi_liquidity";
   const existing = _dbs.get(key);
   if (existing) return existing;
   const db = new SSOTDb(key);
@@ -171,5 +178,7 @@ export function getReleaseScopedSSOTDb(release: {
   chainId: number;
   releaseDigest: string;
 }): SSOTDb {
-  return getSSOTDb(`ssot_frontend_${release.chainId}_${release.releaseDigest.toLowerCase()}`);
+  return getSSOTDb(
+    `arbigamefi_liquidity_${release.chainId}_${release.releaseDigest.toLowerCase()}`
+  );
 }

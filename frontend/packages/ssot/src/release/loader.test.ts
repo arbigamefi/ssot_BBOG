@@ -40,6 +40,15 @@ describe("current release loading", () => {
     ).toBe(false);
   });
 
+  it.each([0, 26, 100])("rejects an advertised game limit of %i rounds", (maxBetCount) => {
+    expect(
+      ReleaseSchema.safeParse({
+        ...fixture,
+        gamesMeta: fixture.gamesMeta.map((game) => ({ ...game, maxBetCount }))
+      }).success
+    ).toBe(false);
+  });
+
   it("rejects a noncurrent lock and missing release identity", () => {
     expect(
       ReleaseSchema.safeParse({
@@ -48,9 +57,6 @@ describe("current release loading", () => {
       }).success
     ).toBe(false);
     embeddedReleases[31337] = { ...fixture, meta: { schemaVersion: 2 } };
-    expect(loadEmbeddedRelease(31337)).toEqual({
-      ok: false,
-      error: "Expected current v1.6 release metadata"
-    });
+    expect(loadEmbeddedRelease(31337).ok).toBe(false);
   });
 });

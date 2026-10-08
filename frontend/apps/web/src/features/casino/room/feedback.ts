@@ -23,7 +23,7 @@ export function getBetErrorKind(error?: StepperDisplayError) {
     case "INSUFFICIENT_VRF_FEE":
       return "quoteChanged";
     case "POOL_CAPACITY_FULL":
-    case "ACTIVE_HOLD_LIMIT":
+    case "OPEN_HOLD_LIMIT":
       return "capacity";
     case "STAKE_BELOW_MINIMUM":
       return "minimumStake";
@@ -46,9 +46,9 @@ export function getBetErrorKind(error?: StepperDisplayError) {
       return "contextChanged";
     case "STAKE_SPEC_MISMATCH":
     case "BAD_INPUT":
-    case "HOUSE_EDGE_TOO_LOW":
-    case "HOUSE_EDGE_TOO_HIGH":
       return "input";
+    case "HOUSE_EDGE_TOO_HIGH":
+      return "houseEdgeChanged";
     default:
       return error?.details?.transactionSubmitted === false ? "notSubmitted" : "unknown";
   }

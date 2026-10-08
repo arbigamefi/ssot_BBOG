@@ -1,20 +1,20 @@
 # ArbiGameFi 项目与商业白皮书
 
-> AGF-WP-BIZ-2026.10-r2 · 2026-10-02 · 中文，附英文概要 · 内部审阅稿，尚未对外发布
+> AGF-WP-BIZ-2026.10-r3 · 2026-10-04 · 中文，附英文概要 · 内部审阅稿，尚未对外发布
 >
 > **首要读者**：战略伙伴、渠道决策者、专业资金合作方；有融资情境时的项目投资者
 >
 > **读后决策**：是否值得进一步尽调、讨论合作或投入资源
 >
-> **项目尚未正式上线。** Base Sepolia 已有受控测试候选，部署、Safe 接管与部分投注结算已核验；这些测试不代表真实用户、营收、资本承诺、机构背书或牌照。机制细节见[技术白皮书](WHITEPAPER.zh-CN.md)，部署证据见[测试网验收记录](deploy/v16-sepolia-acceptance.md)，发布条件见[发布说明](release/README.md)。
+> **项目尚未正式上线。** 已采用每次入金生成存款 NFT、固定 24 小时锁定、LiquidityTree 分配与 VRF 回调同笔尝试结算。核心合约及 SDK、Earn、keeper 接入已实现并完成对应版本的本地验证，详见[核心复盘](audit/nft-core-integration-review.md)和[应用复核](audit/nft-consumer-integration-review.md)。完整回调 gas 资格、新部署网络验收和外部审计尚未完成；此前端到端结果不代表后续源码已重新全跑。本地测试不代表真实用户、营收、资本承诺、机构背书或牌照。机制见[技术白皮书](WHITEPAPER.zh-CN.md)，新部署验收见[测试网清单](deploy/v16-sepolia-acceptance.md)，发布条件见[发布说明](release/README.md)。
 
 ## 摘要
 
 ArbiGameFi 建设单品牌、钱包原生的 casino 与 sportsbook：玩家用自己的钱包参与，规则、费用、随机数、结算与支付都可以在链上核对。首期聚焦 Base 网络与 USDC，面向已经熟悉 EVM 钱包与稳定币、重视支出透明度的成年人。
 
-- **差异**：投注资金由合约而非平台账户托管；结果使用可验证随机数；LP 固定获得每笔流水 house edge 的一半；LP 退出不暂停下注，也不会把尚未结算的风险转嫁给留下的人。
+- **差异**：投注资金由合约而非平台账户托管；结果使用可验证随机数；LP 固定获得每笔流水 house edge 的一半；LP 以存款 NFT 持有资本，固定 24 小时后按可用流动性提款；成功退出部分不再参与后续结果，正常提款不设置计划性停注。
 - **收入**：来自按实际流水计算的 house edge。另一半支付推荐、玩家返水与协议费用。
-- **现状**：合约、网站、结算服务与索引已实现；Base Sepolia 受控候选已完成 Safe 接管及部分真实投注结算。完整网络验收与外部审计尚未完成。
+- **现状**：NFT 账本、回调结算核心及 SDK、页面、keeper 接入已实现并完成对应版本的本地验证；完整回调 gas 资格、新部署验收和外部审计尚未完成。
 - **尚未证明**：真实需求与回访、单位成本、合规路径和规模化的资本供给。
 - **正在寻找**：渠道与内容合作、专业 LP 与服务伙伴，以及帮助完成审计与合规准备的资源。
 
@@ -45,23 +45,23 @@ ArbiGameFi 建设单品牌、钱包原生的 casino 与 sportsbook：玩家用�
 | 资金       | 充值到平台账户，由平台记账   | 由受监管的平台托管   | 投注期间由合约托管；结算后直接支付到玩家钱包 |
 | 结果       | 通常依赖平台自证的公平性机制 | 依赖监管与第三方认证 | 每局随机数与规则输入都在链上，可独立重算     |
 | 费用       | 通常不透明或只在规则页披露   | 按产品披露           | 每局 edge 在接受时固定，并在界面与收据上列明 |
-| 资本来源   | 平台自有资金                 | 平台自有资金         | LP 资金池，份额与负债全部公开                |
+| 资本来源   | 平台自有资金                 | 平台自有资金         | LP存款NFT、树权益与负债全部公开              |
 | 准入与合规 | 因平台而异                   | 严格的身份与地域管理 | 上线前须完成合规方案（§8）                   |
 
-我们需要证明的差异有三项：可核对性确实影响用户的选择；钱包原生的操作成本在可接受范围内；透明、公平的 LP 规则能吸引资本。三项中任何一项不成立，都要调整定位，不能靠宣传弥补。
+我们需要证明的差异有三项：可核对性确实影响用户的选择；钱包原生的操作成本在可接受范围内；透明披露收益与排序风险的 LP 规则能吸引资本。三项中任何一项不成立，都要调整定位，不能靠宣传弥补。
 
 ## 4. 产品组合
 
-- **Casino**：Dice、Coin Toss、Roulette、Keno、Plinko、Sic Bo、Slots 与 Baccarat 八种玩法，支持多局连投与止盈止损。每笔投注都有报价、钱包确认、等待状态和收据。直接转账失败的款项记为玩家应付款，系统自动代为领取，收据同时说明结果与实际到账方式。
+- **Casino**：Dice、Coin Toss、Roulette、Keno、Plinko、Sic Bo、Slots 与 Baccarat 八种玩法，支持多局连投与止盈止损。每笔投注都有报价、钱包确认、等待状态和收据。直接转账失败的款项记为玩家应付款，keeper 公开重试领取；发行方限制等情况仍可使付款失败。收据分别说明结果与实际到账方式。目标是随机数回调同笔尝试结算，失败保留原随机数补结算，不把重抽结果作为恢复方法。
 - **Sportsbook（规划中）**：从赛前足球胜／平／负固定赔率单关起步。共享品牌与钱包体验，但使用独立的资本、数据、结果与争议规则。体育要证明自身完整的终结路径与经营条件后才发布，casino 的测试不能替代它。
-- **LP 资金池**：LP 为指定资产的资金池提供赔付资本，持有份额，参与资金池的盈亏。
-- **推荐与推广**：两级推荐与玩家返水，以及推广方可设定的加价奖励，全部由运营方预算支付，不占用 LP 的固定份额。
+- **LP 资金池**：LP 为指定资产的资金池提供赔付资本，持有每次入金对应的 NFT，按树分配规则参与盈亏。
+- **推荐与推广**：两级推荐与玩家返水，全部由运营方预算支付，不占用 LP 的固定分配比例。
 
 首期不依赖平台代币、白标业务或跨链资金共担。
 
 ## 5. 收入模型与单位经济
 
-每笔投注按实际使用流水计算理论 house edge。**LP 固定保留一半；另一半是运营预算，用于推荐奖励、玩家返水与推广加价，其余为协议收入。** 推荐与返水合计不超过基础 edge 的 35%，玩家没有推荐人时这部分归协议。LP 的份额是合约常量，不随渠道变化。
+每笔投注按实际使用流水计算理论 house edge。**LP 固定保留一半；另一半是运营预算，用于两级推荐奖励与玩家返水，其余为协议收入。** 推荐与返水合计不超过该笔 edge 的 35%，玩家没有推荐人时这部分归协议。LP分配比例是合约常量，不随渠道变化。
 
 **演算（示例参数，非上线配置）。** 流水 1,000 USDC，有效 edge 2%：
 
@@ -72,22 +72,24 @@ ArbiGameFi 建设单品牌、钱包原生的 casino 与 sportsbook：玩家用�
 | 推荐奖励（L1／L2） |  4 ／ 1 USDC |        0 |
 | 协议收入           |       3 USDC |  10 USDC |
 
-这些是理论值。单局结果使 LP 的实际盈亏大幅波动，理论 edge 只在大量投注中体现，也不代表收入已经收到现金。
+这些是有LP资本时的理论值；若旧投注结算时全树已空，正收益按规则归协议资本，不补发给已退出NFT。单局结果使 LP 的实际盈亏大幅波动，理论 edge 只在大量投注中体现，也不代表收入已经收到现金。
 
 **成本由谁承担**
 
-| 成本                                 | 承担方                         |
-| ------------------------------------ | ------------------------------ |
-| 投注交易 gas 与随机数费用            | 玩家，报价中单独列出           |
-| 自动结算、退款、批次激活与代领的 gas | 运营方，以原生资产预算单独管理 |
-| RPC、索引、监控、客服与维护          | 运营方                         |
-| LP 请求、取消与领取的 gas            | 发起交易的 LP                  |
+| 成本                                       | 承担方                                    |
+| ------------------------------------------ | ----------------------------------------- |
+| 投注交易 gas、随机数请求与正常回调结算费用 | 玩家，报价中单独列出；新 gas 参数须实测   |
+| 异常补结算、超时退款与玩家应付款代领的 gas | 提交交易者；keeper 使用运营方原生资产预算 |
+| RPC、索引、监控、客服与维护                | 运营方                                    |
+| NFT 入金与到期提款交易 gas                 | 发起交易的 LP                             |
 
 协议收入以池资产计价，keeper 主要消耗原生资产，二者分开管理。补贴须有资金来源、额度与期限，不能侵占 LP 资金或已成立的用户债权。若在可接受的最小投注金额下，玩家成本过高或资本补偿不足，就调整范围与成本，而不是扩大宣传。经济模型的计算与校准见[经济设计](strategy/economic-design.md)。
 
 ## 6. 资本与 LP
 
-资金池的规模决定能接受多大的投注：每笔投注在接受时都要预留最大赔付，剩余资本还需保留风险缓冲。资本越充足，可承接的单笔投注越大，并发投注也越多。
+资金池的规模决定能接受多大的投注：每笔投注在接受时都要预留最大赔付。新部署默认按 LP 资本加全部
+未结投注本金的 60% 保留下注风险缓冲，其余部分扣除已有准备金后才能接新注。资本越充足，可承接的
+投注越大。这个比例不额外限制 LP 提款；成熟 NFT 仍按自身余额和全池自由资本提款。
 
 LP 的收益来自那一半 house edge，但同时承担：
 
@@ -95,20 +97,28 @@ LP 的收益来自那一半 house edge，但同时承担：
 - 资金被准备金占用的时间成本；
 - 合约、资产与治理风险。
 
-LP 份额不是公司股权，不附带代币权利，也不是固定收益产品。
+LP 存款 NFT 不是公司股权，不附带代币权利，也不是固定收益产品。
 
-**进出规则**
+**进出规则（已实现并本地验证，发布资格待完成）**
 
-- **存入**：即时生效。
-- **退出**：先提交请求，每个批次周期激活一次。激活时，申请者立即获得可领现金。只隔离退出申请对应的未结风险和回收权；留存份额继续承保，结算同笔恢复资本，无需手动复投。新 LP 按完整账面价买入活跃池的剩余风险。若某笔结果已公开但尚未结算，账面报价可能仍含即将支付的损失；入金者也承担这部分风险。
-- **下注不受影响**：LP 退出从不暂停下注。一笔因缺陷永远无法结算的旧投注，只影响它自己的那部分资金，后续退出照常。
-- **披露**：没有全额现金到账期限，页面分别展示活跃权益、排队中的请求、可领现金与历史回收，不把未来可能的回收当作确定收益。
+- **每笔入金一份存款 NFT**：LP 资产直接进入独立的 LiquidityVault；每次入金均创建新节点和新 NFT，固定锁定 24 小时，不向旧 NFT 增资。Bank 单独托管投注本金与负债，未结本金不会直接变成 LP 利润。
+- **到期提款**：只允许当前 NFT owner 发起并收款。成熟后在自身节点金额和全池自由资本范围内，同笔扣账到账；部分提款成功后余值重新锁定 24 小时，全部提款销毁 NFT。成熟的空余额 NFT 也可销毁，零比例和取整为零的部分提款拒绝。
+- **转让**：NFT 转让沿用原期限，受让人取得该存款的权益。NFT 授权允许他人转走 NFT，因此具有资金风险；官方提款流程不要求授权 NFT 给 keeper 或其他 operator。转让不是现金入金，不能把继受人取得 NFT 直接算作收益。
+- **退出后**：已提走资本没有后续盈亏或回收权。不存在每日批次、请求队列或再次领取。旧投注结算时，若开仓记录范围的当前资本足以覆盖该仓位原始最大 LP 亏损，利润与亏损都分给该范围；否则都分给当前全池。零风险仓位保留原范围及空范围回退，空树利润按下述协议资本规则处理。因此新 LP 也可能取得或承担旧投注结果。
+- **额度**：LP 资本 L 是树根，净锁定 K 是 Bank 最大准备金 R 减未结本金 P。自由资本为 `L−K`，不再叠加 LP 出金缓冲；节点成熟不保证池子一定有足够自由资金。K=0 时，即使有旧投注未结也可在其他条件允许时全退；之后空树产生的利润归协议资本，不重建旧 LP 权利。
+- **下注与异常**：正常提款不停止接注；资本减少会缩小下注能力，L=0 禁止新注。随机数已保存但结果未入账时，该 Vault 入金和提款暂缓，先按原结果补结算。若合约缺陷使结果始终无法入账，公开重试不保证恢复；当前接口没有强制退款或绕过门禁提款的路径，该池 LP 操作可能持续冻结。不能承诺所有存款在固定时间内均可全额兑付。
 
-**面向专业 LP 的披露**：完整负债、资金池规则、退出与回收机制、治理权限、审计状态与链上核对方法，均在尽调中逐项提供。项目不提供 APY、回本期或估值预测。
+**专业 LP 的核对口径**：L 读取 LiquidityTree，下注偿付基数为 `G=L+P`；原有下注比例规则仍使用 G。页面按每个 NFT 显示节点价值、解锁时间和当前可提额度，不再展示统一份额价格。捐赠形成的多余余额独立诊断，不自动变成树收益，也不提供新的提取接口。
+
+**已接受的排序取舍（2026-10-04）**：结果尚未记录且其他检查允许时，成熟 NFT 可提走自由资本；已退出部分不再参与以后入账的旧投注损益，留存 LP 按树与回退规则承担。旧范围为空或不足时，后入资金也可能获得旧利润或承担旧损失。项目 Owner 已明确接受并保留这一模型，这是风险接受，不是风险修复。24 小时锁定及结果记录后的门禁不消除记录前的条件排序优势，本地见证也不证明真实 VRF 可提前预测；不宣传资本排序公平。
+
+**H-1 分配修正**：结算时旧范围资本至少覆盖该仓位原始最大 LP 亏损时，两侧结果都归旧范围；否则两侧都归当前全池（零风险仓位保留原空范围规则）。这修正了无需预知结果的薄前缀套利，不撤销上述信息排序风险披露，也不承诺只转移波动而不改变预期收益。
+
+采用的 40 层树会增加执行成本，完整回调与最坏分配路径仍须通过 gas 资格；合约硬上限为 25 轮，USDC 每轮最低 0.01，25 轮本金为 0.25，不设额外的单仓总本金门槛。风险披露、完整集成、新网络验收与独立审计仍是外部 LP 放行条件，不提供 APY、回本期或本金保护承诺。
 
 ## 7. 分发与增长
 
-推荐体系包括玩家返水（L0）、两级推荐奖励（L1、L2）与推广加价。推荐关系首次绑定后不可更改，并在每笔投注接受时固定，事后变更不追溯。推广加价受合约上限约束，提高上限需要等待 7 天。这些成本全部来自运营预算，因此渠道扩张不会稀释 LP 的份额。
+推荐体系仅包括玩家返水（L0）与两级推荐奖励（L1、L2）。推荐关系首次绑定后不可更改；每笔投注接受时固定收款人和分配比例，推荐关系不会改变玩家的 house edge。house edge 的调整均须等待 7 天。奖励金额由接受时的配置决定；Bank 的领取流水门槛与新建 holdback 释放期限仍读取当前配置。这些成本全部来自运营预算，因此渠道扩张不会稀释 LP 分配比例。
 
 增长按"先验证、后扩张"推进：
 
@@ -139,30 +149,33 @@ LP 份额不是公司股权，不附带代币权利，也不是固定收益产�
 
 ## 9. 执行与路线
 
-建设顺序如下（详见[路线图](roadmap.md)）：
+当前建设与验收顺序如下（详见[路线图](roadmap.md)）：
 
-1. 完成玩家从规则到收据的完整路径，以及异常恢复；
-2. 验证资本账本、LP 进出与各种失败情形；
-3. 验证自动结算服务的运行、恢复与告警；
-4. 完成外部审计、合规方案与限定环境的验收；
+1. 玩家规则、收据与异常恢复，Bank／Vault 分工、NFT 树账本和回调结算已实现并完成对应版本的本地验证；
+2. 完成每轮最低 0.01 USDC、最多 25 轮下的完整回调 gas 资格及容量评估；
+3. 在最终源码和新部署上重新验收 NFT 进出、真实支付、异常恢复、keeper WS/HTTP 补漏与告警；
+4. 落实已接受排序风险的公开披露，完成外部审计、合规方案与限定环境的验收；
 5. 在有限范围内开展真实使用与渠道验证，再决定扩大范围。
 
-当前进展：合约、SDK、自动结算服务、索引与网站已实现，本地测试覆盖合约单元、不变量、变异测试、前端单元、浏览器与本地链集成（见[审计范围](audit/v1.6-audit-scope.md)）。Base Sepolia 受控候选已完成部署、2/3 Safe 接管及部分投注的真实 VRF 回调、keeper 结算与付款（见[测试网验收记录](deploy/v16-sepolia-acceptance.md)）。LP 完整退出与历史回收、异常恢复、容量验收与外部审计仍待完成；当前测试不代表正式上线或外部 LP 准入。
+当前进展以[核心复盘](audit/nft-core-integration-review.md)和[应用复核](audit/nft-consumer-integration-review.md)所列源码和实际测试为准；网络与审计的待验事项见[审计范围](audit/v1.6-audit-scope.md)。全新 Base Sepolia 部署将按[测试网清单](deploy/v16-sepolia-acceptance.md)核对多签接管、实际回调与付款、NFT 存取及服务运行。
 
-合约部署后不可升级，治理由多签执行。guardian 可以紧急暂停 Bank，包括新投注、存入、LP 批次激活及退出款和历史回收款领取；暂停不阻止已接受投注的结算、退款与玩家应付款领取，解除暂停只能由治理执行。团队与主体信息在尽调阶段单独提供；本文不从架构推断经营记录。
+**本次账本、回调与消费者已实现并完成对应版本的本地验证，尚未取得发布资格。** 不设置迁移或双版本兼容范围。项目已明确接受并保留上述排序风险；最终源码仍须重新固定编译与部署身份，回调 gas、容量、完整网络验收与外部审计仍待完成。风险接受不替代这些条件，未完成前不放行外部 LP。
+
+合约部署后不可升级，治理由多签执行。目标设计中 guardian 可暂停新投注和 LP 进出；暂停不阻止已接受投注的结算、退款与玩家应付款领取，解除暂停由治理执行。正常回调不依赖 keeper 发第二笔交易，但异常路径仍需公开补结算和运营监控。团队与主体信息在尽调阶段单独提供；本文不从架构推断经营记录。
 
 ## 10. 关键风险
 
-| 风险     | 说明                                                        | 应对                                               |
-| -------- | ----------------------------------------------------------- | -------------------------------------------------- |
-| 需求     | 目标用户是否会选择并回访，尚未验证                          | 限定范围的真实使用研究，按指标决定扩张             |
-| 监管     | 牌照、辖区与强制合规措施尚未完成                            | 上线前完成 §8 所列事项；未完成前不开放真实资金     |
-| 合约     | 不可升级，缺陷无法事后修复                                  | 外部审计、变异与不变量测试、单笔损失隔离设计       |
-| 资本     | LP 可能亏损，资本不足会限制投注规模                         | 完整披露风险；按资本设置投注上限                   |
-| 运营     | 自动结算服务、RPC 或索引中断                                | 所有推进操作都无需许可，任何人都可执行；监控与告警 |
-| 外部依赖 | USDC 发行方的冻结或暂停、Chainlink VRF 与 Base 网络的可用性 | 转账失败转为应付款；随机数超时后可退款             |
-| 治理     | 多签可准入玩法与资金池、调整受限参数                        | 多签管理，参数有上限与延迟，治理不能提取 LP 资金   |
-| 集中度   | 首期只有一条链、一种资产                                    | 有意为之，以集中资源；扩展以经营证据为前提         |
+| 风险     | 说明                                                        | 应对                                                       |
+| -------- | ----------------------------------------------------------- | ---------------------------------------------------------- |
+| 需求     | 目标用户是否会选择并回访，尚未验证                          | 限定范围的真实使用研究，按指标决定扩张                     |
+| 监管     | 牌照、辖区与强制合规措施尚未完成                            | 上线前完成 §8 所列事项；未完成前不开放真实资金             |
+| 合约     | 不可升级，缺陷可能锁住准备金或妨碍 LP 进出                  | 外部审计、反例与不变量测试、明确异常状态和验收边界         |
+| 资本     | LP 可能亏损；退出时机影响留存者承担的风险；资本不足限制投注 | 明确披露未来盈亏归属，保护准备金，按资本设置下注与提款额度 |
+| 运营     | 回调结算失败、补结算服务、RPC 或索引中断                    | 保留原随机数公开重试，WS 与 HTTP 补漏、监控与告警          |
+| 排序     | 结果记录前的进出时机及旧范围回退可能改变 LP 盈亏            | 保留既定规则并明确接受、披露风险；不宣传资本排序公平       |
+| 外部依赖 | USDC 发行方的冻结或暂停、Chainlink VRF 与 Base 网络的可用性 | 付款失败可记应付款；仅仍未收到随机数且达到固定截止后可退款 |
+| 治理     | 多签可准入玩法与资金池、调整受限参数                        | 多签管理，参数有上限与延迟，治理不能提取 LP 资金           |
+| 集中度   | 首期只有一条链、一种资产                                    | 有意为之，以集中资源；扩展以经营证据为前提                 |
 
 ## 11. 合作方式与下一步
 
@@ -177,10 +190,28 @@ LP 份额不是公司股权，不附带代币权利，也不是固定收益产�
 
 ## English overview
 
-ArbiGameFi is an unlaunched, single-brand, wallet-native casino and sportsbook. It starts on Base with USDC, for adults experienced with EVM wallets and stablecoins who value transparent costs and verifiable payments.
+ArbiGameFi is an unlaunched casino and sportsbook project focused initially on Base and USDC.
+**NFT liquidity and callback settlement are implemented and locally verified in the core contracts and application interfaces; release qualification remains pending.**
+A dedicated LiquidityVault issues a new deposit NFT for each contribution, with a fixed 24-hour lock.
+Mature owner-only withdrawals pay that owner; partial success relocks the remainder, full withdrawal
+burns the NFT, and transfers preserve maturity. NFT authorization remains an economic permission.
 
-**Differentiation.** Stakes are held by contracts rather than platform accounts, randomness is verifiable, and LPs keep a fixed half of each bet's turnover house edge. LP exits never pause betting and never shift unsettled risk onto the LPs who stay.
+LP capital is the LiquidityTree root L, net lock is K=R-P and free capital is L-K. No extra LP buffer,
+fungible share price or historical recovery claim remains. At each settlement, profit and loss use
+the old-deposit prefix if it covers the position's original maximum LP loss; otherwise both use all
+current deposits. Zero-risk positions retain the original empty-prefix fallback. New deposits may
+therefore share old expected returns and risk; settlement order may affect allocation. When the tree is empty, later profit
+belongs to protocol capital. Ordinary withdrawal does not pause betting; zero LP capital stops new bets.
 
-**Economics.** The other half of the edge funds referrals, player rebates and protocol income; illustrative per-1,000-USDC figures are shown above.
-
-**Status.** A controlled Base Sepolia candidate is deployed, with 2-of-3 Safe takeover and some real VRF-to-keeper settlement and payment paths verified. Full network acceptance and external audit remain pending; test assets and transactions do not establish production operation, user demand or revenue. The guardian can pause deposits, betting, LP activation and LP claims; only governance can resume them, while settlement, refunds and player-payable claims remain available. The project holds no licences, and its compliance controls are UI-level only; geo-blocking, sanctions screening and limit enforcement must be completed before any real-money service. Demand, retention, unit costs and the regulatory path remain to be proven. Partners are invited to evaluate the project against explicit responsibilities, costs and verifiable results.
+VRF stores the original seed and attempts settlement in the callback. Failure retains that result
+for public retry and blocks affected LP cash operations until booking completes. Keeper continues
+exception handling and WS/HTTP recovery. Stage 0 must measure the adopted 40-level tree and full
+callback before claiming a supported round limit. The 24-hour lock and atomic callback do not prove
+pre-fulfillment ordering safety. Before canonical receipt, mature free capital may exit and bears
+no subsequently booked result, leaving remaining LPs to absorb it. The project Owner explicitly
+accepted and retained these economics on 2026-10-04, including old-result whole-tree fallbacks.
+This accepts the risk rather than fixing it; capital-ordering fairness is not promised, and local
+conditional witnesses do not establish that real VRF can be predicted. Full gas qualification,
+final-source integration, fresh network acceptance and external audit remain gates.
+Previous Base Sepolia evidence stays attached to its original candidate. Test activity establishes
+neither production readiness nor demand, income, capital commitments or regulatory qualification.

@@ -1,0 +1,15 @@
+--- a/utils/LiquidityTree.sol
++++ b/utils/LiquidityTree.sol
+@@ -314,9 +314,10 @@
+                 _pushLazy(node * 2, start, mid, l, r, amount, isSub, updateId_);
+             } else {
+                 uint256 lAmount = treeNode[node * 2].amount;
+-                // get right amount excluding unused leaves
++                // get right amount excluding unused leaves; leaves after the last used one never hold value,
++                // so that suffix is skipped when the range ends at or after it
+                 uint256 rAmount = treeNode[node * 2 + 1].amount -
+-                    _getLeavesAmount(r + 1, end);
++                    (r >= nextNode - 1 ? 0 : _getLeavesAmount(r + 1, end));
+                 uint256 sumAmounts = lAmount + rAmount;
+ 
+                 if (sumAmounts == 0) {

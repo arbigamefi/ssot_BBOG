@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
+import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {IVRFHub} from "../../src/core/interfaces/IVRFHub.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
@@ -21,7 +23,8 @@ contract VRFFee is Test {
     PoolRegistry poolRegistry;
     SettlementRouter router;
     GameHub hub;
-    VRFHub vrf;
+    VRFHub internal vrf;
+    MockVRFV2PlusWrapper internal wrapper;
     address gov = address(0xA11CE);
     address alice = address(0xBEEF);
 
@@ -29,11 +32,12 @@ contract VRFFee is Test {
 
     function setUp() external {
         asset = new MockERC20("Asset", "AST", 18);
-        vrf = new VRFHub(address(this), gov);
 
-        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18, 1);
+        bank = new Bank(address(asset), gov, 1000, 18, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
+        wrapper = new MockVRFV2PlusWrapper();
+        vrf = new VRFHub(address(wrapper), address(router));
 
         ReferralRegistry refReg = new ReferralRegistry(gov);
         DefaultReferralEngine refEng = new DefaultReferralEngine();
@@ -47,18 +51,19 @@ contract VRFFee is Test {
         poolRegistry.setHubRegistered(address(hub), true);
         poolRegistry.setHubAllowedForPool(1, address(hub), true);
         bank.setSettlementRouterOnce(address(router));
+        bank.setRandomnessConsumerOnce(address(vrf));
         refReg.setBinderOnce(address(hub));
         vm.stopPrank();
 
         CoinTossModule coin = new CoinTossModule();
         vm.prank(gov);
-        hub.registerGame(GAME_COIN, address(coin));
+        hub.registerGame(GAME_COIN, address(coin), 25, 2_447_746);
 
         // seed liquidity + player funds
         asset.mint(gov, 10_000 ether);
         vm.startPrank(gov);
-        asset.approve(address(bank), type(uint256).max);
-        bank.deposit(5_000 ether, gov);
+        asset.approve(address(bank.vault()), type(uint256).max);
+        LiquidityVault(bank.vault()).addDepositFor(gov, 5_000 ether);
         vm.stopPrank();
 
         asset.mint(alice, 100 ether);
@@ -72,7 +77,7 @@ contract VRFFee is Test {
     function test_vrf_fee_overpay_refunds_best_effort() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
+        (uint256 fee,) = hub.quoteVRFFee(GAME_COIN, 1, tx.gasprice);
 
         uint256 ethBefore = alice.balance;
 
@@ -86,7 +91,7 @@ contract VRFFee is Test {
     function test_vrf_fee_underpay_reverts() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = hub.quoteVRFFee(1, tx.gasprice);
+        (uint256 fee,) = hub.quoteVRFFee(GAME_COIN, 1, tx.gasprice);
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(IVRFHub.InsufficientVRFFee.selector, fee - 1, fee));

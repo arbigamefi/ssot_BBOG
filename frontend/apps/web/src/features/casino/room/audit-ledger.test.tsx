@@ -315,12 +315,12 @@ describe("GameRoomAuditLedger", () => {
     }
   });
 
-  it("uses fixed release house edge and edge-adjusted multipliers on the info tab", () => {
+  it("uses the current on-chain house edge and edge-adjusted multipliers on the info tab", () => {
     setTab("info");
     render(
       <GameRoomAuditLedger
         game={{ ...game, slug: "sic-bo", label: "Sic Bo" }}
-        gameMeta={{ slug: "sic-bo", houseEdgeBps: 100 }}
+        houseEdgeBps={100}
         recentBets={[]}
       />
     );
@@ -344,7 +344,7 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={{ ...game, slug: "keno", label: "Keno" }}
-        gameMeta={{ slug: "keno", houseEdgeBps: 200 }}
+        houseEdgeBps={200}
         recentBets={[]}
       />
     );
@@ -462,9 +462,16 @@ describe("GameRoomAuditLedger", () => {
     expect(screen.getByText("Connect your wallet to see your history.")).toBeDefined();
   });
 
-  it("renders the game-info table from t.raw bets array", () => {
+  it("leaves fee and net odds unknown if the live fee read is unavailable", () => {
     setTab("info");
     render(<GameRoomAuditLedger game={game} recentBets={[]} />);
+    expect(screen.queryByText("2.70%")).toBeNull();
+    expect(screen.queryByText("36.00×")).toBeNull();
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+  it("renders the game-info table from t.raw bets array", () => {
+    setTab("info");
+    render(<GameRoomAuditLedger game={game} recentBets={[]} houseEdgeBps={270} />);
     expect(screen.getByText("European roulette tagline.")).toBeDefined();
     expect(screen.getByText("2.70%")).toBeDefined();
     expect(screen.getByText("Straight up")).toBeDefined();

@@ -62,27 +62,35 @@ describe("game room hooks helpers", () => {
 
 describe("live pool availability", () => {
   const snapshot = {
-    totalAssets: 100n,
-    totalReserved: 0n,
-    activeReserved: 0n,
-    riskInPaused: false
+    L: 100n,
+    G: 120n,
+    R: 30n,
+    minBetAmount: 1n,
+    openHolds: 1n,
+    maxOpenHolds: 128n,
+    accountingValid: true,
+    riskInPaused: false,
+    riskReserveBps: 1000
   };
-  it("keeps betting ready while historical epochs have earlier bets outstanding", async () => {
+  it("keeps betting available when a received result gates only LP cash operations", async () => {
     const sdk = {
       bank: {
-        getSnapshot: vi.fn().mockResolvedValue({
-          ...snapshot,
-          recoveryBacking: 50n,
-          totalReserved: 20n,
-          activeOpenHolds: 0n,
-          currentEpoch: 2n,
-          queuedBatch: null
-        })
+        getSnapshot: vi
+          .fn()
+          .mockResolvedValue({ ...snapshot, lpStatus: "unbookedResult", unbookedResultCount: 1n })
       }
     };
     const { result } = renderHook(() => usePoolSnapshot({ sdk, poolId: 1 }));
     await waitFor(() => expect(result.current.status).toBe("ready"));
-    expect(result.current.snapshot?.riskInPaused).toBe(false);
+  });
+  it.each([
+    [{ ...snapshot, openHolds: 128n }, "full"],
+    [{ ...snapshot, L: 0n }, "noLiquidity"],
+    [{ ...snapshot, accountingValid: false }, "invalidAccounting"]
+  ])("blocks non-executable Bank state: %s", async (value, expected) => {
+    const sdk = { bank: { getSnapshot: vi.fn().mockResolvedValue(value) } };
+    const { result } = renderHook(() => usePoolSnapshot({ sdk, poolId: 1 }));
+    await waitFor(() => expect(result.current.status).toBe(expected));
   });
   it("blocks until a read completes, shows pause, and refreshes after governance resumes", async () => {
     const getSnapshot = vi

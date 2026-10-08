@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import {Governable} from "../../access/Governable.sol";
 import {Errors} from "../../libs/Errors.sol";
@@ -8,7 +8,7 @@ import {IReferralRegistry} from "./IReferralRegistry.sol";
 /// @notice First-touch referral registry with anti-cycle.
 ///
 /// Notes:
-/// - Cycle checks are limited to a bounded number of hops (64) for gas safety.
+/// - Binding must reach an unbound root within 64 hops; longer chains are rejected for gas safety.
 /// - `binder` is intended to be the authorized game hub and is set once.
 contract ReferralRegistry is IReferralRegistry, Governable {
     uint8 internal constant MAX_HOPS = 64;
@@ -53,6 +53,9 @@ contract ReferralRegistry is IReferralRegistry, Governable {
             if (cur == player) revert Errors.InvalidConfig();
             cur = _ref[cur];
         }
+
+        // A truncated walk cannot prove the proposed edge is acyclic.
+        if (cur != address(0)) revert Errors.InvalidConfig();
 
         _ref[player] = referrer;
         emit ReferrerBound(player, referrer);

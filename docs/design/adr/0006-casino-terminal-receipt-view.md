@@ -8,6 +8,12 @@
 | Superseded by | — |
 | Affects | `src/core/GameHub.sol`, `src/core/interfaces/IGameHub.sol`, `src/core/interfaces/SSOTTypes.sol`, `frontend/packages/ssot/src/sdk/**`, `frontend/apps/web/src/features/casino/room/**` |
 
+The receipt contract and its adaptation to
+[NFT custody and callback settlement](../lp-accounting-and-callback-implementation.md)
+are implemented and locally tested. See the [core review](../../audit/nft-core-integration-review.md)
+and [application review](../../audit/nft-consumer-integration-review.md) for versioned evidence.
+The criteria below remain release checks against the final source; local results are not network acceptance.
+
 ## 1. Context
 
 Casino settlement UX needs distinct facts after a bet becomes terminal:
@@ -45,6 +51,10 @@ function getBetTerminal(uint256 betId)
 - `protocolFeeAccrual`;
 - `refundAmount`.
 
+Internally, four checked `uint128` amounts occupy two storage slots. Terminal state
+comes from the existing bet lifecycle and `feeOnPayout` is derived as gross minus net.
+The view returns the complete tuple above without duplicating those two values in storage.
+
 Frontend result rendering uses this view as the source of terminal amounts.
 The SDK reads it before searching a bounded log window for the terminal
 transaction. Logs locate the transaction for payment evidence and explorer
@@ -65,6 +75,9 @@ the intervening asset `Transfer` or `PlayerPayableCreated` event and exact amoun
 A nonterminal receipt returns no terminal proof. Missing financial fields remain
 unavailable rather than becoming zero. Failure to enrich an existing terminal
 receipt preserves its economic amounts and leaves payment status `unknown`.
+Bank/Vault custody transfers and ERC721 ownership events are not player-payment
+evidence. Match the authenticated Bank-to-player asset payment within the full
+receipt, including callbacks that emit ready and terminal events together.
 
 ## 3. Rationale
 
@@ -79,12 +92,12 @@ receipt preserves its economic amounts and leaves payment status `unknown`.
 
 ## 4. Alternatives Considered
 
-| Alternative | Pros | Cons | Decision |
-| --- | --- | --- | --- |
-| Keep client log scanning | No contract churn | Slow RPC path, bad UX, fragile | Rejected |
-| Use keeper/Postgres as the only result source | Fast when infra is healthy | Adds off-chain dependency to core outcome display | Rejected as primary, allowed as cache/proof layer |
-| Add payout/refund fields directly to `Bet` | Single `getBet` call | Bloats lifecycle struct and every consumer | Rejected |
-| Add `BetTerminal` mapping + view | Direct on-chain result read with narrow surface | Adds one mapping write at terminalization | Accepted |
+| Alternative                                   | Pros                                            | Cons                                              | Decision                                          |
+| --------------------------------------------- | ----------------------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
+| Keep client log scanning                      | No contract churn                               | Slow RPC path, bad UX, fragile                    | Rejected                                          |
+| Use keeper/Postgres as the only result source | Fast when infra is healthy                      | Adds off-chain dependency to core outcome display | Rejected as primary, allowed as cache/proof layer |
+| Add payout/refund fields directly to `Bet`    | Single `getBet` call                            | Bloats lifecycle struct and every consumer        | Rejected                                          |
+| Add `BetTerminal` mapping + view              | Direct on-chain result read with narrow surface | Adds one mapping write at terminalization         | Accepted                                          |
 
 ## 5. Consequences
 
@@ -103,7 +116,8 @@ Negative:
 Neutral:
 
 - Existing `BetFinalized` and `BetRefunded` event ABIs remain unchanged.
-- Keeper behavior remains unchanged.
+- A callback may already have terminalized before the keeper sees a ready event;
+  the keeper indexes the receipt without submitting a duplicate finalization.
 
 ## 6. Acceptance Criteria
 
@@ -111,13 +125,16 @@ Neutral:
       `BetFinalized`.
 - [ ] `GameHub.refund` writes a `Refunded` terminal receipt before emitting
       `BetRefunded`.
-- [ ] Over-refund fallback in `finalize` writes a full-stake `Refunded`
-      terminal receipt.
+- [ ] Invalid output, including an excessive refund, reverts the terminal
+      attempt without a terminal receipt; the canonical seed remains retryable.
+- [ ] Terminal receipt, Bank/Vault accounting and VRF acknowledgment succeed
+      atomically. Failed acknowledgment cannot leave a terminal receipt behind.
 - [ ] Frontend SDK reads `getBetTerminal` before transaction-proof enrichment;
       missing terminal storage or read errors do not select a compatibility path.
 - [ ] Receipt evidence distinguishes `transferred`, `payable`, `none`, and
       `unknown`; missing financial amounts are never silently zero-filled.
-- [ ] Contract tests cover normal settle, refund, and fallback refund receipts.
+- [ ] Contract tests cover callback/retry settlement, eligible missing-seed
+      refunds, invalid-result rollback and refusal to refund a received seed.
 
 ## 7. Implementation References
 

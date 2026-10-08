@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createMemoryBetIndexStore, type BankProviderLedgerRow } from "@ssot/bet-index";
+import { createMemoryBetIndexStore, type VaultProviderLedgerRow } from "@ssot/bet-index";
 import { __resetRateLimitBucketsForTests } from "../../../../server/http/rate-limit";
 
 const mocks = vi.hoisted(() => ({ store: undefined as unknown, scan: vi.fn() }));
@@ -8,7 +8,7 @@ vi.mock("@ssot/bet-index", async () => ({
   createPostgresBetIndexStore: () => mocks.store
 }));
 vi.mock("@ssot/ssot/sdk", () => ({
-  createSSOTSDK: () => ({ bank: { getProviderLedger: mocks.scan } })
+  createSSOTSDK: () => ({ vault: { getProviderLedger: mocks.scan } })
 }));
 vi.mock("@ssot/ssot/release", () => ({
   embeddedChainIds: [84532],
@@ -19,6 +19,7 @@ vi.mock("@ssot/ssot/release", () => ({
         {
           poolId: 1,
           bank: "0x1111111111111111111111111111111111111111",
+          vault: "0x5555555555555555555555555555555555555555",
           asset: "0x2222222222222222222222222222222222222222"
         }
       ]
@@ -43,30 +44,31 @@ describe("provider cash flow deployment identity", () => {
     mocks.scan.mockReset();
   });
 
-  it("returns claims for the selected Bank including aliases, excluding a previous Bank with the same pool ID", async () => {
+  it("returns claims for the selected Vault including aliases, excluding a previous Vault with the same pool ID", async () => {
     const store = createMemoryBetIndexStore();
     mocks.store = store;
-    const row: BankProviderLedgerRow = {
+    const row: VaultProviderLedgerRow = {
       chainId: 84532,
       poolId: "1",
       owner: "0x3333333333333333333333333333333333333333",
       bank: "0x1111111111111111111111111111111111111111",
+      vault: "0x5555555555555555555555555555555555555555",
       asset: "0x2222222222222222222222222222222222222222",
       id: "unused",
       action: "withdraw",
       assets: "10",
-      shares: "10",
+      depositId: "1099511627776",
       txHash: "0xaa",
       blockNumber: 20,
       logIndex: 1,
       updatedAt: 0
     };
-    await store.writeBankProviderLedgerRows([
+    await store.writeVaultProviderLedgerRows([
       row,
       {
         ...row,
         txHash: "0xbb",
-        bank: "0x4444444444444444444444444444444444444444",
+        vault: "0x4444444444444444444444444444444444444444",
         blockNumber: 21,
         assets: "999"
       },
@@ -85,7 +87,7 @@ describe("provider cash flow deployment identity", () => {
     expect(mocks.scan).not.toHaveBeenCalled();
     const mismatched = await GET(
       new Request(
-        `http://localhost/api/earn/provider-ledger?chainId=84532&poolId=1&owner=${row.owner}&bank=0x4444444444444444444444444444444444444444`
+        `http://localhost/api/earn/provider-ledger?chainId=84532&poolId=1&owner=${row.owner}&vault=0x4444444444444444444444444444444444444444`
       )
     );
     expect(mismatched.status).toBe(400);
@@ -95,27 +97,35 @@ describe("provider cash flow deployment identity", () => {
     mocks.store = store;
     const owner = "0x3333333333333333333333333333333333333333" as const;
     const bank = "0x1111111111111111111111111111111111111111" as const;
-    const row: BankProviderLedgerRow = {
+    const row: VaultProviderLedgerRow = {
       chainId: 84532,
       poolId: "1",
       owner,
       bank,
+      vault: "0x5555555555555555555555555555555555555555",
       asset: bank,
       id: "unused",
-      action: "recovery",
+      action: "withdraw",
       assets: "8",
-      shares: "0",
+      depositId: "1099511627776",
       txHash: "0xaa",
       blockNumber: 20,
       logIndex: 1,
       updatedAt: 0,
       caller: bank,
       receiver: owner,
-      epochId: "1"
+      percent: "1000000000000"
     };
-    await store.writeBankProviderLedgerRows([
+    await store.writeVaultProviderLedgerRows([
       row,
-      { ...row, txHash: "0xbb", blockNumber: 21, action: "donation", receiver: bank }
+      {
+        ...row,
+        txHash: "0xbb",
+        blockNumber: 21,
+        action: "transfer",
+        receiver: bank,
+        assets: undefined
+      }
     ]);
     const { GET } = await import("./route");
     const response = await GET(
@@ -125,9 +135,7 @@ describe("provider cash flow deployment identity", () => {
     );
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(body.rows).toMatchObject([
-      { action: "recovery", epochId: "1", receiver: owner, caller: bank }
-    ]);
+    expect(body.rows).toMatchObject([{ action: "withdraw", depositId: "1099511627776", owner }]);
     expect(body.rows).toHaveLength(1);
     expect(body.coverage).toEqual({ fromBlock: null, toBlock: 20, complete: false });
   });

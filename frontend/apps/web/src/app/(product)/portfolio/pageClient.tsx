@@ -43,7 +43,7 @@ export function PortfolioPageClient() {
   const { data: txRows = [] } = useTxJournal(50);
 
   const {
-    data: assetRows = [],
+    data: assetData,
     isLoading: balancesLoading,
     error: balancesError
   } = useQuery({
@@ -54,12 +54,12 @@ export function PortfolioPageClient() {
       const rows = await Promise.all(
         release.pools.map(async (pool) => {
           const poolAsset = getPoolAssetContext(release, pool);
-          if (!poolAsset?.bank) return null;
+          if (!poolAsset?.bank || !pool.vault) return null;
           const assetAddress = poolAsset.asset.address;
-          const [walletBalance, allowance, position] = await Promise.all([
+          const [walletBalance, allowance, deposits] = await Promise.all([
             sdk.bank.getAssetBalance(assetAddress, account),
-            sdk.bank.getAllowance(pool.poolId, account),
-            sdk.bank.getPosition(pool.poolId, account)
+            sdk.vault.getAllowance(pool.poolId, account),
+            sdk.vault.getDeposits(pool.poolId, account, { limit: 25 })
           ]);
           return {
             id: String(pool.poolId),
@@ -68,8 +68,11 @@ export function PortfolioPageClient() {
             asset: poolAsset.asset.address,
             bank: poolAsset.bank,
             walletBalance,
-            shares: position.shares,
-            assetsEquivalent: position.assetsEquivalent,
+            nftCount: deposits.nftCount,
+            liquidityAssets: deposits.complete
+              ? deposits.items.reduce((sum, item) => sum + item.assets, 0n)
+              : undefined,
+            complete: deposits.complete,
             allowance
           };
         })
@@ -83,8 +86,10 @@ export function PortfolioPageClient() {
     refetchInterval: 15_000
   });
 
+  const assetRows = balancesError ? [] : (assetData ?? []);
+
   const {
-    data: refundCredit = 0n,
+    data: refundCredit,
     error: refundError,
     refetch: refetchRefundCredit
   } = useQuery({
@@ -194,7 +199,7 @@ export function PortfolioPageClient() {
     {
       label: t("portfolio.overview.metrics.bankPosition.label"),
       value: account
-        ? formatPortfolioAssetAmounts(assetRows, "assetsEquivalent", pendingLabel)
+        ? formatPortfolioAssetAmounts(assetRows, "liquidityAssets", pendingLabel)
         : valueUnavailable,
       detail: t("portfolio.overview.metrics.bankPosition.detail")
     },
@@ -272,7 +277,13 @@ export function PortfolioPageClient() {
               amount={refundAmount}
               connected={Boolean(account)}
               readOnly={readOnly}
-              disabled={!account || readOnly || refundFlow.busy || refundCredit === 0n}
+              disabled={
+                !account ||
+                readOnly ||
+                refundFlow.busy ||
+                refundCredit == null ||
+                refundCredit === 0n
+              }
               flow={refundFlow}
               explorerBaseUrl={explorerBaseUrl}
               onClaim={() => void handleClaimRefund()}
@@ -287,7 +298,7 @@ export function PortfolioPageClient() {
 
 function formatPortfolioAssetAmounts(
   rows: readonly PortfolioAssetRow[],
-  key: "walletBalance" | "assetsEquivalent",
+  key: "walletBalance" | "liquidityAssets",
   pendingLabel: string
 ) {
   if (rows.length === 0) return pendingLabel;

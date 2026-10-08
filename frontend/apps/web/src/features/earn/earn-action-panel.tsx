@@ -6,7 +6,7 @@ import type { DomainError } from "@ssot/ssot";
 
 import { TokenLogo } from "../../components/TokenLogo";
 import { requestWalletConnect } from "../../app-shell/wallet-connect-events";
-import type { EarnAmountMode, EarnTab } from "./types";
+import type { EarnTab } from "./types";
 
 const TABS: Array<{ key: EarnTab; label: string; description: string }> = [
   {
@@ -19,11 +19,6 @@ const TABS: Array<{ key: EarnTab; label: string; description: string }> = [
     label: "earn.actions.tabs.withdraw.label",
     description: "earn.actions.tabs.withdraw.description"
   }
-];
-
-const AMOUNT_MODES: Array<{ key: EarnAmountMode; label: string }> = [
-  { key: "assets", label: "earn.actions.amountMode.assets" },
-  { key: "shares", label: "earn.actions.amountMode.shares" }
 ];
 
 export type EarnFlowState = {
@@ -40,8 +35,6 @@ export type EarnFlowState = {
 export function EarnActionPanel({
   tab,
   onTabChange,
-  amountMode,
-  onAmountModeChange,
   pools,
   poolKey,
   onPoolChange,
@@ -64,8 +57,6 @@ export function EarnActionPanel({
 }: {
   tab: EarnTab;
   onTabChange: (tab: EarnTab) => void;
-  amountMode: EarnAmountMode;
-  onAmountModeChange: (mode: EarnAmountMode) => void;
   pools: readonly { key: string; label: string }[];
   poolKey: string;
   onPoolChange: (key: string) => void;
@@ -84,7 +75,7 @@ export function EarnActionPanel({
   connected: boolean;
   /** Website switch for new LP capital; withdrawals are unaffected. */
   depositsClosed?: boolean;
-  /** Request, cancellation and claim controls for the selected pool. */
+  /** Current-owner NFT withdrawal controls for the selected pool. */
   withdrawContent: React.ReactNode;
   notice?: React.ReactNode;
 }) {
@@ -133,34 +124,6 @@ export function EarnActionPanel({
             {activeTab ? t(activeTab.description) : ""}
           </p>
         ) : null}
-
-        {showDepositsClosed || showWithdrawContent ? null : (
-          <>
-            <div className="grid min-w-0 gap-2">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-                {t("earn.actions.amountMode.label")}
-              </div>
-              <div className="grid min-w-0 grid-cols-2 gap-2 rounded-md border border-border bg-surface-0 p-1">
-                {AMOUNT_MODES.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    aria-pressed={amountMode === item.key}
-                    onClick={() => onAmountModeChange(item.key)}
-                    disabled={flow.busy}
-                    className={`min-w-0 rounded-sm px-2 py-2.5 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:px-3 sm:text-xs sm:tracking-[0.12em] ${
-                      amountMode === item.key
-                        ? "bg-surface-2 text-fg"
-                        : "text-fg-muted hover:bg-surface-2 hover:text-fg"
-                    } disabled:cursor-not-allowed disabled:opacity-60`}
-                  >
-                    <span className="block truncate">{t(item.label)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
 
         <div className="grid min-w-0 gap-2">
           <label
@@ -227,9 +190,10 @@ export function EarnActionPanel({
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                {amountMode === "shares" ? null : <TokenLogo symbol={symbol} size={24} />}
+                <TokenLogo symbol={symbol} size={24} />
                 <input
                   id="earn-amount"
+                  aria-describedby="earn-deposit-ordering-risk"
                   disabled={flow.busy}
                   value={amount}
                   onChange={(event) => onAmountChange(event.target.value)}
@@ -238,9 +202,15 @@ export function EarnActionPanel({
                   className="min-w-0 flex-1 bg-transparent font-mono text-2xl font-bold text-fg outline-none placeholder:text-fg-subtle sm:text-3xl"
                 />
                 <span className="shrink-0 whitespace-nowrap text-sm font-bold uppercase tracking-[0.08em] text-fg-muted sm:tracking-[0.12em]">
-                  {amountMode === "shares" ? t("earn.units.shares") : symbol}
+                  {symbol}
                 </span>
               </div>
+              <p
+                id="earn-deposit-ordering-risk"
+                className="mt-3 border-t border-border-soft pt-3 text-xs leading-5 text-fg-muted"
+              >
+                {t("earn.nft.orderingRisk")}
+              </p>
             </div>
 
             {!connected ? (
@@ -265,9 +235,7 @@ export function EarnActionPanel({
                 ? t("app.connectWalletButton")
                 : flow.busy
                   ? t("earn.actions.submit.executing")
-                  : amountMode === "shares"
-                    ? t("earn.actions.submit.mint")
-                    : t("earn.actions.submit.deposit")}
+                  : t("earn.actions.submit.deposit")}
             </button>
           </>
         )}

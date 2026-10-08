@@ -8,7 +8,8 @@ on:
 jobs:
   nightly:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # The chained Vault differential adds roughly 25 serial minutes at 1,024 runs (measured locally, not on a runner).
+    timeout-minutes: 150
     steps:
       - name: Checkout
         uses: actions/checkout@v4

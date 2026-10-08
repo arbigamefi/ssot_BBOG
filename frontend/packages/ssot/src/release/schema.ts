@@ -10,7 +10,8 @@ export const AssetSchema = z.object({
   symbol: z.string().min(1),
   decimals: z.number().int().min(0).max(36),
   address: Address,
-  bank: Address
+  bank: Address,
+  vault: Address
 });
 
 const NumericString = z.string().regex(/^[0-9]+$/);
@@ -39,6 +40,7 @@ export const PoolSchema = z.object({
   active: z.boolean(),
   asset: Address,
   bank: Address,
+  vault: Address,
   symbol: z.string().min(1),
   decimals: z.number().int().min(0).max(36),
   sportsRisk: z
@@ -69,8 +71,7 @@ export const ReleaseSchema = z.object({
     sportsRiskEngine: Address,
     vrfHub: Address,
     refRegistry: Address,
-    refEngine: Address,
-    adapter: Address
+    refEngine: Address
   }),
   assets: z.array(AssetSchema).min(1),
   games: z.record(z.string(), Address), // gameId(hex) -> module address
@@ -84,23 +85,23 @@ export const ReleaseSchema = z.object({
         slug: z.string().min(1),
         label: z.string().min(1),
         module: Address,
+        maxBetCount: z.number().int().min(1).max(25),
+        callbackGasLimit: z.number().int().min(200_000).max(2_447_746),
         paramsEncoding: z.string().optional()
       })
     )
     .min(1),
   sports: SportsReleaseSchema,
   pools: z.array(PoolSchema).min(1),
-  // Optional bundle metadata (used by indexer/journal as a sane default for start blocks).
-  meta: z
-    .object({
-      blockNumber: z.number().int().nonnegative().optional(),
-      schemaVersion: z.literal(2).optional(),
-      generatedAt: z.number().int().optional(),
-      // Only the current signed release schema is supported.
-      releaseLock: z.object({ schema: z.literal("SSOT_RELEASE_DIGEST_V16") }).optional()
-    })
-    .partial()
-    .optional()
+  // Current authenticated deployment identity; no inferred deployment or older LP architecture.
+  meta: z.object({
+    architectureVersion: z.literal("v1.6-nft-liquidity"),
+    blockNumber: z.number().int().nonnegative(),
+    schemaVersion: z.literal(2),
+    generatedAt: z.number().int().optional(),
+    // Only the current signed release schema is supported.
+    releaseLock: z.object({ schema: z.literal("SSOT_RELEASE_DIGEST_V16") })
+  })
 });
 
 export type SSOTRelease = z.infer<typeof ReleaseSchema>;

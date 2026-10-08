@@ -4,5 +4,4 @@ export * from "./txPipeline";
 export * from "./errors";
 export * from "./sportsOddsSigner";
 export * from "./roundEvents";
-export * from "./bankRedemption";
-export * from "./bankRecovery";
+export * from "./liquidityVault";

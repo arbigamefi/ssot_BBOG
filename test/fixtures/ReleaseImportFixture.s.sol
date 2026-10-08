@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.37;
 
 import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 import {SafeConfigMockV16, DeployHarnessV16} from "../unit/DeploymentV16.t.sol";
+import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {Governable} from "../../src/access/Governable.sol";
 import {V16Snapshot} from "../../script/release/V16Snapshot.sol";
@@ -37,6 +38,7 @@ contract ReleaseImportFixture is Script {
         vm.startBroadcast(bootstrap);
         ReleaseImportSafeMock safe = new ReleaseImportSafeMock();
         MockERC20 asset = new MockERC20("Test USD", "TUSD", 6);
+        MockVRFV2PlusWrapper wrapper = new MockVRFV2PlusWrapper();
         vm.stopBroadcast();
         vm.setEnv("DEPLOYER", vm.toString(bootstrap));
         vm.setEnv("CHAIN_ID", vm.toString(block.chainid));
@@ -52,12 +54,18 @@ contract ReleaseImportFixture is Script {
             )
         );
         vm.setEnv("SAFE_OWNERS_HASH", vm.toString(keccak256(abi.encode(safe.getOwners(), uint256(2)))));
-        vm.setEnv("VRF_WRAPPER", vm.toString(address(asset)));
+        vm.setEnv("VRF_WRAPPER", vm.toString(address(wrapper)));
+        string[8] memory games =
+            [string("DICE"), "COIN_TOSS", "ROULETTE", "KENO", "PLINKO", "SIC_BO", "SLOTS", "BACCARAT"];
+        for (uint256 i; i < games.length; ++i) {
+            vm.setEnv(string.concat("GAME_MAX_BET_COUNT_", games[i]), "25");
+            vm.setEnv(string.concat("GAME_CALLBACK_GAS_LIMIT_", games[i]), "2447746");
+        }
         vm.setEnv("NUM_POOLS", "1");
         vm.setEnv("POOL_ASSET_0", vm.toString(address(asset)));
         vm.setEnv("POOL_DOMAIN_0", "1");
         vm.setEnv("POOL_ID_0", "1");
-        vm.setEnv("BANK_MIN_STAKE_0", "1000000");
+        vm.setEnv("BANK_MIN_BET_AMOUNT_0", "10000");
         vm.setEnv("SPORTS_DERIVE_ROLE_SET_HASHES", "false");
         vm.setEnv("DEFAULT_HOUSE_EDGE_BPS", "200");
         vm.setEnv("REFUND_TIMEOUT_SECONDS", "3600");
@@ -75,7 +83,7 @@ contract ReleaseImportFixture is Script {
         // A correctly signed but incorrect scale tests live metadata verification,
         // separately from the old-signature digest mismatch control.
         vm.serializeJson("wrong-precision", snap);
-        string memory wrong = vm.serializeUint("wrong-precision", "poolLpDecimals_0", 9);
+        string memory wrong = vm.serializeUint("wrong-precision", "poolAssetDecimals_0", 9);
         _writeBundle(string.concat(directory, "/wrong-precision"), wrong);
     }
 

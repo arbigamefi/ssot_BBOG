@@ -1,6 +1,7 @@
 """Complete authorization history controls; no Forge compilation or network calls."""
 import copy
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -28,7 +29,7 @@ def word(n):
 class Chain:
     def __init__(self, sports=False):
         self.start, self.end = 10, 1250
-        self.snap = {'architectureVersion': 'v1.6-house-edge-allocation', 'chainId': 84532,
+        self.snap = {'architectureVersion': 'v1.6-nft-liquidity', 'chainId': 84532,
                      'blockNumber': self.start, 'poolRegistry': addr(1), 'gameHub': addr(2),
                      'sportsHub': addr(3) if sports else addr(0), 'sportsRiskEngine': addr(4) if sports else addr(0),
                      'sportsEnabled': int(sports), 'numPools': 2 if sports else 1}
@@ -45,13 +46,32 @@ class Chain:
         for i in range(self.snap['numPools']):
             pool, hub = i + 1, i + 2
             self.snap.update({f'poolId_{i}': pool, f'poolDomain_{i}': pool,
-                              f'poolAsset_{i}': addr(20 + i), f'poolBank_{i}': addr(30 + i)})
+                              f'poolAsset_{i}': addr(20 + i), f'poolBank_{i}': addr(30 + i), f'poolVault_{i}': addr(50 + i)})
             self.add('PoolRegistered(uint64,address,address,uint8)', addr(1), [pool, 20 + i, 30 + i], pool)
             self.add('HubAllowedForPoolSet(uint64,address,bool)', addr(1), [pool, hub], 1)
             self.put(addr(1), 'isHubAllowedForPool(uint64,address)', [pool, hub], 1)
             self.put(addr(1), 'poolIdAt(uint256)', [i], pool)
             self.put(addr(1), 'domainFor(uint64)', [pool], pool)
+            self.put(addr(30 + i), 'vault()', [], 50 + i)
+            self.put(addr(30 + i), 'asset()', [], 20 + i)
+            self.put(addr(50 + i), 'bank()', [], 30 + i)
+            self.put(addr(50 + i), 'asset()', [], 20 + i)
         self.put(addr(1), 'poolCount()', [], self.snap['numPools'])
+        # Certified token and VRF provider (first-callback certificate domain) and their live reads.
+        code_hash = hashlib.sha256(bytes.fromhex('6000')).hexdigest()
+        self.snap['vrfWrapper'] = addr(80)
+        self.domain = {'chainId': 84532, 'consumerCallbackGasLimit': 2447746,
+                       'token': {'proxy': addr(20), 'implementationSlot': word(7), 'implementation': addr(70),
+                                 'proxyRuntimeSha256': code_hash, 'implementationRuntimeSha256': code_hash},
+                       'providerReference': {'wrapper': addr(80), 'coordinator': addr(81),
+                                             'wrapperOverheadGas': 13400, 'coordinatorMaxGas': 2500000}}
+        self.storage = {(addr(20), word(7)): word(70)}
+        self.put(addr(80), 's_vrfCoordinator()', [], 81)
+        self.put_words(addr(80), 'getConfig()', [0, 0, 0, 0, 13400] + [0] * 7)
+        self.put_words(addr(81), 's_config()', [0, 2500000] + [0] * 7)
+        for i, (name, key) in enumerate(CHECK.GAMES):
+            self.snap.update({key: addr(60 + i), 'gameMaxBetCount_' + name: 25, 'gameCallbackGasLimit_' + name: 2447746})
+            self.register_game(name, 60 + i, 25, 2447746)
         for i, role in enumerate(CHECK.ROLES):
             self.snap['sports' + role] = addr(40 + i) if sports else addr(0)
             if sports:
@@ -62,6 +82,15 @@ class Chain:
         self.logs.append({'address': target, 'topics': [CHECK.signature(name)] + [word(n) for n in topics],
                           'data': word(value), 'blockNumber': hex(block), 'transactionIndex': '0x0',
                           'logIndex': hex(len(self.logs)), 'removed': False})
+
+    def register_game(self, name, module, rounds, gas, block=10):
+        self.logs.append({'address': addr(2), 'topics': [CHECK.signature('GameRegistered(bytes32,address,uint32,uint32)'),
+                                                         CHECK.signature(name), word(module)],
+                          'data': word(rounds) + format(gas, '064x'), 'blockNumber': hex(block),
+                          'transactionIndex': '0x0', 'logIndex': hex(len(self.logs)), 'removed': False})
+
+    def put_words(self, target, name, values):
+        self.values[(target, CHECK.signature(name)[:10])] = '0x' + ''.join(format(v, '064x') for v in values)
 
     def put(self, target, name, args, value):
         data = CHECK.signature(name)[:10] + ''.join(format(n, '064x') for n in args)
@@ -85,6 +114,8 @@ class Chain:
                                   and int(query['fromBlock'], 16) <= int(row['blockNumber'], 16) <= int(query['toBlock'], 16)]))
         if method == 'eth_call':
             return self.values.get((params[0]['to'], params[0]['data']), word(0))
+        if method == 'eth_getStorageAt':
+            return self.storage.get((params[0], params[1]), word(0))
         raise AssertionError(method)
 
 
@@ -101,10 +132,38 @@ class PermissionHistoryTests(unittest.TestCase):
             self.assertEqual(blocks, [chain.end])
             self.assertEqual(result['blockHash'], chain.hash)
             pages = [params[0] for method, params in chain.requests if method == 'eth_getLogs']
-            self.assertEqual(len(pages), 6 if sports else 3)
+            # Registry and GameHub always replay their history; SportsHub roles only when sports is enabled.
+            self.assertEqual(len(pages), 9 if sports else 6)
+            self.assertEqual({page['address'] for page in pages}, {addr(1), addr(2)} | ({addr(3)} if sports else set()))
             for page in pages:
                 self.assertLessEqual(int(page['toBlock'], 16) - int(page['fromBlock'], 16) + 1, 500)
             self.assertTrue(all(params[1] == hex(chain.end) for method, params in chain.requests if method == 'eth_call'))
+
+    def test_game_registrations_must_equal_the_certified_set(self):
+        chain = Chain()
+        CHECK.verify_permissions(chain, chain.snap, chain.end)
+        extra = Chain()
+        extra.register_game('UNCERTIFIED', 99, 25, 2447746, block=900)
+        self.reject(extra, 'registered game set differs from release')
+        for change in ({'gameMaxBetCount_KENO': 24}, {'gameCallbackGasLimit_DICE': 2447745}, {'moduleSlots': addr(98)}):
+            chain = Chain()
+            chain.snap.update(change)
+            self.reject(chain, 'registered game set differs from release')
+        missing = Chain()
+        missing.logs = [row for row in missing.logs if row['address'] != addr(2)]
+        self.reject(missing, 'registered game set differs from release')
+        duplicate = Chain()
+        duplicate.register_game('KENO', 63, 25, 2447746, block=901)
+        self.reject(duplicate, 'duplicate game registration')
+
+    def test_immutable_bank_vault_and_asset_bindings_are_required(self):
+        for target, method in ((30, 'vault()'), (30, 'asset()'), (50, 'bank()'), (50, 'asset()')):
+            with self.subTest(target=target, method=method):
+                chain = Chain()
+                chain.put(addr(target), method, [], 99)
+                self.reject(chain, 'differs from release')
+        chain = Chain(); chain.snap['poolVault_0'] = addr(0)
+        self.reject(chain, 'invalid or duplicate Vault binding')
 
     def test_extra_registered_hub_and_extra_pool_route_reject(self):
         chain = Chain()

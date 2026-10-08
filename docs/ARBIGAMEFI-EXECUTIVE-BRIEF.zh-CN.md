@@ -1,6 +1,6 @@
 # ArbiGameFi 项目简介
 
-> AGF-BRIEF-2026.10-r2 · 2026-10-02 · 中文与英文 · 内部审阅稿，尚未对外发布
+> AGF-BRIEF-2026.10-r3 · 2026-10-04 · 中文与英文 · 内部审阅稿，尚未对外发布
 >
 > **读者**：首次接触项目的用户、合作方、媒体与研究者
 
@@ -18,11 +18,11 @@ ArbiGameFi 正在建设单品牌、钱包原生的 casino 与 sportsbook，**项
 **资金怎样运作。**
 
 - **投注**：玩家保管自己的钱包密钥，投注资金进入合约，按公开规则结算。
-- **LP 的收益与风险**：LP 为资金池提供赔付资本并持有份额，固定获得每笔流水 house edge 的一半，另一半用于推荐、玩家返水与协议收入。LP 同时承担游戏结果、合约与资产风险。份额不是项目股权，也不保证收益。
-- **LP 存入与退出**：存入即时生效，退出先提交请求。退出从不暂停下注，也不会把尚未结算的投注风险转嫁给留下的 LP。
-- **转账失败**：款项会完整保留为玩家应付款，并由系统自动代为领取；收据分别说明结果与实际到账方式。
+- **LP 的收益与风险**：LP 为资金池提供赔付资本，每笔存款对应独立 NFT，按实际游戏盈亏与公开费用规则记账。NFT 不是项目股权，也不保证收益；LP 承担游戏结果、合约与资产风险。
+- **LP 存入与退出**：存入即时生效并承保，24 小时成熟后按池的可用资本同步提现；部分提款使余款重新冷却 24 小时。NFT 转让保留原到期时间。退出不暂停下注，但已退出部分不再承担以后入账的旧投注损失；这些损益按剩余树与回退规则分配，退出时机可能增加留存 LP 的损失。用户已选择保留规则、接受并披露该排序风险；24 小时锁定不消除它，后入资金也可能分到旧投注利润。外部 LP 仍须满足独立的 gas、审计与网络验收条件。
+- **转账失败**：无法当场支付的玩家款项可保留为固定玩家应付款，支持代为领取；成功到账仍取决于资产可转账及有人提交领取交易。收据分别说明结果与实际支付。
 
-**现状。** Base Sepolia 已部署受控候选，并完成多签接管及部分真实投注结算（见[测试网验收记录](deploy/v16-sepolia-acceptance.md)）。完整网络验收与外部审计尚未完成，测试资金与交易不代表正式运营、用户需求或营收。牌照、辖区与强制合规措施仍在准备中，完成之前不开放真实资金服务。
+**现状。** NFT 流动性、回调结算及 SDK、页面、keeper 接入已完成对应版本的本地验证；最终候选集成、回调 gas 资格、已接受排序风险的披露、全新 Base Sepolia 验收与外部审计仍需按[审计范围](audit/v1.6-audit-scope.md)与[测试网清单](deploy/v16-sepolia-acceptance.md)关闭。测试不代表正式运营、用户需求或营收。牌照、辖区与强制合规措施仍在准备中，完成之前不开放真实资金服务。
 
 | 阅读目的           | 入口                                      |
 | ------------------ | ----------------------------------------- |
@@ -42,10 +42,10 @@ ArbiGameFi is an unlaunched, single-brand, wallet-native casino and sportsbook. 
 **How the money works.**
 
 - Players keep their keys; accepted stakes are held by contracts and settled by public rules.
-- LPs supply payout capital and keep a fixed half of each casino bet's turnover house edge. They bear pool outcomes and contract risk, and their shares are neither equity nor a fixed-return product.
-- Deposits are immediate. Exits are requests that never pause betting and never shift unsettled risk onto the LPs who stay.
-- A failed player transfer is kept in full as a payable and claimed on the player's behalf.
+- Each LP deposit creates a separate NFT supplying payout capital. Its value reflects actual game outcomes and public fee rules. It is neither equity nor a guaranteed-return product; pool, contract and asset risks remain.
+- Deposits underwrite immediately and mature after 24 hours. Withdrawals pay synchronously within available capital; a partial withdrawal relocks the remainder for 24 hours, while NFT transfers preserve maturity. Exits do not pause betting. Exited capital bears no subsequently booked loss, including old bets; remaining deposits and tree fallback absorb those outcomes. The user accepted this ordering tradeoff with public disclosure. The 24-hour lock does not remove it, and later capital may also receive old profit. Gas, external audit and network acceptance remain independent outside-LP admission conditions.
+- Unpaid player amounts can remain fixed-player payables and be claimed on their behalf. Payment still requires a transferable asset and someone submitting a claim transaction.
 
-**Status.** A controlled Base Sepolia candidate is deployed, with multisig takeover and some real bet settlements verified. Full network acceptance and external audit remain pending; test assets and transactions do not establish production operation, demand or revenue. Licensing, jurisdictions and enforced compliance controls are still being prepared, and no real-money service opens before they are complete.
+**Status.** NFT liquidity, callback settlement and the SDK, application and keeper integration have corresponding local verification. Final-candidate integration, callback gas qualification, disclosure of the accepted ordering risk, fresh Base Sepolia acceptance and external audit still need closure under the audit scope and acceptance checklist. Tests do not establish production operation, demand or revenue. Licensing, jurisdictions and enforced compliance controls are still being prepared, and no real-money service opens before they are complete.
 
 Read the [business whitepaper](WHITEPAPER.product.zh-CN.md) to assess cooperation, the [technical whitepaper](WHITEPAPER.zh-CN.md) for mechanisms and trust assumptions, and the [release guide](release/README.md) for current release conditions.

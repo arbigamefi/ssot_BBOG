@@ -315,7 +315,9 @@ export function calculateGameWinChance(input: {
   return 100;
 }
 
-export function calculateGameReserveMultiplier(input: {
+export type ReserveRatio = { numerator: bigint; denominator: bigint };
+
+type ReserveSelection = {
   slug: string;
   diceTarget: number;
   diceDirection: DiceDirection;
@@ -325,22 +327,55 @@ export function calculateGameReserveMultiplier(input: {
   baccaratSide?: BaccaratSide;
   sicBoKind?: SicBoKind;
   sicBoValue?: number;
-}): number {
+};
+
+/** Exact maxPayout ratios from the admitted module rules, before the house edge. */
+export function calculateGameReserveRatio(input: ReserveSelection): ReserveRatio | undefined {
+  const ratio = (numerator: number | bigint, denominator: number | bigint = 10_000n) => ({
+    numerator: BigInt(numerator),
+    denominator: BigInt(denominator)
+  });
   if (input.slug === "dice") {
-    const winCount = input.diceDirection === "under" ? input.diceTarget : 100 - input.diceTarget;
-    return winCount > 0 ? 100 / winCount : 0;
+    const wins = input.diceDirection === "under" ? input.diceTarget : 100 - input.diceTarget;
+    return Number.isInteger(wins) && wins >= 1 && wins <= 99 ? ratio(100, wins) : undefined;
   }
-  if (input.slug === "coin-toss") return 2;
-  if (input.slug === "roulette") return rouletteReserveMultiplier(input.rouletteSpots);
-  if (input.slug === "keno") return kenoMaxMultiplier(input.kenoSpots.length);
-  if (input.slug === "plinko") return plinkoMaxMultiplier(input.plinkoRisk);
-  if (input.slug === "slots") return slotsMaxMultiplier();
-  if (input.slug === "baccarat") return baccaratMultiplier(input.baccaratSide ?? "player");
+  if (input.slug === "coin-toss") return ratio(2, 1);
+  if (input.slug === "roulette") {
+    const covered = rouletteCoveredNumbers(input.rouletteSpots).length;
+    return covered > 0 && covered < 37 ? ratio(37, covered) : undefined;
+  }
+  if (input.slug === "keno") {
+    const row = KENO_GAIN_TABLE[input.kenoSpots.length];
+    return row ? ratio(Math.max(...row)) : undefined;
+  }
+  if (input.slug === "plinko") return ratio(Math.max(...PLINKO_FACTOR_TABLE[input.plinkoRisk]));
+  if (input.slug === "slots") return ratio(64, 1);
+  if (input.slug === "baccarat")
+    return ratio(BACCARAT_FACTOR_TABLE[input.baccaratSide ?? "player"]);
   if (input.slug === "sic-bo") {
     const kind = input.sicBoKind ?? "small";
-    return sicBoMultiplier(kind, normalizeSicBoValue(kind, input.sicBoValue));
+    if (kind === "small" || kind === "big") return ratio(SIC_BO_FACTOR_TABLE.smallBig);
+    if (kind === "total") {
+      const count = SIC_BO_TOTAL_COUNTS[normalizeSicBoValue(kind, input.sicBoValue)];
+      return count ? ratio((216n * 10_000n) / BigInt(count)) : undefined;
+    }
+    return ratio(
+      kind === "anyTriple"
+        ? SIC_BO_FACTOR_TABLE.anyTriple
+        : kind === "specificTriple"
+          ? SIC_BO_FACTOR_TABLE.specificTriple
+          : kind === "specificDouble"
+            ? SIC_BO_FACTOR_TABLE.specificDouble
+            : SIC_BO_FACTOR_TABLE.singleFaceMax
+    );
   }
-  return 0;
+  return undefined;
+}
+
+/** Approximate numeric odds are for display only; capacity always uses the ratio. */
+export function calculateGameReserveMultiplier(input: ReserveSelection): number {
+  const ratio = calculateGameReserveRatio(input);
+  return ratio ? Number(ratio.numerator) / Number(ratio.denominator) : 0;
 }
 
 export function applyHouseEdgeToMultiplier(multiplier: number, houseEdgeBps: number): number {

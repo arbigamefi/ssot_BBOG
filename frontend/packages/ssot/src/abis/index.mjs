@@ -15,8 +15,6 @@ import ReferralRegistry from "./contracts/ReferralRegistry.abi.json" with { type
 export const ReferralRegistryAbi = ReferralRegistry.abi;
 import DefaultReferralEngine from "./contracts/DefaultReferralEngine.abi.json" with { type: "json" };
 export const DefaultReferralEngineAbi = DefaultReferralEngine.abi;
-import ChainlinkV2PlusWrapperAdapter from "./contracts/ChainlinkV2PlusWrapperAdapter.abi.json" with { type: "json" };
-export const ChainlinkV2PlusWrapperAdapterAbi = ChainlinkV2PlusWrapperAdapter.abi;
 import DiceModule from "./contracts/DiceModule.abi.json" with { type: "json" };
 export const DiceModuleAbi = DiceModule.abi;
 import CoinTossModule from "./contracts/CoinTossModule.abi.json" with { type: "json" };
@@ -35,6 +33,8 @@ import BaccaratModule from "./contracts/BaccaratModule.abi.json" with { type: "j
 export const BaccaratModuleAbi = BaccaratModule.abi;
 import Bank from "./contracts/Bank.abi.json" with { type: "json" };
 export const BankAbi = Bank.abi;
+import LiquidityVault from "./contracts/LiquidityVault.abi.json" with { type: "json" };
+export const LiquidityVaultAbi = LiquidityVault.abi;
 import IGameModule from "./contracts/IGameModule.abi.json" with { type: "json" };
 export const IGameModuleAbi = IGameModule.abi;
 const abis = Object.freeze({
@@ -46,7 +46,6 @@ const abis = Object.freeze({
   SportsHubAbi,
   ReferralRegistryAbi,
   DefaultReferralEngineAbi,
-  ChainlinkV2PlusWrapperAdapterAbi,
   DiceModuleAbi,
   CoinTossModuleAbi,
   RouletteModuleAbi,
@@ -56,6 +55,7 @@ const abis = Object.freeze({
   SlotsModuleAbi,
   BaccaratModuleAbi,
   BankAbi,
+  LiquidityVaultAbi,
   IGameModuleAbi
 });
 export function getContractAbis() {

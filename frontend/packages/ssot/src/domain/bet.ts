@@ -13,7 +13,7 @@ export interface DomainBet {
   betCount: number;
   stopGain: bigint;
   stopLoss: bigint;
-  effectiveHouseEdgeBps: number;
+  houseEdgeBps: number;
   vrfFeePaid: bigint;
   vrfFeeCharged: bigint;
   vrfCallbackGasLimit: number;

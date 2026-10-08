@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {BankTestBase, TestRandomnessConsumer, DirectRouterFixture} from "../utils/BankTestBase.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {IBank} from "../../src/core/interfaces/IBank.sol";
@@ -12,13 +13,13 @@ import {MockERC20} from "../../src/mocks/MockERC20.sol";
 ///      - AGF-08: the dead `settlementRouter` pause allowance becomes a real
 ///        `guardian` role that may pause but never unpause.
 ///      - AGF-07: `minPlayerTurnoverForUnlock` gains an upper bound.
-contract BankGuardianAndTurnoverBoundTest is Test {
+contract BankGuardianAndTurnoverBoundTest is BankTestBase {
     event GuardianSet(address indexed guardian);
     event RiskInPausedSet(bool paused);
 
     address internal gov = address(0xA11CE);
     address internal guardian = address(0x6A12D);
-    address internal router = address(0x4007E2);
+    address internal router = address(this);
     address internal stranger = address(0xBAD);
 
     MockERC20 internal asset6;
@@ -26,10 +27,11 @@ contract BankGuardianAndTurnoverBoundTest is Test {
 
     function setUp() external {
         asset6 = new MockERC20("USD Coin", "USDC", 6);
-        bank6 = new Bank(address(asset6), gov, 0, "LP USDC", "lpUSDC", 6, 1);
+        bank6 = new Bank(address(asset6), gov, 0, 6, 1);
 
         vm.prank(gov);
         bank6.setSettlementRouterOnce(router);
+        _bindTestConsumer(bank6);
     }
 
     // ---------------------------------------------------------------- guardian
@@ -138,7 +140,7 @@ contract BankGuardianAndTurnoverBoundTest is Test {
     /// has to scale with decimals rather than be a flat constant.
     function test_sameRawValueIsAcceptedOn18Decimals() external {
         MockERC20 asset18 = new MockERC20("Wrapped Ether", "WETH", 18);
-        Bank bank18 = new Bank(address(asset18), gov, 0, "LP WETH", "lpWETH", 18, 1);
+        Bank bank18 = new Bank(address(asset18), gov, 0, 18, 1);
 
         vm.prank(gov);
         bank18.setMinPlayerTurnoverForUnlock(20e18);
@@ -171,7 +173,7 @@ contract BankGuardianAndTurnoverBoundTest is Test {
 
     function test_rejectsMaxUintWhenHighDecimalsCeilingIsRepresentable() external {
         MockERC20 asset38 = new MockERC20("Extreme", "EXT", 38);
-        Bank bank38 = new Bank(address(asset38), gov, 0, "LP EXT", "lpEXT", 38, 1);
+        Bank bank38 = new Bank(address(asset38), gov, 0, 38, 1);
 
         vm.prank(gov);
         bank38.setMinPlayerTurnoverForUnlock(20 * 10 ** 38);
@@ -186,7 +188,7 @@ contract BankGuardianAndTurnoverBoundTest is Test {
     /// representable thresholds are valid and computing the ceiling must not revert.
     function test_boundDoesNotOverflowOnExtremeDecimals() external {
         MockERC20 asset77 = new MockERC20("Extreme", "EXT", 77);
-        Bank bank77 = new Bank(address(asset77), gov, 0, "LP EXT", "lpEXT", 77, 1);
+        Bank bank77 = new Bank(address(asset77), gov, 0, 77, 1);
 
         vm.prank(gov);
         bank77.setMinPlayerTurnoverForUnlock(type(uint256).max);

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {BankTestBase, TestRandomnessConsumer, DirectRouterFixture} from "../utils/BankTestBase.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
@@ -12,7 +14,7 @@ import {IBank} from "../../src/core/interfaces/IBank.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
-contract SettlementRouterTest is Test {
+contract SettlementRouterTest is BankTestBase {
     address internal gov = address(0xA11CE);
     address internal hub = address(0xBEEF);
     address internal otherHub = address(0xCAFE);
@@ -29,7 +31,7 @@ contract SettlementRouterTest is Test {
 
     function setUp() external {
         usdc = new MockERC20("USD Coin", "USDC", 6);
-        bank = new Bank(address(usdc), gov, 0, "LP USDC", "lpUSDC", 6, 1);
+        bank = new Bank(address(usdc), gov, 0, 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
 
@@ -38,14 +40,15 @@ contract SettlementRouterTest is Test {
         registry.setHubRegistered(hub, true);
         registry.setHubAllowedForPool(1, hub, true);
         bank.setSettlementRouterOnce(address(router));
+        _bindTestConsumer(bank);
         vm.stopPrank();
 
         usdc.mint(gov, 1_000_000e6);
         usdc.mint(player, 1_000e6);
 
         vm.startPrank(gov);
-        usdc.approve(address(bank), type(uint256).max);
-        bank.deposit(500_000e6, gov);
+        usdc.approve(address(bank.vault()), type(uint256).max);
+        LiquidityVault(bank.vault()).addDepositFor(gov, 500_000e6);
         vm.stopPrank();
 
         vm.prank(player);

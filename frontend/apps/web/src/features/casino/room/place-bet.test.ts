@@ -42,6 +42,7 @@ describe("game room place bet builder", () => {
   it("builds a typed PlaceBetInput with encoded params and stake spec", () => {
     const affiliate = "0x5555555555555555555555555555555555555555";
     const result = buildGamePlaceBetInput({
+      maxHouseEdgeBps: 200,
       release,
       game,
       betAmount: "25",
@@ -64,6 +65,7 @@ describe("game room place bet builder", () => {
     expect(result.input.poolId).toBe(1);
     expect(result.input.affiliate).toBe(affiliate);
     expect(result.input.betCount).toBe(3);
+    expect(result.input.maxHouseEdgeBps).toBe(200);
     expect(result.input.stake).toBe(75_000_000n);
     expect(decodeDiceParams(result.input.params)).toEqual({
       direction: "under",
@@ -79,6 +81,7 @@ describe("game room place bet builder", () => {
 
   it("keeps cent-level casino stakes when building contract units", () => {
     const result = buildGamePlaceBetInput({
+      maxHouseEdgeBps: 200,
       release,
       game,
       betAmount: "0.01",
@@ -107,6 +110,7 @@ describe("game room place bet builder", () => {
 
   it("accepts transient decimal input before blur normalization", () => {
     const result = buildGamePlaceBetInput({
+      maxHouseEdgeBps: 200,
       release,
       game,
       betAmount: "10.",
@@ -155,6 +159,7 @@ describe("game room place bet builder", () => {
       ]
     };
     const result = buildGamePlaceBetInput({
+      maxHouseEdgeBps: 200,
       release: wethRelease,
       game,
       betAmount: "0.01",
@@ -214,6 +219,7 @@ describe("game room place bet builder", () => {
 
   it("places into the explicitly selected pool when poolId is provided", () => {
     const result = buildGamePlaceBetInput({
+      maxHouseEdgeBps: 200,
       release: multiPoolRelease,
       game,
       betAmount: "0.01",
@@ -238,6 +244,7 @@ describe("game room place bet builder", () => {
 
   it("fails closed for an unknown explicit poolId", () => {
     const result = buildGamePlaceBetInput({
+      maxHouseEdgeBps: 200,
       release: multiPoolRelease,
       game,
       betAmount: "1",
@@ -261,6 +268,7 @@ describe("game room place bet builder", () => {
 
   it("allows UI layers to provide localized invalid pool errors", () => {
     const result = buildGamePlaceBetInput({
+      maxHouseEdgeBps: 200,
       release: multiPoolRelease,
       game,
       betAmount: "1",
@@ -287,6 +295,7 @@ describe("game room place bet builder", () => {
 
   it("returns neutral selection validation when UI copy is not provided", () => {
     const result = buildGamePlaceBetInput({
+      maxHouseEdgeBps: 200,
       release,
       game: { ...game, slug: "roulette", label: "Roulette" },
       betAmount: "10",
@@ -309,6 +318,7 @@ describe("game room place bet builder", () => {
 
   it("rejects planning when no casino pool is available", () => {
     const result = buildGamePlaceBetInput({
+      maxHouseEdgeBps: 200,
       release: { chainId: 84532, assets: [], pools: [] },
       game,
       betAmount: "10",
@@ -331,6 +341,7 @@ describe("game room place bet builder", () => {
 
   it("allows UI layers to provide localized pool errors", () => {
     const result = buildGamePlaceBetInput({
+      maxHouseEdgeBps: 200,
       release: { chainId: 84532, assets: [], pools: [] },
       game,
       betAmount: "10",

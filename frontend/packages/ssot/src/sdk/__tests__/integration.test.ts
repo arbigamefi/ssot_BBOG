@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   BaseError,
+  ContractFunctionRevertedError,
+  encodeErrorResult,
   encodeAbiParameters,
   encodeEventTopics,
   getAddress,
@@ -8,6 +10,7 @@ import {
   type Hex
 } from "viem";
 import { createSSOTSDK, type SSOTSDK } from "../create";
+import { getContractAbis } from "../../abis/index.mjs";
 import type { SSOTRelease } from "../../release/schema";
 import type { JournalSink, TxJournalEntry } from "../txPipeline";
 import type {
@@ -23,6 +26,7 @@ const ACCOUNT = "0x1111111111111111111111111111111111111111" as Address;
 const TX_HASH = "0xabc123" as Hex;
 const GAME_ID = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" as Hex;
 const ASSET = "0x036cbd53842c5426634e7929541ec2318f3dcf7e" as Address;
+const VAULT = "0x5555555555555555555555555555555555555555" as Address;
 const BANK = "0x49b9dc94d98c3d78224ca37abf05ec09af7c50ff" as Address;
 const SPORTS_RISK_HASH =
   "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6" as Hex;
@@ -42,17 +46,18 @@ const TEST_RELEASE: SSOTRelease = {
     sportsRiskEngine: "0xb9c3647cb5daf23dea8335b7d91c7aa5f6bc2579",
     vrfHub: "0x70f4b14e0aba0034685c0c269445c6d4c6aeb314",
     refRegistry: "0x52e0aac05f039f1be7fa42de7a2ccc5c8c722b15",
-    refEngine: "0x0b77c28707a89f3988f9b38b64134b77050c32a5",
-    adapter: "0x7648fee565dc42dfdb843e5166518060048e8d73"
+    refEngine: "0x0b77c28707a89f3988f9b38b64134b77050c32a5"
   },
-  assets: [{ symbol: "USDC", decimals: 6, address: ASSET, bank: BANK }],
+  assets: [{ symbol: "USDC", decimals: 6, address: ASSET, bank: BANK, vault: VAULT }],
   games: { [GAME_ID]: "0x4444444444444444444444444444444444444444" },
   gamesMeta: [
     {
       gameId: GAME_ID,
       slug: "dice",
       label: "Dice",
-      module: "0x4444444444444444444444444444444444444444"
+      module: "0x4444444444444444444444444444444444444444",
+      maxBetCount: 25,
+      callbackGasLimit: 2_447_746
     }
   ],
   sports: {
@@ -76,12 +81,18 @@ const TEST_RELEASE: SSOTRelease = {
       active: true,
       asset: ASSET,
       bank: BANK,
+      vault: VAULT,
       symbol: "USDC",
       decimals: 6,
       sportsRisk: null
     }
   ],
-  meta: { blockNumber: 100, schemaVersion: 2 }
+  meta: {
+    blockNumber: 100,
+    schemaVersion: 2,
+    architectureVersion: "v1.6-nft-liquidity",
+    releaseLock: { schema: "SSOT_RELEASE_DIGEST_V16" }
+  }
 };
 
 const SPORTS_TEST_RELEASE: SSOTRelease = {
@@ -104,6 +115,7 @@ const SPORTS_TEST_RELEASE: SSOTRelease = {
       active: true,
       asset: ASSET,
       bank: BANK,
+      vault: VAULT,
       symbol: "USDC",
       decimals: 6,
       sportsRisk: {
@@ -119,6 +131,21 @@ const SPORTS_TEST_RELEASE: SSOTRelease = {
 };
 
 const RECEIPT = { blockNumber: 100n, status: "success" as const, logs: [] };
+
+function gameRead(functionName: string): unknown {
+  switch (functionName) {
+    case "gameModule":
+      return TEST_RELEASE.games[GAME_ID];
+    case "defaultHouseEdgeBps":
+      return 200;
+    case "gameMaxBetCount":
+      return 25;
+    case "gameCallbackGasLimit":
+      return 2_447_746;
+    default:
+      throw new Error(`Unexpected game read: ${functionName}`);
+  }
+}
 
 function mockPublicClient(overrides?: Record<string, any>) {
   return {
@@ -183,113 +210,9 @@ describe("createSSOTSDK", () => {
   it("returns the current SDK namespaces", () => {
     expect(sdk).toHaveProperty("gameHub");
     expect(sdk).toHaveProperty("bank");
+    expect(sdk).toHaveProperty("vault");
     expect(sdk).toHaveProperty("vrfHub");
     expect(sdk).toHaveProperty("sportsHub");
-  });
-
-  it("confirms Bank allowance after approval before depositing", async () => {
-    const allowanceReads = [0n, 1_000_000n];
-    pub.readContract.mockImplementation(async ({ functionName }: any) => {
-      if (functionName === "allowance") return allowanceReads.shift() ?? 1_000_000n;
-      return 0n;
-    });
-
-    const result = await sdk.bank.deposit(1, 1_000_000n, ACCOUNT);
-
-    expect(result.ok).toBe(true);
-    expect(pub.simulateContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(ASSET),
-        functionName: "approve",
-        args: [getAddress(BANK), 1_000_000n]
-      })
-    );
-    expect(pub.simulateContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(BANK),
-        functionName: "deposit",
-        args: [1_000_000n, ACCOUNT]
-      })
-    );
-    expect(journal.map((entry) => entry.action)).toContain("APPROVE_DEPOSIT");
-    expect(journal.map((entry) => entry.action)).toContain("DEPOSIT");
-  });
-
-  it("reads the controller's claimable asset limit directly", async () => {
-    pub.readContract.mockResolvedValueOnce(56_999_999n);
-    expect(await sdk.bank.maxWithdraw(1, ACCOUNT)).toBe(56_999_999n);
-    expect(pub.readContract).toHaveBeenCalledTimes(1);
-    expect(pub.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(BANK),
-        functionName: "maxWithdraw",
-        args: [ACCOUNT]
-      })
-    );
-  });
-
-  it("reads provider deposits from Bank Deposit cash events", async () => {
-    pub.getLogs
-      .mockResolvedValueOnce([
-        {
-          eventName: "Deposit",
-          transactionHash: TX_HASH,
-          blockNumber: 120n,
-          logIndex: 7,
-          args: {
-            owner: ACCOUNT,
-            sender: ACCOUNT,
-            assets: 5_000_000n,
-            shares: 4_000_000n
-          }
-        }
-      ])
-      .mockResolvedValueOnce([]);
-    pub.getBlock.mockResolvedValueOnce({ timestamp: 1_700_000_123n });
-
-    const rows = await sdk.bank.getProviderLedger(1, ACCOUNT, { startBlock: 100, limit: 10 });
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toEqual(
-      expect.objectContaining({
-        action: "deposit",
-        assets: 5_000_000n,
-        shares: 4_000_000n,
-        sharePrice: 1_250_000n,
-        txHash: TX_HASH,
-        blockNumber: 120,
-        timestamp: 1_700_000_123_000
-      })
-    );
-  });
-
-  it("chunks provider ledger log scans below Base RPC range limits", async () => {
-    pub.getBlockNumber.mockResolvedValueOnce(5_000n);
-
-    await sdk.bank.getProviderLedger(1, ACCOUNT, { startBlock: 0, limit: 10 });
-
-    expect(pub.getLogs).toHaveBeenCalled();
-    for (const [params] of pub.getLogs.mock.calls) {
-      const fromBlock = BigInt(params.fromBlock);
-      const toBlock = BigInt(params.toBlock);
-      expect(toBlock - fromBlock).toBeLessThanOrEqual(1_900n);
-    }
-  });
-
-  it("does not convert shares when the claimable asset limit is zero", async () => {
-    pub.readContract.mockResolvedValueOnce(0n);
-
-    const result = await sdk.bank.maxWithdraw(1, ACCOUNT);
-
-    expect(result).toBe(0n);
-    expect(pub.readContract).toHaveBeenCalledTimes(1);
-    expect(pub.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(BANK),
-        functionName: "maxWithdraw",
-        args: [ACCOUNT]
-      })
-    );
   });
 
   it.each([
@@ -301,7 +224,8 @@ describe("createSSOTSDK", () => {
     "walletFailure",
     "capacityChanged",
     "feeChanged",
-    "minimumChanged"
+    "minimumChanged",
+    "houseEdgeChanged"
   ])("continues safely from mined approval (%s)", async (scenario) => {
     const readFailure = scenario === "readFailure";
     if (scenario === "laggingSimulation" || scenario === "persistentLag") {
@@ -393,19 +317,30 @@ describe("createSSOTSDK", () => {
         );
     }
     const changedError = {
-      capacityChanged: "ActiveHoldLimit",
+      capacityChanged: "OpenHoldLimit",
       feeChanged: "InsufficientVRFFee",
-      minimumChanged: "StakeBelowMinimum"
+      minimumChanged: "BetAmountBelowMinimum",
+      houseEdgeChanged: "HouseEdgeTooHigh"
     }[scenario];
+    if (scenario === "houseEdgeChanged") plan.payload.maxHouseEdgeBps = 200;
     if (changedError) {
+      const abis = getContractAbis();
+      const abi = [...abis.GameHubAbi, ...abis.BankAbi.filter((entry) => entry.type === "error")];
+      const data = encodeErrorResult({
+        abi,
+        errorName: changedError,
+        args:
+          changedError === "OpenHoldLimit"
+            ? []
+            : changedError === "HouseEdgeTooHigh"
+              ? [300, 200]
+              : [1_000_000n, 2_000_000n]
+      });
       pub.simulateContract
         .mockResolvedValueOnce({ request: { functionName: "approve" } })
         .mockRejectedValueOnce(
           new BaseError("wrapped", {
-            cause: Object.assign(new Error("reverted"), {
-              name: "ContractFunctionRevertedError",
-              data: { errorName: changedError, args: [1_000_000n, 2_000_000n] }
-            })
+            cause: new ContractFunctionRevertedError({ abi, data, functionName: "placeBet" })
           })
         );
     }
@@ -415,9 +350,10 @@ describe("createSSOTSDK", () => {
       expect(wal.writeContract).toHaveBeenCalledTimes(1); // Approval only, no stake transaction.
       expect(result.placeBetTx.error?.code).toBe(
         {
-          capacityChanged: "ACTIVE_HOLD_LIMIT",
+          capacityChanged: "OPEN_HOLD_LIMIT",
           feeChanged: "INSUFFICIENT_VRF_FEE",
-          minimumChanged: "STAKE_BELOW_MINIMUM"
+          minimumChanged: "STAKE_BELOW_MINIMUM",
+          houseEdgeChanged: "HOUSE_EDGE_TOO_HIGH"
         }[scenario]
       );
       expect(pub.simulateContract).toHaveBeenLastCalledWith(
@@ -975,76 +911,87 @@ describe("createSSOTSDK", () => {
     expect(journal.map((entry) => entry.action)).toContain("SPORTS_VOID_TICKETS");
   });
 
-  it("builds SportsHub placeTicket plans with explicit release and odds gates", async () => {
-    const sportsSdk = createSSOTSDK({
-      release: SPORTS_TEST_RELEASE,
-      publicClient: pub,
-      walletClient: wal,
-      account: ACCOUNT,
-      journal: journalSink
-    });
-    pub.readContract
-      .mockResolvedValueOnce({
-        marketId: 7n,
-        eventId: 99n,
-        poolId: 2n,
-        outcomeCount: 3,
-        startsAt: 1_800_000_000n,
-        lockTime: 1_800_003_600n,
-        resultFinalitySeconds: 86_400n,
-        version: 1n,
-        marketKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        state: 2
-      })
-      .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(ODDS_TICKET_HASH)
-      .mockResolvedValueOnce(1n)
-      .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(128n);
+  it.each([1_000_000n, 10_000n, 9_999n])(
+    "checks a sports ticket of %s units against the single-bet minimum",
+    async (stake) => {
+      const sportsSdk = createSSOTSDK({
+        release: SPORTS_TEST_RELEASE,
+        publicClient: pub,
+        walletClient: wal,
+        account: ACCOUNT,
+        journal: journalSink
+      });
+      pub.readContract
+        .mockResolvedValueOnce({
+          marketId: 7n,
+          eventId: 99n,
+          poolId: 2n,
+          outcomeCount: 3,
+          startsAt: 1_800_000_000n,
+          lockTime: 1_800_003_600n,
+          resultFinalitySeconds: 86_400n,
+          version: 1n,
+          marketKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          state: 2
+        })
+        .mockResolvedValueOnce(0n)
+        .mockResolvedValueOnce(ODDS_TICKET_HASH)
+        .mockResolvedValueOnce(10_000n)
+        .mockResolvedValueOnce(0n)
+        .mockResolvedValueOnce(128n);
 
-    const input: PlaceSportsTicketInput = {
-      chainId: 84532,
-      marketId: 7n,
-      outcomeId: 1,
-      stake: 1_000_000n,
-      odds: {
+      const input: PlaceSportsTicketInput = {
+        chainId: 84532,
         marketId: 7n,
         outcomeId: 1,
-        marketVersion: 1n,
-        oddsWad: 2_100_000_000_000_000_000n,
-        maxStake: 2_000_000n,
-        maxPayout: 4_200_000n,
-        expiresAt: 1_900_000_000n,
-        nonce: 33n,
-        riskHash: SPORTS_RISK_HASH
-      },
-      signature: SPORTS_SIGNATURE
-    };
+        stake,
+        odds: {
+          marketId: 7n,
+          outcomeId: 1,
+          marketVersion: 1n,
+          oddsWad: 2_100_000_000_000_000_000n,
+          maxStake: 2_000_000n,
+          maxPayout: 4_200_000n,
+          expiresAt: 1_900_000_000n,
+          nonce: 33n,
+          riskHash: SPORTS_RISK_HASH
+        },
+        signature: SPORTS_SIGNATURE
+      };
 
-    const result = await sportsSdk.sportsHub.planPlaceTicket(input);
+      const result = await sportsSdk.sportsHub.planPlaceTicket(input);
 
-    if ("error" in result) throw new Error(`${result.error.code}: ${result.error.message}`);
-    expect(result.payload.poolId).toBe(2);
-    expect(result.preview.asset).toBe(getAddress(ASSET));
-    expect(result.preview.bank).toBe(getAddress(BANK));
-    expect(result.preview.needsApproval).toBe(true);
-    expect(result.preview.oddsTicketHash).toBe(ODDS_TICKET_HASH);
-    expect(result.steps.map((step) => step.type)).toEqual(["approve", "placeSportsTicket"]);
-    expect(result.steps[1]).toEqual(
-      expect.objectContaining({
-        to: getAddress(TEST_RELEASE.contracts.sportsHub),
-        call: expect.objectContaining({ contract: "SportsHub", fn: "placeTicket" })
-      })
-    );
-    expect(pub.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(TEST_RELEASE.contracts.sportsHub),
-        functionName: "hashOddsTicket",
-        args: [expect.objectContaining({ riskHash: SPORTS_RISK_HASH }), ACCOUNT, 1_000_000n]
-      })
-    );
-  });
+      expect(pub.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({ functionName: "minBetAmount", blockNumber: 130n })
+      );
+      if (stake < 10_000n) {
+        expect(result).toHaveProperty("error.code", "STAKE_BELOW_MINIMUM");
+        expect(wal.writeContract).not.toHaveBeenCalled();
+        return;
+      }
+      if ("error" in result) throw new Error(`${result.error.code}: ${result.error.message}`);
+      expect(result.payload.poolId).toBe(2);
+      expect(result.preview.asset).toBe(getAddress(ASSET));
+      expect(result.preview.bank).toBe(getAddress(BANK));
+      expect(result.preview.needsApproval).toBe(true);
+      expect(result.preview.oddsTicketHash).toBe(ODDS_TICKET_HASH);
+      expect(result.steps.map((step) => step.type)).toEqual(["approve", "placeSportsTicket"]);
+      expect(result.steps[1]).toEqual(
+        expect.objectContaining({
+          to: getAddress(TEST_RELEASE.contracts.sportsHub),
+          call: expect.objectContaining({ contract: "SportsHub", fn: "placeTicket" })
+        })
+      );
+      expect(pub.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: getAddress(TEST_RELEASE.contracts.sportsHub),
+          functionName: "hashOddsTicket",
+          args: [expect.objectContaining({ riskHash: SPORTS_RISK_HASH }), ACCOUNT, stake]
+        })
+      );
+    }
+  );
 
   it.each([0n, 1n, 999_999_999_999_999_999n, 1_000_000_000_000_000_000n])(
     "rejects SportsHub odds %s at or below 1.0 before approval or contract reads",
@@ -1203,123 +1150,44 @@ describe("createSSOTSDK", () => {
     );
   });
 
-  it("uses pool bank and asset for bank reads", async () => {
-    pub.readContract.mockResolvedValueOnce(123n);
-
-    const result = await sdk.bank.getAllowance(1, ACCOUNT);
-
-    expect(result).toBe(123n);
-    expect(pub.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(ASSET),
-        functionName: "allowance",
-        args: [ACCOUNT, getAddress(BANK)]
-      })
+  it("reads current fee and game admission from the same block, never the release fee", async () => {
+    pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) =>
+      gameRead(functionName)
     );
-  });
-
-  it("includes ERC4626-like share accounting in bank snapshots", async () => {
-    pub.readContract
-      .mockResolvedValueOnce({
-        NAV: 1_250_000n,
-        R: 250_000n,
-        riskReserveBps: 2000n,
-        riskInPaused: true,
-        riskReserve: 250_000n,
-        riskFree: 750_000n,
-        withdrawalBufferBps: 500n,
-        withdrawalBuffer: 62_500n,
-        withdrawable: 937_500n,
-        PF: 10_000n,
-        XP: 20_000n
-      })
-      .mockResolvedValueOnce(1_000_000n)
-      .mockResolvedValueOnce(1_250_000n)
-      .mockResolvedValueOnce([
-        5_000_000n,
-        4_950_000n,
-        4_900_000n,
-        25_000n,
-        50_000n,
-        10_000n,
-        10n,
-        8n,
-        2n
-      ]);
-
-    pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
-      if (functionName === "currentEpoch") return 1n;
-      if (functionName === "redeemBatch")
-        return {
-          cutoff: 0n,
-          priced: false,
-          shares: 0n,
-          assets: 0n,
-          assignedShares: 0n,
-          assignedAssets: 0n,
-          activatedAt: 0n,
-          fullExit: false
-        };
-      return 0n;
+    expect(await sdk.gameHub.getGameConfig(GAME_ID)).toMatchObject({
+      houseEdgeBps: 200,
+      maxBetCount: 25
     });
-
-    const result = await sdk.bank.getSnapshot(1);
-
-    expect(result.totalAssets).toBe(1_250_000n);
-    expect(result.totalSupply).toBe(1_000_000n);
-    expect(result.activeReserved).toBe(250_000n);
-    expect(result.assetsPerShare).toBe(1_250_000n);
-    expect(result.riskReserveBps).toBe(2000);
-    expect(result.riskInPaused).toBe(true);
-    expect(result.riskReserve).toBe(250_000n);
-    expect(result.riskFree).toBe(750_000n);
-    expect(result.withdrawalBufferBps).toBe(500);
-    expect(result.withdrawalBuffer).toBe(62_500n);
-    expect(result.withdrawable).toBe(937_500n);
-    expect(result.totalTurnover).toBe(5_000_000n);
-    expect(result.totalPayoutGross).toBe(4_950_000n);
-    expect(result.totalPayoutNet).toBe(4_900_000n);
-    expect(result.totalRefunded).toBe(25_000n);
-    expect(result.totalFeeOnPayout).toBe(50_000n);
-    expect(result.totalProtocolFeeAccrued).toBe(10_000n);
-    expect(result.totalBetsHeld).toBe(10n);
-    expect(result.totalBetsSettled).toBe(8n);
-    expect(result.totalBetsRefunded).toBe(2n);
-    expect(pub.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(BANK),
-        functionName: "totalSupply",
-        args: []
-      })
-    );
-    expect(pub.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(BANK),
-        functionName: "convertToAssets",
-        args: [1_000_000n]
-      })
-    );
-    expect(pub.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(BANK),
-        functionName: "getPerformance",
-        args: []
-      })
-    );
+    for (const call of pub.readContract.mock.calls) expect(call[0].blockNumber).toBe(130n);
+    pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      if (functionName === "defaultHouseEdgeBps") throw new Error("fee RPC failed");
+      return gameRead(functionName);
+    });
+    await expect(sdk.gameHub.getGameConfig(GAME_ID)).rejects.toThrow("fee RPC failed");
   });
-
   it("builds pool-aware placeBet plans", async () => {
-    pub.readContract
-      .mockResolvedValueOnce(false)
-      .mockResolvedValueOnce([100000n, 200000])
-      .mockResolvedValueOnce(999999999n)
-      .mockResolvedValueOnce(1000000n)
-      .mockResolvedValueOnce(10000000n)
-      .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(128n)
-      .mockResolvedValueOnce(1n);
+    pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      switch (functionName) {
+        case "riskInPaused":
+          return false;
+        case "quoteVRFFee":
+          return [100000n, 2_447_746];
+        case "allowance":
+          return 999999999n;
+        case "maxPayout":
+          return 1000000n;
+        case "getSSOT":
+          return { G: 10000000n, L: 10000000n, R: 0n, riskReserveBps: 0n, accountingValid: true };
+        case "openHolds":
+          return 0n;
+        case "MAX_OPEN_HOLDS":
+          return 128n;
+        case "minBetAmount":
+          return 1n;
+        default:
+          return gameRead(functionName);
+      }
+    });
 
     const input: PlaceBetInput = {
       chainId: 84532,
@@ -1348,21 +1216,35 @@ describe("createSSOTSDK", () => {
   });
 
   it("preflights casino liquidity against the Bank post-stake solvency rule", async () => {
-    pub.readContract
-      .mockResolvedValueOnce(false)
-      .mockResolvedValueOnce([1000n, 200000])
-      .mockResolvedValueOnce(999999999n)
-      // The required reserve is larger than current free liquidity
-      // (1_000_000 - 10% risk reserve = 900_000), but the player's stake is
-      // transferred before Bank.holdBet checks solvency. The post-stake state
-      // can still cover this reserve, so the SDK must not reject it early.
-      .mockResolvedValueOnce(1_636_000n)
-      .mockResolvedValueOnce(1_000_000n)
-      .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(1000n)
-      .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(128n)
-      .mockResolvedValueOnce(1n);
+    // Existing free liquidity is 900_000, but Bank checks solvency after receiving stake.
+    pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      switch (functionName) {
+        case "riskInPaused":
+          return false;
+        case "quoteVRFFee":
+          return [1000n, 2_447_746];
+        case "allowance":
+          return 999999999n;
+        case "maxPayout":
+          return 1_636_000n;
+        case "getSSOT":
+          return {
+            G: 1_000_000n,
+            L: 1_000_000n,
+            R: 0n,
+            riskReserveBps: 1000n,
+            accountingValid: true
+          };
+        case "openHolds":
+          return 0n;
+        case "MAX_OPEN_HOLDS":
+          return 128n;
+        case "minBetAmount":
+          return 1n;
+        default:
+          return gameRead(functionName);
+      }
+    });
 
     const input: PlaceBetInput = {
       chainId: 84532,
@@ -1408,7 +1290,7 @@ describe("createSSOTSDK", () => {
     }
   );
 
-  it.each([127n, 128n])("preflights active position capacity at %s of 128", async (holds) => {
+  it.each([127n, 128n])("preflights open position capacity at %s of 128", async (holds) => {
     pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
       switch (functionName) {
         case "riskInPaused":
@@ -1417,16 +1299,18 @@ describe("createSSOTSDK", () => {
           return [1000n, 200000];
         case "maxPayout":
           return 20n;
-        case "totalAssets":
-          return 100n;
-        case "totalReserved":
-          return 1000n; // Segregated old risk is irrelevant to admission.
-        case "activeOpenHolds":
+        case "getSSOT":
+          return { G: 100n, L: 100n, R: 0n, riskReserveBps: 0n, accountingValid: true };
+        case "allowance":
+          return 0n;
+        case "minBetAmount":
+          return 1n;
+        case "openHolds":
           return holds;
-        case "MAX_ACTIVE_HOLDS":
+        case "MAX_OPEN_HOLDS":
           return 128n;
         default:
-          return 0n;
+          return gameRead(functionName);
       }
     });
     const result = await sdk.gameHub.planPlaceBet({
@@ -1446,20 +1330,15 @@ describe("createSSOTSDK", () => {
         "riskInPaused",
         "quoteVRFFee",
         "allowance",
-        "totalAssets",
-        "activeReserved",
-        "riskReserveBps",
-        "activeOpenHolds",
-        "MAX_ACTIVE_HOLDS"
+        "getSSOT",
+        "openHolds",
+        "MAX_OPEN_HOLDS"
       ]) {
         expect(pub.readContract).toHaveBeenCalledWith(
           expect.objectContaining({ functionName, blockNumber: 130n })
         );
       }
     }
-    expect(pub.readContract).not.toHaveBeenCalledWith(
-      expect.objectContaining({ functionName: "totalReserved" })
-    );
     expect(wal.writeContract).not.toHaveBeenCalled();
   });
 

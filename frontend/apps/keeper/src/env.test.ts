@@ -192,6 +192,7 @@ it("only reconciles the active pools in the current release", () => {
         {
           poolId: 7,
           asset: "0x0000000000000000000000000000000000000003",
+          vault: "0x0000000000000000000000000000000000000008",
           bank: "0x0000000000000000000000000000000000000004",
           active: false
         }
@@ -200,5 +201,5 @@ it("only reconciles the active pools in the current release", () => {
     })
   );
   const config = loadKeeperConfig(baseEnv({ KEEPER_RELEASE_PATH: path }));
-  expect(config.bankProviderLedgerPools).toEqual([]);
+  expect(config.vaultProviderLedgerPools).toEqual([]);
 });

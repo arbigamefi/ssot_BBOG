@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 /// @dev A USDC-like asset. Transfers from or to a blocked address revert, like an issuer blacklist. A transfer to
 ///      `gasSink` simulates a transfer with configurable, bounded gas work. This is a failure model, not a

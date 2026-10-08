@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { formatAllowance, formatAmount } from "./format";
@@ -51,13 +52,16 @@ export function PortfolioPositionsPanel({
               </div>
               <div>
                 <div className="font-mono font-bold text-fg">
-                  {formatAmount(row.assetsEquivalent, row.decimals, undefined, pendingLabel)}
+                  {formatAmount(row.liquidityAssets, row.decimals, undefined, pendingLabel)}
                 </div>
                 <div className="mt-1 font-mono text-xs text-fg-subtle">
-                  {t("portfolio.overview.positions.shares", {
-                    amount: formatAmount(row.shares, row.decimals, undefined, pendingLabel)
-                  })}
+                  {t("portfolio.overview.positions.nftCount", { count: row.nftCount.toString() })}
                 </div>
+                {!row.complete ? (
+                  <Link href="/earn" className="mt-1 block text-xs text-brand">
+                    {t("portfolio.overview.positions.incomplete")}
+                  </Link>
+                ) : null}
               </div>
               <div
                 className={

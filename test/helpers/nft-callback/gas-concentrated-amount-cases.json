@@ -1,0 +1,73 @@
+[
+  {
+    "name": "concentrated-keno25-thin-cutoff-pp",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 1,
+    "TREE": 4,
+    "CUTOFF": 1649267441662,
+    "LAST_USED": 2198753705984,
+    "BLACKLIST": true,
+    "AMOUNT_PROFILE": 1,
+    "CUTOFF_RETAIN": 5
+  },
+  {
+    "name": "concentrated-keno25-full-predicate-cover-pp",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 1,
+    "TREE": 4,
+    "CUTOFF": 1649267441662,
+    "LAST_USED": 2198753705984,
+    "BLACKLIST": true,
+    "AMOUNT_PROFILE": 1,
+    "CUTOFF_RETAIN": 200500000,
+    "EXPECT_PREDICATE": 1
+  },
+  {
+    "name": "concentrated-keno25-full-predicate-reject-pp",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 1,
+    "TREE": 4,
+    "CUTOFF": 1649267441662,
+    "LAST_USED": 2198753705984,
+    "BLACKLIST": true,
+    "AMOUNT_PROFILE": 1,
+    "CUTOFF_RETAIN": 200359308,
+    "EXPECT_PREDICATE": 2
+  },
+  {
+    "name": "concentrated-keno25-full-predicate-cover-zero-share-pp",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 1,
+    "TREE": 4,
+    "CUTOFF": 1649267441662,
+    "LAST_USED": 2198753705984,
+    "BLACKLIST": true,
+    "AMOUNT_PROFILE": 1,
+    "CUTOFF_RETAIN": 200500000,
+    "EXPECT_PREDICATE": 1,
+    "LATE_LARGE_USDC": 1000000000
+  },
+  {
+    "name": "concentrated-keno25-full-predicate-reject-zero-share-pp",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 1,
+    "TREE": 4,
+    "CUTOFF": 1649267441662,
+    "LAST_USED": 2198753705984,
+    "BLACKLIST": true,
+    "AMOUNT_PROFILE": 1,
+    "CUTOFF_RETAIN": 200359308,
+    "EXPECT_PREDICATE": 2,
+    "LATE_LARGE_USDC": 1000000000
+  }
+]

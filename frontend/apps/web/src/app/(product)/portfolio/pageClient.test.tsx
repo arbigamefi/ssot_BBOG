@@ -171,66 +171,75 @@ describe("PortfolioPageClient", () => {
     expect(screen.getAllByText("\u2014")).toHaveLength(4);
   });
 
-  it("shows wallet and bank position totals per asset instead of summing raw units", async () => {
-    const account = "0xc8ec9920d573893e888db5d30b2b3b3824b1b684";
-    state.release = {
-      ...state.release,
-      assets: [
-        {
-          address: "0x0000000000000000000000000000000000000001",
-          symbol: "USDC",
-          decimals: 6
+  it.each([true, false])(
+    "only shows complete NFT position totals per asset (complete=%s)",
+    async (complete) => {
+      const account = "0xc8ec9920d573893e888db5d30b2b3b3824b1b684";
+      state.release = {
+        ...state.release,
+        assets: [
+          {
+            address: "0x0000000000000000000000000000000000000001",
+            symbol: "USDC",
+            decimals: 6
+          },
+          {
+            address: "0x0000000000000000000000000000000000000002",
+            symbol: "WETH",
+            decimals: 18
+          }
+        ],
+        pools: [
+          {
+            poolId: 1,
+            asset: "0x0000000000000000000000000000000000000001",
+            bank: "0x0000000000000000000000000000000000000101",
+            vault: "0x0000000000000000000000000000000000000201",
+            symbol: "USDC",
+            decimals: 6
+          },
+          {
+            poolId: 2,
+            asset: "0x0000000000000000000000000000000000000002",
+            bank: "0x0000000000000000000000000000000000000102",
+            vault: "0x0000000000000000000000000000000000000202",
+            symbol: "WETH",
+            decimals: 18
+          }
+        ]
+      };
+      state.ready = true;
+      state.sdk = {
+        account,
+        bank: {
+          getAssetBalance: vi.fn(async (asset: string) =>
+            asset.endsWith("0001") ? 37_920_000n : 2_000_000_000_000_000_000n
+          )
         },
-        {
-          address: "0x0000000000000000000000000000000000000002",
-          symbol: "WETH",
-          decimals: 18
-        }
-      ],
-      pools: [
-        {
-          poolId: 1,
-          asset: "0x0000000000000000000000000000000000000001",
-          bank: "0x0000000000000000000000000000000000000101",
-          symbol: "USDC",
-          decimals: 6
+        vault: {
+          getAllowance: vi.fn().mockResolvedValue(0n),
+          getDeposits: vi.fn(async (poolId: number) => ({
+            nftCount: complete ? 1n : 26n,
+            complete,
+            items: [{ assets: poolId === 1 ? 10_000_000n : 500_000_000_000_000_000n }]
+          }))
         },
-        {
-          poolId: 2,
-          asset: "0x0000000000000000000000000000000000000002",
-          bank: "0x0000000000000000000000000000000000000102",
-          symbol: "WETH",
-          decimals: 18
+        vrfHub: {
+          getRefundCredit: vi.fn().mockResolvedValue(73_170_000_000_000n)
         }
-      ]
-    };
-    state.ready = true;
-    state.sdk = {
-      account,
-      bank: {
-        getAllowance: vi.fn().mockResolvedValue(0n),
-        getAssetBalance: vi.fn(async (asset: string) =>
-          asset.endsWith("0001") ? 37_920_000n : 2_000_000_000_000_000_000n
-        ),
-        getPosition: vi.fn(async (poolId: number) =>
-          poolId === 1
-            ? { assetsEquivalent: 10_000_000n, shares: 9_000_000n }
-            : {
-                assetsEquivalent: 500_000_000_000_000_000n,
-                shares: 450_000_000_000_000_000n
-              }
-        )
-      },
-      vrfHub: {
-        getRefundCredit: vi.fn().mockResolvedValue(73_170_000_000_000n)
+      };
+
+      renderWithQueryClient(<PortfolioPageClient />);
+
+      await waitFor(() => {
+        expect(screen.getByText("37.92 USDC / 2 WETH")).toBeDefined();
+      });
+      if (complete) expect(screen.getByText("10 USDC / 0.5 WETH")).toBeDefined();
+      else {
+        expect(screen.queryByText("10 USDC / 0.5 WETH")).toBeNull();
+        expect(screen.getAllByText("Open Earn for the complete position")).toHaveLength(2);
+        expect(screen.queryByText("26 USDC")).toBeNull();
       }
-    };
-
-    renderWithQueryClient(<PortfolioPageClient />);
-
-    await waitFor(() => {
-      expect(screen.getByText("37.92 USDC / 2 WETH")).toBeDefined();
-    });
-    expect(screen.getByText("10 USDC / 0.5 WETH")).toBeDefined();
-  });
+    }
+  );
 });

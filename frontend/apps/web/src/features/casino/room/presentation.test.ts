@@ -1,191 +1,142 @@
 import { describe, expect, it } from "vitest";
-
 import {
   canPoolHoldBet,
   computePoolMaxStakeForReserve,
   computePoolFreeLiquidity,
-  deriveGameRoomLimits,
-  formatGameMaxPayout,
-  formatHouseEdge,
-  resolveHouseEdgeBps
+  deriveGameRoomLimits
 } from "./presentation";
 
-describe("game room presentation helpers", () => {
-  it("formats house edge fallbacks", () => {
-    expect(formatHouseEdge(undefined, "roulette")).toBe("2.70%");
-    expect(formatHouseEdge({ houseEdgeBps: 150 }, "dice")).toBe("1.50%");
-    expect(resolveHouseEdgeBps({ houseEdgeBps: 200 }, "dice")).toBe(200);
-    expect(resolveHouseEdgeBps(undefined, "dice", { defaultHouseEdgeBps: 200 })).toBe(200);
-    expect(formatHouseEdge(undefined, "coin-toss", { defaultHouseEdgeBps: 200 })).toBe("2.00%");
-    expect(resolveHouseEdgeBps({ houseEdgeBps: 150 }, "dice", { defaultHouseEdgeBps: 200 })).toBe(
-      150
-    );
-  });
+const snapshot = { G: 1_000_000_000n, R: 0n, riskReserveBps: 1000 };
+const coin = { numerator: 2n, denominator: 1n };
+const exact = (stake: bigint, p: bigint, q: bigint, G: bigint, R: bigint, b: number) =>
+  G + stake - R - (stake * p) / q >= ((G + stake) * BigInt(b)) / 10000n;
 
-  it("formats release max payout or catalog fallback", () => {
-    expect(
-      formatGameMaxPayout({
-        assetDecimals: 6,
-        assetSymbol: "USDC",
-        gameMeta: { maxPayout: "2500000000" },
-        slug: "dice"
-      })
-    ).toBe("2,500 USDC");
-    expect(
-      formatGameMaxPayout({
-        assetDecimals: 18,
-        assetSymbol: "WETH",
-        gameMeta: undefined,
-        slug: "keno"
-      })
-    ).toBe("500,000 WETH");
-  });
-
-  it("derives free liquidity net of the risk reserve", () => {
-    // totalAssets 1,000,000 (6dp) − reserved 100,000 − 10% reserve (100,000) = 800,000.
-    expect(
-      computePoolFreeLiquidity({
-        totalAssets: 1_000_000_000_000n,
-        activeReserved: 100_000_000_000n,
-        riskReserveBps: 1000
-      })
-    ).toBe(800_000_000_000n);
+describe("exact room capacity", () => {
+  it("uses G including pending principal and subtracts the complete reserve R", () => {
+    expect(computePoolFreeLiquidity({ G: 100n, R: 10n, riskReserveBps: 0 })).toBe(90n);
     expect(computePoolFreeLiquidity(undefined)).toBeUndefined();
-    // Never returns negative.
-    expect(computePoolFreeLiquidity({ totalAssets: 100n, activeReserved: 1_000n })).toBe(0n);
+    expect(computePoolFreeLiquidity({ G: 100n, R: 1000n })).toBe(0n);
   });
-
-  it("uses active reserves when historical recovery retains most of the Bank reserves", () => {
-    const snapshot = {
-      totalAssets: 100n,
-      totalReserved: 150n,
-      activeReserved: 10n,
-      recoveryBacking: 140n,
-      riskReserveBps: 0
-    };
-    expect(computePoolFreeLiquidity(snapshot)).toBe(90n);
-    expect(canPoolHoldBet({ snapshot, stake: 20n, requiredReserve: 40n })).toBe(true);
-    expect(canPoolHoldBet({ snapshot, stake: 91n, requiredReserve: 182n })).toBe(false);
-  });
-
-  it("derives live max payout from full free liquidity and max bet for the odds", () => {
-    // free liquidity 1,000 USDC; at 2x odds, max bet = 500 USDC.
-    // The 90% threshold is only an SDK warning, not the Bank.holdBet solvency cap.
-    const limits = deriveGameRoomLimits({
-      freeLiquidity: 1_000_000_000n,
-      reserveMultiplier: 2,
-      assetDecimals: 6,
-      assetSymbol: "USDC"
-    });
-    expect(limits.maxPayout).toBe("1,000 USDC");
-    expect(limits.maxBet).toBe("500 USDC");
-    expect(limits.maxBetState).toBe("value");
-    expect(limits.maxPayoutState).toBe("value");
-  });
-
-  it("uses gross reserve multiplier rather than player-facing net multiplier for max bet", () => {
-    const limits = deriveGameRoomLimits({
-      freeLiquidity: 10_000_000n,
-      reserveMultiplier: 2,
-      assetDecimals: 6,
-      assetSymbol: "USDC"
-    });
-
-    expect(limits.maxPayout).toBe("10 USDC");
-    expect(limits.maxBet).toBe("5 USDC");
-    expect(limits.maxBetRaw).toBe(5_000_000n);
-  });
-
-  it("derives max bet from the actual post-stake Bank solvency condition", () => {
-    const snapshot = {
-      totalAssets: 1_000_000_000n,
-      activeReserved: 0n,
-      riskReserveBps: 1000
-    };
-
-    const maxStake = computePoolMaxStakeForReserve({
+  it.each([
+    [2n, 1n],
+    [100n, 99n],
+    [100n, 3n],
+    [37n, 18n],
+    [37n, 36n],
+    [21813n, 10000n]
+  ])("finds the exact last base unit for %s/%s, including both Solidity floors", (p, q) => {
+    const max = computePoolMaxStakeForReserve({
       snapshot,
-      reserveMultiplier: 2
-    });
-
-    expect(maxStake).toBe(818_181_819n);
-    expect(
-      canPoolHoldBet({
-        snapshot,
-        stake: maxStake!,
-        requiredReserve: maxStake! * 2n
-      })
-    ).toBe(true);
-    expect(
-      canPoolHoldBet({
-        snapshot,
-        stake: maxStake! + 1n,
-        requiredReserve: (maxStake! + 1n) * 2n
-      })
-    ).toBe(false);
-
+      reserveRatio: { numerator: p, denominator: q }
+    })!;
+    expect(exact(max, p, q, snapshot.G, snapshot.R, 1000)).toBe(true);
+    expect(exact(max + 1n, p, q, snapshot.G, snapshot.R, 1000)).toBe(false);
+  });
+  it("fixes the measured Dice under-99 one-round and 25-round Max rejection", () => {
+    const ratio = { numerator: 100n, denominator: 99n };
+    expect(computePoolMaxStakeForReserve({ snapshot, reserveRatio: ratio })).toBe(8_174_311_939n);
+    for (const count of [1, 25]) {
+      const limits = deriveGameRoomLimits({
+        poolSnapshot: snapshot,
+        reserveRatio: ratio,
+        betCount: count,
+        assetDecimals: 6,
+        assetSymbol: "USDC"
+      });
+      const total = limits.maxBetRaw! * BigInt(count);
+      expect(exact(total, 100n, 99n, snapshot.G, 0n, 1000)).toBe(true);
+      expect(exact(total + BigInt(count), 100n, 99n, snapshot.G, 0n, 1000)).toBe(false);
+    }
+  });
+  it("displays the same precise per-round cap the input enforces and its executable total", () => {
     const limits = deriveGameRoomLimits({
-      freeLiquidity: computePoolFreeLiquidity(snapshot),
       poolSnapshot: snapshot,
-      reserveMultiplier: 2,
+      reserveRatio: coin,
+      betCount: 25,
       assetDecimals: 6,
       assetSymbol: "USDC"
     });
-
-    expect(limits.maxBetRaw).toBe(818_181_819n);
-    expect(limits.maxBet).toBe("818.18 USDC");
-    expect(limits.maxPayout).toBe("1,636 USDC");
+    expect(limits).toMatchObject({
+      maxBetRaw: 32_727_272n,
+      maxBet: "32.727272 USDC",
+      maxTotal: "818.1818 USDC",
+      maxPayout: "1,636.3636 USDC"
+    });
   });
-
-  it("does not cap live room limits by asset-agnostic static game metadata", () => {
+  it("uses the on-chain 60% buffer for exact one-round and 25-round limits", () => {
+    const current = { ...snapshot, riskReserveBps: 6000 };
+    expect(computePoolMaxStakeForReserve({ snapshot: current, reserveRatio: coin })).toBe(
+      250_000_000n
+    );
     const limits = deriveGameRoomLimits({
-      freeLiquidity: 1_000_000_000n,
-      reserveMultiplier: 10,
+      poolSnapshot: current,
+      reserveRatio: coin,
+      betCount: 25,
       assetDecimals: 6,
       assetSymbol: "USDC"
     });
-    expect(limits.maxPayout).toBe("1,000 USDC");
-    expect(limits.maxBet).toBe("100 USDC");
+    expect(limits).toMatchObject({
+      maxBetRaw: 10_000_000n,
+      maxBet: "10 USDC",
+      maxTotal: "250 USDC"
+    });
+    expect(exact(250_000_000n, 2n, 1n, current.G, 0n, 6000)).toBe(true);
+    expect(exact(250_000_025n, 2n, 1n, current.G, 0n, 6000)).toBe(false);
   });
-
-  it("shows placeholders without a snapshot or without selectable odds", () => {
+  it("caps at numerical tree headroom even when the reserve inequality allows more", () => {
+    const M = (1n << 108n) - 1n;
+    const current = { G: M - 10n, R: 0n, riskReserveBps: 0 };
+    expect(computePoolMaxStakeForReserve({ snapshot: current, reserveRatio: coin })).toBe(10n);
+    expect(canPoolHoldBet({ snapshot: current, stake: 11n, requiredReserve: 22n })).toBe(false);
+  });
+  it("shrinks the limit immediately in a snapshot after a successful NFT withdrawal", () => {
+    const before = computePoolMaxStakeForReserve({ snapshot, reserveRatio: coin })!;
+    const after = computePoolMaxStakeForReserve({
+      snapshot: { ...snapshot, G: snapshot.G - 950_000_000n },
+      reserveRatio: coin
+    })!;
+    expect(after).toBeLessThan(before);
+    expect(after).toBe(40_909_091n);
+  });
+  it("does not guess odds or liquidity when the required inputs are absent", () => {
+    expect(computePoolMaxStakeForReserve({ snapshot, reserveRatio: undefined })).toBeUndefined();
     expect(
       deriveGameRoomLimits({
-        freeLiquidity: undefined,
-        reserveMultiplier: 2,
+        poolSnapshot: snapshot,
+        reserveRatio: undefined,
+        betCount: 1,
         assetDecimals: 6,
         assetSymbol: "USDC"
       })
-    ).toEqual({
-      maxBet: "—",
-      maxBetState: "pending-liquidity",
-      maxPayout: "—",
-      maxPayoutState: "pending-liquidity"
-    });
-
-    const noOdds = deriveGameRoomLimits({
-      freeLiquidity: 1_000_000_000n,
-      reserveMultiplier: 0,
-      assetDecimals: 6,
-      assetSymbol: "USDC"
-    });
-    expect(noOdds.maxPayout).toBe("1,000 USDC");
-    expect(noOdds.maxBet).toBe("—");
-    expect(noOdds.maxBetState).toBe("pending-selection");
-    expect(noOdds.maxPayoutState).toBe("value");
+    ).toMatchObject({ maxBet: "—", maxBetState: "pending-selection" });
+    expect(
+      deriveGameRoomLimits({
+        poolSnapshot: undefined,
+        reserveRatio: coin,
+        betCount: 1,
+        assetDecimals: 6,
+        assetSymbol: "USDC"
+      })
+    ).toMatchObject({ maxBet: "—", maxBetState: "pending-liquidity" });
   });
-
-  it("keeps zero pool capacity as a distinct state for product copy", () => {
-    const limits = deriveGameRoomLimits({
-      freeLiquidity: 0n,
-      reserveMultiplier: 2,
-      assetDecimals: 6,
-      assetSymbol: "USDC"
-    });
-
-    expect(limits.maxBet).toBe("0 USDC");
-    expect(limits.maxBetState).toBe("no-capacity");
-    expect(limits.maxPayout).toBe("0 USDC");
-    expect(limits.maxPayoutState).toBe("no-capacity");
+  it("matches an independent exhaustive enumeration on small balances and fractional odds", () => {
+    for (const G of [1n, 7n, 31n])
+      for (const R of [0n, G / 2n, G])
+        for (const b of [0, 1000, 6000, 10000])
+          for (const [p, q] of [
+            [2n, 1n],
+            [37n, 18n],
+            [100n, 99n]
+          ]) {
+            let brute = 0n;
+            for (let amount = 1n; amount <= G * 100n + 100n; amount++)
+              if (exact(amount, p!, q!, G, R, b)) brute = amount;
+            expect(
+              computePoolMaxStakeForReserve({
+                snapshot: { G, R, riskReserveBps: b },
+                reserveRatio: { numerator: p!, denominator: q! }
+              })
+            ).toBe(brute);
+          }
   });
 });

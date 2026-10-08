@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {BankTestBase, TestRandomnessConsumer, DirectRouterFixture} from "../utils/BankTestBase.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {IBank} from "../../src/core/interfaces/IBank.sol";
@@ -9,10 +11,12 @@ import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {Errors} from "../../src/libs/Errors.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
-contract BankObservabilityTest is Test {
-    event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
-    event Withdraw(
-        address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
+contract BankObservabilityTest is BankTestBase {
+    event DepositAdded(
+        address indexed payer, address indexed owner, uint48 indexed depositId, uint128 assets, uint64 withdrawAfter
+    );
+    event DepositWithdrawn(
+        address indexed owner, uint48 indexed depositId, uint40 percent, uint128 assets, uint64 withdrawAfter
     );
 
     address internal gov = address(0xA11CE);
@@ -25,80 +29,47 @@ contract BankObservabilityTest is Test {
 
     function setUp() external {
         asset = new MockERC20("USD Coin", "USDC", 6);
-        bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6, 1);
+        bank = new Bank(address(asset), gov, 0, 6, 1);
 
         vm.prank(gov);
         bank.setSettlementRouterOnce(address(this));
+        _bindTestConsumer(bank);
     }
 
-    function test_constructorRejectsShareDecimalsThatDoNotMatchAsset() external {
+    function test_constructorRejectsDecimalsThatDoNotMatchAsset() external {
         vm.expectRevert(Errors.InvalidConfig.selector);
-        new Bank(address(asset), gov, 0, "LP USDC Bad Decimals", "lpUSDC-BAD", 18, 1);
+        new Bank(address(asset), gov, 0, 18, 1);
     }
 
-    function test_erc4626EventsAndControllerScopedClaims() external {
-        asset.mint(alice, 1_000e6);
-
+    function test_nftDepositWithdrawalEventsAndSeparateCustody() external {
+        LiquidityVault vault = LiquidityVault(bank.vault());
+        asset.mint(alice, 100e6);
         vm.startPrank(alice);
-        asset.approve(address(bank), type(uint256).max);
-
-        vm.expectEmit(true, true, false, true, address(bank));
-        emit Deposit(alice, alice, 100e6, 100e6);
-        uint256 shares = bank.deposit(100e6, alice);
-        assertEq(shares, 100e6, "initial shares should be 1:1");
-
-        vm.expectEmit(true, true, false, true, address(bank));
-        emit Deposit(alice, bob, 10e6, 10e6);
-        uint256 assetsIn = bank.mint(10e6, bob);
-        assertEq(assetsIn, 10e6, "mint should use 1:1 assets at current share price");
-
-        // Exits are Requests: nothing is claimable until the batch is priced (ADR-0034).
-        bank.requestRedeem(25e6, alice, alice);
-        assertEq(bank.maxWithdraw(alice), 0, "a pending request is not claimable");
+        asset.approve(address(vault), 100e6);
+        uint48 id = vault.getLastDepositId() + 1;
+        vm.expectEmit(true, true, true, true, address(vault));
+        emit DepositAdded(alice, alice, id, 100e6, uint64(block.timestamp + 1 days));
+        assertEq(vault.addDeposit(100e6), id);
         vm.stopPrank();
-
-        vm.warp(bank.redeemBatch(1).cutoff);
-        bank.activateBatch();
-        assertEq(bank.maxWithdraw(alice), 25e6, "the controller's priced claim");
-        assertEq(bank.maxWithdraw(bob), 0, "claims are scoped to the controller, not the global cap");
-
+        SSOTTypes.SSOT memory s = bank.getSSOT();
+        assertEq(s.L, 100e6);
+        assertEq(s.vaultCash, 100e6);
+        assertEq(s.bankCash, 0);
+        vm.warp(block.timestamp + 1 days);
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit DepositWithdrawn(alice, id, 1e12, 100e6, 0);
         vm.prank(alice);
-        vm.expectEmit(true, true, true, true, address(bank));
-        emit Withdraw(alice, bob, alice, 25e6, 25e6);
-        uint256 burned = bank.withdraw(25e6, bob, alice);
-        assertEq(burned, 25e6, "the claim consumes the priced shares");
-        assertEq(asset.balanceOf(bob), 25e6, "the controller chooses the receiver");
-        assertEq(bank.maxWithdraw(alice), 0);
-        assertEq(bank.balanceOf(alice), 75e6, "unrequested shares stay in the wallet");
-    }
-
-    function test_exitsAreExemptFromTheWithdrawalBuffer() external {
-        Bank bufferedBank = new Bank(address(asset), gov, 9000, "LP USDC Buffered", "lpUSDC-B", 6, 1);
-        vm.prank(gov);
-        bufferedBank.setSettlementRouterOnce(address(this));
-
-        assertEq(bufferedBank.riskReserveBps(), 9000, "risk reserve should initialize from initial buffer");
-        assertEq(bufferedBank.withdrawalBufferBps(), 9000, "withdrawal buffer defaults to initial buffer");
-
-        asset.mint(alice, 1_000e6);
-        vm.startPrank(alice);
-        asset.approve(address(bufferedBank), type(uint256).max);
-        bufferedBank.deposit(1_000e6, alice);
-        bufferedBank.requestRedeem(1_000e6, alice, alice);
-        vm.stopPrank();
-
-        vm.warp(bufferedBank.redeemBatch(1).cutoff);
-        bufferedBank.activateBatch();
-        vm.prank(alice);
-        bufferedBank.withdraw(1_000e6, alice, alice);
-        assertEq(bufferedBank.totalAssets(), 0, "a priced exit draws on exitPayable, not on the 90% buffer");
-        assertEq(asset.balanceOf(alice), 1_000e6);
+        assertEq(vault.withdrawDeposit(id, 1e12), 100e6);
+        assertEq(vault.totalSupply(), 0);
+        assertEq(vault.getReserve(), 0);
+        assertEq(asset.balanceOf(alice), 100e6);
     }
 
     function test_withdrawalBufferAccountsForReservedRiskOnFeeClaims() external {
-        Bank bufferedBank = new Bank(address(asset), gov, 0, "LP USDC Buffered", "lpUSDC-B", 6, 1);
+        Bank bufferedBank = new Bank(address(asset), gov, 0, 6, 1);
         vm.prank(gov);
         bufferedBank.setSettlementRouterOnce(address(this));
+        _bindTestConsumer(bufferedBank);
         vm.prank(gov);
         bufferedBank.setWithdrawalBufferBps(1000);
 
@@ -106,8 +77,8 @@ contract BankObservabilityTest is Test {
         asset.mint(player, 20e6);
 
         vm.startPrank(alice);
-        asset.approve(address(bufferedBank), type(uint256).max);
-        bufferedBank.deposit(1_000e6, alice);
+        asset.approve(address(bufferedBank.vault()), type(uint256).max);
+        LiquidityVault(bufferedBank.vault()).addDepositFor(alice, 1_000e6);
         vm.stopPrank();
 
         vm.prank(player);
@@ -120,9 +91,9 @@ contract BankObservabilityTest is Test {
         bufferedBank.holdBet(2, player, 10e6, 915e6, bytes32(uint256(2)), player);
 
         SSOTTypes.SSOT memory s = bufferedBank.getSSOT();
-        assertEq(s.NAV, 1_015e6, "player stakes enter NAV while the bets are open");
+        assertEq(s.G, 1_015e6, "player stakes enter NAV while the bets are open");
         assertEq(s.withdrawalBuffer, 101_500_000);
-        assertEq(s.withdrawable, 0, "NAV - R is below the buffer");
+        assertLt(s.G - s.R, s.withdrawalBuffer, "gross capacity is below the optional outflow buffer");
 
         vm.prank(gov);
         vm.expectRevert(IBank.OptionalOutflowDomainViolation.selector);
@@ -138,8 +109,8 @@ contract BankObservabilityTest is Test {
         asset.mint(player, 200e6);
 
         vm.startPrank(gov);
-        asset.approve(address(bank), type(uint256).max);
-        bank.deposit(1_000e6, gov);
+        asset.approve(address(bank.vault()), type(uint256).max);
+        LiquidityVault(bank.vault()).addDepositFor(gov, 1_000e6);
         vm.stopPrank();
 
         vm.prank(player);
@@ -195,10 +166,11 @@ contract BankObservabilityTest is Test {
 
     function test_performanceCountersAreBankAndAssetScoped() external {
         MockERC20 weth = new MockERC20("Wrapped Ether", "WETH", 18);
-        Bank wethBank = new Bank(address(weth), gov, 0, "LP WETH", "lpWETH", 18, 1);
+        Bank wethBank = new Bank(address(weth), gov, 0, 18, 1);
 
         vm.prank(gov);
         wethBank.setSettlementRouterOnce(address(this));
+        _bindTestConsumer(wethBank);
 
         asset.mint(gov, 1_000e6);
         weth.mint(gov, 100 ether);
@@ -206,10 +178,10 @@ contract BankObservabilityTest is Test {
         weth.mint(player, 2 ether);
 
         vm.startPrank(gov);
-        asset.approve(address(bank), type(uint256).max);
-        weth.approve(address(wethBank), type(uint256).max);
-        bank.deposit(1_000e6, gov);
-        wethBank.deposit(100 ether, gov);
+        asset.approve(address(bank.vault()), type(uint256).max);
+        weth.approve(address(wethBank.vault()), type(uint256).max);
+        LiquidityVault(bank.vault()).addDepositFor(gov, 1_000e6);
+        LiquidityVault(wethBank.vault()).addDepositFor(gov, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(player);

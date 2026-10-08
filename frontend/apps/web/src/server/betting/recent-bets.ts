@@ -797,14 +797,20 @@ async function queryBetReceiptTerminalTxFallback({
   const receiptBetId = BigInt(betId);
   try {
     const loaded = await loadGameHubClient({ chainId, client });
-    const [bet, txReceipt] = await Promise.all([
+    const [bet, txReceipt, referralPayees] = await Promise.all([
       loaded.client.readContract({
         address: loaded.gameHub,
         abi: GameHubAbi,
         functionName: "getBet",
         args: [receiptBetId]
       }) as Promise<any>,
-      loaded.client.getTransactionReceipt({ hash: terminalTxHash })
+      loaded.client.getTransactionReceipt({ hash: terminalTxHash }),
+      loaded.client.readContract({
+        address: loaded.gameHub,
+        abi: GameHubAbi,
+        functionName: "getBetReferralPayees",
+        args: [receiptBetId]
+      }) as Promise<readonly [Address, Address]>
     ]);
     const terminal = decodeTerminalReceiptLog({
       betId: receiptBetId,
@@ -843,7 +849,8 @@ async function queryBetReceiptTerminalTxFallback({
       placedAt: numberSecondsToMs(bet.placedAt),
       refundDeadline: numberSecondsToMs(bet.refundDeadline),
       player: getAddress(bet.player) as Address,
-      pricingAffiliate: getAddress(bet.pricingAffiliate) as Address,
+      referrerL1: getAddress(referralPayees[0]) as Address,
+      referrerL2: getAddress(referralPayees[1]) as Address,
       randomHash: bet.randomHash as Hex,
       requestId: BigInt(bet.requestId).toString(),
       stake: BigInt(bet.stake).toString(),
@@ -894,9 +901,8 @@ async function queryBetReceiptTerminalTxFallback({
 function houseEdgeFromEvent(args: Record<string, unknown>): BetRow["houseEdge"] {
   return {
     edge: bigintStringFromUnknown(args.edge),
-    effectiveHouseEdgeBps: Number(args.effectiveHouseEdgeBps),
+    houseEdgeBps: Number(args.houseEdgeBps),
     lpRetained: bigintStringFromUnknown(args.lpRetained),
-    markup: bigintStringFromUnknown(args.markup),
     operatorShare: bigintStringFromUnknown(args.operatorShare),
     protocolFee: bigintStringFromUnknown(args.protocolFee),
     r0: bigintStringFromUnknown(args.r0),
@@ -1348,7 +1354,7 @@ export async function queryAffiliateBets({
 
         const rows = foldRecentBetLogs({ chainId, gameHub, logs }).filter(
           (row) =>
-            row.pricingAffiliate?.toLowerCase() === normalizedAffiliate.toLowerCase() &&
+            row.referrerL1?.toLowerCase() === normalizedAffiliate.toLowerCase() &&
             (!normalizedAsset || row.asset?.toLowerCase() === normalizedAsset.toLowerCase())
         );
         const generatedAt = now();

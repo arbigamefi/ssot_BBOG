@@ -15,18 +15,21 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'script/release'))
-from export_frontend_abis import REQUIRED_CONTRACTS
-from validate_frontend_artifacts import EXECUTION_ADDRESSES, GAMES, _game_id
+from export_frontend_abis import REQUIRED_CONTRACTS, pool_instances
+from validate_frontend_artifacts import EXECUTION_ADDRESSES, GAMES, _game_id, _validate_execution
 
 
 def fixture():
     address = lambda n: '0x' + format(n, '040x')
-    common = {'architectureVersion': 'v1.6-house-edge-allocation', 'chainId': 84532, 'blockNumber': 10}
+    common = {'architectureVersion': 'v1.6-nft-liquidity', 'chainId': 84532, 'blockNumber': 10}
     addresses = {key: address(i + 1) for i, key in enumerate(EXECUTION_ADDRESSES)}
     addresses.update(sportsHub=address(0), sportsRiskEngine=address(0))
     snapshot = {**common, **addresses, 'refundTimeoutSeconds': 3600, 'sportsEnabled': 0,
-                'numPools': 1, 'poolAssetSymbol_0': 'USDC', 'poolLpDecimals_0': 6, 'poolId_0': 1, 'poolDomain_0': 1,
-                'poolAsset_0': address(21), 'poolBank_0': address(22), 'poolActive_0': 1}
+                'numPools': 1, 'poolAssetSymbol_0': 'USDC', 'poolAssetDecimals_0': 6, 'poolId_0': 1, 'poolDomain_0': 1,
+                'poolAsset_0': address(21), 'poolBank_0': address(22), 'poolVault_0': address(23), 'poolActive_0': 1}
+    for name, _, _ in GAMES:
+        snapshot[f'gameMaxBetCount_{name}'] = 25
+        snapshot[f'gameCallbackGasLimit_{name}'] = 2_447_746
     sports = {'enabled': False, 'sportsHub': address(0), 'riskEngine': address(0)}
     for key in ('resultReporterThreshold', 'resultChallengeTimeoutSeconds', 'maxStake', 'maxPayout',
                 'maxMarketReserved', 'maxOutcomeReserved', 'maxEventReserved'):
@@ -37,10 +40,10 @@ def fixture():
         snapshot['sports' + key[0].upper() + key[1:]] = sports[key]
     manifest = {**common, 'schemaVersion': 2, 'addresses': addresses, 'sports': sports,
                 'refundTimeoutSeconds': 3600,
-                'games': [{'slug': slug, 'gameId': _game_id(name), 'label': name, 'module': addresses[key]}
+                'games': [{'slug': slug, 'gameId': _game_id(name), 'label': name, 'module': addresses[key], 'maxBetCount': 25, 'callbackGasLimit': 2_447_746}
                           for name, slug, key in GAMES],
                 'pools': [{'poolId': 1, 'domainId': 1, 'domain': 'Casino', 'active': True, 'asset': address(21),
-                           'bank': address(22), 'decimals': 6, 'symbol': 'USDC', 'sportsRisk': None}]}
+                           'bank': address(22), 'vault': address(23), 'decimals': 6, 'symbol': 'USDC', 'sportsRisk': None}]}
     digest = '0x' + 'a' * 64
     release = {**common, 'schema': 'SSOT_RELEASE_DIGEST_V16', 'digest': digest}
     vectors = {**common, 'schemaVersion': 2, 'vectors': [{'poolId': 1, 'stakeSpec': {'amountPerRoll': 1_000_000}}]}
@@ -48,6 +51,19 @@ def fixture():
 
 
 class ManifestAuthenticationTests(unittest.TestCase):
+    def test_matching_snapshot_still_rejects_round_limit_above_contract_cap(self):
+        snapshot, manifest, _, _ = fixture()
+        game_name = GAMES[0][0]
+        for count in (25, 26, 100):
+            snapshot[f'gameMaxBetCount_{game_name}'] = count
+            manifest['games'][0]['maxBetCount'] = count
+            with self.subTest(count=count):
+                if count == 25:
+                    _validate_execution(manifest, snapshot, manifest_path=Path('manifest'), snapshot_path=Path('snapshot'))
+                else:
+                    with self.assertRaisesRegex(SystemExit, 'admission bounds'):
+                        _validate_execution(manifest, snapshot, manifest_path=Path('manifest'), snapshot_path=Path('snapshot'))
+
     def test_actual_strict_entrypoint_rejects_every_execution_address_and_game_mismatch(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -56,13 +72,20 @@ class ManifestAuthenticationTests(unittest.TestCase):
                 (root / f'{name}.json').write_text(json.dumps(data))
             (root / 'notes.md').write_text(release['digest'])
             rows = []
-            for name, _, _ in REQUIRED_CONTRACTS:
+            for name, qualified, key in REQUIRED_CONTRACTS:
                 filename = f'{name}.abi.json'
-                data = (ROOT / 'frontend/packages/ssot/src/abis/contracts' / filename).read_bytes()
+                abi = [{"type": "error", "name": "FixtureOnly", "inputs": []}]
+                artifact = root / "out" / Path(qualified.split(":")[0]).name / f"{name}.json"
+                artifact.parent.mkdir(parents=True, exist_ok=True)
+                artifact.write_text(json.dumps({"abi": abi}))
+                data = json.dumps({"contract": name, "abi": abi}).encode()
                 (root / filename).write_bytes(data)
-                rows.append({'name': name, 'abiFile': filename, 'abiSha256': hashlib.sha256(data).hexdigest()})
-            (root / 'index.json').write_text(json.dumps({'schemaVersion': 2, 'chainId': 84532, 'blockNumber': 10, 'contracts': rows}))
-            cmd = [sys.executable, str(ROOT / 'script/release/validate_frontend_artifacts.py'), '--strict', '1']
+                rows.append({'name': name, 'addressKey': key, 'address': manifest['addresses'].get(key),
+                             'abiFile': filename, 'abiSha256': hashlib.sha256(data).hexdigest()})
+            rows.extend(pool_instances(manifest))
+            (root / 'index.json').write_text(json.dumps({'schemaVersion': 2, 'architectureVersion': 'v1.6-nft-liquidity',
+                                                         'chainId': 84532, 'blockNumber': 10, 'contracts': rows}))
+            cmd = [sys.executable, str(ROOT / 'script/release/validate_frontend_artifacts.py'), '--strict', '1', '--out', str(root / 'out')]
             for key, filename in [('release', 'release.json'), ('snapshot', 'snapshot.json'), ('notes', 'notes.md'),
                                   ('manifest', 'manifest.json'), ('vectors', 'vectors.json'), ('abis-index', 'index.json')]:
                 cmd += ['--' + key, str(root / filename)]
@@ -79,11 +102,17 @@ class ManifestAuthenticationTests(unittest.TestCase):
                     self.assertNotEqual(result.returncode, 0)
                     self.assertIn('does not match authenticated snapshot', result.stderr)
             cases = []
-            for field in ('gameId', 'module', 'slug'):
+            for field in ('gameId', 'module', 'slug', 'maxBetCount', 'callbackGasLimit'):
                 changed = copy.deepcopy(manifest)
                 changed['games'][0][field] = 'wrong'
                 cases.append(changed)
+            for field in ('maxBetCount', 'callbackGasLimit'):
+                changed = copy.deepcopy(manifest); del changed['games'][0][field]; cases.append(changed)
+                for value in (None, True, 0, 2_447_747):
+                    changed = copy.deepcopy(manifest); changed['games'][0][field] = value; cases.append(changed)
+            changed = copy.deepcopy(manifest); del changed['pools'][0]['vault']; cases.append(changed)
             changed = copy.deepcopy(manifest); changed['pools'][0]['active'] = False; cases.append(changed)
+            changed = copy.deepcopy(manifest); changed['pools'][0]['vault'] = '0x' + 'f' * 40; cases.append(changed)
             changed = copy.deepcopy(manifest); changed['sports']['maxStake'] = '1'; cases.append(changed)
             changed = copy.deepcopy(manifest); changed['refundTimeoutSeconds'] = 1; cases.append(changed)
             for changed in cases:
@@ -123,8 +152,9 @@ class SignedImportIntegrationTests(unittest.TestCase):
                              '--rpc-url', endpoint, '--broadcast', '--private-key', fixture_key,
                              '--non-interactive'], cwd=ROOT, env=env)
         cls.bundle = cls.fixture_root / 'bundle'
+        cls.pending_bundle = cls.fixture_root / 'pending/bundle'
         cls.wrong_precision = cls.fixture_root / 'wrong-precision/bundle'
-        for bundle in (cls.bundle, cls.wrong_precision):
+        for bundle in (cls.bundle, cls.pending_bundle, cls.wrong_precision):
             cls.run_checked([sys.executable, str(ROOT / 'script/release/export_frontend_abis.py'),
                              '--manifest', str(bundle / 'deployments/frontend-manifest-latest-v16.json'),
                              '--dest', str(bundle / 'abis')], cwd=ROOT)
@@ -219,16 +249,24 @@ class SignedImportIntegrationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         active = json.loads((self.active / f"chain-{self.snapshot['chainId']}.json").read_text())
         self.assertEqual(active['contracts']['gameHub'], self.snapshot['gameHub'].lower())
+        self.assertEqual(active['meta']['architectureVersion'], 'v1.6-nft-liquidity')
+        self.assertNotIn('adapter', active['contracts'])
+        for game in active['gamesMeta']:
+            key = next(name for name, slug, _ in GAMES if slug == game['slug'])
+            self.assertEqual(game['maxBetCount'], self.snapshot[f'gameMaxBetCount_{key}'])
+            self.assertEqual(game['callbackGasLimit'], self.snapshot[f'gameCallbackGasLimit_{key}'])
         self.assertEqual(active['assets'][0]['decimals'], 6)
         self.assertEqual(active['pools'][0]['decimals'], 6)
+        self.assertEqual(active['pools'][0]['vault'], self.snapshot['poolVault_0'].lower())
         release = json.loads((bundle / 'deployments/release-latest-v16.json').read_text())
         self.assertEqual(active['releaseDigest'], release['digest'])
         self.assertFalse(active['isPlaceholder'])
         self.assertEqual(list(self.deployments.iterdir()), [])
 
-    def changed_bundle(self):
-        target = self.root / 'changed-bundle'
+    def changed_bundle(self, name='changed-bundle'):
+        target = self.root / name
         shutil.copytree(self.bundle, target)
+        self.addCleanup(shutil.rmtree, target, ignore_errors=True)
         return target
 
     @staticmethod
@@ -265,7 +303,7 @@ class SignedImportIntegrationTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('Release chain differs', result.stderr)
         self.assertEqual(self.files(self.active), self.original)
-        result = self.sync(self.bundle, endpoint=self.pending_rpc, only_chain=self.snapshot['chainId'])
+        result = self.sync(self.pending_bundle, endpoint=self.pending_rpc, only_chain=self.snapshot['chainId'])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("live governance failed", result.stderr)
         self.assertEqual(self.files(self.active), self.original)
@@ -304,11 +342,11 @@ class SignedImportIntegrationTests(unittest.TestCase):
         self.assert_rejected(bundle, 'artifact validation', 'pools[0].decimals=9')
 
     def test_signed_precision_and_symbol_changes_reject_original_signature(self):
-        for field, value in (('poolLpDecimals_0', 9), ('poolAssetSymbol_0', 'OTHER')):
+        for field, value in (('poolAssetDecimals_0', 9), ('poolAssetSymbol_0', 'OTHER')):
             with self.subTest(field=field):
-                bundle = self.changed_bundle()
+                bundle = self.changed_bundle(f'changed-bundle-{field}')
                 self.change(bundle, 'latest', lambda data: data.update({field: value}))
-                if field == 'poolLpDecimals_0':
+                if field == 'poolAssetDecimals_0':
                     self.change(bundle, 'frontend-manifest-latest', lambda data: data['pools'][0].update(decimals=9))
                     self.change(bundle, 'golden-vectors-latest',
                                 lambda data: [row['stakeSpec'].update(amountPerRoll=10**9) for row in data['vectors']])
@@ -318,6 +356,48 @@ class SignedImportIntegrationTests(unittest.TestCase):
                 self.assert_verifier_reason(bundle, 'VerifyReleaseV16', 'digest mismatch')
                 shutil.rmtree(bundle)
 
+    def test_signed_house_edge_and_referral_rates_reject_tampering(self):
+        for field in ('defaultHouseEdgeBps', 'lpShareBps', 'refL0Bps', 'refL1Bps', 'refL2Bps', 'refHoldbackBps'):
+            with self.subTest(field=field):
+                bundle = self.changed_bundle(f'changed-bundle-{field}')
+                self.change(bundle, 'latest', lambda data: data.update({field: data[field] + 1}))
+                self.assert_rejected(bundle, 'release signature')
+                self.assert_verifier_reason(bundle, 'VerifyReleaseV16', 'digest mismatch')
+                shutil.rmtree(bundle)
+
+    def test_signed_vault_and_game_admission_tampering_rejects_original_signature(self):
+        for field, value in (('poolVault_0', '0x' + 'f' * 40),
+                             ('codeHash_poolVault_0', '0x' + 'f' * 64),
+                             ('gameMaxBetCount_DICE', 24), ('gameCallbackGasLimit_DICE', 200_000)):
+            with self.subTest(field=field):
+                bundle = self.changed_bundle(f'changed-bundle-{field}')
+                self.change(bundle, 'latest', lambda data: data.update({field: value}))
+                if field == 'poolVault_0':
+                    self.change(bundle, 'frontend-manifest-latest', lambda data: data['pools'][0].update(vault=value))
+                    index_path = bundle / 'abis/index.json'
+                    index = json.loads(index_path.read_text())
+                    for row in index['contracts']:
+                        if row['name'] in ('BankInstance', 'VaultInstance'):
+                            row['vault'] = value
+                            if row['name'] == 'VaultInstance': row['address'] = value
+                    index_path.write_text(json.dumps(index))
+                elif field.startswith('game'):
+                    key = 'maxBetCount' if field.startswith('gameMax') else 'callbackGasLimit'
+                    self.change(bundle, 'frontend-manifest-latest',
+                                lambda data: next(game for game in data['games'] if game['slug'] == 'dice').update({key: value}))
+                self.assert_rejected(bundle, 'release signature')
+                self.assert_verifier_reason(bundle, 'VerifyReleaseV16', 'digest mismatch')
+                shutil.rmtree(bundle)
+
+    def test_unsigned_vault_and_game_admission_tampering_rejects_before_activation(self):
+        for field, value in (('vault', '0x' + 'f' * 40), ('maxBetCount', 99), ('callbackGasLimit', 200_000)):
+            with self.subTest(field=field):
+                bundle = self.changed_bundle(f'changed-bundle-{field}')
+                self.change(bundle, 'frontend-manifest-latest',
+                            lambda data: data['pools' if field == 'vault' else 'games'][0].update({field: value}))
+                self.assert_rejected(bundle, 'artifact validation')
+                shutil.rmtree(bundle)
+
     def test_correctly_signed_wrong_precision_rejects_at_live_governance(self):
         bundle = self.root / 'wrong-precision'
         shutil.copytree(self.wrong_precision, bundle)
@@ -325,7 +405,10 @@ class SignedImportIntegrationTests(unittest.TestCase):
         self.assert_verifier_reason(bundle, 'VerifyGovernanceV16', 'bank precision mismatch')
 
     def test_unaccepted_governance_rejects_at_live_governance(self):
-        bundle = self.changed_bundle()
+        # Each independent deployment is verified against its own signed code identities.
+        # Crossing snapshots between chains can reject at bytecode identity before testing governance.
+        bundle = self.root / 'changed-bundle'
+        shutil.copytree(self.pending_bundle, bundle)
         self.assert_rejected(bundle, 'live governance', endpoint=self.pending_rpc)
         self.assert_verifier_reason(bundle, 'VerifyGovernanceV16', 'governance not ready', endpoint=self.pending_rpc)
 

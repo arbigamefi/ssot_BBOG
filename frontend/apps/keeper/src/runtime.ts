@@ -6,6 +6,8 @@ import {
   defineChain,
   decodeEventLog,
   getAddress,
+  getAbiItem,
+  type AbiEvent,
   http,
   webSocket,
   type Address,
@@ -27,7 +29,7 @@ import {
 
 import { decodeHouseEdgeLog } from "@ssot/bet-index/house-edge";
 import { GAME_HUB_KEEPER_ABI, SPORTS_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
-import { fetchBankProviderLedgerRows } from "./bank-provider-ledger.js";
+import { fetchVaultProviderLedgerRows } from "./vault-provider-ledger.js";
 import { describeError } from "./errors.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
 import {
@@ -39,22 +41,14 @@ import {
 import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
 import { isScanTruncated, splitBlockRange, type BlockRange } from "./scan.js";
-import { mapBetState } from "./state.js";
+import { mapBetState, mapRequestState } from "./state.js";
 import { mapSportsMarketState, mapSportsTicketState } from "./sports-terminalizer.js";
 import type { BetRead, KeeperConfig, KeeperEvent, KeeperLogger } from "./types.js";
 import { createSportsRecovery } from "./sports-recovery.js";
-import {
-  BANK_REDEMPTION_KEEPER_ABI,
-  createPocketMonitor,
-  reconcileRedemptionBank
-} from "./redemption.js";
+import { BANK_KEEPER_ABI } from "./abi.js";
+import { readPoolHealth } from "./pools.js";
 import { createPayableClaimer } from "./payables.js";
-import type {
-  PayableHealth,
-  PocketDiscoveryHealth,
-  PocketHealth,
-  RedemptionHealth
-} from "./health.js";
+import type { PayableHealth } from "./health.js";
 
 // Stage-2 admission calls GameHub with 3m execution gas. Transactions also pay intrinsic gas
 // (21k + 36 calldata bytes); use the same 3.05m envelope for eth_call and the actual transaction.
@@ -79,7 +73,7 @@ const SPORTS_TERMINALIZER_EVENTS: SportsTerminalizerEventName[] = [
   "ResultChallengeResolved"
 ];
 const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
-const BANK_PROVIDER_LEDGER_CURSOR_SOURCE = "bank-provider-ledger-finalized";
+const VAULT_PROVIDER_LEDGER_CURSOR_SOURCE = "vault-provider-ledger-finalized";
 const CASINO_RECOVERY_PAGE_SIZE = 50;
 /**
  * Indexed-bet recovery re-reads every requeued bet on chain, so after scans it runs
@@ -281,11 +275,11 @@ export function createKeeperRuntime({
   let resettingWebSocket = false;
   let stopped = false;
   let scanning = false;
-  let bankProviderLedgerScanning = false;
+  let vaultProviderLedgerScanning = false;
   let lastScannedBlock = config.startBlock ?? 0n;
-  let bankProviderLedgerLastScannedBlock =
+  let vaultProviderLedgerLastScannedBlock =
     (config.casinoRecoveryStartBlock ?? config.startBlock ?? 0n) - 1n;
-  let bankProviderLedgerFinalizedBlock: bigint | undefined;
+  let vaultProviderLedgerFinalizedBlock: bigint | undefined;
   let recoveryAfterBetId = 0n;
   let recoveringIndexedBets = false;
   let drainingQueue = false;
@@ -293,15 +287,7 @@ export function createKeeperRuntime({
   let nextLifecycleScanAt = 0;
   const recoveryOrigin = config.casinoRecoveryStartBlock;
   const banks = new Map(
-    config.bankProviderLedgerPools.map((pool) => [pool.bank.toLowerCase(), pool])
-  );
-  const pocketMonitors = [...banks.values()].map((pool) =>
-    createPocketMonitor({
-      bank: pool.bank,
-      origin: recoveryOrigin,
-      chunkSize: config.scanChunkBlocks,
-      maxChunks: config.scanMaxChunksPerPass
-    })
+    config.vaultProviderLedgerPools.map((pool) => [pool.bank.toLowerCase(), pool])
   );
   const payableClaimers = [...banks.values()].map((pool) =>
     createPayableClaimer({
@@ -388,12 +374,47 @@ export function createKeeperRuntime({
       abi: GAME_HUB_KEEPER_ABI,
       functionName: "getBet",
       args: [betId]
-    })) as unknown as { betId: bigint; requestId: bigint; state: number; refundDeadline: bigint };
+    })) as unknown as {
+      betId: bigint;
+      requestId: bigint;
+      state: number;
+      refundDeadline: bigint;
+      bank: Address;
+    };
     return {
       betId: BigInt(bet.betId),
       requestId: BigInt(bet.requestId),
       state: mapBetState(Number(bet.state)),
+      bank: bet.bank,
       refundDeadline: BigInt(bet.refundDeadline)
+    };
+  };
+
+  const readRequest = async (bet: BetRead) => {
+    const request = await readVrfRequest(bet.requestId);
+    if (
+      request.betId !== bet.betId ||
+      getAddress(request.hub) !== getAddress(config.gameHub) ||
+      !bet.bank ||
+      getAddress(request.bank) !== getAddress(bet.bank)
+    ) {
+      throw new Error("Canonical VRF request binding does not match Hub position");
+    }
+    return request;
+  };
+
+  const readVrfRequest = async (requestId: bigint) => {
+    const request = (await publicClient.readContract({
+      address: config.vrfHub,
+      abi: VRF_HUB_KEEPER_ABI,
+      functionName: "getRequest",
+      args: [requestId]
+    })) as { bank: Address; hub: Address; betId: bigint; state: number };
+    return {
+      bank: request.bank,
+      hub: request.hub,
+      betId: request.betId,
+      state: mapRequestState(Number(request.state))
     };
   };
 
@@ -584,6 +605,7 @@ export function createKeeperRuntime({
     try {
       const outcome = await finalizeIfReady(item, {
         readBet,
+        readRequest,
         simulateFinalize,
         writeFinalize,
         readRefundClock,
@@ -753,7 +775,7 @@ export function createKeeperRuntime({
       const resumeBlock = resolveBetIndexResumeBlock(lastScannedBlock, cursor);
       const bankProviderCursor = await betIndexStore.getCursor(
         config.chainId,
-        BANK_PROVIDER_LEDGER_CURSOR_SOURCE,
+        VAULT_PROVIDER_LEDGER_CURSOR_SOURCE,
         config.gameHub
       );
       if (resumeBlock > lastScannedBlock) {
@@ -765,11 +787,11 @@ export function createKeeperRuntime({
         });
         writeHealth(health.recordStarted(lastScannedBlock, queue.size));
       }
-      if (bankProviderCursor != null && bankProviderCursor > bankProviderLedgerLastScannedBlock) {
-        const configuredStartBlock = bankProviderLedgerLastScannedBlock;
-        bankProviderLedgerLastScannedBlock = bankProviderCursor;
-        bankProviderLedgerFinalizedBlock = bankProviderCursor;
-        logger.info("casino.keeper.bank_provider_ledger_cursor_resumed", {
+      if (bankProviderCursor != null && bankProviderCursor > vaultProviderLedgerLastScannedBlock) {
+        const configuredStartBlock = vaultProviderLedgerLastScannedBlock;
+        vaultProviderLedgerLastScannedBlock = bankProviderCursor;
+        vaultProviderLedgerFinalizedBlock = bankProviderCursor;
+        logger.info("casino.keeper.vault_provider_ledger_cursor_resumed", {
           configuredStartBlock: configuredStartBlock.toString(),
           cursorBlock: bankProviderCursor.toString()
         });
@@ -792,26 +814,38 @@ export function createKeeperRuntime({
     }
   };
 
-  const enqueueFulfilledLog = (log: {
-    args?: { hub?: Address; betId?: bigint; requestId?: bigint; randomHash?: Hex };
+  // Receipt events survive a failed entire Hub delivery. Resolve request identity on
+  // the canonical consumer; one consumer may serve other pools and Hubs.
+  const enqueueVrfLog = async (log: {
+    args?: { requestId?: bigint };
     blockNumber?: bigint;
     transactionHash?: Hex;
   }) => {
-    const betId = log.args?.betId;
-    if (betId == null) return;
-    if (log.args?.hub && getAddress(log.args.hub) !== getAddress(config.gameHub)) return;
+    const requestId = log.args?.requestId;
+    if (requestId == null || stopped) return;
+    const request = await readVrfRequest(requestId);
+    if (getAddress(request.hub) !== getAddress(config.gameHub) || request.state !== "received")
+      return;
     enqueue({
       source: "vrfHub",
-      betId,
-      requestId: log.args?.requestId,
-      randomHash: log.args?.randomHash,
+      betId: request.betId,
+      requestId,
       blockNumber: log.blockNumber,
       txHash: log.transactionHash,
       receivedAt: Date.now()
     });
-    void trackOperation(drainQueue()).catch((error) => {
-      logger.error("casino.keeper.ready_drain_failed", { error: describeError(error) });
+  };
+  const vrfRecoveryEvents = ["ResultReceived", "CallbackAttempt"].map(
+    (name) => getAbiItem({ abi: VRF_HUB_KEEPER_ABI, name }) as AbiEvent
+  );
+  const scanVrfResults = async (range: BlockRange) => {
+    const logs = await publicClient.getLogs({
+      address: config.vrfHub,
+      events: vrfRecoveryEvents,
+      ...range
     });
+    for (const log of logs)
+      await enqueueVrfLog(log as unknown as Parameters<typeof enqueueVrfLog>[0]);
   };
 
   /**
@@ -852,6 +886,7 @@ export function createKeeperRuntime({
         indexing ? GAME_HUB_INDEX_EVENTS : ["BetPlaced", "BetRandomReady"],
         range
       );
+      await scanVrfResults(range);
       const readyLogs = logsByEvent.get("BetRandomReady") ?? [];
       for (const log of logsByEvent.get("BetPlaced") ?? []) {
         const betId = log.args?.positionId ?? log.args?.betId;
@@ -892,11 +927,11 @@ export function createKeeperRuntime({
     }
   };
 
-  const scanBankProviderLedgerEvents = async () => {
+  const scanVaultProviderLedgerEvents = async () => {
     if (
       !betIndexStore ||
-      config.bankProviderLedgerPools.length === 0 ||
-      config.bankProviderLedgerScanIntervalMs <= 0
+      config.vaultProviderLedgerPools.length === 0 ||
+      config.vaultProviderLedgerScanIntervalMs <= 0
     ) {
       return;
     }
@@ -904,23 +939,23 @@ export function createKeeperRuntime({
     if (finalized.number == null)
       throw new Error("Bank provider ledger requires a numbered finalized block");
     if (
-      bankProviderLedgerFinalizedBlock != null &&
-      finalized.number < bankProviderLedgerFinalizedBlock
+      vaultProviderLedgerFinalizedBlock != null &&
+      finalized.number < vaultProviderLedgerFinalizedBlock
     )
       throw new Error(
-        `Bank provider ledger finalized block regressed from ${bankProviderLedgerFinalizedBlock} to ${finalized.number}`
+        `Bank provider ledger finalized block regressed from ${vaultProviderLedgerFinalizedBlock} to ${finalized.number}`
       );
-    bankProviderLedgerFinalizedBlock = finalized.number;
+    vaultProviderLedgerFinalizedBlock = finalized.number;
     const ranges = splitBlockRange({
-      fromBlock: bankProviderLedgerLastScannedBlock + 1n,
+      fromBlock: vaultProviderLedgerLastScannedBlock + 1n,
       toBlock: finalized.number,
       chunkSize: config.scanChunkBlocks,
       maxChunks: config.scanMaxChunksPerPass
     });
-    reportScanCap("bank-provider-ledger", ranges, finalized.number);
+    reportScanCap("vault-provider-ledger", ranges, finalized.number);
     for (const range of ranges) {
-      await writeBankProviderLedgerRange(betIndexStore, publicClient, config, range, logger);
-      bankProviderLedgerLastScannedBlock = range.toBlock;
+      await writeVaultProviderLedgerRange(betIndexStore, publicClient, config, range, logger);
+      vaultProviderLedgerLastScannedBlock = range.toBlock;
     }
   };
 
@@ -973,30 +1008,13 @@ export function createKeeperRuntime({
     );
   };
 
-  const activateRedemptionBatch = (bank: Address) =>
-    withWriteLock(async () => {
-      if (stopped) throw new Error("Keeper stopped before batch advancement");
-      const functionName = "activateBatch" as const;
-      const request = { address: bank, abi: BANK_REDEMPTION_KEEPER_ABI, functionName };
-      await publicClient.simulateContract({ ...request, account: account.address });
-      const txHash = await walletClient.writeContract({ ...request, account, chain });
-      const receipt = await waitFinalizeReceipt(txHash);
-      logger.info("casino.keeper.batch_advanced", {
-        bank,
-        functionName,
-        txHash,
-        status: receipt.status
-      });
-      return { ...receipt, txHash };
-    });
-
   // claimPlayerPayable pays only the player, so the keeper needs no authority to complete a deferred payout.
   const claimPlayerPayable = (bank: Address, player: Address) =>
     withWriteLock(async () => {
       if (stopped) throw new Error("Keeper stopped before a payable claim");
       const request = {
         address: bank,
-        abi: BANK_REDEMPTION_KEEPER_ABI,
+        abi: BANK_KEEPER_ABI,
         functionName: "claimPlayerPayable" as const,
         args: [player] as const
       };
@@ -1041,30 +1059,16 @@ export function createKeeperRuntime({
         logger.error("casino.keeper.lifecycle_recovery_failed", { error: description });
         await health.recordError(description, queue.size, "recovery");
       }
-      const states: RedemptionHealth[] = [];
-      for (const pool of banks.values()) {
-        states.push(
-          await reconcileRedemptionBank(pool.bank, {
-            publicClient,
-            activate: activateRedemptionBatch
-          })
-        );
-      }
-      await health.recordRedemptions(states, queue.size);
-      const pockets: PocketHealth[] = [];
-      const discovery: PocketDiscoveryHealth[] = [];
-      for (const monitor of pocketMonitors) {
-        const result = await monitor.scan(publicClient);
-        pockets.push(...result.pockets);
-        discovery.push(result.discovery);
-      }
-      await health.recordPockets(pockets, discovery, queue.size);
+      const states = await Promise.all(
+        [...banks.values()].map((pool) => readPoolHealth(pool, publicClient))
+      );
+      await health.recordPools(states, queue.size);
       const payables: PayableHealth[] = [];
       for (const claimer of payableClaimers)
         payables.push(await claimer.run(publicClient, claimPlayerPayable));
       await health.recordPayables(payables, queue.size);
     } catch (error) {
-      await health.recordError(describeError(error), queue.size, "redemption");
+      await health.recordError(describeError(error), queue.size, "pools");
     } finally {
       lifecycleScanning = false;
     }
@@ -1092,18 +1096,18 @@ export function createKeeperRuntime({
     }
   };
 
-  const runBankProviderLedgerScan = async () => {
-    if (stopped || bankProviderLedgerScanning) return;
-    bankProviderLedgerScanning = true;
+  const runVaultProviderLedgerScan = async () => {
+    if (stopped || vaultProviderLedgerScanning) return;
+    vaultProviderLedgerScanning = true;
     try {
-      await scanBankProviderLedgerEvents();
+      await scanVaultProviderLedgerEvents();
       writeHealth(health.recordLedgerScan(queue.size));
     } catch (error) {
       const description = describeError(error);
-      logger.error("casino.keeper.bank_provider_ledger_scan_failed", { error: description });
+      logger.error("casino.keeper.vault_provider_ledger_scan_failed", { error: description });
       writeHealth(health.recordError(description, queue.size, "ledger"));
     } finally {
-      bankProviderLedgerScanning = false;
+      vaultProviderLedgerScanning = false;
     }
   };
 
@@ -1241,19 +1245,31 @@ export function createKeeperRuntime({
           );
         }
       }
-      unwatchers.push(
-        wsClient.watchContractEvent({
-          poll: false,
-          address: config.vrfHub,
-          abi: VRF_HUB_KEEPER_ABI,
-          eventName: "Fulfilled",
-          onLogs: (logs) =>
-            (logs as unknown as Parameters<typeof enqueueFulfilledLog>[0][]).forEach(
-              enqueueFulfilledLog
-            ),
-          onError: (error) => logWatchError("casino.keeper.vrfhub_watch_error", error)
-        })
-      );
+      for (const eventName of ["ResultReceived", "CallbackAttempt"] as const) {
+        unwatchers.push(
+          wsClient.watchContractEvent({
+            poll: false,
+            address: config.vrfHub,
+            abi: VRF_HUB_KEEPER_ABI,
+            eventName,
+            onLogs: (logs) => {
+              void trackOperation(
+                (async () => {
+                  for (const log of logs)
+                    await enqueueVrfLog(log as unknown as Parameters<typeof enqueueVrfLog>[0]);
+                  await drainQueue();
+                })()
+              ).catch((error) => {
+                logger.error("casino.keeper.vrf_result_recovery_failed", {
+                  error: describeError(error)
+                });
+                writeHealth(health.recordError(describeError(error), queue.size, "recovery"));
+              });
+            },
+            onError: (error) => logWatchError("casino.keeper.vrfhub_watch_error", error, eventName)
+          })
+        );
+      }
       logger.info("casino.keeper.websocket_watchers_registered", { watchers: unwatchers.length });
     } catch (error) {
       logWatchError("casino.keeper.websocket_connect_failed", error);
@@ -1274,8 +1290,8 @@ export function createKeeperRuntime({
       scanMaxChunksPerPass: config.scanMaxChunksPerPass,
       startupScanEnabled: config.startupScanEnabled,
       wsEnabled: Boolean(wsClient),
-      bankProviderLedgerPoolCount: config.bankProviderLedgerPools.length,
-      bankProviderLedgerScanIntervalMs: config.bankProviderLedgerScanIntervalMs,
+      vaultProviderLedgerPoolCount: config.vaultProviderLedgerPools.length,
+      vaultProviderLedgerScanIntervalMs: config.vaultProviderLedgerScanIntervalMs,
       sportsTicketIndexEnabled: config.sportsTicketIndexEnabled,
       sportsTerminalizerScanChunkBlocks: config.sportsTerminalizerScanChunkBlocks.toString(),
       sportsTerminalizerMarketIds: config.sportsTerminalizerMarketIds.map((id) => id.toString()),
@@ -1313,11 +1329,14 @@ export function createKeeperRuntime({
         )
       );
     }
-    if (config.bankProviderLedgerPools.length > 0 && config.bankProviderLedgerScanIntervalMs > 0) {
+    if (
+      config.vaultProviderLedgerPools.length > 0 &&
+      config.vaultProviderLedgerScanIntervalMs > 0
+    ) {
       timers.push(
         setInterval(
-          () => void trackOperation(runBankProviderLedgerScan()),
-          config.bankProviderLedgerScanIntervalMs
+          () => void trackOperation(runVaultProviderLedgerScan()),
+          config.vaultProviderLedgerScanIntervalMs
         )
       );
     }
@@ -1327,12 +1346,6 @@ export function createKeeperRuntime({
         void trackOperation(runLifecycleScan());
       }, 10_000)
     );
-    if (pocketMonitors.length > 0)
-      await health.recordError(
-        "Pocket lifecycle history is awaiting reconciliation",
-        queue.size,
-        "pocket-recovery"
-      );
     if (recoveryOrigin != null)
       await health.recordError(
         "Casino lifecycle history is awaiting reconciliation",
@@ -1342,7 +1355,7 @@ export function createKeeperRuntime({
     void trackOperation(runLifecycleScan());
     if (config.startupScanEnabled) {
       void trackOperation(runScan());
-      void trackOperation(runBankProviderLedgerScan());
+      void trackOperation(runVaultProviderLedgerScan());
     } else {
       logger.info("casino.keeper.startup_scan_skipped", {
         scanIndexEventsEnabled: config.scanIndexEventsEnabled,
@@ -1404,7 +1417,7 @@ async function writeBetIndexRange(
   }
 }
 
-async function writeBankProviderLedgerRange(
+async function writeVaultProviderLedgerRange(
   store: BetIndexStore,
   publicClient: PublicClient,
   config: KeeperConfig,
@@ -1412,16 +1425,16 @@ async function writeBankProviderLedgerRange(
   logger: KeeperLogger
 ) {
   try {
-    const rowsByPool = await fetchBankProviderLedgerRows({
+    const rowsByPool = await fetchVaultProviderLedgerRows({
       chainId: config.chainId,
-      pools: config.bankProviderLedgerPools,
+      pools: config.vaultProviderLedgerPools,
       publicClient,
       range
     });
     for (const { pool, rows } of rowsByPool) {
-      await store.replaceBankProviderLedgerRange({
+      await store.replaceVaultProviderLedgerRange({
         chainId: config.chainId,
-        bank: pool.bank,
+        vault: pool.vault,
         ...range,
         rows
       });
@@ -1430,10 +1443,10 @@ async function writeBankProviderLedgerRange(
       blockNumber: range.toBlock,
       chainId: config.chainId,
       cursorKey: config.gameHub,
-      source: BANK_PROVIDER_LEDGER_CURSOR_SOURCE
+      source: VAULT_PROVIDER_LEDGER_CURSOR_SOURCE
     });
   } catch (error) {
-    logger.error("casino.keeper.bank_provider_ledger_scan_failed", {
+    logger.error("casino.keeper.vault_provider_ledger_scan_failed", {
       fromBlock: range.fromBlock.toString(),
       error: describeError(error),
       toBlock: range.toBlock.toString()
@@ -1536,7 +1549,6 @@ type TerminalBetRead = {
   placedAt: bigint | number;
   refundDeadline: bigint | number;
   player: Address;
-  pricingAffiliate: Address;
   randomHash: Hex;
   requestId: bigint | number;
   stake: bigint | number;
@@ -1555,14 +1567,20 @@ async function buildTerminalBetRow({
   publicClient: PublicClient;
   txHash: Hex;
 }): Promise<{ row: BetRow; houseEdge: BetIndexEvent | null }> {
-  const [bet, receipt] = await Promise.all([
+  const [bet, receipt, referralPayees] = await Promise.all([
     publicClient.readContract({
       address: gameHub,
       abi: GAME_HUB_KEEPER_ABI,
       functionName: "getBet",
       args: [betId]
     }) as Promise<TerminalBetRead>,
-    publicClient.getTransactionReceipt({ hash: txHash })
+    publicClient.getTransactionReceipt({ hash: txHash }),
+    publicClient.readContract({
+      address: gameHub,
+      abi: GAME_HUB_KEEPER_ABI,
+      functionName: "getBetReferralPayees",
+      args: [betId]
+    }) as Promise<readonly [Address, Address]>
   ]);
   const terminal = decodeTerminalLog({
     betId,
@@ -1590,7 +1608,8 @@ async function buildTerminalBetRow({
     placedAt: secondsToMs(bet.placedAt),
     refundDeadline: secondsToMs(bet.refundDeadline),
     player: getAddress(bet.player) as Address,
-    pricingAffiliate: getAddress(bet.pricingAffiliate) as Address,
+    referrerL1: getAddress(referralPayees[0]) as Address,
+    referrerL2: getAddress(referralPayees[1]) as Address,
     randomHash: bet.randomHash,
     requestId: BigInt(bet.requestId).toString(),
     stake: BigInt(bet.stake).toString(),

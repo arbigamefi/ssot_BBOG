@@ -21,8 +21,6 @@ export type CasinoReceiptHouseEdge = {
   playerRakebackValue?: string;
   /** Both referral levels (L1 + L2); absent when zero. */
   referrersValue?: string;
-  /** The referrer's markup share; absent when zero. */
-  affiliateMarkupValue?: string;
 };
 
 export type CasinoReceiptViewModel = {
@@ -44,7 +42,8 @@ export type CasinoReceiptViewModel = {
   payment: PlayerPaymentProof;
   placedBlock?: number;
   player?: string;
-  pricingAffiliate?: string;
+  referrerL1?: string;
+  referrerL2?: string;
   randomHash?: string;
   requestId?: string;
   resolvedAt?: number;
@@ -130,7 +129,8 @@ export function buildCasinoReceiptFromBetRow({
     lastEventName: row.lastEventName,
     placedBlock: row.placedBlock,
     player: row.player,
-    pricingAffiliate: row.pricingAffiliate,
+    referrerL1: row.referrerL1,
+    referrerL2: row.referrerL2,
     randomHash: row.randomHash,
     requestId: row.requestId,
     resolvedAt: row.updatedAt,
@@ -153,7 +153,7 @@ function buildReceiptHouseEdge(
   decimals: number,
   symbol: string
 ): CasinoReceiptHouseEdge | undefined {
-  const amount = (key: Exclude<keyof typeof allocation, "effectiveHouseEdgeBps">) =>
+  const amount = (key: Exclude<keyof typeof allocation, "houseEdgeBps">) =>
     bigintFromString(allocation[key]);
   const edge = amount("edge");
   const turnover = amount("usedTurnover");
@@ -162,15 +162,14 @@ function buildReceiptHouseEdge(
   const r0 = amount("r0");
   const r1 = amount("r1");
   const r2 = amount("r2");
-  const markup = amount("markup");
-  if ([edge, turnover, lpRetained, protocolFee, r0, r1, r2, markup].some((v) => v == null)) {
+  if ([edge, turnover, lpRetained, protocolFee, r0, r1, r2].some((v) => v == null)) {
     return undefined;
   }
   // Small bets in an 18-decimal asset would round their shares to 0 at the usual 4 digits.
   const format = (value: bigint) =>
     formatReceiptTokenAmount(value, decimals, symbol, Math.min(decimals, 8));
   const optional = (value: bigint) => (value > 0n ? format(value) : undefined);
-  const bps = allocation.effectiveHouseEdgeBps;
+  const bps = allocation.houseEdgeBps;
   return {
     edgeValue: format(edge!),
     rateLabel: `${Math.floor(bps / 100)}.${String(bps % 100).padStart(2, "0")}%`,
@@ -178,8 +177,7 @@ function buildReceiptHouseEdge(
     lpRetainedValue: format(lpRetained!),
     protocolFeeValue: format(protocolFee!),
     playerRakebackValue: optional(r0!),
-    referrersValue: optional(r1! + r2!),
-    affiliateMarkupValue: optional(markup!)
+    referrersValue: optional(r1! + r2!)
   };
 }
 
@@ -216,9 +214,6 @@ export function buildCasinoReceiptProofText({
             : []),
           ...(model.houseEdge.referrersValue
             ? [`Referrers: ${model.houseEdge.referrersValue}`]
-            : []),
-          ...(model.houseEdge.affiliateMarkupValue
-            ? [`Referrer markup: ${model.houseEdge.affiliateMarkupValue}`]
             : []),
           `Protocol fee: ${model.houseEdge.protocolFeeValue}`
         ]
@@ -272,7 +267,8 @@ function buildCasinoReceiptViewModel({
   lastEventName,
   placedBlock,
   player,
-  pricingAffiliate,
+  referrerL1,
+  referrerL2,
   randomHash,
   requestId,
   resolvedAt,
@@ -294,7 +290,8 @@ function buildCasinoReceiptViewModel({
   lastEventName?: string;
   placedBlock?: number;
   player?: string;
-  pricingAffiliate?: string;
+  referrerL1?: string;
+  referrerL2?: string;
   randomHash?: string;
   requestId?: string;
   resolvedAt?: number;
@@ -333,7 +330,8 @@ function buildCasinoReceiptViewModel({
     payment: provenPayment,
     placedBlock,
     player,
-    pricingAffiliate,
+    referrerL1,
+    referrerL2,
     randomHash,
     requestId,
     resolvedAt,

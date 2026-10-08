@@ -16,43 +16,30 @@ export type KeeperFailureSource =
   | "ledger"
   | "finalize"
   | "recovery"
-  | "redemption"
-  | "pocket-recovery"
-  | "payables"
-  | "pocket";
+  | "pools"
+  | "payables";
 
-export type RedemptionHealth = {
+export type PoolHealth = {
   bank: Address;
-  batchId?: string;
-  cutoff?: string;
-  activationDue?: boolean;
-  openHolds?: string;
-  activeOpenHolds?: string;
-  maxActiveHolds?: string;
-  capacityHeadroom?: string;
-  minStake?: string;
+  vault: Address;
   observedBlock?: string;
+  openHolds?: string;
+  maxOpenHolds?: string;
+  capacityHeadroom?: string;
+  minBetAmount?: string;
+  bankCash?: string;
+  vaultCash?: string;
+  L?: string;
+  P?: string;
+  R?: string;
+  K?: string;
+  G?: string;
+  PF?: string;
+  XP?: string;
+  PP?: string;
+  accountingValid?: boolean;
   paused?: boolean;
-  error?: string;
-};
-
-export type PocketHealth = {
-  bank: Address;
-  epochId: string;
-  openedAt?: string;
-  remainingHolds?: string;
-  remainingReserve?: string;
-  ageSeconds?: number;
-  error?: string;
-};
-
-export type PocketDiscoveryHealth = {
-  bank: Address;
-  scannedThrough?: string;
-  /** Pocket discovery and state reads cover finalized blocks only. */
-  finalizedBlock?: string;
-  headBlock?: string;
-  caughtUp: boolean;
+  lpStatus?: number;
   error?: string;
 };
 
@@ -109,10 +96,8 @@ export type KeeperHealthSnapshot = {
     retryable: boolean;
   };
   lastError?: string;
-  redemptions?: RedemptionHealth[];
-  lastRedemptionScanAt?: string;
-  pockets?: PocketHealth[];
-  pocketDiscovery?: PocketDiscoveryHealth[];
+  pools?: PoolHealth[];
+  lastPoolScanAt?: string;
   payables?: PayableHealth[];
   casinoRecoveryScannedThrough?: string;
   degradedBy?: Array<KeeperFailureSource | "stalled">;
@@ -162,7 +147,7 @@ export class KeeperHealthReporter {
     this.scanProgressMs = Date.parse(startedAt);
     this.lifecycleProgressMs = Date.parse(startedAt);
     this.lifecycleEnabled =
-      config.casinoRecoveryStartBlock != null || config.bankProviderLedgerPools.length > 0;
+      config.casinoRecoveryStartBlock != null || config.vaultProviderLedgerPools.length > 0;
     this.snapshotData = {
       schemaVersion: 1,
       status: "starting",
@@ -264,46 +249,12 @@ export class KeeperHealthReporter {
     await this.update({ casinoRecoveryScannedThrough: blockNumber.toString(), queueDepth });
   }
 
-  async recordRedemptions(redemptions: RedemptionHealth[], queueDepth: number) {
+  async recordPools(pools: PoolHealth[], queueDepth: number) {
     this.lifecycleProgressMs = this.now().getTime();
-    const errors = redemptions
-      .filter((item) => item.error)
-      .map((item) => `${item.bank}: ${item.error}`);
-    if (errors.length) this.fail("redemption", errors.join("; "));
-    else this.failures.delete("redemption");
-    await this.update({ redemptions, lastRedemptionScanAt: this.isoNow(), queueDepth });
-  }
-
-  /** Receives the complete retained set, including epochs not polled on this pass. */
-  async recordPockets(
-    pockets: PocketHealth[],
-    pocketDiscovery: PocketDiscoveryHealth[],
-    queueDepth: number
-  ) {
-    const incomplete = pocketDiscovery.filter((item) => !item.caughtUp || item.error);
-    if (incomplete.length)
-      this.fail(
-        "pocket-recovery",
-        incomplete
-          .map(
-            (item) =>
-              `${item.bank}: ${item.error ?? `pocket discovery is incomplete through block ${item.scannedThrough ?? "unknown"}`}`
-          )
-          .join("; ")
-      );
-    else this.failures.delete("pocket-recovery");
-    const errors = pockets.flatMap((item) => {
-      const messages: string[] = [];
-      if (item.error) messages.push(`${item.bank} epoch ${item.epochId}: ${item.error}`);
-      if (item.remainingHolds !== "0" && (item.ageSeconds ?? 0) > 600)
-        messages.push(
-          `${item.bank} epoch ${item.epochId} remains open beyond 10 minutes (opened at ${item.openedAt})`
-        );
-      return messages;
-    });
-    if (errors.length) this.fail("pocket", errors.join("; "));
-    else this.failures.delete("pocket");
-    await this.update({ pockets, pocketDiscovery, queueDepth });
+    const errors = pools.filter((item) => item.error).map((item) => `${item.bank}: ${item.error}`);
+    if (errors.length) this.fail("pools", errors.join("; "));
+    else this.failures.delete("pools");
+    await this.update({ pools, lastPoolScanAt: this.isoNow(), queueDepth });
   }
 
   async recordPayables(payables: PayableHealth[], queueDepth: number) {

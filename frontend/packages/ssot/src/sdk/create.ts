@@ -2,7 +2,6 @@ import type { PublicClient, WalletClient } from "viem";
 import { getAddress, getAbiItem, type AbiEvent, type Address, type Hex } from "viem";
 import type { SSOTRelease } from "../release/schema";
 import type {
-  DomainBankPosition,
   DomainBankSnapshot,
   DomainBet,
   DomainError,
@@ -13,9 +12,15 @@ import type {
 } from "../domain";
 import { decodeStakeSpec } from "../encoding/stakeSpec";
 import { ERC20_ABI } from "../abis/erc20";
-import { readRecoveryPosition, readRecoveryPage } from "./bankRecovery";
-import { readAsyncBankState, readAsyncBankPosition } from "./bankRedemption";
-import { decodeBankProviderCashEvent } from "@ssot/bet-index/bank-cash-ledger";
+import { decodeVaultProviderEvent } from "@ssot/bet-index/vault-ledger";
+import {
+  decodeLPStatus,
+  readDepositPosition,
+  readDepositsPage,
+  quoteNftWithdrawal,
+  verifyVaultBinding,
+  MAX_TREE_CAPITAL
+} from "./liquidityVault";
 import { extractPlayerPaymentProof, type PlayerPaymentProof } from "@ssot/bet-index/player-payment";
 import { getContractAbis } from "../abis/index.mjs";
 import { createTxPipeline, type JournalSink, type TxResult } from "./txPipeline";
@@ -25,7 +30,7 @@ import type {
   CreateSportsMarketInput,
   ExecutePlanResult,
   ExecuteSportsTicketPlanResult,
-  BankProviderLedgerEntry,
+  VaultProviderLedgerEntry,
   ReconcilePlaceBetTxResult,
   BindPlaceBetTxResult,
   PlaceSportsTicketInput,
@@ -36,6 +41,7 @@ import type {
   GameHubTerminalProof,
   SSOTGameHubAPI,
   SSOTBankAPI,
+  SSOTLiquidityVaultAPI,
   SSOTVRFHubAPI,
   SSOTSportsHubAPI,
   SportsOddsSnapshotInput,
@@ -58,43 +64,38 @@ function sleep(ms: number) {
 }
 
 function computeRiskFreeLiquidity({
-  totalAssets,
-  activeReserved,
+  riskAssets,
+  totalReserved,
   riskReserveBps
 }: {
-  totalAssets: bigint;
-  activeReserved: bigint;
+  riskAssets: bigint;
+  totalReserved: bigint;
   riskReserveBps: bigint;
 }) {
-  const riskReserve = (totalAssets * riskReserveBps) / 10000n;
-  const free = totalAssets - activeReserved - riskReserve;
+  const riskReserve = (riskAssets * riskReserveBps) / 10000n;
+  const free = riskAssets - totalReserved - riskReserve;
   return free > 0n ? free : 0n;
 }
 
 function canBankHoldBet({
-  totalAssets,
-  activeReserved,
+  riskAssets,
+  totalReserved,
   riskReserveBps,
   stake,
   requiredReserve
 }: {
-  totalAssets: bigint;
-  activeReserved: bigint;
+  riskAssets: bigint;
+  totalReserved: bigint;
   riskReserveBps: bigint;
   stake: bigint;
   requiredReserve: bigint;
 }) {
-  const navAfterStake = totalAssets + stake;
-  const reservedAfterStake = activeReserved + requiredReserve;
-  if (navAfterStake < reservedAfterStake) return false;
-  const riskReserveAfterStake = (navAfterStake * riskReserveBps) / 10000n;
-  return navAfterStake - reservedAfterStake >= riskReserveAfterStake;
-}
-
-function assetPerShare(assets: bigint | undefined, shares: bigint, decimals: number) {
-  if (assets == null || shares <= 0n) return undefined;
-  const shareUnit = 10n ** BigInt(decimals);
-  return (assets * shareUnit) / shares;
+  const riskAssetsAfterStake = riskAssets + stake;
+  if (riskAssetsAfterStake > MAX_TREE_CAPITAL || requiredReserve < stake) return false;
+  const reservedAfterStake = totalReserved + requiredReserve;
+  if (riskAssetsAfterStake < reservedAfterStake) return false;
+  const riskReserveAfterStake = (riskAssetsAfterStake * riskReserveBps) / 10000n;
+  return riskAssetsAfterStake - reservedAfterStake >= riskReserveAfterStake;
 }
 
 export interface CreateSSOTSDKParams {
@@ -113,6 +114,7 @@ export interface SSOTSDK {
   account?: Address;
   gameHub: SSOTGameHubAPI;
   bank: SSOTBankAPI;
+  vault: SSOTLiquidityVaultAPI;
   vrfHub: SSOTVRFHubAPI;
   sportsHub: SSOTSportsHubAPI;
 }
@@ -166,7 +168,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     return {
       ...pool,
       asset: getAddress(pool.asset) as Address,
-      bank: getAddress(pool.bank) as Address
+      bank: getAddress(pool.bank) as Address,
+      vault: getAddress(pool.vault) as Address
     };
   }
 
@@ -185,6 +188,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   const {
     GameHubAbi: GAME_HUB_ABI,
     BankAbi: BANK_ABI,
+    LiquidityVaultAbi: VAULT_ABI,
+    SettlementRouterAbi: ROUTER_ABI,
     VRFHubAbi: VRFHUB_ABI,
     SportsHubAbi: SPORTS_HUB_ABI,
     IGameModuleAbi: GAME_MODULE_ABI
@@ -193,9 +198,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   const bankErrors = BANK_ABI.filter((item) => item.type === "error");
   const CASINO_EXECUTION_ABI = [...GAME_HUB_ABI, ...bankErrors];
   const SPORTS_EXECUTION_ABI = [...SPORTS_HUB_ABI, ...bankErrors];
-  const BANK_DEPOSIT_EVENT = getAbiItem({ abi: BANK_ABI, name: "Deposit" }) as AbiEvent;
-  const BANK_WITHDRAW_EVENT = getAbiItem({ abi: BANK_ABI, name: "Withdraw" }) as AbiEvent;
-  const BANK_RECOVERY_EVENT = getAbiItem({ abi: BANK_ABI, name: "RecoveryClaimed" }) as AbiEvent;
+  const VAULT_DEPOSIT_EVENT = getAbiItem({ abi: VAULT_ABI, name: "DepositAdded" }) as AbiEvent;
+  const VAULT_WITHDRAW_EVENT = getAbiItem({ abi: VAULT_ABI, name: "DepositWithdrawn" }) as AbiEvent;
+  const VAULT_TRANSFER_EVENT = getAbiItem({ abi: VAULT_ABI, name: "Transfer" }) as AbiEvent;
 
   async function readTokenAllowance(token: Address, owner: Address, spender: Address) {
     return (await publicClient.readContract({
@@ -400,13 +405,79 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   }
 
   const gameHub: SSOTGameHubAPI = {
-    async quoteVRFFee(betCount: number): Promise<bigint> {
+    async getGameConfig(gameId, opts) {
+      const blockNumber =
+        opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
+      const [module, maxBetCount, callbackGasLimit, houseEdgeBps] = await Promise.all([
+        publicClient.readContract({
+          address: gameHubAddress,
+          abi: GAME_HUB_ABI,
+          functionName: "gameModule",
+          args: [gameId],
+          blockNumber
+        }),
+        publicClient.readContract({
+          address: gameHubAddress,
+          abi: GAME_HUB_ABI,
+          functionName: "gameMaxBetCount",
+          args: [gameId],
+          blockNumber
+        }),
+        publicClient.readContract({
+          address: gameHubAddress,
+          abi: GAME_HUB_ABI,
+          functionName: "gameCallbackGasLimit",
+          args: [gameId],
+          blockNumber
+        }),
+        publicClient.readContract({
+          address: gameHubAddress,
+          abi: GAME_HUB_ABI,
+          functionName: "defaultHouseEdgeBps",
+          blockNumber
+        })
+      ]);
+      const normalizedModule = getAddress(module as Address);
+      const released = release.games[gameId.toLowerCase()];
+      const metadata = release.gamesMeta.find(
+        (game) => game.gameId.toLowerCase() === gameId.toLowerCase()
+      );
+      if (
+        !released ||
+        !metadata ||
+        normalizedModule !== getAddress(released) ||
+        normalizedModule !== getAddress(metadata.module) ||
+        Number(maxBetCount) !== metadata.maxBetCount ||
+        Number(callbackGasLimit) !== metadata.callbackGasLimit ||
+        Number(maxBetCount) <= 0 ||
+        Number(maxBetCount) > 25 ||
+        !Number.isInteger(Number(houseEdgeBps)) ||
+        Number(houseEdgeBps) <= 0 ||
+        Number(houseEdgeBps) > 500 ||
+        Number(callbackGasLimit) <= 0
+      ) {
+        throw new Error("Game admission is missing or differs from the authenticated release.");
+      }
+      return {
+        gameId,
+        module: normalizedModule,
+        houseEdgeBps: Number(houseEdgeBps),
+        maxBetCount: Number(maxBetCount),
+        callbackGasLimit: Number(callbackGasLimit)
+      };
+    },
+    async quoteVRFFee(gameId, betCount, gasPriceBudget): Promise<bigint> {
+      const blockNumber = await publicClient.getBlockNumber({ cacheTime: 0 });
+      const config = await gameHub.getGameConfig(gameId, { blockNumber });
+      if (!Number.isInteger(betCount) || betCount <= 0 || betCount > config.maxBetCount)
+        throw new RangeError("Bet count exceeds this game's admitted limit.");
       const [fee] = (await publicClient.readContract({
         address: gameHubAddress,
         abi: GAME_HUB_ABI,
         functionName: "quoteVRFFee",
-        args: [betCount, await publicClient.getGasPrice()]
-      })) as unknown as [bigint, number];
+        args: [gameId, betCount, gasPriceBudget ?? (await publicClient.getGasPrice())],
+        blockNumber
+      })) as [bigint, number];
       return fee;
     },
 
@@ -423,11 +494,11 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           };
         }
 
-        if (input.betCount <= 0 || input.betCount > 100) {
+        if (!Number.isInteger(input.betCount) || input.betCount <= 0) {
           return {
             error: {
               code: "BAD_INPUT",
-              message: "betCount must be between 1 and 100",
+              message: "betCount must be a positive integer",
               severity: "error"
             }
           };
@@ -460,6 +531,15 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         const bank = getAddress(pool.bank) as Address;
 
         const blockNumber = await publicClient.getBlockNumber({ cacheTime: 0 });
+        const config = await gameHub.getGameConfig(input.gameId, { blockNumber });
+        if (input.betCount > config.maxBetCount)
+          return {
+            error: {
+              code: "BAD_INPUT",
+              message: `This game permits at most ${config.maxBetCount} rounds.`,
+              severity: "error"
+            }
+          };
         const paused = (await publicClient.readContract({
           address: gameHubAddress,
           abi: GAME_HUB_ABI,
@@ -483,7 +563,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           abi: GAME_HUB_ABI,
           functionName: "quoteVRFFee",
           blockNumber,
-          args: [input.betCount, gasPrice]
+          args: [input.gameId, input.betCount, gasPrice]
         })) as unknown as [bigint, number];
 
         // Add 50% buffer to VRF fee to account for L1 gas price fluctuation
@@ -522,77 +602,69 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         const stakeSpecForSolvency = stakeSpecDecoded;
 
         // Parallel reads: game module maxPayout + bank solvency state
-        const [
-          requiredReserve,
-          totalAssets,
-          activeReserved,
-          riskReserveBps,
-          activeOpenHolds,
-          maxActiveHolds,
-          minStake
-        ] = await Promise.all([
-          publicClient.readContract({
-            address: getAddress(moduleAddress) as Address,
-            abi: GAME_MODULE_ABI,
-            functionName: "maxPayout",
-            blockNumber,
-            args: [
-              input.params,
-              {
-                amountPerRoll: stakeSpecForSolvency.amountPerRoll,
-                betCount: stakeSpecForSolvency.betCount,
-                stopGain: stakeSpecForSolvency.stopGain,
-                stopLoss: stakeSpecForSolvency.stopLoss
-              }
-            ]
-          }) as Promise<bigint>,
-          publicClient.readContract({
-            address: bank as Address,
-            abi: BANK_ABI,
-            blockNumber,
-            functionName: "totalAssets"
-          }) as Promise<bigint>,
-          publicClient.readContract({
-            address: bank as Address,
-            abi: BANK_ABI,
-            blockNumber,
-            functionName: "activeReserved"
-          }) as Promise<bigint>,
-          publicClient.readContract({
-            address: bank as Address,
-            abi: BANK_ABI,
-            blockNumber,
-            functionName: "riskReserveBps"
-          }) as Promise<bigint>,
-          publicClient.readContract({
-            address: bank,
-            abi: BANK_ABI,
-            blockNumber,
-            functionName: "activeOpenHolds"
-          }) as Promise<bigint>,
-          publicClient.readContract({
-            address: bank,
-            abi: BANK_ABI,
-            blockNumber,
-            functionName: "MAX_ACTIVE_HOLDS"
-          }) as Promise<bigint>,
-          publicClient.readContract({
-            address: bank,
-            abi: BANK_ABI,
-            blockNumber,
-            functionName: "minStake"
-          }) as Promise<bigint>
-        ]);
-        if (input.stake < minStake) {
+        const [requiredReserve, accounting, openHolds, maxOpenHolds, minBetAmount] =
+          await Promise.all([
+            publicClient.readContract({
+              address: getAddress(moduleAddress) as Address,
+              abi: GAME_MODULE_ABI,
+              functionName: "maxPayout",
+              blockNumber,
+              args: [
+                input.params,
+                {
+                  amountPerRoll: stakeSpecForSolvency.amountPerRoll,
+                  betCount: stakeSpecForSolvency.betCount,
+                  stopGain: stakeSpecForSolvency.stopGain,
+                  stopLoss: stakeSpecForSolvency.stopLoss
+                }
+              ]
+            }) as Promise<bigint>,
+            publicClient.readContract({
+              address: bank,
+              abi: BANK_ABI,
+              blockNumber,
+              functionName: "getSSOT"
+            }) as Promise<any>,
+            publicClient.readContract({
+              address: bank,
+              abi: BANK_ABI,
+              blockNumber,
+              functionName: "openHolds"
+            }) as Promise<bigint>,
+            publicClient.readContract({
+              address: bank,
+              abi: BANK_ABI,
+              blockNumber,
+              functionName: "MAX_OPEN_HOLDS"
+            }) as Promise<bigint>,
+            publicClient.readContract({
+              address: bank,
+              abi: BANK_ABI,
+              blockNumber,
+              functionName: "minBetAmount"
+            }) as Promise<bigint>
+          ]);
+        const riskAssets = BigInt(accounting.G);
+        const totalReserved = BigInt(accounting.R);
+        const riskReserveBps = BigInt(accounting.riskReserveBps);
+        if (!accounting.accountingValid || BigInt(accounting.L) <= 0n)
+          return {
+            error: {
+              code: "INSUFFICIENT_LIQUIDITY",
+              message: "Pool capital is unavailable for new bets.",
+              severity: "warning"
+            }
+          };
+        if (stakeSpecDecoded.amountPerRoll < minBetAmount) {
           return {
             error: {
               code: "STAKE_BELOW_MINIMUM",
-              message: `Total stake must be at least ${minStake} asset units.`,
+              message: `Each round must stake at least ${minBetAmount} asset units.`,
               severity: "warning"
             }
           };
         }
-        if (activeOpenHolds >= maxActiveHolds) {
+        if (openHolds >= maxOpenHolds) {
           return {
             error: {
               code: "POOL_CAPACITY_FULL",
@@ -604,25 +676,25 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         }
 
         const freeLiquidity = computeRiskFreeLiquidity({
-          totalAssets,
-          activeReserved,
+          riskAssets,
+          totalReserved,
           riskReserveBps
         });
 
         if (
           !canBankHoldBet({
-            totalAssets,
-            activeReserved,
+            riskAssets,
+            totalReserved,
             riskReserveBps,
             stake: input.stake,
             requiredReserve
           })
         ) {
-          const navAfterStake = totalAssets + input.stake;
-          const riskReserveAfterStake = (navAfterStake * riskReserveBps) / 10000n;
+          const riskAssetsAfterStake = riskAssets + input.stake;
+          const riskReserveAfterStake = (riskAssetsAfterStake * riskReserveBps) / 10000n;
           const availableAfterStake =
-            navAfterStake > activeReserved + riskReserveAfterStake
-              ? navAfterStake - activeReserved - riskReserveAfterStake
+            riskAssetsAfterStake > totalReserved + riskReserveAfterStake
+              ? riskAssetsAfterStake - totalReserved - riskReserveAfterStake
               : 0n;
           return {
             error: {
@@ -637,11 +709,11 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           };
         }
 
-        const navAfterStake = totalAssets + input.stake;
-        const riskReserveAfterStake = (navAfterStake * riskReserveBps) / 10000n;
+        const riskAssetsAfterStake = riskAssets + input.stake;
+        const riskReserveAfterStake = (riskAssetsAfterStake * riskReserveBps) / 10000n;
         const availableAfterStake =
-          navAfterStake > activeReserved + riskReserveAfterStake
-            ? navAfterStake - activeReserved - riskReserveAfterStake
+          riskAssetsAfterStake > totalReserved + riskReserveAfterStake
+            ? riskAssetsAfterStake - totalReserved - riskReserveAfterStake
             : 0n;
 
         // Warn if liquidity is tight (reserved > 90% of post-stake capacity).
@@ -1041,7 +1113,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         betCount: Number(bet.betCount),
         stopGain: BigInt(bet.stopGain),
         stopLoss: BigInt(bet.stopLoss),
-        effectiveHouseEdgeBps: Number(bet.effectiveHouseEdgeBps),
+        houseEdgeBps: Number(bet.houseEdgeBps),
         vrfFeePaid: BigInt(bet.vrfFeePaid),
         vrfFeeCharged: BigInt(bet.vrfFeeCharged),
         vrfCallbackGasLimit: Number(bet.vrfCallbackGasLimit),
@@ -1134,110 +1206,83 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   }
 
   const bank: SSOTBankAPI = {
-    requestRedeem(poolId, shares, controller, owner) {
-      return bankExit(poolId, "requestRedeem", "REQUEST_REDEEM", (self) => [
-        shares,
-        controller ?? self,
-        owner ?? self
-      ]);
-    },
-    cancelRedeemRequest(poolId, controller) {
-      return bankExit(poolId, "cancelRedeemRequest", "CANCEL_REDEEM", (self) => [
-        controller ?? self
-      ]);
-    },
-    syncRedeem(poolId, controller) {
-      return bankExit(poolId, "syncRedeem", "SYNC_REDEEM", (self) => [controller ?? self]);
-    },
     claimPlayerPayable(poolId, player) {
       return bankExit(poolId, "claimPlayerPayable", "CLAIM_PLAYER_PAYABLE", (self) => [
         player ?? self
       ]);
     },
-    syncRecovery(poolId, epochId, controller) {
-      return bankExit(poolId, "syncRecovery", "SYNC_RECOVERY", (self) => [
-        epochId,
-        controller ?? self
-      ]);
+    async getPlayerPayable(poolId, player, opts) {
+      return (await publicClient.readContract({
+        address: resolveBankPool(poolId).bank,
+        abi: BANK_ABI,
+        functionName: "playerPayable",
+        args: [player],
+        blockNumber: opts?.blockNumber
+      })) as bigint;
     },
-    claimRecovery(poolId, epochId, receiver, controller) {
-      return bankExit(poolId, "claimRecovery", "CLAIM_RECOVERY", (self) => [
-        epochId,
-        receiver ?? self,
-        controller ?? self
-      ]);
+    async getAssetBalance(asset, user) {
+      return (await publicClient.readContract({
+        address: asset,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [user]
+      })) as bigint;
     },
-    async getRecovery(poolId, epochId, controller, opts) {
-      const pool = resolveBankPool(poolId);
-      const blockNumber = opts?.blockNumber ?? (await publicClient.getBlockNumber());
-      const block = await publicClient.getBlock({ blockNumber });
-      return readRecoveryPosition(
-        publicClient,
-        pool.bank,
-        epochId,
-        controller,
-        blockNumber,
-        block.timestamp
-      );
-    },
-    async getRecoveryPage(poolId, controller, opts) {
-      const pool = resolveBankPool(poolId);
-      return readRecoveryPage(publicClient, pool.bank, controller, release.chainId, opts);
-    },
-    async getSnapshot(poolId: number, opts): Promise<DomainBankSnapshot> {
+    async getSnapshot(poolId, opts): Promise<DomainBankSnapshot> {
       const pool = resolveBankPool(poolId);
       const blockNumber =
         opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
       const block = await publicClient.getBlock({ blockNumber });
-      const shareUnit = 10n ** BigInt(pool.decimals);
-      const [ssot, totalSupply, assetsPerShare, performance] = (await Promise.all([
-        publicClient.readContract({
-          address: pool.bank,
-          abi: BANK_ABI,
-          functionName: "getSSOT",
-          args: [],
-          blockNumber
-        }),
-        publicClient.readContract({
-          address: pool.bank,
-          abi: BANK_ABI,
-          functionName: "totalSupply",
-          args: [],
-          blockNumber
-        }),
-        publicClient.readContract({
-          address: pool.bank,
-          abi: BANK_ABI,
-          functionName: "convertToAssets",
-          args: [shareUnit],
-          blockNumber
-        }),
-        publicClient.readContract({
-          address: pool.bank,
-          abi: BANK_ABI,
-          functionName: "getPerformance",
-          args: [],
-          blockNumber
-        })
-      ])) as [
-        any,
-        bigint,
-        bigint,
-        readonly [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
-      ];
-
-      const asyncState = await readAsyncBankState(publicClient, pool.bank, blockNumber);
-
+      await verifyVaultBinding(publicClient, pool, blockNumber);
+      const read = (functionName: string) =>
+        publicClient.readContract({ address: pool.bank, abi: BANK_ABI, functionName, blockNumber });
+      const [ssot, performance, lp, openHolds, maxOpenHolds, minBetAmount, unbooked] =
+        (await Promise.all([
+          read("getSSOT"),
+          read("getPerformance"),
+          read("lpAccounting"),
+          read("openHolds"),
+          read("MAX_OPEN_HOLDS"),
+          read("minBetAmount"),
+          publicClient.readContract({
+            address: getAddress(release.contracts.settlementRouter),
+            abi: ROUTER_ABI,
+            functionName: "unbookedResultCount",
+            args: [pool.bank],
+            blockNumber
+          })
+        ])) as [
+          any,
+          readonly bigint[],
+          readonly [bigint, bigint, number],
+          bigint,
+          bigint,
+          bigint,
+          bigint
+        ];
       return {
         chainId: release.chainId,
         poolId,
-        asset: pool.asset as AddressT,
-        bank: pool.bank as AddressT,
-        totalAssets: BigInt(ssot.NAV),
-        totalSupply,
-        assetsPerShare,
-        activeReserved: BigInt(ssot.R),
-        ...asyncState,
+        asset: pool.asset,
+        bank: pool.bank,
+        vault: pool.vault,
+        L: BigInt(ssot.L),
+        P: BigInt(ssot.P),
+        R: BigInt(ssot.R),
+        K: BigInt(ssot.K),
+        G: BigInt(ssot.G),
+        bankCash: BigInt(ssot.bankCash),
+        vaultCash: BigInt(ssot.vaultCash),
+        bankSurplus: BigInt(ssot.bankSurplus),
+        vaultSurplus: BigInt(ssot.vaultSurplus),
+        accountingValid: ssot.accountingValid,
+        lpStatus: ssot.accountingValid ? decodeLPStatus(lp[2]) : "invalidAccounting",
+        unbookedResultCount: BigInt(unbooked),
+        openHolds,
+        maxOpenHolds,
+        minBetAmount,
+        lpFreeCapital: BigInt(ssot.lpFreeCapital),
+        playerPayableTotal: BigInt(ssot.PP),
         updatedAtBlock: blockNumber,
         snapshotTimestamp: block.timestamp,
         riskInPaused: ssot.riskInPaused,
@@ -1246,368 +1291,18 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         riskFree: BigInt(ssot.riskFree),
         withdrawalBufferBps: Number(ssot.withdrawalBufferBps),
         withdrawalBuffer: BigInt(ssot.withdrawalBuffer),
-        withdrawable: BigInt(ssot.withdrawable),
         protocolFeesPayable: BigInt(ssot.PF),
         externalPayablesTotal: BigInt(ssot.XP),
-        totalTurnover: BigInt(performance[0]),
-        totalPayoutGross: BigInt(performance[1]),
-        totalPayoutNet: BigInt(performance[2]),
-        totalRefunded: BigInt(performance[3]),
-        totalFeeOnPayout: BigInt(performance[4]),
-        totalProtocolFeeAccrued: BigInt(performance[5]),
-        totalBetsHeld: BigInt(performance[6]),
-        totalBetsSettled: BigInt(performance[7]),
-        totalBetsRefunded: BigInt(performance[8])
+        totalTurnover: BigInt(performance[0]!),
+        totalPayoutGross: BigInt(performance[1]!),
+        totalPayoutNet: BigInt(performance[2]!),
+        totalRefunded: BigInt(performance[3]!),
+        totalFeeOnPayout: BigInt(performance[4]!),
+        totalProtocolFeeAccrued: BigInt(performance[5]!),
+        totalBetsHeld: BigInt(performance[6]!),
+        totalBetsSettled: BigInt(performance[7]!),
+        totalBetsRefunded: BigInt(performance[8]!)
       };
-    },
-
-    async getPosition(poolId: number, user: AddressT, opts): Promise<DomainBankPosition> {
-      const pool = resolveBankPool(poolId);
-      const blockNumber =
-        opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
-      const [block, shares] = await Promise.all([
-        publicClient.getBlock({ blockNumber }),
-        publicClient.readContract({
-          address: pool.bank,
-          abi: BANK_ABI,
-          functionName: "balanceOf",
-          args: [user],
-          blockNumber
-        })
-      ]);
-      const assetsEquivalent = (await publicClient.readContract({
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "convertToAssets",
-        args: [shares],
-        blockNumber
-      })) as bigint;
-      const state = await readAsyncBankPosition(
-        publicClient,
-        pool.bank,
-        user,
-        blockNumber,
-        shares as bigint,
-        assetsEquivalent
-      );
-      return {
-        poolId,
-        user,
-        shares: shares as bigint,
-        updatedAtBlock: blockNumber,
-        snapshotTimestamp: block.timestamp,
-        ...state
-      };
-    },
-
-    async convertToShares(poolId: number, assets: bigint): Promise<bigint> {
-      const pool = resolveBankPool(poolId);
-      return (await publicClient.readContract({
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "convertToShares",
-        args: [assets]
-      })) as bigint;
-    },
-
-    async convertToAssets(poolId: number, shares: bigint): Promise<bigint> {
-      const pool = resolveBankPool(poolId);
-      return (await publicClient.readContract({
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "convertToAssets",
-        args: [shares]
-      })) as bigint;
-    },
-
-    async getProviderLedger(
-      poolId: number,
-      owner: AddressT,
-      opts?: {
-        startBlock?: number;
-        endBlock?: number;
-        beforeBlock?: number;
-        beforeLogIndex?: number;
-        limit?: number;
-      }
-    ): Promise<BankProviderLedgerEntry[]> {
-      const pool = resolveBankPool(poolId);
-      const ownerAddress = getAddress(owner) as Address;
-      const latest =
-        opts?.endBlock != null ? BigInt(opts.endBlock) : await publicClient.getBlockNumber();
-      const fromBlock =
-        opts?.startBlock != null && opts.startBlock >= 0
-          ? BigInt(opts.startBlock)
-          : latest > 100_000n
-            ? latest - 100_000n
-            : 0n;
-      const limit = opts?.limit ?? PROVIDER_LEDGER_DEFAULT_LIMIT;
-
-      type CashLog = {
-        transactionHash: Hex | null;
-        blockNumber: bigint | null;
-        logIndex: number | null;
-        cash: NonNullable<ReturnType<typeof decodeBankProviderCashEvent>>;
-      };
-      const cashLogs: CashLog[] = [];
-      for (
-        let start = fromBlock;
-        start <= latest;
-        start += PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS + 1n
-      ) {
-        const end =
-          start + PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS < latest
-            ? start + PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS
-            : latest;
-        const logs = await publicClient.getLogs({
-          address: pool.bank,
-          events: [BANK_DEPOSIT_EVENT, BANK_WITHDRAW_EVENT, BANK_RECOVERY_EVENT],
-          fromBlock: start,
-          toBlock: end
-        });
-        for (const log of logs) {
-          const cash = decodeBankProviderCashEvent(
-            pool.bank,
-            log.eventName!,
-            log.args as Record<string, unknown>
-          );
-          if (
-            cash?.owner === ownerAddress.toLowerCase() &&
-            log.transactionHash &&
-            log.blockNumber != null &&
-            log.logIndex != null &&
-            !log.removed &&
-            (opts?.beforeBlock == null ||
-              log.blockNumber < BigInt(opts.beforeBlock) ||
-              (log.blockNumber === BigInt(opts.beforeBlock) &&
-                log.logIndex < (opts.beforeLogIndex ?? 0)))
-          )
-            cashLogs.push({ ...log, cash });
-        }
-      }
-      const selected = cashLogs
-        .sort((a, b) => Number(b.blockNumber! - a.blockNumber!) || b.logIndex! - a.logIndex!)
-        .slice(0, limit);
-      return Promise.all(
-        selected.map(async (log): Promise<BankProviderLedgerEntry> => {
-          const block = await publicClient.getBlock({ blockNumber: log.blockNumber! });
-          return {
-            id: `${release.chainId}:${log.transactionHash}:${log.logIndex ?? 0}`,
-            action: log.cash.action,
-            txHash: log.transactionHash!,
-            blockNumber: Number(log.blockNumber),
-            logIndex: log.logIndex ?? 0,
-            timestamp: Number(block.timestamp) * 1000,
-            assets: log.cash.assets,
-            shares: log.cash.shares,
-            receiver: log.cash.receiver,
-            caller: log.cash.caller,
-            epochId: log.cash.epochId,
-            sharePrice: assetPerShare(log.cash.assets, log.cash.shares, pool.decimals)
-          };
-        })
-      );
-    },
-
-    async getAssetBalance(asset: AddressT, user: AddressT): Promise<bigint> {
-      return (await publicClient.readContract({
-        address: asset as Address,
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: [user]
-      })) as bigint;
-    },
-
-    async getAllowance(poolId: number, owner: AddressT): Promise<bigint> {
-      const pool = resolveBankPool(poolId);
-      return (await publicClient.readContract({
-        address: pool.asset,
-        abi: ERC20_ABI,
-        functionName: "allowance",
-        args: [owner, pool.bank]
-      })) as bigint;
-    },
-
-    async deposit(
-      poolId: number,
-      assets: bigint,
-      receiver: AddressT
-    ): Promise<TxResult & { shares?: bigint }> {
-      const walletReq = requireWallet();
-      if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
-      const poolReq = getPool(poolId);
-      if ("error" in poolReq) return { txHash: "0x0" as Hex, ok: false, error: poolReq.error };
-      const pool = normalizePool(poolReq);
-
-      const allowance = (await publicClient.readContract({
-        address: pool.asset,
-        abi: ERC20_ABI,
-        functionName: "allowance",
-        args: [walletReq.account, pool.bank]
-      })) as bigint;
-      const { needsApproval, approveAmount } = planExactApproval({ allowance, required: assets });
-
-      if (needsApproval) {
-        const approveTx = await tx.simulateAndWrite({
-          chainId: release.chainId,
-          releaseDigest: release.releaseDigest,
-          action: "APPROVE_DEPOSIT",
-          publicClient,
-          walletClient: walletReq.walletClient,
-          account: walletReq.account,
-          address: pool.asset,
-          abi: ERC20_ABI,
-          functionName: "approve",
-          args: [pool.bank, approveAmount!]
-        });
-        if (!approveTx.ok) return approveTx;
-        const allowanceReady = await waitForTokenAllowance({
-          token: pool.asset,
-          owner: walletReq.account,
-          spender: pool.bank,
-          required: assets
-        });
-        if (!allowanceReady.ok) {
-          return {
-            txHash: approveTx.txHash,
-            ok: false,
-            error: createAllowanceNotConfirmedError({
-              action: "the Bank",
-              required: assets,
-              observed: allowanceReady.observed,
-              spender: pool.bank
-            })
-          };
-        }
-      }
-
-      return tx.simulateAndWrite({
-        chainId: release.chainId,
-        releaseDigest: release.releaseDigest,
-        action: "DEPOSIT",
-        publicClient,
-        walletClient: walletReq.walletClient,
-        account: walletReq.account,
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "deposit",
-        args: [assets, receiver]
-      });
-    },
-
-    withdraw(poolId, assets, receiver, owner) {
-      return bankExit(poolId, "withdraw", "WITHDRAW", (self) => [
-        assets,
-        receiver ?? self,
-        owner ?? self
-      ]);
-    },
-
-    redeem(poolId, shares, receiver, owner) {
-      return bankExit(poolId, "redeem", "REDEEM", (self) => [
-        shares,
-        receiver ?? self,
-        owner ?? self
-      ]);
-    },
-
-    async mint(
-      poolId: number,
-      shares: bigint,
-      receiver: AddressT
-    ): Promise<TxResult & { assets?: bigint }> {
-      const walletReq = requireWallet();
-      if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
-      const poolReq = getPool(poolId);
-      if ("error" in poolReq) return { txHash: "0x0" as Hex, ok: false, error: poolReq.error };
-      const pool = normalizePool(poolReq);
-
-      const blockNumber = await publicClient.getBlockNumber();
-      const assetsNeeded = (await publicClient.readContract({
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "previewMint",
-        args: [shares],
-        blockNumber
-      })) as bigint;
-
-      const allowance = (await publicClient.readContract({
-        address: pool.asset,
-        abi: ERC20_ABI,
-        functionName: "allowance",
-        args: [walletReq.account, pool.bank]
-      })) as bigint;
-      const { needsApproval, approveAmount } = planExactApproval({
-        allowance,
-        required: assetsNeeded
-      });
-
-      if (needsApproval) {
-        const approveTx = await tx.simulateAndWrite({
-          chainId: release.chainId,
-          releaseDigest: release.releaseDigest,
-          action: "APPROVE_MINT",
-          publicClient,
-          walletClient: walletReq.walletClient,
-          account: walletReq.account,
-          address: pool.asset,
-          abi: ERC20_ABI,
-          functionName: "approve",
-          args: [pool.bank, approveAmount!]
-        });
-        if (!approveTx.ok) return approveTx;
-        const allowanceReady = await waitForTokenAllowance({
-          token: pool.asset,
-          owner: walletReq.account,
-          spender: pool.bank,
-          required: assetsNeeded
-        });
-        if (!allowanceReady.ok) {
-          return {
-            txHash: approveTx.txHash,
-            ok: false,
-            error: createAllowanceNotConfirmedError({
-              action: "the Bank",
-              required: assetsNeeded,
-              observed: allowanceReady.observed,
-              spender: pool.bank
-            })
-          };
-        }
-      }
-
-      return tx.simulateAndWrite({
-        chainId: release.chainId,
-        releaseDigest: release.releaseDigest,
-        action: "MINT",
-        publicClient,
-        walletClient: walletReq.walletClient,
-        account: walletReq.account,
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "mint",
-        args: [shares, receiver]
-      });
-    },
-
-    async maxWithdraw(poolId: number, owner: AddressT): Promise<bigint> {
-      const pool = resolveBankPool(poolId);
-      return (await publicClient.readContract({
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "maxWithdraw",
-        args: [owner]
-      })) as bigint;
-    },
-
-    async maxRedeem(poolId: number, owner: AddressT): Promise<bigint> {
-      const pool = resolveBankPool(poolId);
-      return (await publicClient.readContract({
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "maxRedeem",
-        args: [owner]
-      })) as bigint;
     },
 
     async playerTurnover(poolId: number, player: AddressT): Promise<bigint> {
@@ -1746,6 +1441,229 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         functionName: "syncXPHoldback",
         args: [payee]
       });
+    }
+  };
+
+  const vault: SSOTLiquidityVaultAPI = {
+    async getDeposit(poolId, depositId, opts) {
+      const pool = resolveBankPool(poolId);
+      const blockNumber =
+        opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
+      const block = await publicClient.getBlock({ blockNumber });
+      await verifyVaultBinding(publicClient, pool, blockNumber);
+      return readDepositPosition(publicClient, pool, depositId, blockNumber, block.timestamp);
+    },
+    getDeposits(poolId, owner, opts) {
+      return readDepositsPage(publicClient, resolveBankPool(poolId), owner, release.chainId, opts);
+    },
+    async quoteWithdrawal(poolId, depositId, percent, opts) {
+      return quoteNftWithdrawal(await vault.getDeposit(poolId, depositId, opts), percent);
+    },
+    async getAllowance(poolId, owner) {
+      const pool = resolveBankPool(poolId);
+      return readTokenAllowance(pool.asset, owner, pool.vault);
+    },
+    async addDeposit(poolId, assets, owner) {
+      const wallet = requireWallet();
+      if ("error" in wallet) return { txHash: "0x0", ok: false, error: wallet.error };
+      const poolReq = getPool(poolId);
+      if ("error" in poolReq) return { txHash: "0x0", ok: false, error: poolReq.error };
+      try {
+        if (assets <= 0n) throw new Error("Deposit assets must be positive.");
+        const pool = normalizePool(poolReq);
+        const recipient = getAddress(owner ?? wallet.account);
+        if (
+          ["0x0000000000000000000000000000000000000000", pool.bank, pool.vault].includes(recipient)
+        )
+          throw new Error("Invalid deposit owner.");
+        const snapshot = await bank.getSnapshot(poolId);
+        if (snapshot.lpStatus !== "ready" || !snapshot.accountingValid)
+          throw new Error(`LP deposits unavailable: ${snapshot.lpStatus}.`);
+        if (snapshot.G + assets > MAX_TREE_CAPITAL)
+          throw new Error("Deposit exceeds the admitted capital bound.");
+        const allowance = await readTokenAllowance(pool.asset, wallet.account, pool.vault);
+        const { needsApproval, approveAmount } = planExactApproval({ allowance, required: assets });
+        if (needsApproval) {
+          const approved = await tx.simulateAndWrite({
+            chainId: release.chainId,
+            releaseDigest: release.releaseDigest,
+            action: "APPROVE_DEPOSIT",
+            publicClient,
+            walletClient: wallet.walletClient,
+            account: wallet.account,
+            address: pool.asset,
+            abi: ERC20_ABI,
+            functionName: "approve",
+            args: [pool.vault, approveAmount!]
+          });
+          if (!approved.ok) return approved;
+          const ready = await waitForTokenAllowance({
+            token: pool.asset,
+            owner: wallet.account,
+            spender: pool.vault,
+            required: assets
+          });
+          if (!ready.ok)
+            return {
+              txHash: approved.txHash,
+              ok: false,
+              error: createAllowanceNotConfirmedError({
+                action: "the LiquidityVault",
+                required: assets,
+                observed: ready.observed,
+                spender: pool.vault
+              })
+            };
+        }
+        return tx.simulateAndWrite({
+          chainId: release.chainId,
+          releaseDigest: release.releaseDigest,
+          action: "DEPOSIT",
+          publicClient,
+          walletClient: wallet.walletClient,
+          account: wallet.account,
+          address: pool.vault,
+          abi: VAULT_ABI,
+          functionName: "addDepositFor",
+          args: [recipient, assets]
+        });
+      } catch (error) {
+        return { txHash: "0x0", ok: false, error: toDomainError(error) };
+      }
+    },
+    async withdrawDeposit(poolId, depositId, percent) {
+      const wallet = requireWallet();
+      if ("error" in wallet) return { txHash: "0x0", ok: false, error: wallet.error };
+      try {
+        const quote = await vault.quoteWithdrawal(poolId, depositId, percent);
+        if (getAddress(wallet.account) !== quote.position.owner)
+          throw new Error("Only the current NFT owner may withdraw.");
+        if (!quote.executable)
+          return {
+            txHash: "0x0",
+            ok: false,
+            error: {
+              code: "NFT_WITHDRAWAL_UNAVAILABLE",
+              message: `NFT withdrawal unavailable: ${quote.reason}.`,
+              severity: "warning",
+              details: { reason: quote.reason }
+            }
+          };
+        return tx.simulateAndWrite({
+          chainId: release.chainId,
+          releaseDigest: release.releaseDigest,
+          action: "WITHDRAW",
+          publicClient,
+          walletClient: wallet.walletClient,
+          account: wallet.account,
+          address: quote.position.vault,
+          abi: VAULT_ABI,
+          functionName: "withdrawDeposit",
+          args: [depositId, percent]
+        });
+      } catch (error) {
+        return { txHash: "0x0", ok: false, error: toDomainError(error) };
+      }
+    },
+    async getProviderLedger(poolId, owner, opts): Promise<VaultProviderLedgerEntry[]> {
+      const pool = resolveBankPool(poolId);
+      const identity = owner.toLowerCase();
+      const latest =
+        opts?.endBlock != null
+          ? BigInt(opts.endBlock)
+          : await publicClient.getBlockNumber({ cacheTime: 0 });
+      const fromBlock =
+        opts?.startBlock != null
+          ? BigInt(opts.startBlock)
+          : latest > 100_000n
+            ? latest - 100_000n
+            : 0n;
+      const limit = opts?.limit ?? PROVIDER_LEDGER_DEFAULT_LIMIT;
+      if (
+        !Number.isInteger(limit) ||
+        limit < 1 ||
+        limit > 200 ||
+        fromBlock < 0n ||
+        latest < fromBlock
+      )
+        throw new RangeError("Invalid Vault history range or limit.");
+      await verifyVaultBinding(publicClient, pool, latest);
+      const entries: VaultProviderLedgerEntry[] = [];
+      let end =
+        opts?.beforeBlock != null && BigInt(opts.beforeBlock) < latest
+          ? BigInt(opts.beforeBlock)
+          : latest;
+      while (end >= fromBlock && entries.length < limit) {
+        const start =
+          end - fromBlock > PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS
+            ? end - PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS
+            : fromBlock;
+        const logs = await publicClient.getLogs({
+          address: pool.vault,
+          events: [VAULT_DEPOSIT_EVENT, VAULT_WITHDRAW_EVENT, VAULT_TRANSFER_EVENT],
+          fromBlock: start,
+          toBlock: end
+        });
+        for (const log of logs) {
+          if (
+            !log.transactionHash ||
+            log.blockNumber == null ||
+            log.logIndex == null ||
+            log.removed
+          )
+            continue;
+          if (
+            opts?.beforeBlock != null &&
+            (log.blockNumber > BigInt(opts.beforeBlock) ||
+              (log.blockNumber === BigInt(opts.beforeBlock) &&
+                log.logIndex >= (opts.beforeLogIndex ?? 0)))
+          )
+            continue;
+          const row = decodeVaultProviderEvent(
+            pool.vault,
+            log.eventName!,
+            log.args as Record<string, unknown>
+          );
+          if (
+            !row ||
+            (row.owner !== identity &&
+              !(row.action === "transfer" && row.receiver === identity) &&
+              !(row.action === "deposit" && row.caller === identity))
+          )
+            continue;
+          entries.push({
+            id: `${release.chainId}:${log.transactionHash}:${log.logIndex}`,
+            action: row.action,
+            depositId: row.depositId,
+            txHash: log.transactionHash,
+            blockNumber: Number(log.blockNumber),
+            logIndex: log.logIndex,
+            ...(row.action === "transfer"
+              ? { from: row.owner, to: row.receiver }
+              : {
+                  owner: row.owner,
+                  assets: row.assets,
+                  percent: row.percent,
+                  withdrawAfter: row.withdrawAfter,
+                  ...(row.action === "deposit" ? { payer: row.caller } : {})
+                })
+          });
+        }
+        if (start === fromBlock) break;
+        end = start - 1n;
+      }
+      return Promise.all(
+        entries
+          .sort((a, b) => b.blockNumber - a.blockNumber || b.logIndex - a.logIndex)
+          .slice(0, limit)
+          .map(async (entry) => ({
+            ...entry,
+            timestamp:
+              Number(
+                (await publicClient.getBlock({ blockNumber: BigInt(entry.blockNumber) })).timestamp
+              ) * 1000
+          }))
+      );
     }
   };
 
@@ -2023,8 +1941,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         }
 
         const blockNumber = await publicClient.getBlockNumber({ cacheTime: 0 });
-        const [minStake, activeOpenHolds, maxActiveHolds] = await Promise.all(
-          ["minStake", "activeOpenHolds", "MAX_ACTIVE_HOLDS"].map(
+        const [minBetAmount, openHolds, maxOpenHolds] = await Promise.all(
+          ["minBetAmount", "openHolds", "MAX_OPEN_HOLDS"].map(
             (functionName) =>
               publicClient.readContract({
                 address: pool.bank,
@@ -2034,15 +1952,15 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
               }) as Promise<bigint>
           )
         );
-        if (input.stake < minStake!)
+        if (input.stake < minBetAmount!)
           return {
             error: {
               code: "STAKE_BELOW_MINIMUM",
-              message: `Total stake must be at least ${minStake} asset units.`,
+              message: `Each sports ticket must stake at least ${minBetAmount} asset units.`,
               severity: "warning"
             }
           };
-        if (activeOpenHolds! >= maxActiveHolds!)
+        if (openHolds! >= maxOpenHolds!)
           return {
             error: {
               code: "POOL_CAPACITY_FULL",
@@ -2331,7 +2249,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     });
   }
 
-  return { release, account, gameHub, bank, vrfHub, sportsHub };
+  return { release, account, gameHub, bank, vault, vrfHub, sportsHub };
 }
 
 function mapBetState(state: number): DomainBet["state"] {

@@ -76,15 +76,15 @@ export function HomePageClient() {
     aggregatedAssets[0];
   const reserveFloor = hasBankRows
     ? formatAssetOverviewValue(selectedAsset, locale, t("format.awaitingReserveSync"), (asset) =>
-        asset.totalAssets > asset.totalReserved ? asset.totalAssets - asset.totalReserved : 0n
+        asset.lpCapital > asset.lockedCapital ? asset.lpCapital - asset.lockedCapital : 0n
       )
     : t("format.awaitingReserveSync");
-  const totalAssetsLabel = hasBankRows
+  const lpCapitalLabel = hasBankRows
     ? formatAssetOverviewValue(
         selectedAsset,
         locale,
         t("format.awaitingReserveSync"),
-        (asset) => asset.totalAssets
+        (asset) => asset.lpCapital
       )
     : t("format.awaitingReserveSync");
 
@@ -166,7 +166,7 @@ export function HomePageClient() {
   const stats: LandingStat[] = [
     {
       label: t("stats.vault.label"),
-      value: totalAssetsLabel,
+      value: lpCapitalLabel,
       detail: t("stats.vault.detail"),
       integrity: "verifiable"
     },
@@ -386,8 +386,8 @@ function aggregateAssetOverviews(rows: readonly AssetOverview[]): AssetOverview[
     const key = String(row.address).toLowerCase();
     const existing = byAsset.get(key);
     if (existing) {
-      existing.totalAssets += row.totalAssets;
-      existing.totalReserved += row.totalReserved;
+      existing.lpCapital += row.lpCapital;
+      existing.lockedCapital += row.lockedCapital;
       existing.turnover += row.turnover;
       existing.protocolFee += row.protocolFee;
     } else {

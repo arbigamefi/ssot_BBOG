@@ -7,8 +7,9 @@ export type PortfolioAssetRow = {
   asset: `0x${string}`;
   bank: `0x${string}`;
   walletBalance: bigint;
-  shares: bigint;
-  assetsEquivalent: bigint;
+  nftCount: bigint;
+  liquidityAssets: bigint | undefined;
+  complete: boolean;
   allowance: bigint;
 };
 

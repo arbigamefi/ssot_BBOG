@@ -1,22 +1,13 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import {
-  ClipboardDocumentCheckIcon,
-  CircleStackIcon,
-  LockClosedIcon,
-  ScaleIcon,
-  ShieldCheckIcon
-} from "@heroicons/react/24/outline";
-
-import { formatBps, formatPctFromBps, formatTokenAmount, shortHex } from "./format";
+import { formatTokenAmount, shortHex } from "./format";
 import type { EarnBankData } from "./types";
 
 export function EarnRiskPanel({
   data,
   decimals,
   symbol,
-  releaseDigest,
-  embedded = false
+  releaseDigest
 }: {
   data?: EarnBankData;
   decimals: number;
@@ -25,122 +16,31 @@ export function EarnRiskPanel({
   embedded?: boolean;
 }) {
   const t = useTranslations();
-  const snapshot = data?.snapshot;
-  const freeReserve = snapshot
-    ? snapshot.totalAssets > snapshot.activeReserved
-      ? snapshot.totalAssets - snapshot.activeReserved
-      : 0n
-    : undefined;
-  const withdrawalBufferBps = snapshot?.withdrawalBufferBps;
-  const withdrawalBuffer = snapshot?.withdrawalBuffer;
-
-  const rows = (
+  const s = data?.snapshot;
+  const rows = [
+    ["vaultCash", s?.vaultCash],
+    ["bankCash", s?.bankCash],
+    ["playerDebt", s?.playerPayableTotal],
+    ["protocolDebt", s?.protocolFeesPayable],
+    ["referralDebt", s?.externalPayablesTotal],
+    ["vaultSurplus", s?.vaultSurplus],
+    ["bankSurplus", s?.bankSurplus]
+  ] as const;
+  return (
     <div className="divide-y divide-border-soft">
-      <RiskRow
-        icon={<LockClosedIcon className="h-5 w-5" />}
-        label={t("earn.risk.custody.label")}
-        title={t("earn.risk.custody.title")}
-        detail={t("earn.risk.custody.detail")}
-      />
-      <RiskRow
-        icon={<CircleStackIcon className="h-5 w-5" />}
-        label={t("earn.risk.buffer.label")}
-        title={formatTokenAmount(freeReserve, decimals, symbol, 2)}
-        detail={t("earn.risk.buffer.detail", {
-          reserved: formatTokenAmount(snapshot?.activeReserved, decimals, symbol, 2)
-        })}
-      />
-      <RiskRow
-        icon={<ScaleIcon className="h-5 w-5" />}
-        label={t("earn.risk.liquidityFloor.label")}
-        title={formatPctFromBps(withdrawalBufferBps)}
-        detail={t("earn.risk.liquidityFloor.detail", {
-          bps: formatBps(withdrawalBufferBps),
-          amount: formatTokenAmount(withdrawalBuffer, decimals, symbol, 2)
-        })}
-      />
-      <RiskRow
-        label={t("earn.risk.payables.label")}
-        title={formatTokenAmount(snapshot?.protocolFeesPayable, decimals, symbol, 2)}
-        detail={t("earn.risk.payables.detail", {
-          externalPayables: formatTokenAmount(snapshot?.externalPayablesTotal, decimals, symbol, 2),
-          assets: formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2)
-        })}
-      />
-      <RiskRow
-        icon={<ClipboardDocumentCheckIcon className="h-5 w-5" />}
-        label={t("earn.risk.release.label")}
-        title={shortHex(releaseDigest)}
-        detail={t("earn.risk.release.detail")}
-      />
-      {snapshot ? (
-        <RiskRow
-          label={t("earn.recovery.backing")}
-          title={formatTokenAmount(snapshot.recoveryBacking, decimals, symbol, 6)}
-          detail={t("earn.recovery.backingDetail")}
-        />
-      ) : null}
-      {snapshot ? (
-        <RiskRow
-          label={t("earn.async.exitLiabilities")}
-          title={formatTokenAmount(
-            snapshot.exitPayable != null && snapshot.playerPayableTotal != null
-              ? snapshot.exitPayable + snapshot.playerPayableTotal
-              : undefined,
-            decimals,
-            symbol,
-            6
-          )}
-          detail={t("earn.async.exitLiabilitiesDetail", {
-            exits: formatTokenAmount(snapshot.exitPayable, decimals, symbol, 6),
-            players: formatTokenAmount(snapshot.playerPayableTotal, decimals, symbol, 6)
-          })}
-        />
-      ) : null}
-    </div>
-  );
-
-  if (embedded) return rows;
-
-  return (
-    <section className="rounded-md border border-border bg-surface-1 shadow-e2">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
-        <div className="flex items-center gap-2 text-sm font-bold text-fg">
-          <ShieldCheckIcon className="h-5 w-5 text-brand" />
-          {t("earn.risk.title")}
+      <p className="px-5 py-4 text-sm leading-6 text-fg-muted">{t("earn.nft.riskTerms")}</p>
+      {rows.map(([key, value]) => (
+        <div key={key} className="flex flex-wrap justify-between gap-3 px-5 py-4">
+          <span className="text-sm text-fg-muted">{t(`earn.nft.${key}`)}</span>
+          <span className="font-mono font-bold text-fg">
+            {formatTokenAmount(value, decimals, symbol, 6)}
+          </span>
         </div>
-        <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
-          {t("earn.risk.readModel")}
-        </span>
-      </div>
-      {rows}
-    </section>
-  );
-}
-
-function RiskRow({
-  icon,
-  label,
-  title,
-  detail
-}: {
-  icon?: React.ReactNode;
-  label: string;
-  title: string;
-  detail: string;
-}) {
-  return (
-    <div className="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,0.82fr)_minmax(180px,0.55fr)] sm:items-center">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-          {icon}
-          {label}
-        </div>
-        <p className="mt-1 text-sm leading-5 text-fg-muted">{detail}</p>
-      </div>
-      <h3 className="truncate font-mono text-lg font-bold text-fg sm:text-right" title={title}>
-        {title}
-      </h3>
+      ))}
+      <p className="px-5 py-4 text-sm text-fg-muted">{t("earn.nft.surplusDetail")}</p>
+      <p className="px-5 py-4 text-xs text-fg-subtle">
+        {t("earn.risk.release.label")}: {shortHex(releaseDigest)}
+      </p>
     </div>
   );
 }

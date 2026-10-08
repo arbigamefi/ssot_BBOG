@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdtempSync, mkdirSync, openSync, closeSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import {
   createPublicClient,
@@ -12,6 +13,7 @@ import {
   http,
   keccak256,
   toHex,
+  encodeEventTopics,
   encodeAbiParameters
 } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
@@ -40,7 +42,7 @@ const client = createPublicClient({
 const wallet = createWalletClient({ chain, transport: http(rpc) });
 const evm = createTestClient({ chain, transport: http(rpc), mode: "anvil" });
 assert.equal(await evm.getAutomine(), true);
-const [owner, player] = await wallet.getAddresses();
+const [owner, player, secondLevel] = await wallet.getAddresses();
 // Public Anvil test mnemonic; never reads or signs with a user's wallet.
 const keeper = mnemonicToAccount("test test test test test test test test test test test junk", {
   addressIndex: 9
@@ -82,10 +84,12 @@ async function until(predicate, label) {
   throw new Error(`Timed out: ${label}`);
 }
 const token = await deploy("BlacklistToken", []);
-const bank = await deploy("Bank", [token.address, owner, 0n, "LP", "LP", 6, 1_000_000n]);
+const bank = await deploy("Bank", [token.address, owner, 6_000n, 6, 10_000n]);
 const registry = await deploy("PoolRegistry", [owner]);
 const router = await deploy("SettlementRouter", [registry.address]);
-const vrf = await deploy("VRFHub", [owner, owner]);
+const wrapper = await deploy("ExactGasWrapperFixture", []);
+const vrf = await deploy("VRFHub", [wrapper.address, router.address]);
+const vault = { address: await read(bank, "vault"), abi: artifacts("LiquidityVault").abi };
 const refs = await deploy("ReferralRegistry", [owner]);
 const engine = await deploy("DefaultReferralEngine", []);
 const hub = await deploy("GameHub", [
@@ -96,9 +100,9 @@ const hub = await deploy("GameHub", [
   owner,
   3600n,
   200,
-  0,
-  0,
-  0,
+  500,
+  2000,
+  1000,
   0
 ]);
 const coin = await deploy("CoinTossModule", []);
@@ -107,17 +111,19 @@ await write(registry, "registerPool", [1n, token.address, bank.address, 1]);
 await write(registry, "setHubRegistered", [hub.address, true]);
 await write(registry, "setHubAllowedForPool", [1n, hub.address, true]);
 await write(bank, "setSettlementRouterOnce", [router.address]);
+await write(bank, "setRandomnessConsumerOnce", [vrf.address]);
 await write(refs, "setBinderOnce", [hub.address]);
-await write(hub, "registerGame", [gameId, coin.address]);
+await write(refs, "bind", [owner, secondLevel]);
+await write(hub, "registerGame", [gameId, coin.address, 1, 2_447_746]);
 await write(token, "mint", [owner, 100_000_000n]);
 await write(token, "mint", [player, 10_000_000n]);
-await write(token, "approve", [bank.address, 100_000_000n]);
-await write(bank, "deposit", [100_000_000n, owner]);
-await write(token, "approve", [hub.address, 10_000_000n], player);
 const startBlock = await client.getBlockNumber({ cacheTime: 0 });
+await write(token, "approve", [vault.address, 100_000_000n]);
+await write(vault, "addDeposit", [100_000_000n]);
+await write(token, "approve", [hub.address, 10_000_000n], player);
 async function place() {
   const id = await read(router, "nextPositionId");
-  const [fee] = await read(hub, "quoteVRFFee", [1, await client.getGasPrice()]);
+  const [fee] = await read(hub, "quoteVRFFee", [gameId, 1, await client.getGasPrice()]);
   await write(
     hub,
     "placeBet",
@@ -126,7 +132,7 @@ async function place() {
       1n,
       encodeAbiParameters([{ type: "bool" }], [true]),
       { amountPerRoll: 1_000_000n, betCount: 1, stopGain: 0n, stopLoss: 0n },
-      "0x0000000000000000000000000000000000000000",
+      owner,
       200
     ],
     player,
@@ -154,8 +160,10 @@ const config = {
   betIndexDatabaseUrl: database,
   betIndexSsl: false,
   betIndexWriteEnabled: true,
-  bankProviderLedgerPools: [{ bank: bank.address, asset: token.address, poolId: 1, decimals: 6 }],
-  bankProviderLedgerScanIntervalMs: 1000,
+  vaultProviderLedgerPools: [
+    { bank: bank.address, vault: vault.address, asset: token.address, poolId: 1, decimals: 6 }
+  ],
+  vaultProviderLedgerScanIntervalMs: 1000,
   sportsTicketIndexEnabled: false,
   sportsTerminalizerEnabled: false,
   sportsTerminalizerScanChunkBlocks: 100n,
@@ -182,7 +190,7 @@ writeFileSync(
   JSON.stringify({
     chainId: 84532,
     contracts: { gameHub: hub.address, vrfHub: vrf.address },
-    pools: config.bankProviderLedgerPools,
+    pools: config.vaultProviderLedgerPools,
     meta: { blockNumber: Number(startBlock) }
   })
 );
@@ -212,7 +220,7 @@ function startCli(label) {
         KEEPER_SCAN_INDEX_EVENTS_ENABLED: "true",
         KEEPER_STARTUP_SCAN_ENABLED: "true",
         KEEPER_HEALTH_PATH: healthPath,
-        KEEPER_BANK_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS: "1",
+        KEEPER_VAULT_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS: "1",
         BET_INDEX_DATABASE_URL: database,
         BET_INDEX_WRITE_ENABLED: "true",
         BET_INDEX_SSL: "false"
@@ -246,7 +254,98 @@ const readWorkerLogs = (worker) =>
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line));
+
+// Reuse viem's installed WS implementation to interrupt only the real socket.
+// HTTP goes straight to the owned Anvil; no mocked RPC results or manual enqueue.
+async function createWsRelay() {
+  const requireViem = createRequire(createRequire(import.meta.url).resolve("viem"));
+  const { WebSocket, WebSocketServer } = createRequire(requireViem.resolve("isows"))("ws");
+  const server = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+  await new Promise((resolve) => server.once("listening", resolve));
+  const peers = new Set();
+  const acknowledged = new Map();
+  let offline = false;
+  server.on("connection", (downstream) => {
+    if (offline) {
+      downstream.close(1013);
+      return;
+    }
+    const upstream = new WebSocket(rpc.replace("http:", "ws:"));
+    peers.add(downstream);
+    peers.add(upstream);
+    const pending = new Map();
+    const active = new Map();
+    acknowledged.set(downstream, active);
+    const waiting = [];
+    downstream.on("message", (data) => {
+      const request = JSON.parse(data.toString());
+      if (request.method === "eth_subscribe") pending.set(request.id, request.params);
+      if (upstream.readyState === WebSocket.OPEN) upstream.send(data.toString());
+      else waiting.push(data.toString());
+    });
+    upstream.on("open", () => waiting.splice(0).forEach((data) => upstream.send(data)));
+    upstream.on("message", (data) => {
+      const response = JSON.parse(data.toString());
+      if (pending.has(response.id)) {
+        if (!response.error && typeof response.result === "string" && response.result.length > 0) {
+          active.set(response.result, pending.get(response.id));
+        }
+        pending.delete(response.id);
+      }
+      if (downstream.readyState === WebSocket.OPEN) downstream.send(data.toString());
+    });
+    downstream.on("close", () => {
+      peers.delete(downstream);
+      acknowledged.delete(downstream);
+      upstream.close();
+    });
+    upstream.on("close", () => {
+      peers.delete(upstream);
+      acknowledged.delete(downstream);
+      downstream.close();
+    });
+    downstream.on("error", () => upstream.terminate());
+    upstream.on("error", () => downstream.terminate());
+  });
+  return {
+    url: `ws://127.0.0.1:${server.address().port}`,
+    subscriptions: () => [...acknowledged.values()].flatMap((active) => [...active.values()]),
+    disconnect: () => {
+      offline = true;
+      for (const peer of peers) peer.terminate();
+    },
+    resume: () => {
+      offline = false;
+    },
+    stop: async () => {
+      for (const peer of peers) peer.terminate();
+      await new Promise((resolve) => server.close(resolve));
+    }
+  };
+}
+const expectedSubscriptions = [
+  ...["BetRandomReady", "BetPlaced", "BetFinalized", "BetRefunded"].map((eventName) => ({
+    address: hub.address.toLowerCase(),
+    topic: encodeEventTopics({ abi: hub.abi, eventName })[0]
+  })),
+  ...["ResultReceived", "CallbackAttempt"].map((eventName) => ({
+    address: vrf.address.toLowerCase(),
+    topic: encodeEventTopics({ abi: vrf.abi, eventName })[0]
+  }))
+];
+const hasAllSubscriptions = () =>
+  expectedSubscriptions.every(({ address, topic }) =>
+    wsRelay
+      .subscriptions()
+      .some(
+        ([kind, filter]) =>
+          kind === "logs" &&
+          filter.address?.toLowerCase() === address &&
+          filter.topics?.[0] === topic
+      )
+  );
 let runtime;
+let wsRelay;
 try {
   await store.initializeSchema();
   const id = await place();
@@ -275,13 +374,27 @@ try {
     gameHub: hub.address,
     betId: id.toString()
   });
+  assert.equal(rowBeforeKill.referrerL1, owner.toLowerCase());
+  assert.equal(rowBeforeKill.referrerL2, secondLevel.toLowerCase());
+  assert.deepEqual(
+    (await read(hub, "getBetReferralPayees", [id])).map((a) => a.toLowerCase()),
+    [owner.toLowerCase(), secondLevel.toLowerCase()]
+  );
   const cursorBeforeKill = await store.getCursor(84532, "gamehub-events", hub.address);
   assert.equal((await read(hub, "getBet", [id])).state, 2);
   assert.deepEqual(await stopCli(first, "SIGKILL"), { code: null, signal: "SIGKILL" });
   assert.equal(await store.getCursor(84532, "gamehub-events", hub.address), cursorBeforeKill);
   // The callback is mined only after the first OS process has exited.
-  const callback = await write(vrf, "fulfillRandomWords", [before.requestId, [winningSeed]]);
-  assert.equal((await read(hub, "getBet", [id])).state, 3);
+  // Deliberately underfund the transport diagnostic callback to persist the first
+  // canonical seed while the entire Hub delivery fails. This is a local failure
+  // fixture, not a claim about the admitted wrapper callback budget.
+  const callback = await write(wrapper, "diagnosticDelivery", [
+    before.requestId,
+    winningSeed,
+    150_000n
+  ]);
+  assert.equal((await read(vrf, "getRequest", [before.requestId])).state, 2);
+  assert.equal((await read(hub, "getBet", [id])).state, 2);
   assert.equal(await read(token, "balanceOf", [player]), cashBeforeCallback);
   const second = startCli("after-kill");
   assert.notEqual(second.pid, first.pid);
@@ -306,6 +419,39 @@ try {
   assert(terminal.payoutNet > 0n, "positive payment is required for idempotency evidence");
   assert.equal(await read(token, "balanceOf", [player]), cashBeforeCallback + terminal.payoutNet);
   assert.equal(BigInt(rowAfterRecovery.payout), terminal.payoutNet);
+  assert.equal(rowAfterRecovery.referrerL1, owner.toLowerCase());
+  assert.equal(rowAfterRecovery.referrerL2, secondLevel.toLowerCase());
+  const allocation = rowAfterRecovery.houseEdge;
+  assert(allocation, "real terminal receipt must include current HouseEdgeAllocated");
+  assert.equal(allocation.houseEdgeBps, 200);
+  const value = (name) => BigInt(allocation[name]);
+  assert.equal(
+    value("lpRetained") + value("protocolFee") + value("r0") + value("r1") + value("r2"),
+    value("edge")
+  );
+  assert(value("r0") > 0n && value("r1") > 0n && value("r2") > 0n);
+  assert.equal(
+    (
+      await store.getAffiliateBets({
+        chainId: 84532,
+        gameHub: hub.address,
+        affiliate: owner,
+        limit: 10
+      })
+    ).length,
+    1
+  );
+  assert.equal(
+    (
+      await store.getAffiliateBets({
+        chainId: 84532,
+        gameHub: hub.address,
+        affiliate: secondLevel,
+        limit: 10
+      })
+    ).length,
+    0
+  );
   const cursorAfterRecovery = await store.getCursor(84532, "gamehub-events", hub.address);
   assert.equal((await stopCli(second)).code, 0);
   // A third OS process must not repay an already terminal durable position.
@@ -406,10 +552,146 @@ try {
   console.log(
     "PASS: distinct CLI PIDs, SIGKILL before offline callback, durable PostgreSQL recovery, one positive payment after terminal restart"
   );
-  // Preserve the existing timeout and refused-payment cases below.
-  runtime = createKeeperRuntime({ config, logger });
+  // A normally funded callback settles directly. Starting keeper afterwards must
+  // index the callback's terminal receipt without creating a second transaction.
+  const normalId = await place();
+  const normalRequest = (await read(hub, "getBet", [normalId])).requestId;
+  const directCallback = await write(wrapper, "deliver", [normalRequest, 0n]);
+  assert.equal((await read(hub, "getBet", [normalId])).state, 4);
+  assert.equal((await read(vrf, "getRequest", [normalRequest])).state, 3);
+  assert.equal(await read(vrf, "unbookedResultCount", [bank.address]), 0n);
+  const ssot = await read(bank, "getSSOT");
+  assert.equal(ssot.accountingValid, true);
+  assert.equal(ssot.P, 0n);
+  assert.equal(ssot.R, 0n);
+  assert.equal(ssot.K, 0n);
+  assert.equal(ssot.vaultCash, ssot.L);
+  assert.equal(await read(token, "balanceOf", [vault.address]), ssot.L);
+  // Preserve timeout and refused-payment coverage with the current custodian model.
+  wsRelay = await createWsRelay();
+  const liveConfig = { ...config, wsRpcUrl: wsRelay.url };
+  runtime = createKeeperRuntime({ config: liveConfig, logger });
   await runtime.start();
+  runtime.enqueue({ source: "manual", betId: normalId, receivedAt: Date.now() });
+  await until(
+    async () =>
+      (await store.getBet({ chainId: 84532, gameHub: hub.address, betId: normalId.toString() }))
+        ?.state === "finalized",
+    "direct callback terminal indexing"
+  );
+  assert(
+    !events.some(
+      (e) => e.name === "casino.finalize.broadcast" && e.fields?.betId === normalId.toString()
+    )
+  );
+  assert.equal(
+    (await store.getBet({ chainId: 84532, gameHub: hub.address, betId: normalId.toString() }))
+      .finalizedTxHash,
+    directCallback.transactionHash
+  );
+  await until(hasAllSubscriptions, "six acknowledged WS event filters before interruption");
+  const subscriptionsBefore = wsRelay.subscriptions();
+  wsRelay.disconnect();
+  await until(() => wsRelay.subscriptions().length === 0, "all real WS sockets disconnected");
+  const outageId = await place();
+  const outageRequest = (await read(hub, "getBet", [outageId])).requestId;
+  let outageSeed = 0n;
+  for (; outageSeed < 100n; outageSeed++) {
+    if ((await read(coin, "resolve", [params, spec, outageId, [outageSeed]]))[0] > 0n) break;
+  }
+  assert(outageSeed < 100n);
+  const outageCashBefore = await read(token, "balanceOf", [player]);
+  const offlineDelivery = await write(wrapper, "diagnosticDelivery", [
+    outageRequest,
+    outageSeed,
+    200_000n
+  ]);
+  await until(
+    async () =>
+      (await store.getBet({ chainId: 84532, gameHub: hub.address, betId: outageId.toString() }))
+        ?.state === "finalized",
+    "HTTP catches actual missed placement/result and retries the original seed during WS outage"
+  );
+  const outageTerminal = await read(hub, "getBetTerminal", [outageId]);
+  assert.equal(outageTerminal.state, 4);
+  assert(outageTerminal.payoutNet > 0n);
+  const outageCanonical = await read(vrf, "getRequest", [outageRequest]);
+  assert.equal(outageCanonical.seed, outageSeed);
+  assert.equal(outageCanonical.state, 3);
+  assert.equal(await read(vrf, "unbookedResultCount", [bank.address]), 0n);
+  assert.equal(
+    await read(token, "balanceOf", [player]),
+    outageCashBefore + outageTerminal.payoutNet
+  );
+  const outageFinalized = await client.getContractEvents({
+    ...hub,
+    eventName: "BetFinalized",
+    args: { positionId: outageId },
+    fromBlock: offlineDelivery.blockNumber,
+    toBlock: "latest"
+  });
+  assert.equal(outageFinalized.length, 1);
+  assert.notEqual(outageFinalized[0].transactionHash, offlineDelivery.transactionHash);
+  const outagePayments = await client.getContractEvents({
+    ...token,
+    eventName: "Transfer",
+    args: { from: bank.address, to: player },
+    fromBlock: offlineDelivery.blockNumber,
+    toBlock: "latest"
+  });
+  assert.equal(outagePayments.length, 1);
+  assert.equal(outagePayments[0].args.amount, outageTerminal.payoutNet);
+  const outageRow = await store.getBet({
+    chainId: 84532,
+    gameHub: hub.address,
+    betId: outageId.toString()
+  });
+  assert.equal(outageRow.finalizedTxHash, outageFinalized[0].transactionHash);
+  const afterOutage = await read(bank, "getSSOT");
+  assert.equal(afterOutage.accountingValid, true);
+  assert.equal(afterOutage.P + afterOutage.R + afterOutage.K + afterOutage.PP, 0n);
+  assert.equal(afterOutage.bankCash, afterOutage.PF + afterOutage.XP);
+  assert.equal(afterOutage.vaultCash, afterOutage.L);
+  wsRelay.resume();
+  await until(hasAllSubscriptions, "six newly acknowledged WS event filters after HTTP recovery");
+  const subscriptionsAfter = wsRelay.subscriptions();
   const missing = await place();
+  await until(
+    () =>
+      events.some(
+        (e) =>
+          e.name === "casino.keeper.enqueued" &&
+          e.fields?.betId === missing.toString() &&
+          e.fields?.source === "gameHub"
+      ),
+    "reconnected WS consumes real BetPlaced, independently of HTTP scans"
+  );
+  writeFileSync(
+    join(evidenceDir, "websocket-outage.json"),
+    JSON.stringify(
+      {
+        subscriptionsBefore,
+        subscriptionsAfter,
+        restoredWsBetId: missing.toString(),
+        restoredWsBetPlacedConsumed: true,
+        betId: outageId.toString(),
+        seed: outageSeed.toString(),
+        deliveryTx: offlineDelivery.transactionHash,
+        terminalTx: outageRow.finalizedTxHash,
+        terminalEvents: outageFinalized.length,
+        positivePayments: outagePayments.length,
+        actualHttpFallback: true,
+        manualEnqueueUsed: false,
+        originalSeedPreserved: true,
+        cashAndLiabilitiesReconciled: true
+      },
+      null,
+      2
+    )
+  );
+  console.log(
+    "PASS: real WS disconnect, HTTP catch-up with original seed, one positive payment, PostgreSQL receipt and WS resubscription"
+  );
   const pending = await read(hub, "getBet", [missing]);
   await write(hub, "setRefundTimeout", [86_400n]);
   await write(bank, "setRiskInPaused", [true]);
@@ -444,19 +726,25 @@ try {
   await runtime.stop();
   runtime = undefined;
   await write(token, "setBlocked", [player, false]);
-  runtime = createKeeperRuntime({ config, logger });
+  runtime = createKeeperRuntime({ config: liveConfig, logger });
   await runtime.start();
   await until(
     async () => (await read(bank, "playerPayable", [player])) === 0n,
     "keeper claims refused refund to its player"
   );
   assert.equal(await read(token, "balanceOf", [player]), cashBeforeRefund + 1_000_000n);
-  assert.equal(await read(bank, "activeOpenHolds"), 0n);
+  assert.equal(await read(bank, "openHolds"), 0n);
+  // A late wrapper callback after timeout cancellation cannot recreate risk or payment.
+  const cashAfterClaim = await read(token, "balanceOf", [player]);
+  await write(wrapper, "deliver", [pending.requestId, winningSeed]);
+  assert.equal((await read(vrf, "getRequest", [pending.requestId])).state, 4);
+  assert.equal((await read(hub, "getBet", [missing])).state, 5);
+  assert.equal(await read(token, "balanceOf", [player]), cashAfterClaim);
   assert.equal(await read(token, "balanceOf", [hub.address]), 0n);
   assert.equal(await read(token, "allowance", [hub.address, bank.address]), 0n);
   assert(events.some((event) => event.name === "casino.finalize.broadcast"));
   console.log(
-    "PASS: real keeper + Anvil + PostgreSQL restart, fixed deadlines, pause refund, refused-payment recovery and cash ownership"
+    "PASS: real keeper + Anvil + PostgreSQL restart, immutable L1/L2 referral snapshots, direct-only attribution, house-edge conservation, fixed deadlines, pause refund, refused-payment recovery and cash ownership"
   );
 } catch (error) {
   console.error(runtime?.health.snapshot().payables);
@@ -467,6 +755,7 @@ try {
 } finally {
   for (const worker of children) await stopCli(worker);
   await runtime?.stop();
+  await wsRelay?.stop();
   await store.close();
 }
 // viem keeps shared websocket transports alive after unsubscribing. All runtime

@@ -51,6 +51,7 @@ export async function executeGamePlaceBetAction({
   sicBoValue,
   affiliate,
   poolId,
+  maxHouseEdgeBps,
   messages,
   poolAvailability = "ready",
   isCurrent
@@ -82,6 +83,7 @@ export async function executeGamePlaceBetAction({
   affiliate?: Address;
   /** Selected casino pool id (multi-asset). Defaults to the default pool when omitted. */
   poolId?: number;
+  maxHouseEdgeBps: number | undefined;
   poolAvailability?: PoolAvailability;
   isCurrent?: () => boolean;
   messages?: {
@@ -94,6 +96,7 @@ export async function executeGamePlaceBetAction({
     unexpectedError?: string;
     poolUnavailable?: string;
     contextChanged?: string;
+    houseEdgeUnavailable?: string;
   };
 }) {
   // Explain availability before asking the visitor to connect or sign.
@@ -131,6 +134,7 @@ export async function executeGamePlaceBetAction({
 
   try {
     const placeBet = buildGamePlaceBetInput({
+      maxHouseEdgeBps,
       release,
       game,
       betAmount,

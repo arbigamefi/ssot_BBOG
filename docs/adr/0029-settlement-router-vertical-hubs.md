@@ -4,21 +4,22 @@ Status: Implemented in the current prelaunch architecture.
 
 ## Decision
 
-Bank owns custody and accounting. SettlementRouter owns position authorization.
+Bank holds betting principal and liabilities; its LiquidityVault holds NFT deposit capital.
+SettlementRouter owns position authorization.
 GameHub and SportsHub own their respective domain lifecycles. Hubs never move
 bankroll funds directly.
 
 ```text
-GameHub   -> VRFHub -> pure casino modules
-    |
-SettlementRouter -> PoolRegistry -> Bank per pool
-    |
+GameHub -> VRFHub -> Chainlink wrapper             (request)
+Chainlink wrapper -> VRFHub -> GameHub -> pure module (callback)
+GameHub / SportsHub -> SettlementRouter -> Bank -> LiquidityVault
+SettlementRouter -> PoolRegistry                  (admission lookup)
 SportsHub -> oracle adapters and SportsRiskEngine
 ```
 
 PoolRegistry assigns each `poolId` one asset, one Bank and one domain. A Bank is
 registered to exactly one pool. Multiple pools may use the same asset while keeping
-their reserves, LP shares and liabilities separate. Governance controls pool activity,
+their reserves, NFT deposits and liabilities separate. Governance controls pool activity,
 Hub registration and per-pool admission.
 
 SettlementRouter assigns each position an ID and snapshots its owner Hub, pool,
@@ -34,7 +35,10 @@ to its Router through `setSettlementRouterOnce`.
 
 GameHub validates casino parameters, snapshots pricing and referrals, opens the
 position, requests randomness, and finalizes or refunds through the Router. Pure
-game modules compute outcomes without custody. VRF callbacks never transfer funds.
+game modules compute outcomes without custody. A VRF callback persists the canonical
+seed and attempts settlement through the Router, Bank and Vault in the same transaction,
+including custody movements and player payment. Failed settlement keeps the same seed
+available for retry; terminal state, accounting and acknowledgment are atomic.
 
 SportsHub manages markets, odds snapshots, ticket exposure, result proposals,
 challenges and terminalization. SportsRiskEngine enforces risk limits on chain.

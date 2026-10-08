@@ -55,7 +55,7 @@ def main() -> int:
     data = json.loads(in_path.read_text())
     chain_id = int(_must(data, "chainId"))
     architecture_version = str(data.get("architectureVersion", ""))
-    if architecture_version != "v1.6-house-edge-allocation":
+    if architecture_version != "v1.6-nft-liquidity":
         print(f"error: expected a v1.6 snapshot, got architectureVersion={architecture_version!r}", file=sys.stderr)
         return 2
     release_version = "v16"
@@ -76,7 +76,6 @@ def main() -> int:
     )
 
     contracts: list[tuple[str, str, str]] = [
-        ("adapter", "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", "ctorArgs_adapter"),
         ("vrfHub", "src/core/VRFHub.sol:VRFHub", "ctorArgs_vrfHub"),
         ("poolRegistry", "src/core/PoolRegistry.sol:PoolRegistry", "ctorArgs_poolRegistry"),
         ("settlementRouter", "src/core/SettlementRouter.sol:SettlementRouter", "ctorArgs_settlementRouter"),
@@ -87,10 +86,13 @@ def main() -> int:
         ("sportsHub", "src/core/SportsHub.sol:SportsHub", "ctorArgs_sportsHub"),
     ]
 
-    # Each pool owns a Bank deployment.
-    n_banks = int(data.get("numPools", 0))
+    # Each Bank creates its immutable LiquidityVault; both have verified source.
+    n_banks = int(_must(data, "numPools"))
+    if not 1 <= n_banks <= 32:
+        raise ValueError("numPools must be in [1, 32]")
     for i in range(n_banks):
         contracts.append((f"poolBank_{i}", "src/core/Bank.sol:Bank", f"ctorArgs_bank_{i}"))
+        contracts.append((f"poolVault_{i}", "src/core/LiquidityVault.sol:LiquidityVault", f"ctorArgs_vault_{i}"))
 
     # Modules: no-arg constructors
     contracts.extend(

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.37;
 
 import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
@@ -258,7 +258,7 @@ contract GenerateGoldenVectorsV16 is Script {
         for (uint256 i = 0; i < numPools; i++) {
             string memory suffix = vm.toString(i);
             if (snap.readUint(string.concat(".poolId_", suffix)) == uint256(poolId)) {
-                uint256 d = jsonReader.readUint(snap, string.concat(".poolLpDecimals_", suffix));
+                uint256 d = jsonReader.readUint(snap, string.concat(".poolAssetDecimals_", suffix));
                 require(d <= type(uint8).max, "pool asset decimals too large");
                 dec = uint8(d);
                 return dec;

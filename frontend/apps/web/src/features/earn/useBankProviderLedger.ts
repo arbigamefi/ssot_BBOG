@@ -10,12 +10,12 @@ const LEDGER_PAGE_SIZE = 25;
 
 type ProviderLedgerApiRow = Omit<
   EarnProviderLedgerEntry,
-  "assets" | "sharePrice" | "shares" | "epochId"
+  "assets" | "depositId" | "percent" | "withdrawAfter"
 > & {
   assets?: string;
-  sharePrice?: string;
-  shares: string;
-  epochId?: string;
+  depositId: string;
+  percent?: string;
+  withdrawAfter?: string;
 };
 
 type ProviderLedgerApiResponse = {
@@ -49,9 +49,9 @@ function rowFromApi(row: ProviderLedgerApiRow): EarnProviderLedgerEntry {
   return {
     ...row,
     assets: parseOptionalBigInt(row.assets),
-    sharePrice: parseOptionalBigInt(row.sharePrice),
-    epochId: parseOptionalBigInt(row.epochId),
-    shares: BigInt(row.shares)
+    depositId: BigInt(row.depositId),
+    percent: parseOptionalBigInt(row.percent),
+    withdrawAfter: parseOptionalBigInt(row.withdrawAfter)
   };
 }
 
@@ -69,7 +69,7 @@ export function useBankProviderLedger({
       "providerLedger",
       sdk?.release?.chainId,
       sdk?.release?.releaseDigest,
-      sdk?.release?.pools.find((pool) => pool.poolId === poolId)?.bank.toLowerCase(),
+      sdk?.release?.pools.find((pool) => pool.poolId === poolId)?.vault.toLowerCase(),
       poolId,
       sdk?.account,
       startBlock,
@@ -85,8 +85,8 @@ export function useBankProviderLedger({
         owner: sdk.account as Address,
         poolId: String(poolId)
       });
-      const bank = sdk.release.pools.find((pool) => pool.poolId === poolId)?.bank;
-      if (bank) params.set("bank", bank);
+      const vault = sdk.release.pools.find((pool) => pool.poolId === poolId)?.vault;
+      if (vault) params.set("vault", vault);
       if (startBlock != null) params.set("startBlock", String(startBlock));
       if (endBlock != null) params.set("endBlock", endBlock.toString());
       if (pageParam) {

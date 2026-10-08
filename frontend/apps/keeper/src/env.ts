@@ -14,6 +14,7 @@ type ReleaseLike = {
     active?: boolean;
     asset: Address;
     bank: Address;
+    vault: Address;
     decimals?: number;
     poolId: number;
   }>;
@@ -95,12 +96,13 @@ function parseBigintList(value: string | undefined, name: string) {
     });
 }
 
-function resolveBankProviderLedgerPools(release: ReleaseLike) {
+function resolveVaultProviderLedgerPools(release: ReleaseLike) {
   return (release.pools ?? [])
     .filter((pool) => pool.active !== false)
     .map((pool) => ({
       asset: getAddress(pool.asset),
       bank: getAddress(pool.bank),
+      vault: getAddress(pool.vault),
       decimals: pool.decimals ?? 6,
       poolId: pool.poolId
     }));
@@ -184,8 +186,8 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     // Left unbounded, a cursor that has fallen months behind turns one pass into
     // hundreds of thousands of `eth_getLogs` calls and drains a provider quota
     // outright. Note a chunk is not one request: with scanIndexEventsEnabled a
-    // gamehub chunk costs five (`BetRandomReady`, then the four index events),
-    // and a bank-ledger chunk costs two per configured pool, plus timestamps.
+    // a casino chunk reads one combined Hub query plus one canonical VRF query;
+    // a Vault-ledger chunk combines all Vault addresses, plus timestamps.
     //
     // The default keeps a healthy keeper comfortable while refusing to grind: at
     // the free-tier 10-block chunk size a 300s pass only needs ~15 chunks to keep
@@ -207,9 +209,9 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     betIndexDatabaseUrl: env.BET_INDEX_DATABASE_URL?.trim() || undefined,
     betIndexSsl: parseBool(env.BET_INDEX_SSL),
     betIndexWriteEnabled: parseBool(env.BET_INDEX_WRITE_ENABLED),
-    bankProviderLedgerPools: resolveBankProviderLedgerPools(release),
-    bankProviderLedgerScanIntervalMs: parseMs(
-      env.KEEPER_BANK_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS,
+    vaultProviderLedgerPools: resolveVaultProviderLedgerPools(release),
+    vaultProviderLedgerScanIntervalMs: parseMs(
+      env.KEEPER_VAULT_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS,
       60_000
     ),
     sportsTicketIndexEnabled: parseBool(env.KEEPER_SPORTS_TICKET_INDEX_ENABLED),

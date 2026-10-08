@@ -4,14 +4,14 @@ Keep one record per incident with the following facts. Never include private key
 credential-bearing URLs or database credentials.
 
 - **Identity:** incident time in UTC, chain ID, verified release digest, source revision, affected
-  Hub/Bank addresses and bet, ticket or batch IDs.
-- **Impact:** actions currently unavailable, open positions, unresolved player/LP liabilities and
+  Hub/Bank/Vault addresses and bet, ticket, NFT deposit or VRF request IDs.
+- **Impact:** actions currently unavailable, open positions, unresolved player liabilities and constrained LP capital and
   affected users. Distinguish recorded settlement from a completed asset transfer.
 - **Evidence:** block numbers, transaction hashes, decoded errors, relevant contract reads, health
   snapshots and redacted process logs. State whether evidence is local, staging or deployed.
 - **Actions:** caller and authority, exact targets and calldata, simulations, receipts and readbacks.
   Record pause and governance actions separately from permissionless settlement/recovery.
-- **Recovery:** oldest unresolved work, coverage/cursors, balances and liabilities before and after,
+- **Recovery:** oldest unresolved work, coverage/cursors, both custody balances, L/K/G/P/R and liabilities before and after,
   retries still pending, and who owns follow-up work.
 - **Cause and prevention:** confirmed cause, uncertain points, code/configuration correction and
   the test or operating check that detects recurrence.

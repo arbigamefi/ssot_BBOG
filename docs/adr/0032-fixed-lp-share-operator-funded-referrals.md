@@ -1,127 +1,99 @@
 # ADR-0032: Fixed LP share; operator-funded referrals
 
-Status: Accepted. Current prelaunch implementation.
-
-LPs receive a fixed half of the turnover edge. The operator half funds referral awards and protocol fees.
+Status: Accepted. The current implementation uses one house edge and L0/L1/L2 only.
+The simplification requires fresh source-bound regression and release checks; earlier gas measurements
+and network evidence do not qualify this source automatically.
 
 ## Decision
 
-### 1. One allocation base: the turnover edge
+### 1. One house edge and one allocation base
 
-For every settled casino position, with `U = stake − refundAmount` and the effective edge `h_e`
-snapshotted when the bet was accepted:
-
-```text
-E   = floor(U × h_e / 10000)
-E_b = floor(U × h_b / 10000)     base edge, h_b = snapshotted base edge
-E_Δ = E − E_b                    affiliate markup part, zero while markup is disabled
-```
-
-Allocation is accrued at settlement whether the player wins or loses. A pure refund allocates nothing.
-
-### 2. LPs keep a fixed half
-
-`LP_SHARE_BPS = 5000` is a constant of the release unit. The operator budget is
-`O = floor(E × (10000 − LP_SHARE_BPS) / 10000)`. LPs retain `E − O` in gameplay accounting;
-it must not be charged a second time as gameplay PF or XP. Active capital, ordinary liquid exits
-and historical recovery follow ADR-0034/0035. The virtual-capital residual defined there is a distinct
-capital-accounting credit, not additional turnover edge or gameplay fee accrual.
-
-### 3. Referrals are funded from the operator budget
-
-Rates are basis points of `E_b`:
-
-| Level | Payee                   | Condition                                                 | Initial rate |
-| ----- | ----------------------- | --------------------------------------------------------- | -----------: |
-| L0    | the player (rakeback)   | the player had a bound referrer when the bet was accepted |         1000 |
-| L1    | the player's referrer   | the referrer exists                                       |         2000 |
-| L2    | the referrer's referrer | that address exists                                       |          500 |
-
-`L0 + L1 + L2 ≤ MAX_REFERRAL_BPS = 3500` is a constant. Referral depth is capped at L2. A missing payee or
-a rounding remainder is not paid to anyone else; it becomes protocol fees.
-
-### 4. The protocol keeps the rest of the operator budget
+Each accepted casino bet snapshots `houseEdgeBps = h`, its referral configuration version and its
+L1/L2 payees. For `U = stake − refundAmount`:
 
 ```text
-PF_new = O − R0 − R1 − R2 − M
+E = floor(U × h / 10000)
+O = floor(E × (10000 − LP_SHARE_BPS) / 10000)
+LP retained edge = E − O
 ```
 
-`R0`, `R1`, `R2` are the referral amounts actually accrued and `M` is the markup payout (section 5). With the
-constants above the protocol keeps at least 15% of `E_b`, and 50% of `E` from players without a referrer.
+`LP_SHARE_BPS = 5000` and `MAX_HOUSE_EDGE_BPS = 500` are release constants. There is no separate
+agent price, multi-hop price traversal or additional referral budget. `maxHouseEdgeBps` remains the
+player's maximum accepted price. Pure refunds allocate nothing.
 
-### 5. Affiliate markup stays possible but starts disabled
+Bank keeps player stakes and fixed liabilities separate from LiquidityVault's NFT capital. The net
+position result uses its opening deposit-ID cutoff and the original tree fallback under
+[ADR-0034](0034-nft-liquidity-deposits.md). Profit with an empty tree becomes separately identified
+protocol capital; it is not additional turnover edge. Direct token surpluses are not allocated.
 
-The skyline markup from ADR-0008 is retained so it can be enabled later without a new release unit. At
-deployment `maxAffiliateDeltaBps = 0`, which makes `h_e = h_b`. If governance enables it, LPs still retain
-`E − O` of the full edge including markup. The operator part of the markup,
-`floor(E_Δ × (10000 − LP_SHARE_BPS) / 10000)`, is paid to the skyline payees in proportion to their
-increments, and any unallocated amount becomes protocol fees.
+### 2. Three rewards, funded from the operator share
 
-### 6. The settlement boundary enforces the LP share
+Rates are basis points of `E`, not of stake:
 
-The hub computes the split (through its referral engine); the SettlementRouter enforces the LP floor without
-trusting it. The Router
-stores `h_e` when a position is opened, bounded by the constant `MAX_HOUSE_EDGE_BPS = 500`, and on
-settlement requires:
+| Level | Payee               | Condition at acceptance         | Initial rate |
+| ----- | ------------------- | ------------------------------- | -----------: |
+| L0    | Player rakeback     | The player has a bound referrer |         1000 |
+| L1    | Direct referrer     | The snapshotted payee exists    |         2000 |
+| L2    | Referrer's referrer | The snapshotted payee exists    |          500 |
+
+`l0 + l1 + l2 ≤ MAX_REFERRAL_BPS = 3500`. Each amount is independently rounded down:
+`Rk = floor(E × lk / 10000)` when its condition holds, otherwise zero.
+The engine returns at most three nonempty awards and:
 
 ```text
-protocolFeeAccrual + Σ(new XP: accrued + locked + holdback) ≤ floor(floor(U × h_e / 10000) × 5000 / 10000)
+PF_new = O − R0 − R1 − R2
+XP_new = R0 + R1 + R2
+LP retained edge + PF_new + XP_new = E
 ```
 
-A buggy or malicious hub therefore cannot take more than the operator half.
+Missing payees and rounding remainders go to PF. No reward is paid beyond L2. A failed affiliate hint
+creates no reward or price change; the hint only attempts a first-touch referral binding.
+The registry rejects self-binding, rebinding, cycles and traversals that cannot establish an empty root
+within its bounded check. This proof limit is not a promise that every relationship graph has a global
+maximum depth: an existing root can later bind a previously unrelated referrer.
 
-### 7. Parameters and governance
+L0 is accrued XP. L1/L2 follow turnover eligibility and holdback rules. Reward rates and holdbackBps
+are snapshotted, but Bank's current unlock threshold and vesting duration remain live configuration:
+settlement reads the current threshold and a newly started vesting schedule reads the current duration.
+Changing the duration does not extend an already active schedule.
 
-| Parameter                                                | Adjustable       | Rule                                                                                             |
-| -------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------ |
-| `LP_SHARE_BPS`, `MAX_REFERRAL_BPS`, `MAX_HOUSE_EDGE_BPS` | No               | Constants; changing them requires a new release unit                                             |
-| Base edge `h_b`                                          | Yes, by the Safe | Takes effect no earlier than 7 days after it is queued                                           |
-| `maxAffiliateDeltaBps`                                   | Yes, by the Safe | Raising it takes effect no earlier than 7 days after it is queued                                |
-| L0 / L1 / L2 rates                                       | Yes, by the Safe | New versioned configuration; `L0 + L1 + L2 ≤ 3500`; effective for bets accepted after activation |
+### 3. Independent settlement enforcement
 
-Every bet snapshots the configuration it was accepted under. Changes never apply to accepted bets.
+Router snapshots `h` and enforces `PF_new + XP_new ≤ floor(floor(U × h / 10000) / 2)` independently of
+the hub. Bank separately checks the full terminal cost and cash backing. Neither check can be removed
+because the reference engine currently returns three awards.
 
-### 8. Scope
+### 4. Governance
 
-This ADR covers casino-domain positions. Sports tickets accrue nothing through the Router today and must
-not accrue protocol or referral liabilities in a v1.6 unit until a separate ADR defines sports allocation.
+- Safe queues the single `defaultHouseEdgeBps`; anyone may activate it after `EDGE_CHANGE_DELAY = 7 days`.
+  Safe may cancel a pending change. Both increases and decreases use this delay.
+- The interfaces are `pendingEdgeChange()`, `queueEdgeChange(uint16)`, `activateEdgeChange()` and
+  `cancelEdgeChange()`. There is one pending record and no parameter selector.
+- Referral schedules are immutable versions. Activating a new version affects new bets only.
+- LP share, maximum referral rate and maximum house edge are constants. Guardian remains pause-only.
+- Sports positions accrue no PF or XP until a separate sports allocation decision is accepted.
 
 ## Consequences
 
-- **LPs** expect 50% of the theoretical edge: at `h_b = 2%`, 1.0% of used turnover. They still bear the
-  variance of game results. This is not a return guarantee.
-- **The protocol** receives between 15% of `E_b` (fully referred traffic) and 50% of `E` (no referrer). At
-  2% this is 0.3%–1.0% of used turnover, which must cover keeper gas and fixed operating costs. It sets a
-  minimum economic bet size.
-- **Players** with a referrer see an effective edge of 1.8% at the initial rates. A player who refers
-  themselves through extra wallets can recover the whole 35% cap, an effective edge of 1.3%. That is
-  accepted as the maximum discount and does not touch the LP share.
-- **Referrers** earn predictable, outcome-independent commissions, comparable to wager-based industry
-  programs.
-- **Downstream changes:** the indexer, receipts, pools page, affiliate dashboard, fact table, both
-  whitepapers and the economic design must describe this allocation before any public claim uses it.
+With 100 USDC used turnover, a 2% house edge and all default payees present: E=2, O=1, LP retained
+edge=1, L0=0.2, L1=0.4, L2=0.1 and PF=0.3 USDC. Without a referrer PF=1 and XP=0. These are allocation
+amounts; LPs still bear actual game-result variance, and accrued XP is not a wallet transfer.
 
-## Alternatives considered
+The single-price model removes extra pricing permissions, traversal, duplicate per-bet price fields and
+additional reward branches. Exact gas savings require measurements of identical inputs. A fixed VRF
+callback gas limit does not automatically become cheaper because execution uses fewer instructions.
 
-- **Allocate the actual payout fee instead of turnover** (the economic design draft). Expectations are the
-  same, the Bank could verify it from `payoutGross − payoutNet`, and players would see a single fee
-  concept. Rejected: protocol and referral income would arrive only on rounds with a payout, in proportion
-  to what players win. That is lumpy and runs against wager-based industry norms. The turnover rule remains
-  enforceable once the Router records `h_e`.
-- **Unclaimed referral shares stay with LPs.** Rejected: LPs do not control acquisition spending, and a
-  fixed LP share is simpler to state and verify. The operator funds acquisition, as operators do elsewhere.
-- **No protocol fee.** Rejected: the protocol has per-bet and fixed costs, including keeper gas and RPC and
-  infrastructure plans.
-- **An adjustable LP share with a floor.** Rejected for simplicity and for LP certainty.
-- **Referral depth up to six levels.** Rejected: two tiers is standard for affiliate programs, and deeper
-  structures carry multi-level-marketing regulatory risk.
+## Verification
+
+Bind allocation, request authentication, terminal atomicity, NFT accounting and three-recipient
+callback tests to the new source. Verify missing payees, integer rounding, immutable accepted rates,
+Bank's live XP configuration, governance delay, failed first-touch binding, and the Router's independent cap.
+Rebuild ABI, event consumers, signed release snapshots, manifests and negative release checks as one schema.
+No removed field or interface is retained for compatibility.
 
 ## References
 
+- [SSOT v1.6](../constitution/SSOT.v1.6.md)
 - [Executable SSOT v1.6](../constitution/ExecutableSSOT.v1.6.md)
-- `src/core/GameHub.sol` (`finalize`, `setActiveReferralConfig`), `src/engines/referral/DefaultReferralEngine.sol`
+- [Implementation plan](../design/lp-accounting-and-callback-implementation.md)
 - `test/unit/HouseEdgeAllocationV16.t.sol`, `test/unit/SettlementRouter.t.sol`, `test/unit/GameHubE2E.t.sol`
-- [Stake: affiliate commission](https://help.stake.com/en/articles/9995651-how-to-get-an-affiliate-commission-with-stake),
-  [Stake: rakeback](https://help.stake.com/en/articles/4821738-what-is-rakeback),
-  [Azuro: reward distribution](https://dev-gem.azuro.org/knowledge-hub/how-azuro-works/reward-distribution),
-  BetSwirl revenue distribution (documentation.betswirl.com; read through search extracts, 2026-09-26)

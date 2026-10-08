@@ -95,14 +95,15 @@ export function useGameWalletBalance({
 
 /** Minimal pool-snapshot shape used for header liquidity-derived limits. */
 export type PoolSnapshot = {
-  totalAssets: bigint;
-  totalReserved: bigint;
-  activeReserved: bigint;
-  minStake: bigint;
-  activeOpenHolds: bigint;
-  maxActiveHolds: bigint;
+  L: bigint;
+  G: bigint;
+  R: bigint;
+  minBetAmount: bigint;
+  openHolds: bigint;
+  maxOpenHolds: bigint;
+  accountingValid: boolean;
   riskInPaused: boolean;
-  riskReserveBps?: number;
+  riskReserveBps: number;
 };
 
 type SnapshotSdk = {
@@ -114,7 +115,16 @@ type SnapshotSdk = {
  * so the header's live max-bet / max-payout stay roughly current. Mirrors the
  * effect-based pattern of useGameWalletBalance (no React Query dependency).
  */
-export type PoolAvailability = "loading" | "unavailable" | "paused" | "ready";
+export type PoolAvailability =
+  | "loading"
+  | "unavailable"
+  | "paused"
+  | "ready"
+  | "full"
+  | "noLiquidity"
+  | "invalidAccounting"
+  | "gameUnavailable"
+  | "invalidCount";
 
 export function usePoolSnapshot({
   sdk,
@@ -150,7 +160,15 @@ export function usePoolSnapshot({
             poolId,
             revision,
             snapshot,
-            status: snapshot.riskInPaused ? "paused" : "ready"
+            status: !snapshot.accountingValid
+              ? "invalidAccounting"
+              : snapshot.riskInPaused
+                ? "paused"
+                : snapshot.openHolds >= snapshot.maxOpenHolds
+                  ? "full"
+                  : snapshot.L <= 0n
+                    ? "noLiquidity"
+                    : "ready"
           });
       } catch {
         if (!cancelled)

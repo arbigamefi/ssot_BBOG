@@ -76,4 +76,55 @@ describe("readKeeperHealthSnapshot", () => {
       keeper: `0x${"55".repeat(20)}`
     });
   });
+  it("preserves the bound NFT pool accounting snapshot", async () => {
+    const healthPath = join(tempDir, "health.json");
+    const pools = [
+      {
+        bank: `0x${"44".repeat(20)}`,
+        vault: `0x${"55".repeat(20)}`,
+        L: "100",
+        P: "20",
+        R: "30",
+        K: "10",
+        G: "120",
+        PF: "1",
+        XP: "2",
+        PP: "3",
+        bankCash: "26",
+        vaultCash: "100",
+        accountingValid: true,
+        openHolds: "1",
+        maxOpenHolds: "128",
+        capacityHeadroom: "127",
+        lpStatus: 0,
+        paused: false,
+        observedBlock: "99"
+      }
+    ];
+    await writeFile(
+      healthPath,
+      JSON.stringify({ ...runningSnapshot(84532), pools, degradedBy: ["pools"] })
+    );
+    process.env.KEEPER_HEALTH_PATH = healthPath;
+    expect(await readKeeperHealthSnapshot({ chainId: 84532 })).toMatchObject({
+      pools,
+      degradedBy: ["pools"]
+    });
+  });
+  it.each([
+    { chainId: 8453 },
+    { redemptions: [] },
+    { pockets: [] },
+    { pocketDiscovery: {} },
+    { pools: [{ bank: `0x${"44".repeat(20)}`, L: "100" }] },
+    { degradedBy: ["redemptions"] }
+  ])("rejects a different chain or unsupported health schema: %j", async (invalid) => {
+    const healthPath = join(tempDir, "health.json");
+    await writeFile(healthPath, JSON.stringify({ ...runningSnapshot(84532), ...invalid }));
+    process.env.KEEPER_HEALTH_PATH = healthPath;
+    expect(await readKeeperHealthSnapshot({ chainId: 84532 })).toMatchObject({
+      status: "stopped",
+      keeper: `0x${"00".repeat(20)}`
+    });
+  });
 });

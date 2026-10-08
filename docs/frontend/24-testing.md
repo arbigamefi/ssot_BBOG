@@ -14,7 +14,7 @@ The [workspace scripts](../../frontend/package.json) run each package's checks.
 Current golden-vector tests require their fixture in the normal test suite.
 
 Tests should exercise the affected boundary: exact encoding, chain/pool identity,
-transaction preflight, receipt payment status, async redemption accounting,
+transaction preflight, receipt payment status, NFT deposit ownership and withdrawal accounting,
 idempotent event processing, or recovery after a restart. Production keeper
 recovery uses the durable database; do not assume an unavailable database can
 always be bypassed with recent RPC logs.

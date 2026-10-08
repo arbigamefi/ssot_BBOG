@@ -53,8 +53,8 @@ const config: KeeperConfig = {
   betIndexWriteEnabled: true,
   betIndexDatabaseUrl: "postgres://unused.invalid",
   betIndexSsl: false,
-  bankProviderLedgerPools: [],
-  bankProviderLedgerScanIntervalMs: 0,
+  vaultProviderLedgerPools: [],
+  vaultProviderLedgerScanIntervalMs: 0,
   sportsTicketIndexEnabled: true,
   sportsTerminalizerEnabled: true,
   sportsTerminalizerMarketIds: [],
@@ -164,7 +164,8 @@ describe("runtime error reporting", () => {
       ["sports.terminalizer.watch_error", "ResultFinalized"],
       ["sports.terminalizer.watch_error", "MarketVoided"],
       ["sports.terminalizer.watch_error", "ResultChallengeResolved"],
-      ["casino.keeper.vrfhub_watch_error", null]
+      ["casino.keeper.vrfhub_watch_error", "ResultReceived"],
+      ["casino.keeper.vrfhub_watch_error", "CallbackAttempt"]
     ]);
     for (const entry of entries()) {
       expect(entry).toMatchObject({
@@ -224,16 +225,20 @@ describe("runtime error reporting", () => {
     const reason = "bet A remains unavailable";
     let aRecovered = false;
     let bSettled = result === "raced";
-    const readContract = vi.fn(async ({ args }: { args: readonly [bigint] }) => {
-      const betId = args[0];
-      if (betId === failedBetId && failure === "read" && !aRecovered) throw new Error(reason);
-      return {
-        betId,
-        requestId: betId,
-        state: betId === failedBetId ? (aRecovered ? 4 : 3) : bSettled ? 4 : 3,
-        refundDeadline: 0n
-      };
-    });
+    const readContract = vi.fn(
+      async ({ functionName, args }: { functionName: string; args: readonly [bigint] }) => {
+        const betId = args[0];
+        if (functionName === "getRequest") return { bank: hub, hub, betId, state: 2 };
+        if (betId === failedBetId && failure === "read" && !aRecovered) throw new Error(reason);
+        return {
+          bank: hub,
+          betId,
+          requestId: betId,
+          state: betId === failedBetId ? (aRecovered ? 4 : 3) : bSettled ? 4 : 3,
+          refundDeadline: 0n
+        };
+      }
+    );
     const simulateContract = vi.fn(async ({ args }: { args: readonly [bigint] }) => {
       if (args[0] === failedBetId && !aRecovered) throw new Error(reason);
     });
@@ -266,7 +271,13 @@ describe("runtime error reporting", () => {
     // A fails again after its first retry; this is still unresolved work, not a recovered blip.
     await vi.advanceTimersByTimeAsync(2_000);
     const attempts = failure === "read" ? readContract : simulateContract;
-    expect(attempts.mock.calls.filter(([call]) => call.args[0] === failedBetId)).toHaveLength(2);
+    expect(
+      attempts.mock.calls.filter(
+        ([call]) =>
+          call.args[0] === failedBetId &&
+          (!("functionName" in call) || call.functionName !== "getRequest")
+      )
+    ).toHaveLength(2);
     const beforeB = runtime.health.snapshot();
     expect(beforeB.status).toBe("degraded");
     expect(runtime.queue.has(failedBetId)).toBe(true);
@@ -316,15 +327,19 @@ describe("runtime error reporting", () => {
 
   it("clears a transient read failure when the same bet is safely deferred", async () => {
     let recovered = false;
-    mock.client.readContract = vi.fn(async ({ args }: { args: readonly [bigint] }) => {
-      if (!recovered) throw new Error("temporary read failure");
-      return {
-        betId: args[0],
-        requestId: args[0],
-        state: 2,
-        refundDeadline: 1000n
-      };
-    });
+    mock.client.readContract = vi.fn(
+      async ({ functionName, args }: { functionName: string; args: readonly [bigint] }) => {
+        if (functionName === "getRequest") return { bank: hub, hub, betId: args[0], state: 1 };
+        if (!recovered) throw new Error("temporary read failure");
+        return {
+          bank: hub,
+          betId: args[0],
+          requestId: args[0],
+          state: 2,
+          refundDeadline: 1000n
+        };
+      }
+    );
     mock.client.getBlock = vi.fn(async () => ({ timestamp: 0n }));
     mock.client.writeContract = vi.fn();
     runtime = createKeeperRuntime({

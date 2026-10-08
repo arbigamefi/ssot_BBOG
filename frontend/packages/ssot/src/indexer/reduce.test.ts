@@ -23,7 +23,8 @@ function mk(
       gameId: "0x" + "11".repeat(32),
       asset: "0x0000000000000000000000000000000000000002",
       player: "0x0000000000000000000000000000000000000003",
-      pricingAffiliate: "0x0000000000000000000000000000000000000004"
+      referrerL1: "0x0000000000000000000000000000000000000004",
+      referrerL2: "0x0000000000000000000000000000000000000005"
     }
   };
 }
@@ -51,12 +52,13 @@ describe("indexer reducer", () => {
   });
 
   // ——— BetPlaced enrichment ———
-  it("enriches row with gameId, asset, player, and affiliate on BetPlaced", () => {
+  it("enriches row with gameId, asset, player, and immutable referral payees on BetPlaced", () => {
     const bet = applyGameHubEventToBet(undefined, mk("BetPlaced", 10, TX1));
     expect(bet.gameId).toBe("0x" + "11".repeat(32));
     expect(bet.asset).toBe("0x0000000000000000000000000000000000000002");
     expect(bet.player).toBe("0x0000000000000000000000000000000000000003");
-    expect(bet.pricingAffiliate).toBe("0x0000000000000000000000000000000000000004");
+    expect(bet.referrerL1).toBe("0x0000000000000000000000000000000000000004");
+    expect(bet.referrerL2).toBe("0x0000000000000000000000000000000000000005");
     expect(bet.placedBlock).toBe(10);
   });
 

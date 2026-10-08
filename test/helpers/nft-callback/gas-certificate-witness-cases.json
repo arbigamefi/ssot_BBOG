@@ -1,0 +1,80 @@
+[
+  {
+    "name": "witness-dp-argmax-covers-loss-keno25-pp",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 1,
+    "TREE": 4,
+    "CUTOFF": 2198888759296,
+    "LAST_USED": 2199023255551,
+    "BLACKLIST": true,
+    "AMOUNT_PROFILE": 1,
+    "CUTOFF_RETAIN": 200500000,
+    "EXPECT_PREDICATE": 1
+  },
+  {
+    "name": "witness-dp-argmax-covers-loss-newsource-pp",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 12,
+    "TREE": 4,
+    "CUTOFF": 2198888759296,
+    "LAST_USED": 2199023255551,
+    "BLACKLIST": true,
+    "PRIOR_NEW_SOURCE_HELD": true
+  },
+  {
+    "name": "witness-dp-argmax-covers-loss-priorhb-eligible-pp",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 12,
+    "TREE": 4,
+    "CUTOFF": 2198888759296,
+    "LAST_USED": 2199023255551,
+    "BLACKLIST": true,
+    "PRIOR_HOLDBACK": true,
+    "ELIGIBLE": true
+  },
+  {
+    "name": "witness-dp-argmax-covers-profit",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 12345,
+    "TREE": 4,
+    "CUTOFF": 2198754263040,
+    "LAST_USED": 2199023255551,
+    "BLACKLIST": false
+  },
+  {
+    "name": "witness-dp-argmax-below-reject-pp",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 1,
+    "TREE": 4,
+    "CUTOFF": 1649267441662,
+    "LAST_USED": 2199023255550,
+    "BLACKLIST": true,
+    "AMOUNT_PROFILE": 1,
+    "CUTOFF_RETAIN": 200359308,
+    "EXPECT_PREDICATE": 2
+  },
+  {
+    "name": "witness-dp-argmax-covers-loss-keno25-direct",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "VARIANT": 31,
+    "SEED": 1,
+    "TREE": 4,
+    "CUTOFF": 2198888759296,
+    "LAST_USED": 2199023255551,
+    "BLACKLIST": false,
+    "AMOUNT_PROFILE": 1,
+    "CUTOFF_RETAIN": 200500000,
+    "EXPECT_PREDICATE": 1
+  }
+]

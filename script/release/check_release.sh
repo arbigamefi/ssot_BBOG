@@ -45,3 +45,7 @@ fi
 # Verify digest + signature deterministically (no RPC needed).
 RELEASE_PATH="$RELEASE_PATH" SNAPSHOT_PATH="$SNAPSHOT_PATH" \
   forge script script/release/VerifyReleaseV16.s.sol:VerifyReleaseV16 -vvv
+
+# The snapshot must lie inside its chain's accepted first-callback certificate domain (no RPC needed).
+SNAPSHOT_PATH="$SNAPSHOT_PATH" \
+  forge script script/release/VerifyCallbackDomainV16.s.sol:VerifyCallbackDomainV16 -vvv

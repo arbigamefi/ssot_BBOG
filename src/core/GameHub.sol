@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import {IGameHub} from "./interfaces/IGameHub.sol";
 import {IBank} from "./interfaces/IBank.sol";
@@ -13,24 +13,27 @@ import {Errors} from "../libs/Errors.sol";
 import {StakeFunding} from "../libs/StakeFunding.sol";
 import {HouseEdgeLib} from "../libs/HouseEdgeLib.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IReferralRegistry} from "../engines/referral/IReferralRegistry.sol";
 import {IReferralEngine} from "../engines/referral/IReferralEngine.sol";
 
-/// @notice GameHub = casino-game lifecycle SSOT + skyline pricing + referral orchestration.
+/// @notice GameHub = casino-game lifecycle SSOT + two-tier referrals and player rakeback.
 ///
 /// Option 1 (institutional):
 /// - player = msg.sender (no relayer / no delegated betting)
-/// - affiliate hint is used for best-effort first-touch binding + skyline pricing
+/// - affiliate hint is used only for best-effort first-touch binding
 /// - bet snapshots pricing, referral schedule and referral payees to prevent retroactive changes
 ///
 /// House-edge allocation (SSOT v1.6, ADR-0032): of the turnover edge E, LPs retain E - O where
-/// O = floor(E * (10000 - LP_SHARE_BPS) / 10000). Referral rewards and markup are paid from O, and whatever
+/// O = floor(E * (10000 - LP_SHARE_BPS) / 10000). Referral rewards are paid from O, and whatever
 /// they do not use accrues as protocol fees. The referral engine computes the allocation from the bet's
 /// acceptance snapshot; the SettlementRouter enforces the same bound independently.
 contract GameHub is IGameHub, Governable, ReentrancyGuard {
+    using SafeCast for uint256;
+
+    uint32 public constant override MAX_BET_COUNT = 25;
     uint16 internal constant BPS = 10_000;
-    uint8 internal constant MAX_SKYLINE_SEGMENTS = 6;
 
     uint16 public constant override LP_SHARE_BPS = HouseEdgeLib.LP_SHARE_BPS;
     uint16 public constant override MAX_REFERRAL_BPS = HouseEdgeLib.MAX_REFERRAL_BPS;
@@ -49,9 +52,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     uint256 public override refundTimeoutSeconds;
 
     // pricing
-    uint16 public override defaultHouseEdgeBps; // active base edge h_b
-    uint16 public override maxAffiliateDeltaBps; // active markup cap; 0 disables markup
-    mapping(address => uint16) public override affiliateHouseEdgeBps; // 0 => unset
+    uint16 public override defaultHouseEdgeBps;
 
     /// @dev activatesAt == 0 means nothing is queued.
     struct PendingEdgeChange {
@@ -59,14 +60,14 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         uint64 activatesAt;
     }
 
-    mapping(EdgeParam => PendingEdgeChange) internal _pendingEdgeChange;
+    PendingEdgeChange internal _pendingEdgeChange;
 
-    /// @dev Immutable once created. Rates are bps of the base turnover edge; l0 + l1 + l2 <= MAX_REFERRAL_BPS.
+    /// @dev Immutable once created. Rates are bps of the turnover edge; l0 + l1 + l2 <= MAX_REFERRAL_BPS.
     struct ReferralSchedule {
         uint16 l0Bps; // player rakeback, paid only if the player had a referrer at acceptance
         uint16 l1Bps; // direct referrer
         uint16 l2Bps; // referrer's referrer
-        uint16 holdbackBps; // share of L1/L2 and markup amounts that vests linearly
+        uint16 holdbackBps; // share of L1/L2 amounts that vests linearly
         bool exists;
     }
 
@@ -80,15 +81,25 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     }
 
     mapping(bytes32 => address) public override gameModule;
+    mapping(bytes32 => uint32) public override gameMaxBetCount;
+    mapping(bytes32 => uint32) public override gameCallbackGasLimit;
+    mapping(uint256 => address) public override betModule;
+
+    uint256 private constant CALLBACK_COMPLETION_GAS = 25_000;
+
+    /// @dev Accepted amounts are bounded by Bank's 108-bit capital ceiling. Keep checked casts
+    ///      at the write boundary; lifecycle state and gross-minus-net fee need no duplicate slots.
+    struct StoredBetTerminal {
+        uint128 payoutGross;
+        uint128 payoutNet;
+        uint128 protocolFeeAccrual;
+        uint128 refundAmount;
+    }
 
     mapping(uint256 => SSOTTypes.Bet) internal bets;
-    mapping(uint256 => SSOTTypes.BetTerminal) internal betTerminals;
+    mapping(uint256 => StoredBetTerminal) internal betTerminals;
     mapping(uint256 => bytes) internal betParams;
-    mapping(uint256 => bytes) internal betRandomData;
-    mapping(uint256 => bytes) internal betDeltaSkyline;
     mapping(uint256 => ReferralPayees) internal betReferralPayees;
-
-    mapping(uint256 => uint256) public requestToBetId;
 
     constructor(
         address settlementRouter_,
@@ -111,7 +122,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
             revert Errors.ZeroAddress();
         }
 
-        _validateBaseHouseEdge(defaultHouseEdgeBps_);
+        _validateHouseEdge(defaultHouseEdgeBps_);
 
         settlementRouter = settlementRouter_;
         vrfHub = vrfHub_;
@@ -120,9 +131,8 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
         _setRefundTimeout(refundTimeoutSeconds_);
 
-        // Affiliate markup starts disabled (SSOT v1.6 section 4); enabling it goes through the delay.
         defaultHouseEdgeBps = defaultHouseEdgeBps_;
-        emit EdgeChangeApplied(EdgeParam.BaseHouseEdge, 0, defaultHouseEdgeBps_);
+        emit EdgeChangeApplied(0, defaultHouseEdgeBps_);
 
         // schedule id 1 is created and activated at deployment
         uint32 id = _createReferralConfig(l0Bps_, l1Bps_, l2Bps_, holdbackBps_);
@@ -149,42 +159,34 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         emit RefundTimeoutSet(seconds_);
     }
 
-    // Base edge and markup cap: governance queues a change, and anyone applies it once EDGE_CHANGE_DELAY has
-    // passed. Bets snapshot the edge at acceptance, so a change never reaches a bet that was already accepted.
-    // A markup-cap decrease protects players and applies at once, discarding any queued increase.
-
-    function pendingEdgeChange(EdgeParam param) external view override returns (uint16 bps, uint64 activatesAt) {
-        PendingEdgeChange memory pending = _pendingEdgeChange[param];
+    // Every house-edge change is delayed; accepted bets retain their snapshot.
+    function pendingEdgeChange() external view override returns (uint16 bps, uint64 activatesAt) {
+        PendingEdgeChange memory pending = _pendingEdgeChange;
         return (pending.bps, pending.activatesAt);
     }
 
-    function queueEdgeChange(EdgeParam param, uint16 bps) external override onlyGov {
-        if (bps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS || (bps == 0 && param == EdgeParam.BaseHouseEdge)) {
-            revert Errors.InvalidBps(bps);
-        }
-        if (param == EdgeParam.MaxAffiliateDelta && bps <= maxAffiliateDeltaBps) {
-            delete _pendingEdgeChange[param];
-            _applyEdgeChange(param, bps);
-            return;
-        }
+    function queueEdgeChange(uint16 bps) external override onlyGov {
+        _validateHouseEdge(bps);
         uint64 activatesAt = uint64(block.timestamp + HouseEdgeLib.EDGE_CHANGE_DELAY);
-        _pendingEdgeChange[param] = PendingEdgeChange({bps: bps, activatesAt: activatesAt});
-        emit EdgeChangeQueued(param, _edgeParamValue(param), bps, activatesAt);
+        _pendingEdgeChange = PendingEdgeChange({bps: bps, activatesAt: activatesAt});
+        emit EdgeChangeQueued(defaultHouseEdgeBps, bps, activatesAt);
     }
 
-    function activateEdgeChange(EdgeParam param) external override {
-        PendingEdgeChange memory pending = _pendingEdgeChange[param];
+    function activateEdgeChange() external override {
+        PendingEdgeChange memory pending = _pendingEdgeChange;
         if (pending.activatesAt == 0) revert NoPendingEdgeChange();
         if (block.timestamp < pending.activatesAt) revert EdgeChangeNotReady(pending.activatesAt);
-        delete _pendingEdgeChange[param];
-        _applyEdgeChange(param, pending.bps);
+        delete _pendingEdgeChange;
+        uint16 old = defaultHouseEdgeBps;
+        defaultHouseEdgeBps = pending.bps;
+        emit EdgeChangeApplied(old, pending.bps);
     }
 
-    function cancelEdgeChange(EdgeParam param) external override onlyGov {
-        PendingEdgeChange memory pending = _pendingEdgeChange[param];
+    function cancelEdgeChange() external override onlyGov {
+        PendingEdgeChange memory pending = _pendingEdgeChange;
         if (pending.activatesAt == 0) revert NoPendingEdgeChange();
-        delete _pendingEdgeChange[param];
-        emit EdgeChangeCancelled(param, _edgeParamValue(param), pending.bps);
+        delete _pendingEdgeChange;
+        emit EdgeChangeCancelled(defaultHouseEdgeBps, pending.bps);
     }
 
     // Referral schedules are versioned: a new schedule is a new id, and activation applies to bets accepted
@@ -217,25 +219,6 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         return (c.l0Bps, c.l1Bps, c.l2Bps, c.holdbackBps);
     }
 
-    // --- pricing ---
-
-    function getAffiliateHouseEdge(address affiliate) public view override returns (uint16) {
-        uint16 v = affiliateHouseEdgeBps[affiliate];
-        return v == 0 ? defaultHouseEdgeBps : v;
-    }
-
-    function setAffiliateHouseEdge(uint16 houseEdgeBps) external override {
-        uint16 def = defaultHouseEdgeBps;
-        if (houseEdgeBps < def) revert HouseEdgeTooLow(houseEdgeBps, def);
-
-        uint16 maxAllowed = _maxAffiliateHouseEdge(def);
-        if (houseEdgeBps > maxAllowed) revert HouseEdgeTooHigh(houseEdgeBps, maxAllowed);
-
-        uint16 old = affiliateHouseEdgeBps[msg.sender];
-        affiliateHouseEdgeBps[msg.sender] = houseEdgeBps;
-        emit AffiliateHouseEdgeSet(msg.sender, old, houseEdgeBps);
-    }
-
     // --- referral registry ---
 
     function bindReferrer(address referrer) external override {
@@ -249,11 +232,20 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
     // --- games ---
 
-    function registerGame(bytes32 gameId, address module) external override onlyGov {
-        if (module == address(0)) revert Errors.ZeroAddress();
-        if (gameModule[gameId] != address(0)) revert Errors.InvalidConfig();
+    function registerGame(bytes32 gameId, address module, uint32 maxBetCount, uint32 callbackGasLimit)
+        external
+        override
+        onlyGov
+    {
+        if (module.code.length == 0) revert Errors.InvalidConfig();
+        if (
+            gameModule[gameId] != address(0) || maxBetCount == 0 || maxBetCount > MAX_BET_COUNT
+                || callbackGasLimit < 200_000 || callbackGasLimit > IVRFHub(vrfHub).MAX_CALLBACK_GAS()
+        ) revert Errors.InvalidConfig();
         gameModule[gameId] = module;
-        emit GameRegistered(gameId, module);
+        gameMaxBetCount[gameId] = maxBetCount;
+        gameCallbackGasLimit[gameId] = callbackGasLimit;
+        emit GameRegistered(gameId, module, maxBetCount, callbackGasLimit);
     }
 
     function getBet(uint256 betId) external view override returns (SSOTTypes.Bet memory) {
@@ -263,9 +255,19 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     }
 
     function getBetTerminal(uint256 betId) external view override returns (SSOTTypes.BetTerminal memory) {
-        SSOTTypes.Bet memory b = bets[betId];
+        SSOTTypes.Bet storage b = bets[betId];
         if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
-        return betTerminals[betId];
+        StoredBetTerminal storage terminal = betTerminals[betId];
+        return SSOTTypes.BetTerminal({
+            state: b.state == SSOTTypes.BetState.Settled || b.state == SSOTTypes.BetState.Refunded
+                ? b.state
+                : SSOTTypes.BetState.None,
+            payoutGross: terminal.payoutGross,
+            payoutNet: terminal.payoutNet,
+            feeOnPayout: uint256(terminal.payoutGross) - uint256(terminal.payoutNet),
+            protocolFeeAccrual: terminal.protocolFeeAccrual,
+            refundAmount: terminal.refundAmount
+        });
     }
 
     function getBetParams(uint256 betId) external view override returns (bytes memory) {
@@ -277,15 +279,15 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     function getBetRandomWords(uint256 betId) external view override returns (uint256[] memory) {
         SSOTTypes.Bet memory b = bets[betId];
         if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
-        bytes memory data = betRandomData[betId];
-        if (data.length == 0) return new uint256[](0);
-        return abi.decode(data, (uint256[]));
-    }
-
-    function getDeltaSkyline(uint256 betId) external view override returns (bytes memory) {
-        SSOTTypes.Bet memory b = bets[betId];
-        if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
-        return betDeltaSkyline[betId];
+        // During the request's native-refund callback, placeBet has not bound requestId yet.
+        if (b.requestId == 0) return new uint256[](0);
+        IVRFHub.RequestInfo memory request = _boundRequest(betId);
+        if (request.state != IVRFHub.RequestState.Received && request.state != IVRFHub.RequestState.Terminal) {
+            return new uint256[](0);
+        }
+        uint256[] memory words = new uint256[](1);
+        words[0] = request.seed;
+        return words;
     }
 
     function getBetReferralPayees(uint256 betId) external view override returns (address l1, address l2) {
@@ -302,24 +304,20 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     // Risk-In: placeBet (player=msg.sender)
     // ---------------------------------------------------------------------
 
-    uint32 internal constant MAX_BET_COUNT = 100;
     // The admitted casino formats contain at most two static ABI words. Bound the bytes stored and
     // later copied during finalization; abi.decode alone accepts arbitrarily long trailing data.
     uint256 internal constant MAX_GAME_PARAMS_BYTES = 64;
 
-    function quoteVRFFee(uint32 betCount, uint256 gasPriceBudget)
+    function quoteVRFFee(bytes32 gameId, uint32 betCount, uint256 gasPriceBudget)
         public
         view
         override
         returns (uint256 fee, uint32 callbackGasLimit)
     {
-        callbackGasLimit = _callbackGasLimit(betCount);
-        fee = IVRFHub(vrfHub).quote(callbackGasLimit, 3, 1, gasPriceBudget);
-    }
-
-    function _callbackGasLimit(uint32 betCount) private pure returns (uint32) {
-        uint256 cb = 300_000 + uint256(betCount) * 20_000;
-        return uint32(cb > 2_000_000 ? 2_000_000 : cb);
+        if (gameModule[gameId] == address(0)) revert UnknownGame(gameId);
+        if (betCount == 0 || betCount > gameMaxBetCount[gameId]) revert Errors.InvalidConfig();
+        callbackGasLimit = gameCallbackGasLimit[gameId];
+        fee = IVRFHub(vrfHub).quote(callbackGasLimit, gasPriceBudget);
     }
 
     function placeBet(
@@ -333,8 +331,12 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         SSOTTypes.Pool memory pool_ = _casinoPool(poolId);
         if (!pool_.active || IBank(pool_.bank).riskInPaused()) revert RiskInPaused(poolId);
         if (stakeSpec.amountPerRoll == 0) revert Errors.InsufficientBalance();
-        if (stakeSpec.betCount == 0 || stakeSpec.betCount > MAX_BET_COUNT) revert Errors.InvalidConfig();
+        if (stakeSpec.betCount == 0 || stakeSpec.betCount > gameMaxBetCount[gameId]) revert Errors.InvalidConfig();
         if (params.length > MAX_GAME_PARAMS_BYTES) revert Errors.InvalidConfig();
+        uint256 minimum = IBank(pool_.bank).minBetAmount();
+        if (stakeSpec.amountPerRoll < minimum) {
+            revert IBank.BetAmountBelowMinimum(stakeSpec.amountPerRoll, minimum);
+        }
 
         uint256 stake = stakeSpec.amountPerRoll * uint256(stakeSpec.betCount);
         if (stake == 0) revert Errors.InsufficientBalance();
@@ -361,39 +363,21 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         if (usedMaxHE == 0) usedMaxHE = defaultHouseEdgeBps;
         if (usedMaxHE > HouseEdgeLib.MAX_HOUSE_EDGE_BPS) usedMaxHE = HouseEdgeLib.MAX_HOUSE_EDGE_BPS;
 
-        // Referral payees (after best-effort first-touch binding) + pricing snapshot + skyline
-        (address pricingAff, address l1, address l2) = _snapshotReferral(player, affiliate);
-        uint16 baseHE = defaultHouseEdgeBps;
-        (uint16 effectiveHE, bytes memory skyline) = _computeSkyline(pricingAff, baseHE);
-        if (effectiveHE > usedMaxHE) revert HouseEdgeTooHigh(effectiveHE, usedMaxHE);
-        bytes32 skylineHash = keccak256(skyline);
+        // Snapshot the fixed house edge and the accepted referral payees.
+        (address l1, address l2) = _snapshotReferral(player, affiliate);
+        uint16 houseEdge = defaultHouseEdgeBps;
+        if (houseEdge > usedMaxHE) revert HouseEdgeTooHigh(houseEdge, usedMaxHE);
 
         uint32 cfgId = activeReferralConfigId;
 
         bytes32 snapshotHash = keccak256(
-            abi.encodePacked(
-                gameId,
-                module,
-                poolId,
-                asset,
-                bank_,
-                block.chainid,
-                cfgId,
-                pricingAff,
-                baseHE,
-                effectiveHE,
-                usedMaxHE,
-                skylineHash,
-                l1,
-                l2
-            )
+            abi.encodePacked(gameId, module, poolId, asset, bank_, block.chainid, cfgId, houseEdge, usedMaxHE, l1, l2)
         );
 
         uint256 fundingBalance = StakeFunding.collect(asset, bank_, stake);
-        positionId = ISettlementRouter(settlementRouter)
-            .openPosition(poolId, player, stake, reserved, snapshotHash, effectiveHE);
+        positionId =
+            ISettlementRouter(settlementRouter).openPosition(poolId, player, stake, reserved, snapshotHash, houseEdge);
         StakeFunding.finish(asset, bank_, fundingBalance);
-        betDeltaSkyline[positionId] = skyline;
         if (l1 != address(0)) betReferralPayees[positionId] = ReferralPayees({l1: l1, l2: l2});
 
         SSOTTypes.Bet storage b = bets[positionId];
@@ -410,12 +394,9 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         b.stopGain = stakeSpec.stopGain;
         b.stopLoss = stakeSpec.stopLoss;
 
-        b.pricingAffiliate = pricingAff;
-        b.baseHouseEdgeBps = baseHE;
-        b.effectiveHouseEdgeBps = effectiveHE;
+        b.houseEdgeBps = houseEdge;
         b.maxHouseEdgeBps = usedMaxHE;
         b.referralConfigId = cfgId;
-        b.deltaSkylineHash = skylineHash;
 
         b.snapshotHash = snapshotHash;
         b.paramsHash = paramsHash;
@@ -424,19 +405,18 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         b.state = SSOTTypes.BetState.Held;
 
         betParams[positionId] = params;
+        betModule[positionId] = module;
 
-        // --- VRF fee: charged in native token (refactored parity) ---
-        uint32 cb = _callbackGasLimit(stakeSpec.betCount);
+        // --- VRF fee: charged in native token ---
+        uint32 cb = gameCallbackGasLimit[gameId];
 
-        (uint256 requestId, uint256 charged) =
-            IVRFHub(vrfHub).requestRandomWords{value: msg.value}(address(this), positionId, cb, 3, 1, player);
+        (uint256 requestId, uint256 charged) = IVRFHub(vrfHub).requestRandomWords{value: msg.value}(positionId, cb, 3);
         b.vrfFeePaid = msg.value;
         b.vrfFeeCharged = charged;
         b.vrfCallbackGasLimit = cb;
         b.requestId = requestId;
         b.vrfRequestedAt = uint64(block.timestamp);
         b.state = SSOTTypes.BetState.PendingVRF;
-        requestToBetId[requestId] = positionId;
 
         emit BetPlaced(
             positionId,
@@ -457,12 +437,11 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
             requestId,
             snapshotHash,
             paramsHash,
-            pricingAff,
-            baseHE,
-            effectiveHE,
+            l1,
+            l2,
+            houseEdge,
             usedMaxHE,
             cfgId,
-            skylineHash,
             b.refundDeadline
         );
     }
@@ -471,25 +450,79 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     // VRF callback
     // ---------------------------------------------------------------------
 
-    function onRandomWords(uint256 requestId, uint256[] calldata randomWords) external override {
+    function onRandomWords(uint256 requestId, uint256[] calldata randomWords) external override nonReentrant {
         if (msg.sender != vrfHub) revert NotVRFHub();
-        uint256 betId = requestToBetId[requestId];
-        if (betId == 0) return;
+        if (randomWords.length != 1) revert InvalidRandomReceipt();
+        IVRFHub.RequestInfo memory request = IVRFHub(vrfHub).getRequest(requestId);
+        uint256 betId = request.betId;
+        _validateRequest(betId, requestId, request);
+        if (request.state != IVRFHub.RequestState.Received || request.seed != randomWords[0]) {
+            revert InvalidRandomReceipt();
+        }
+        _recordRandom(betId, requestId, request.seed);
+        _attemptCallbackSettlement(betId, request.seed);
+    }
 
+    function _recordRandom(uint256 betId, uint256 requestId, uint256 seed) private {
         SSOTTypes.Bet storage b = bets[betId];
-        if (b.state != SSOTTypes.BetState.PendingVRF) return;
-
-        bytes32 rh = keccak256(abi.encode(randomWords));
+        if (b.state == SSOTTypes.BetState.RandomReady) return;
+        if (b.state != SSOTTypes.BetState.PendingVRF) revert BadState(betId, b.state, SSOTTypes.BetState.PendingVRF);
+        uint256[] memory words = new uint256[](1);
+        words[0] = seed;
+        bytes memory data = abi.encode(words);
+        bytes32 rh = keccak256(data);
         b.randomHash = rh;
         b.state = SSOTTypes.BetState.RandomReady;
-        betRandomData[betId] = abi.encode(randomWords);
-
-        // C1/C2 hygiene: requestId is only meaningful while PendingVRF.
-        // Clear mapping ASAP (even though VRFHub deactivates requests on first fulfill).
-        requestToBetId[requestId] = 0;
-        _detachRequestIfOwned(requestId);
-
         emit BetRandomReady(betId, requestId, rh);
+    }
+
+    function _receivedRequest(uint256 betId) private view returns (IVRFHub.RequestInfo memory request) {
+        request = _boundRequest(betId);
+        if (request.state != IVRFHub.RequestState.Received) revert InvalidRandomReceipt();
+    }
+
+    function _boundRequest(uint256 betId) private view returns (IVRFHub.RequestInfo memory request) {
+        uint256 requestId = bets[betId].requestId;
+        request = IVRFHub(vrfHub).getRequest(requestId);
+        _validateRequest(betId, requestId, request);
+    }
+
+    function _validateRequest(uint256 betId, uint256 requestId, IVRFHub.RequestInfo memory request) private view {
+        SSOTTypes.Bet storage b = bets[betId];
+        if (
+            betId == 0 || requestId == 0 || b.state == SSOTTypes.BetState.None || b.requestId != requestId
+                || request.hub != address(this) || request.betId != betId || request.bank != b.bank
+                || request.payer != b.player
+        ) revert InvalidRandomReceipt();
+    }
+
+    function _attemptCallbackSettlement(uint256 betId, uint256 seed) private {
+        bytes memory data = abi.encodeCall(this.finalizeFromCallback, (betId, seed));
+        uint256 remaining = gasleft();
+        bool ok;
+        bytes32 errorPrefix;
+        if (remaining > CALLBACK_COMPLETION_GAS) {
+            uint256 childGas = remaining - CALLBACK_COMPLETION_GAS;
+            // Do not copy unbounded module/token revert data into the durable receipt frame.
+            assembly ("memory-safe") {
+                ok := call(childGas, address(), 0, add(data, 32), mload(data), 0, 0)
+                if iszero(ok) {
+                    let n := returndatasize()
+                    if gt(n, 32) { n := 32 }
+                    mstore(0, 0)
+                    returndatacopy(0, 0, n)
+                    errorPrefix := mload(0)
+                }
+            }
+        }
+        if (!ok) emit CallbackSettlementFailed(betId, errorPrefix);
+    }
+
+    /// @dev The guarded callback already authenticated the canonical receipt and seed.
+    ///      All terminal effects, including ack, revert together in this only-self child frame.
+    function finalizeFromCallback(uint256 betId, uint256 seed) external {
+        if (msg.sender != address(this)) revert NotSelf();
+        _finalize(betId, seed);
     }
 
     // ---------------------------------------------------------------------
@@ -497,43 +530,38 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     // ---------------------------------------------------------------------
 
     function finalize(uint256 betId) external override nonReentrant {
+        if (bets[betId].state == SSOTTypes.BetState.None) revert BetNotFound(betId);
+        IVRFHub.RequestInfo memory request = _receivedRequest(betId);
+        _recordRandom(betId, bets[betId].requestId, request.seed);
+        _finalize(betId, request.seed);
+    }
+
+    function _finalize(uint256 betId, uint256 seed) private {
         SSOTTypes.Bet storage b = bets[betId];
         if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
         if (b.state != SSOTTypes.BetState.RandomReady) revert BadState(betId, b.state, SSOTTypes.BetState.RandomReady);
 
-        address module = gameModule[b.gameId];
+        address module = betModule[betId];
         if (module == address(0)) revert UnknownGame(b.gameId);
 
-        uint256[] memory randomWords = abi.decode(betRandomData[betId], (uint256[]));
+        uint256[] memory randomWords = new uint256[](1);
+        randomWords[0] = seed;
         SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
             amountPerRoll: b.amountPerRoll, betCount: b.betCount, stopGain: b.stopGain, stopLoss: b.stopLoss
         });
-        uint256 payoutGross;
-        uint256 refundAmount;
-        try IGameModule(module).resolve(betParams[betId], spec, betId, randomWords) returns (
-            uint256 resolvedPayoutGross, uint256 resolvedRefundAmount
-        ) {
-            payoutGross = resolvedPayoutGross;
-            refundAmount = resolvedRefundAmount;
-        } catch {
-            _refundInvalidRandomReadyBet(betId, b);
-            return;
-        }
-        if (refundAmount > b.stake) {
-            _refundInvalidRandomReadyBet(betId, b);
-            return;
-        }
+        (uint256 payoutGross, uint256 refundAmount) =
+            IGameModule(module).resolve(betParams[betId], spec, betId, randomWords);
+        if (refundAmount > b.stake) revert InvalidModuleResult();
         // reserved must cover total owed (payoutGross + refundAmount)
         if (payoutGross > b.reserved || refundAmount > b.reserved - payoutGross) {
-            _refundInvalidRandomReadyBet(betId, b);
-            return;
+            revert InvalidModuleResult();
         }
 
         // ---- Fee-on-payout ----
         uint256 feeOnPayout = 0;
         uint256 payoutNet = payoutGross;
         if (payoutGross > 0) {
-            feeOnPayout = Math.mulDiv(payoutGross, uint256(b.effectiveHouseEdgeBps), BPS);
+            feeOnPayout = Math.mulDiv(payoutGross, uint256(b.houseEdgeBps), BPS);
             if (feeOnPayout > payoutGross) feeOnPayout = payoutGross;
             payoutNet = payoutGross - feeOnPayout;
         }
@@ -546,33 +574,28 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
         b.resolvedAt = uint64(block.timestamp);
         b.state = SSOTTypes.BetState.Settled;
-        betTerminals[betId] = SSOTTypes.BetTerminal({
-            state: SSOTTypes.BetState.Settled,
-            payoutGross: payoutGross,
-            payoutNet: payoutNet,
-            feeOnPayout: feeOnPayout,
-            protocolFeeAccrual: protocolFeeAccrual,
-            refundAmount: refundAmount
+        betTerminals[betId] = StoredBetTerminal({
+            payoutGross: payoutGross.toUint128(),
+            payoutNet: payoutNet.toUint128(),
+            protocolFeeAccrual: protocolFeeAccrual.toUint128(),
+            refundAmount: refundAmount.toUint128()
         });
-
-        // clear request mapping to prevent any late transport artifacts
-        _clearRequest(b);
 
         ISettlementRouter(settlementRouter)
             .settlePosition(betId, payoutGross, payoutNet, refundAmount, protocolFeeAccrual, awards);
+        IVRFHub(vrfHub).acknowledge(b.requestId);
 
         emit HouseEdgeAllocated(
             betId,
             usedTurnover,
-            b.effectiveHouseEdgeBps,
+            b.houseEdgeBps,
             alloc.edge,
             alloc.operatorShare,
             alloc.edge - alloc.operatorShare,
             alloc.protocolFee,
             alloc.r0,
             alloc.r1,
-            alloc.r2,
-            alloc.markup
+            alloc.r2
         );
         emit BetFinalized(betId, payoutGross, payoutNet, feeOnPayout, protocolFeeAccrual);
     }
@@ -588,25 +611,17 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
         uint256 readyAt = b.refundDeadline;
         if (block.timestamp < readyAt) revert RefundNotReady(betId, block.timestamp, readyAt);
+        if (IVRFHub(vrfHub).getRequest(b.requestId).state != IVRFHub.RequestState.Awaiting) {
+            revert InvalidRandomReceipt();
+        }
 
         b.resolvedAt = uint64(block.timestamp);
         b.state = SSOTTypes.BetState.Refunded;
-        betTerminals[betId] = SSOTTypes.BetTerminal({
-            state: SSOTTypes.BetState.Refunded,
-            payoutGross: 0,
-            payoutNet: 0,
-            feeOnPayout: 0,
-            protocolFeeAccrual: 0,
-            refundAmount: b.stake
-        });
-
-        uint256 requestId = b.requestId;
-        if (requestId != 0) {
-            requestToBetId[requestId] = 0;
-            _detachRequestIfOwned(requestId);
-        }
+        betTerminals[betId] =
+            StoredBetTerminal({payoutGross: 0, payoutNet: 0, protocolFeeAccrual: 0, refundAmount: b.stake.toUint128()});
 
         ISettlementRouter(settlementRouter).refundPosition(betId, b.stake);
+        IVRFHub(vrfHub).cancel(b.requestId);
 
         emit BetRefunded(betId, b.stake);
     }
@@ -615,19 +630,8 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     // Internals
     // ---------------------------------------------------------------------
 
-    function _validateBaseHouseEdge(uint16 bps) internal pure {
+    function _validateHouseEdge(uint16 bps) internal pure {
         if (bps == 0 || bps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS) revert Errors.InvalidBps(bps);
-    }
-
-    function _edgeParamValue(EdgeParam param) internal view returns (uint16) {
-        return param == EdgeParam.BaseHouseEdge ? defaultHouseEdgeBps : maxAffiliateDeltaBps;
-    }
-
-    function _applyEdgeChange(EdgeParam param, uint16 bps) internal {
-        uint16 old = _edgeParamValue(param);
-        if (param == EdgeParam.BaseHouseEdge) defaultHouseEdgeBps = bps;
-        else maxAffiliateDeltaBps = bps;
-        emit EdgeChangeApplied(param, old, bps);
     }
 
     function _createReferralConfig(uint16 l0Bps, uint16 l1Bps, uint16 l2Bps, uint16 holdbackBps)
@@ -642,11 +646,6 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         _refCfg[id] =
             ReferralSchedule({l0Bps: l0Bps, l1Bps: l1Bps, l2Bps: l2Bps, holdbackBps: holdbackBps, exists: true});
         emit ReferralConfigCreated(id, l0Bps, l1Bps, l2Bps, holdbackBps);
-    }
-
-    function _maxAffiliateHouseEdge(uint16 def) internal view returns (uint16) {
-        uint256 maxAllowed = uint256(def) + uint256(maxAffiliateDeltaBps);
-        return maxAllowed > HouseEdgeLib.MAX_HOUSE_EDGE_BPS ? HouseEdgeLib.MAX_HOUSE_EDGE_BPS : uint16(maxAllowed);
     }
 
     function _poolRegistry() internal view returns (IPoolRegistry) {
@@ -669,49 +668,10 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         }
     }
 
-    function _clearRequest(SSOTTypes.Bet storage b) internal {
-        uint256 requestId = b.requestId;
-        if (requestId != 0) {
-            requestToBetId[requestId] = 0;
-            _detachRequestIfOwned(requestId);
-        }
-    }
-
-    function _refundInvalidRandomReadyBet(uint256 betId, SSOTTypes.Bet storage b) internal {
-        b.resolvedAt = uint64(block.timestamp);
-        b.state = SSOTTypes.BetState.Refunded;
-        betTerminals[betId] = SSOTTypes.BetTerminal({
-            state: SSOTTypes.BetState.Refunded,
-            payoutGross: 0,
-            payoutNet: 0,
-            feeOnPayout: 0,
-            protocolFeeAccrual: 0,
-            refundAmount: b.stake
-        });
-
-        _clearRequest(b);
-        ISettlementRouter(settlementRouter).refundPosition(betId, b.stake);
-
-        emit BetRefunded(betId, b.stake);
-    }
-
-    function _detachRequestIfOwned(uint256 requestId) internal {
-        if (requestId == 0) return;
-
-        try IVRFHub(vrfHub).getRequest(requestId) returns (IVRFHub.RequestInfo memory request) {
-            if (request.hub == address(this)) {
-                try IVRFHub(vrfHub).detach(requestId) {} catch {}
-            }
-        } catch {}
-    }
-
     /// @dev Resolves the referral payees a bet is accepted under. If the player has no referrer, the affiliate
-    ///      hint is bound first-touch on a best-effort basis. A hint that cannot be bound still prices the bet
-    ///      (skyline), but pays no referral reward.
-    function _snapshotReferral(address player, address affiliate)
-        internal
-        returns (address pricingAff, address l1, address l2)
-    {
+    ///      hint is bound first-touch on a best-effort basis. A rejected hint creates no referral payee
+    ///      and does not change pricing; betting may still proceed without referral rewards.
+    function _snapshotReferral(address player, address affiliate) internal returns (address l1, address l2) {
         IReferralRegistry registry = IReferralRegistry(referralRegistry);
         l1 = registry.referrerOf(player);
         if (l1 == address(0) && affiliate != address(0) && affiliate != player) {
@@ -723,35 +683,10 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
             // The registry's anti-cycle check rules this out; stay safe against a registry that does not.
             if (l2 == player || l2 == l1) l2 = address(0);
         }
-        pricingAff = l1 != address(0) ? l1 : affiliate;
     }
 
-    /// @dev Skyline segments are packed as address(20) || uint16 incBps(2): each affiliate up the chain that prices
-    ///      above everyone below it earns the increment.
-    function _computeSkyline(address pricingAff, uint16 baseHE)
-        internal
-        view
-        returns (uint16 effectiveHE, bytes memory skyline)
-    {
-        effectiveHE = baseHE;
-        uint16 maxAllowed = _maxAffiliateHouseEdge(baseHE);
-        if (maxAllowed <= baseHE) return (effectiveHE, skyline); // markup disabled
-
-        address cur = pricingAff;
-        for (uint8 i = 0; i < MAX_SKYLINE_SEGMENTS && cur != address(0); ++i) {
-            uint16 heCur = affiliateHouseEdgeBps[cur];
-            // A stored edge may predate a lower cap or base edge; it never prices above the current cap.
-            if (heCur > maxAllowed) heCur = maxAllowed;
-            if (heCur > effectiveHE) {
-                skyline = abi.encodePacked(skyline, cur, heCur - effectiveHE);
-                effectiveHE = heCur;
-            }
-            cur = IReferralRegistry(referralRegistry).referrerOf(cur);
-        }
-    }
-
-    /// @dev SSOT v1.6 section 2. The allocation depends only on usedTurnover and the acceptance snapshot (edges,
-    ///      schedule id, payees, skyline); the Bank's turnover state only decides the XP buckets.
+    /// @dev SSOT v1.6 section 2. The allocation depends only on usedTurnover and the acceptance snapshot (house edge,
+    ///      schedule id, payees); the Bank's current turnover and unlock threshold decide the XP buckets.
     function _allocate(uint256 betId, SSOTTypes.Bet storage b, uint256 usedTurnover)
         internal
         view
@@ -763,8 +698,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
             .allocate(
                 IReferralEngine.AllocationInput({
                     usedTurnover: usedTurnover,
-                    baseEdgeBps: b.baseHouseEdgeBps,
-                    effectiveEdgeBps: b.effectiveHouseEdgeBps,
+                    houseEdgeBps: b.houseEdgeBps,
                     player: b.player,
                     l1: payees.l1,
                     l2: payees.l2,
@@ -775,8 +709,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
                     minTurnover: IBank(b.bank).minPlayerTurnoverForUnlock(),
                     // eligibility uses turnover AFTER this bet
                     playerTurnover: IBank(b.bank).playerTurnover(b.player) + usedTurnover
-                }),
-                betDeltaSkyline[betId]
+                })
             );
     }
 }

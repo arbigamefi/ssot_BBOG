@@ -1,0 +1,82 @@
+[
+  {
+    "name": "keno25-compressed-lifetime-pp",
+    "GAME": 0,
+    "ROUNDS": 25,
+    "TREE": 3,
+    "SEED": 12,
+    "OLD_LEAVES": 1,
+    "LATE_LEAVES": 1,
+    "BLACKLIST": true
+  },
+  {
+    "name": "plinko25-compressed-lifetime-pp",
+    "GAME": 1,
+    "ROUNDS": 25,
+    "TREE": 3,
+    "SEED": 0,
+    "OLD_LEAVES": 1,
+    "LATE_LEAVES": 1,
+    "BLACKLIST": true
+  },
+  {
+    "name": "baccarat25-compressed-lifetime-pp",
+    "GAME": 2,
+    "ROUNDS": 25,
+    "TREE": 3,
+    "SEED": 2869,
+    "OLD_LEAVES": 1,
+    "LATE_LEAVES": 1,
+    "BLACKLIST": true
+  },
+  {
+    "name": "coin25-compressed-lifetime-pp",
+    "GAME": 3,
+    "ROUNDS": 25,
+    "TREE": 3,
+    "SEED": 12,
+    "OLD_LEAVES": 1,
+    "LATE_LEAVES": 1,
+    "BLACKLIST": true
+  },
+  {
+    "name": "dice25-compressed-lifetime-pp",
+    "GAME": 4,
+    "ROUNDS": 25,
+    "TREE": 3,
+    "SEED": 12,
+    "OLD_LEAVES": 1,
+    "LATE_LEAVES": 1,
+    "BLACKLIST": true
+  },
+  {
+    "name": "roulette25-compressed-lifetime-pp",
+    "GAME": 5,
+    "ROUNDS": 25,
+    "TREE": 3,
+    "SEED": 12,
+    "OLD_LEAVES": 1,
+    "LATE_LEAVES": 1,
+    "BLACKLIST": true
+  },
+  {
+    "name": "sicbo25-compressed-lifetime-pp",
+    "GAME": 6,
+    "ROUNDS": 25,
+    "TREE": 3,
+    "SEED": 2,
+    "OLD_LEAVES": 1,
+    "LATE_LEAVES": 1,
+    "BLACKLIST": true
+  },
+  {
+    "name": "slots25-compressed-lifetime-pp",
+    "GAME": 7,
+    "ROUNDS": 25,
+    "TREE": 3,
+    "SEED": 433,
+    "OLD_LEAVES": 1,
+    "LATE_LEAVES": 1,
+    "BLACKLIST": true
+  }
+]

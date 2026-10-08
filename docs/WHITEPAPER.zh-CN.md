@@ -1,10 +1,10 @@
 # ArbiGameFi 技术白皮书
 
-> AGF-WP-TECH-2026.10-r2 · 2026-10-02 · 中文，附英文摘要 · 内部审阅稿，尚未对外发布
+> AGF-WP-TECH-2026.10-r3 · 2026-10-04 · 中文，附英文摘要 · 内部审阅稿，尚未对外发布
 >
 > **首要读者**：协议研究者、技术尽调与审计人员、集成方、专业 LP 的技术顾问
 >
-> **适用范围**：v1.6 合约候选源码，含 [ADR-0034](adr/0034-async-lp-redemption-continuous-betting.md) 与 [ADR-0035](adr/0035-recovery-rights-without-exit-blocking.md) 的 LP 异步赎回。**项目尚未正式上线**：Base Sepolia 已有受控部署及部分业务验收，外部审计与完整网络验收仍待完成。当前源码修正不自动改变已经部署的不可升级合约。部署身份见[测试网验收记录](deploy/v16-sepolia-acceptance.md)，候选源码与验证记录见[审计范围](audit/v1.6-audit-scope.md)，规范文本以 [SSOT v1.6](constitution/SSOT.v1.6.md) 与[可执行规范](constitution/ExecutableSSOT.v1.6.md)为准。
+> **适用范围与状态**：本文描述已接受的 NFT 流动性与回调结算设计。核心合约及 SDK、Earn、keeper 接入已实现并完成对应版本的本地验证，详见[核心复盘](audit/nft-core-integration-review.md)和[应用复核](audit/nft-consumer-integration-review.md)。完整回调 gas 资格、新部署网络验收和外部审计尚未完成；此前端到端结果不代表后续源码已重新全跑。项目尚未正式上线。具体账本、接口与实施步骤见[实施设计](design/lp-accounting-and-callback-implementation.md)，新部署验收见[测试网清单](deploy/v16-sepolia-acceptance.md)。规范以 [SSOT v1.6](constitution/SSOT.v1.6.md) 与[可执行规范](constitution/ExecutableSSOT.v1.6.md)为准。
 
 ## 摘要
 
@@ -13,108 +13,123 @@ ArbiGameFi 是钱包原生的 casino 与 sportsbook 项目。每个资金池（B
 主要结论如下：
 
 - **每笔投注在接受时锁定规则与最大赔付。** 结算只能在这笔准备金以内完成，所有负债在形成时就从资金池净值中扣除。
-- **LP 固定获得每笔流水 house edge 的一半。** 份额是合约常量，推荐奖励与协议费用只能从另一半里支付，由结算路由器独立限额。
-- **LP 退出不会暂停下注。** 退出在激活时只隔离申请者对应的旧风险和回收权，留存份额继续承保，结算同笔恢复可用资本。一笔永远无法结算的旧投注只锁住它自己的准备金，不阻塞后续退出。
-- **合约不可升级。** 治理可以暂停新风险、准入玩法与资金池，并在合约上限内调参，但不能提取 LP 资金，已接受投注的模块、有效 edge 与推荐比例版本固定；退款截止时间在接受投注时固定；治理调整仅影响新投注，默认 1 小时、范围 1 分钟至 1 天。
+- **LP 预算固定为每笔流水 house edge 的一半。** 分配比例是合约常量，推荐奖励与协议费用只能从另一半里支付，由结算路由器独立限额。
+- **存款按 NFT 独立记账。** 每次入金生成新 NFT，固定锁定 24 小时；到期且自由资本足够时，提款同笔到账。部分提款成功后余款重新锁定 24 小时，转让 NFT 不重置期限。退出部分不再参与后续盈亏；正常提款不设置停注流程。
+- **合约不可升级。** 治理可以暂停新风险、准入玩法与资金池，并在合约上限内调参，但不能任意提取 LP 资金，已接受投注的模块、有效 edge 与推荐比例版本固定；退款截止时间在接受投注时固定；治理调整仅影响新投注，默认 1 小时、范围 1 分钟至 1 天。
 
 ## 1. 设计问题与目标
 
 LP 共同承保的链上 casino 同时面对四个相互牵连的问题。
 
-1. **偿付**：每笔已接受的投注在最坏结果下都必须付得出。协议费用、推荐奖励、LP 退出款和支付失败的玩家款项都是负债，不能重复计算，也不能被用来承保新的风险。
-2. **投注进行中的公平进出**：资金池的现金里包含尚未结算投注的本金。如果份额价格忽略这些投注可能的赔付，LP 就能抢先退出。例如开奖结果已上链、但结算尚未完成时，看到大额中奖的 LP 可以先退出。又如 LP 本人下注后按包含自己本金的价格退出。这正是早期安全扫描发现的问题。
-3. **持续运营**：LP 退出不能打断玩家下注，这是项目所有者的硬性要求。一笔有缺陷的投注也不能冻结整个资金池。
+1. **偿付**：每笔已接受的投注在最坏结果下都必须付得出。协议费用、推荐奖励和支付失败的玩家款项都是负债，不能重复计算，也不能被用来承保新的风险。
+2. **投注期间的资金归属与排序**：未结投注本金不能当作 LP 利润。随机结果已记录但尚未入账时，LP 资金变动受门禁保护；结果记录前，成熟资本的退出和后入资金的回退分配仍可能改变参与者的盈亏。项目已明确接受并保留这一经济取舍，详见 §5.4；不承诺资本排序公平。
+3. **持续运营与失败边界**：正常 LP 退出不能设置计划性停注。未结风险占用准备金；已记录随机结果却未入账时，该池 LP 操作暂缓，避免按已知过时价格进出。结算永久失败的可用性风险必须如实披露，不能承诺任何时候都能全额退出。
 4. **可核对**：每个结果、费用与支付都必须能够仅凭链上数据重算。
 
-| 目标                  | 设计                                           | 章节   |
-| --------------------- | ---------------------------------------------- | ------ |
-| G1 偿付               | 接受时预留最大赔付；单一的活跃净值扣除全部负债 | §3、§6 |
-| G2 LP 份额固定        | 50% 为合约常量，路由器按开仓记录独立限额       | §4     |
-| G3 退出公平           | 激活仅隔离退出者风险；留存资本结算同笔恢复     | §5     |
-| G4 下注与退出互不阻塞 | 按期隔离，旧期永远不阻塞新期                   | §5     |
-| G5 支付不能阻断结算   | 转账失败转为玩家应付款，仓位照常终结           | §6     |
-| G6 可核对             | 事件与视图足以重算结果、分配、净值与现金流     | §10    |
+| 目标                | 设计                                                | 章节   |
+| ------------------- | --------------------------------------------------- | ------ |
+| G1 偿付             | Bank 本金与负债、Vault 树资本分开；最大赔付与净锁定 | §3、§6 |
+| G2 LP 分配比例固定  | 50% 为合约常量，路由器按开仓记录独立限额            | §4     |
+| G3 清楚的退出权利   | NFT 24 小时锁定，退出部分无后续盈亏或回收权         | §5     |
+| G4 持续下注         | 退出不设排空期；资本和风控条件仍限制接注            | §5     |
+| G5 支付不能阻断记账 | 支付失败转为玩家应付款，仓位照常终结                | §6     |
+| G6 可核对           | 事件与视图重算结果、分配、权益和现金流              | §10    |
 
 本设计明确不提供：合约升级；跨资金池互相赔付；LP 在确定期限内全额取回现金的保证；当前阶段的体育资金池准入。
 
 ## 2. 系统结构
 
-| 组件                                | 职责                                                                              | 信任性质                                     |
-| ----------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------- |
-| Bank                                | 单一资产托管；LP 份额；准备金；协议、推荐、退出与玩家负债；历史回收池             | 只接受结算路由器的下注与结算调用             |
-| SettlementRouter                    | 把头寸绑定到原始 hub、资金池、Bank 与玩家；校验终态身份、次数与金额；执行分配上限 | 无治理函数，装配后不可更改                   |
-| PoolRegistry                        | 定义资金池与业务域，授予 hub 使用指定资金池的准入                                 | 治理控制                                     |
-| GameHub                             | 固定投注输入，请求随机数，调用游戏模块计算结果，按规则分配 house edge             | 治理可登记游戏模块、调整参数（有上限与延迟） |
-| VRFHub 与 Chainlink VRF v2.5 适配器 | 请求并保存随机数；多付的随机数费用直接退还，失败时记为可领取退款额度              | 依赖 Chainlink VRF                           |
-| 游戏模块（8 种）                    | 确定性规则：Dice、Coin Toss、Roulette、Keno、Plinko、Sic Bo、Slots、Baccarat      | 模块正确性属于安全假设                       |
-| ReferralRegistry 与分配引擎         | 首次绑定的推荐关系；把运营预算分配给返水、推荐与协议                              | 推荐关系在接受投注时固定                     |
-| SportsHub 与 SportsRiskEngine       | 体育固定赔率票据、敞口、结果证据与争议                                            | **当前不准入异步 Bank**                      |
-| Keeper（链下）                      | 推进结算与退款、激活到期赎回、监控回收池、代玩家领取应付款                        | 所调用的函数任何人都能调用；不托管资金       |
+| 组件                                 | 职责                                                                              | 信任性质                                     |
+| ------------------------------------ | --------------------------------------------------------------------------------- | -------------------------------------------- |
+| Bank                                 | 托管投注本金与负债，记录准备金及每仓旧存款截止 ID                                 | 只接受认证 Router 的下注与终结调用           |
+| LiquidityVault                       | 托管 LP 资本，ERC-721 存款、LiquidityTree、24 小时提款锁定                        | 固定绑定 Bank；NFT owner 提款并收款          |
+| SettlementRouter                     | 把头寸绑定到原始 hub、资金池、Bank 与玩家；校验终态身份、次数与金额；执行分配上限 | 无治理函数，装配后不可更改                   |
+| PoolRegistry                         | 定义资金池与业务域，授予 hub 使用指定资金池的准入                                 | 治理控制                                     |
+| GameHub                              | 固定投注输入，请求随机数，调用游戏模块计算结果，按规则分配 house edge             | 治理可登记游戏模块、调整参数（有上限与延迟） |
+| VRFHub（Chainlink wrapper consumer） | 直接请求 wrapper，先保存随机数，再同笔尝试 GameHub 结算；处理随机数费用退款       | 依赖 Chainlink VRF                           |
+| 游戏模块（8 种）                     | 确定性规则：Dice、Coin Toss、Roulette、Keno、Plinko、Sic Bo、Slots、Baccarat      | 模块正确性属于安全假设                       |
+| ReferralRegistry 与分配引擎          | 首次绑定的推荐关系；把运营预算分配给返水、推荐与协议                              | 推荐关系在接受投注时固定                     |
+| SportsHub 与 SportsRiskEngine        | 体育固定赔率票据、敞口、结果证据与争议                                            | **当前不准入首发 casino Bank**               |
+| Keeper（链下）                       | 异常补结算、超时退款、玩家应付款重试，以及 WS 事件和 HTTP 补漏                    | 所调用的函数任何人都能调用；不托管资金       |
 
 合约没有代理、`delegatecall` 或升级机制，部署后的规则即为最终规则。Bank 不判断开奖结果：已准入的 hub 与模块可以在每笔投注的准备金范围内提交任意结果。因此随机数链路、模块代码和准入流程都是资金安全模型的一部分（§8）。不同资产、casino 与体育分别承保，互不赔付。
 
-下注授权的 spender 是对应的 GameHub 或 SportsHub；LP 申购授权的 spender 仍是 Bank。Hub 只从调用玩家收款，Router 将认证后的 Hub 作为 Bank 的付款方，两段转账均校验精确到账，失败全笔回滚。玩家给 Bank 的申购授权不能被已准入 Hub 用来扣下注本金。这不限制已准入 Hub 在自身仓位准备金范围内提交结算，准入治理风险仍然存在。
+下注授权的 spender 是对应的 GameHub 或 SportsHub；LP 入金授权的 spender 是 LiquidityVault。Hub 只从调用玩家收款，Router 将认证后的 Hub 作为 Bank 的付款方，两段转账均校验精确到账，失败全笔回滚。玩家给 Vault 的 LP 入金授权不能被已准入 Hub 用来扣下注本金。这不限制已准入 Hub 在自身仓位准备金范围内提交结算，准入治理风险仍然存在。
 
-每个 Bank 按资产最小单位配置最低单仓总本金。USDC 的业务值为 1 USDC（1,000,000 单位）；单仓最多 100 轮，因此每轮至少 0.01 USDC。其他资产须在部署时显式确认其最低额。容量上限按 `activeOpenHolds` 判断；历史退出风险不占用新仓位名额。最低下注和及时结算降低容量占用成本，但不保证任何网络负载下都能接单。
+每个 Bank 按资产最小单位配置最低每轮下注额，GameHub 在链上检查每轮金额和轮数。USDC 每轮最低 0.01 USDC（10,000 单位），单仓最多 25 轮，总本金等于每轮金额乘以轮数：1 轮最低 0.01 USDC，25 轮最低 0.25 USDC；不另设单仓合计 1 USDC 的门槛。各游戏可设置更低的轮数上限，并须通过完整回调 gas 准入。其他资产须在部署时显式确认其每轮最低额。未结仓位容量按当前 Bank 规则检查；不再区分活跃与历史退出仓位。最低下注和及时结算降低容量占用成本，但不保证任何网络负载下都能接单。
 
-Casino 投注的状态流转如下：
+目标结算流程如下。这是跨 VRFHub 与 GameHub 的概念状态图，不把 VRFHub 已保存随机数等同于 GameHub 子调用已经成功写入状态：
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PendingVRF: placeBet 预留准备金并请求随机数
-    PendingVRF --> RandomReady: VRF 回调写入随机数
-    PendingVRF --> Refunded: 超时后任何人调用 refund
-    RandomReady --> Settled: 任何人调用 finalize
-    RandomReady --> Refunded: 模块结果无效时自动全额退款
+    [*] --> AwaitingRandomness: placeBet 预留准备金并请求随机数
+    AwaitingRandomness --> SeedStored: VRFHub 先保存随机数
+    AwaitingRandomness --> Refunded: 尚无随机数且到期，公开退款
+    SeedStored --> Settled: 同笔尝试唯一结算入口
+    SeedStored --> SeedStored: 子调用失败，保留原随机数重试
     Settled --> [*]
     Refunded --> [*]
 ```
 
 ## 3. 账本与偿付
 
-同一链上状态下定义：B 为 Bank 的实际资产余额，PF 为协议应付款，XP 为全部推荐奖励负债（可领、锁定与 holdback 三部分），X 为已定价但未领取的 LP 退出款，PP 为玩家应付款，P 为历史回收池备付金，Ra 为所有未结投注中由活跃份额承担的准备金。
+LP 与投注资金使用两个固定绑定的合约。LiquidityVault 托管 LP 资本，Bank 托管投注本金并记录玩家、协议与推荐债务。定义：
+
+| 符号         | 权威来源与意义                                        |
+| ------------ | ----------------------------------------------------- |
+| L            | LiquidityTree 根节点金额：所有存款 NFT 的当前资本权益 |
+| P            | Bank 中全部未终结投注的原始本金                       |
+| R            | Bank 中全部未终结仓位的最大终结支出准备金             |
+| K = R − P    | LP 资本被占用的净锁定额度                             |
+| G = L + P    | 新下注偿付基数                                        |
+| PF / XP / PP | Bank 的协议、推荐与玩家应付款，均不属于 NFT 资本      |
+
+正常状态须满足 `R >= P`、`L >= K`，等价于 `G >= R`。P 已在 Bank 托管，不在 Vault 再锁一次本金。L 直接读取树，不能再用 Bank 或 Vault 的代币余额减几项负债反推，更不能把捐赠变成可分配的存款权益。两处实际余额、树与债务分别对账；超出账面要求的资产作为 surplus 诊断，不自动加树，也不新增提取 surplus 的接口。精确托管恒等式与跨合约资金动作以 [ADR-0034](adr/0034-nft-liquidity-deposits.md) 为准。
+
+接受本金 S 时，Bank 的 P 增加 S，R 增加本笔准备金，L 不变，并记录 Vault 此时的 `lastDepositId`。终结成本 C 包含玩家净派彩、未使用本金退款及新增 PF、XP；相对原本金的差额 `S − C` 决定树的盈利或亏损。终结清除该笔 P、R，并只结转一次损益。玩家转账失败改记 PP，不再重复从树扣一次；纯全额退款不产生 LP 利润。
+
+**下注风险缓冲。** 收到本次本金后，使用以下公式；新部署默认 `riskReserveBps=6000`，
+即按此时的 G 保留 60%，现有准备金与新增准备金合计须满足同一约束：
 
 ```text
-活跃 NAV       = B − PF − XP − X − PP − P
-偿付不变量     B ≥ PF + XP + X + PP + P + Ra，且 活跃 NAV ≥ Ra
-全部准备金     totalReserved = Ra + 已隔离的退出者及协议剩余准备金
+G_after = L + P_before + S
+R_after = R_before + 本笔最大准备金
+R_after + floor(G_after × riskReserveBps / 10000) <= G_after
 ```
 
-份额价格、`totalAssets()`、`getSSOT()`、新风险检查与协议出金检查都使用同一个活跃 NAV。P 同时覆盖历史期尚未终结的风险，以及已经释放但尚未领取的回收款，因此不能用历史准备金代替它，也不能再重复扣除其中的准备金。
+`L = 0` 时拒绝新下注，即使仅用投注本金计算也可能满足某个赔率条件。SDK 和游戏页面使用同一 G、R 和整数取整，不能将 L 直接代入旧偿付公式。
 
-负债在形成时入账，此后对外支付时，现金与负债等额减少，活跃 NAV 不变。例外是授权方把款项领取给 Bank 自身，这属于明确标识的捐赠，会增加活跃 NAV。
-
-两个缓冲参数分别约束两类流出：`riskReserveBps` 限制新增承保；`withdrawalBufferBps` 限制协议费用与推荐奖励这两类可选出金。LP 已定价的退出款、回收款和玩家应付款都是既定负债，不受缓冲比例缩减，但紧急暂停仍可阻止 LP 款项的支付。
-
-**份额与虚拟偏移。** 设 T 为真实份额总量，V 为虚拟偏移：
+**NFT 提款。** 成熟存款的可提款现金上界为：
 
 ```text
-V = 10^(decimals − 3)            资产小数位不足 3 位时 V = 1
-存入份额 = floor(assets × (T + V) / (NAV + V))
-铸造成本 = ceil(shares × (NAV + V) / (T + V))
+freeCapital = max(L − K, 0)
+可提额度 = min(本 NFT 当前节点金额, freeCapital)
 ```
 
-V 相当于千分之一个代币，同时作用于资产与份额，使初始价格为 1:1。攻击者要让受害者的存款四舍五入到零份额，需要捐出约千倍于该存款的资产，而且捐赠几乎全部被虚拟头寸吸收，攻击无利可图；存款若只能铸出零份额，合约会拒绝，而不会吞掉资金。V 不取一整个代币，是因为退出与回收时，虚拟头寸对应的那部分价值要划归协议资本（§5.5）：若 V 为一个代币，6 USDC 的小池每次回收约有 14% 划走；取千分之一时可以忽略。
+LP 提款不叠加 `withdrawalBufferBps`。该参数用于 PF/XP 领取，部署默认独立保持 1000 bps，
+不得被消费者误当作 NFT 提款条件。实际执行还校验 NFT owner、24 小时期限、暂停、跨合约 busy、账实有效性及已记录随机结果状态。没有 ERC-4626 份额价格、虚拟偏移、四个标准 `max*` 或最后一份额保留规则。
 
-**资产准入假设**：转账金额精确、余额不会自动变动（rebase），失败的转账不能先改动余额再返回失败。发行方冻结或暂停代币仍可能使支付暂时不可用（§7）。
+**数值准入**：新增存款和开仓均限制 `G <= 2^108−1`，为原树含 `1e12` 精度的乘法提供边界；不能只限制L而忽略未结本金之后可能转成利润。原树懒更新节点和固定宽度整数仍需阶段0独立验证。
+
+**资产准入假设**：精确到账、无转账税、无 rebase，失败转账不能先改余额再返回失败。USDC 发行方冻结或暂停仍可能妨碍支付，账本记录不保证任意发行方动作下都有可用现金。
 
 ## 4. House edge 与分配
 
-金额按资产最小单位整数计算。设 S 为投注本金，Q 为未使用本金的退款，G 为按规则计算的毛派彩，h 为接受投注时固定的有效 edge（bps）：
+金额按资产最小单位整数计算。设 S 为投注本金，Q 为未使用本金的退款，H 为按规则计算的毛派彩，h 为接受投注时固定的有效 edge（bps）：
 
 ```text
 U = S − Q                       实际使用的流水
-F = floor(G × h / 10000)        派彩手续费，留在本局游戏损益中
-N = G − F                       玩家净派彩
+F = floor(H × h / 10000)        派彩手续费，留在本局游戏损益中
+N = H − F                       玩家净派彩
 E = floor(U × h / 10000)        流水 edge
 O = floor(E / 2)                运营预算
 LP 保留 = E − O
 PF_new + XP_new ≤ O
 ```
 
-- **LP 的一半是常量。** `LP_SHARE_BPS = 5000`，治理不能修改；整数余数也留给 LP。
-- **运营预算的用途。** 运营方用 O 支付玩家返水（L0）、两级推荐奖励（L1、L2）与推广加价奖励，剩余部分计为协议费用。L0、L1、L2 合计不超过基础 edge 的 35%。玩家没有推荐人时 L0 不发放，这部分与舍入余数都归协议。
-- **路由器独立限额。** 结算路由器按开仓时记录的 edge 独立计算上限，不依赖 hub 自报的预算，并检查 `N ≤ G`、`Q ≤ S`、`G + Q ≤ 准备金`。
+- **LP 预算比例是常量。** `LP_SHARE_BPS = 5000`，治理不能修改。树仍有资本时，LP 损益按 §5 分配；树根为零时后来产生的正收益归协议资本，不为已退出 NFT 重建权利。
+- **运营预算的用途。** 运营方用 O 支付玩家返水（L0）、两级推荐奖励（L1、L2），剩余部分计为协议费用。L0、L1、L2 合计不超过该笔 edge 的 35%。玩家没有推荐人时 L0 不发放，这部分与舍入余数都归协议。
+- **路由器独立限额。** 结算路由器按开仓时记录的 edge 独立计算上限，不依赖 hub 自报的预算，并检查 `N ≤ H`、`Q ≤ S`、`H + Q ≤ 准备金`。
 - **Bank 的第二道检查。** 玩家净派彩、退款、PF 与全部 XP 之和不得超过该笔准备金。由于准备金不低于本金、手续费按毛派彩计收，这条对 casino 的每一种结果都成立。
 - **F 与 E 是两个计量基数。** 即使一局没有派彩，也会按 E 计提运营预算。纯退款不产生任何分配。
 
@@ -128,120 +143,95 @@ PF_new + XP_new ≤ O
 | 其中 L0 / L1 / L2 |    2 / 4 / 1 |        0 |
 | 其中协议费用      |         3.00 |    10.00 |
 
-单局的资本变化为 `U − G + F − PF_new − XP_new`（未计出入金与虚拟残值）。在规则公平、毛派彩期望等于流水的假设下，LP 的理论期望约为流水 edge 的一半，即上例的 10 USDC。这不是本金收益率：有限样本可以亏损，停止条件会改变实际分布，不能据此推算年化收益。
+单局的资本变化为 `U − H + F − PF_new − XP_new`（未计出入金；按下述树分配和零资本规则入账）。在规则公平、毛派彩期望等于流水的假设下，LP 的理论期望约为流水 edge 的一半，即上例的 10 USDC。这不是本金收益率：有限样本可以亏损，停止条件会改变实际分布，不能据此推算年化收益。
 
-**参数边界。** 有效 edge 不超过 5%。基础 edge 调整与加价上限的提高要等待 7 天才生效，任何人都可在到期后激活；加价上限的降低立即生效。推荐关系、推荐比例版本和有效 edge 在接受投注时固定，之后的配置变化不追溯已接受的投注。详见 [ADR-0032](adr/0032-fixed-lp-share-operator-funded-referrals.md)。
+**参数边界。** 每笔投注只有一个 house edge，不超过 5%；推荐关系不改变该价格。house edge 的所有调整要等待 7 天才生效，任何人都可在到期后激活。推荐收款人、推荐比例版本及 house edge 在接受投注时固定，之后的配置变化不追溯奖励金额。Bank 的领取流水门槛和新建 holdback 释放期限仍读取当前配置，既有有效释放计划不因新奖励延长。详见 [ADR-0032](adr/0032-fixed-lp-share-operator-funded-referrals.md)。
 
-## 5. LP 进出：持续下注下的公平退出
+## 5. LP：存款 NFT、24 小时与树分配
 
-### 5.1 存入
+### 5.1 每次入金生成新存款
 
-`deposit` / `mint` 按活跃池账面价即时执行（ERC-4626）。新 LP 参与当前期尚未结算的风险，但不取得已经隔离的历史期的回收权。账面价值不等于随时可提取的现金。账面 NAV 包含未结投注本金；即使随机数已公开，只要尚未执行终态结算，已知的派彩仍可能未从该报价中扣除。新 LP 可能买入这部分已知损失，页面报价也可能因区块更新而过时。
+`LiquidityVault.addDeposit(amount)` / `addDepositFor(owner, amount)` 接收资产、增加树资本并生成新的 ERC-721 存款 NFT。每次均为新节点，不能向旧 NFT 增资。存款拥有独立节点金额和 `withdrawAfter = 入金时间 + 24 小时`；本项目采用固定常量，不提供治理修改冷却期或升级 Vault 的路径。
 
-### 5.2 请求、取消与授权
+入金资产授权给 Vault，下注仍授权给对应 Hub。NFT 可以转让，转让后沿用原 `withdrawAfter`，不重新开始或绕过锁定。实际付款者、初始 NFT owner 和现 owner 可以不同，现金历史与权益归属必须分开记录。
 
-- **提交请求。** `requestRedeem(shares, controller, owner)` 托管 owner 的份额，并把这笔请求的权利交给 controller（ERC-7540）。owner 本人、owner 授权的 operator，或持有 ERC-20 授权额度的 spender 都可以提交；有限额度会被扣减，operator 不消耗额度。
-- **请求 ID。** 所有请求的 ID 都是 0，同一 controller 的请求合并计算。
-- **取消。** 在实际激活之前都可以取消，即使最早可激活时间已过；份额退回 controller。
-- **领取与授权。** 付款只能由 controller 或它当前授权的 operator 发起，并由其选择收款地址。owner 以前给出的 ERC-20 授权不能用来领取或取消。
-- **托管限制。** Bank 自身不能成为 controller，普通转账和铸造也不能把份额直接转给 Bank。`rescueToken` 拒绝移动资产与 Bank 份额。
-- **网站与 keeper。** 网站从不请求为 keeper 授予 operator 权限，用户自己领取。
+### 5.2 提款规则
 
-### 5.3 激活：只隔离退出者的风险
+`withdrawDeposit(id, percent)` 只能由当前 NFT owner 发起，资产也只付给该 owner。成熟后按节点金额的指定比例提款，`1e12 = 100%`，并校验 §3 的自由资本条件：
 
-请求在批次周期边界后可由任何人激活。周期初始为一天，治理可在一小时至七天内调整。实际激活前仍可取消。
+- 部分提款成功后，剩余 NFT 重新锁定 24 小时。
+- 100% 提款销毁 NFT；已经到期的零余额 NFT 也可通过此操作销毁。
+- 0% 及向下取整为零的部分提款拒绝，失败交易不重置锁定时间。
+- NFT 的 approved/operator 不能直接代提款，但能转走 NFT，再成为 owner。因此 NFT 授权仍是经济权限；官方入金／提款流程不请求 NFT approval 或 keeper operator 授权。
 
-1. 读取活跃 NAV N、真实份额 S、申请份额 Q 和活跃准备金 R。
-2. 按同一虚拟偏移报价及真实权益上限，算出申请者权益 E。
-3. 为申请者固定液态现金，同时只把各仓位中对应 E 的准备金单位隔离为申请 controller 的历史权利。
-4. 烧毁 Q，进入下一批。留存份额继续承担其余旧风险和新投注；后续存入按完整账面价买入这部分风险。
+不设每日退出队列、旧风险凭证或领取阶段。提款成功立即减少 L 并转账；已退出资本不再分配后续盈亏。有未结仓位时也没有“最后一个 NFT 不能退出”的附加规则：当 `K = 0` 时，即使仍有未结投注，也可在其他条件允许时全部退出。
 
-激活不停止下注，也不等待旧仓清零。每池最多允许 128 个仍由活跃资本承担风险的未结仓位，以限制批次操作的 gas。全部风险已隔离的旧仓不占此名额。资本不足、此并发容量上限或紧急暂停仍可能拒绝新下注，不能承诺无限容量。
+### 5.3 旧存款范围与盈亏
 
-### 5.4 原始准备金单位与回收
+Bank 开仓时保存 `lastDepositId`，作为该笔未来结果优先分配的旧存款范围截止点。采用的树规则是：
 
-虚拟偏移 V 不变；以下均向下取整，N 为零时分配为零：
+1. 每次结算按该仓位原始最大 LP 亏损 `k = 最大总赔付准备金 − 原始本金` 选择分配范围，不使用当笔实际盈亏作为阈值。
+2. 旧范围当前资本大于或等于 k 时，利润和亏损都分配给旧范围；小于 k 时，利润和亏损都分配给当前全树。因此后入存款可能同时承接旧投注的收益与风险，不能只将亏损转给它们。
+3. k 为零时保留旧范围及原树空范围回退规则；此时不可能产生 LP 净亏损。分配范围在各笔结算时判断，先结算的结果可能改变后续仓位的范围与各 NFT 余额，不保证结算顺序无关。
+4. 若结算时全树 `L = 0`，正收益归协议资本并单独记录；不把收益留在空根，也不给已经销毁或清空的存款补发权利。
 
-```text
-G = min(floor(S × (N + V) / (S + V)), N)
-E = floor(Q × G / S)
-批次现金 = floor(E × (N − R) / N)
-各仓位划给本批的单位 u = floor(该仓位活跃单位 × E / N)
-```
+这是针对 H-1“薄前缀独占利润、损失外溢”的统一分配修复，不是所有经济风险消失的证明。收益预期和风险都会随范围变化重新分配。因此不能用一个统一 ERC-20 价格来概括每个 NFT 的收益，也不能宣传新存款绝不参与旧风险。节点权利随 NFT 转移，钱包转让不等于现金入金或已实现利润。继受人的 NFT 取得成本未知时，页面不能把历史原始入金当作继受人投入来编造收益率。
 
-每个单位始终使用该投注最初的准备金 T 作分母，后续退出不重设分母。该投注终结成本 C 包括玩家净派彩、退款、PF、所有 XP 和转账失败形成的玩家欠款，且 C 不得超过 T。本批从这笔投注回收 `floor(u × (T − C) / T)`。每位 controller 按其申请份额占 Q 的比例分配批次累计回收，减去已领金额。
+### 5.4 流动性与经济取舍
 
-留存准备金在投注终结的同笔交易里释放，直接恢复承保，不需领取、再次存入或 keeper 复投。退出者的回收仍在活跃 NAV 之外。同一批有一笔卡住，不妨碍领取其他已终结投注释放的金额。原始单位与负债守恒规则详见 ADR-0035。
+例：L=100、P=10、R=40，则 K=30、G=110，自由资本为70。成熟 NFT 在自身节点余额范围内可以提走70；提款后仍有L=30覆盖净锁定。若R=P，则K=0，可在成熟与状态条件允许时提空L；后续旧仓盈利在空树情况下归协议资本。
 
-### 5.5 演算：留存资本自动继续承保
+**已接受的排序风险（2026-10-04）**：随机结果尚未记录且其他检查允许时，成熟 NFT 可提走自由资本；已退出部分不再参与以后入账的旧投注损益，留存 LP 按剩余树与回退规则承担。旧范围为空或不足时，后入资金也可能获得旧利润或承担旧损失。项目 Owner 已明确接受并保留这一模型，这是风险接受，不是风险修复。24 小时锁定及结果记录后的门禁不消除记录前的条件排序优势，保留准备金也不保证不同存取顺序取得相同盈亏。本地条件见证不证明真实 VRF 可提前预测；不宣传资本排序公平。
 
-忽略虚拟偏移和整数尾差的简化示例：Alice、Bob 各存入 1,000 USDC；一笔投注本金 100、准备金 200，故 N 为 2,100。Alice 全部退出时，约 950 记为可领现金、100 作为旧风险保留；Bob 的活跃 NAV 约为 1,050，其中 100 仍预留给旧投注。
+**H-1 分配修正**：结算时旧范围资本至少覆盖该仓位原始最大 LP 亏损时，两侧结果都归旧范围；否则两侧都归当前全池（零风险仓位保留原空范围规则）。这修正了无需预知结果的薄前缀套利，不撤销上述信息排序风险披露，也不承诺只转移波动而不改变预期收益。
 
-| 投注终结成本 | Alice 现金加回收 | Bob 活跃 NAV | Bob 剩余旧准备金 |
-| ------------ | ---------------: | -----------: | ---------------: |
-| 200          |              950 |          950 |                0 |
-| 0            |            1,050 |        1,050 |                0 |
-| 100          |            1,000 |        1,000 |                0 |
-
-实际费用计入终结成本，精确金额按合约整数公式计算。Bob 在这笔交易结束时即可用已释放资本继续承保。若期间有新 LP 存入，他们买入 Bob 所在活跃池的剩余旧风险，而不取得 Alice 已隔离的回收权。
-
-### 5.6 残值与尾差
-
-部分退出的风险分配向下取整，余数留给活跃资本。全部真实份额退出时，剩余风险单位与液态残值归协议，排除在后续新 LP 的 NAV 外。每笔仓位的整批取整尾差，要等所有退出单位分配完才转协议；每批按 controller 分配的尾差，要等所有申请份额完成最终同步才转协议。已分配未领取的款项持续有备付，不会过期或被没收。
-
-普通现金领取的批次尾差：部分退出时回到活跃 NAV，全额退出时归协议，即使中途已有新 LP 存入。协议资本残值单独记录，不计入玩法手续费或流水 edge。取整可能导致与双重取整的整体报价相差一个最小单位；不承诺任意小额路径下的价格完全相同。
-
-### 5.7 两类领取
-
-`withdraw` / `redeem` 领取已定价的批次现金；标准的 `maxWithdraw` / `maxRedeem` 只反映这部分，暂停期间返回 0。历史回收通过 `claimRecovery(epoch, receiver, controller)` 按期领取，是独立的权利，即使钱包份额为零也继续存在。领取现金时向下取整；部分 `withdraw` 若会耗尽可领份额却留下资产，将被拒绝，因此领取顺序不影响总额。`syncRedeem` 与 `syncRecovery` 任何人都可调用，只整理账目，不转账、不改变受益人，暂停期间也可执行。
-
-### 5.8 一笔投注永远无法结算时
-
-这种情况只可能由结算链路上的合约缺陷引起（§7）。按本设计：
-
-- **Bank**：该笔未结风险继续由留存份额和已退出 controller 各自的准备金单位承担；退出者对应回收暂不能释放，后续退出可继续分离剩余活跃风险。下注、新存入、后续批次的退出与其他期的回收全部照常。可领现金没有全额到账期限；若全部资金都在承担未终结风险，可领现金可能为零，但回收权不会被折价抹去。
-- **玩家**：合约不能把合法的赢家改成退款来释放准备金，因为那会让输家可以故意制造结算失败以取回本金，所以该玩家在链上无法得到支付。运营政策是由运营方按用户条款以协议收入在链下补偿。这一承诺须在上线前写入条款，链上规则不因此改变。
+正常退出不设置停注或全池排空，但资本减少会降低下注上限，L=0拒绝新注。未结仓位卡住会占用K；已经记录随机数但无法完成记账时，LP入金与提款暂缓。不能承诺所有NFT在固定时间内都能兑付。未知结算错误、无效结果或gas不足均不能把合法赢家改成退款来释放资本。
 
 ## 6. 投注结算与支付
 
-- **接受**：规则参数最多 64 字节，最多 100 局。准备金取模块给出的最大赔付，且不低于本金；新风险须通过活跃资本检查。
-- **随机数**：通过 Chainlink VRF v2.5 wrapper 请求。玩家以链的原生资产预付随机数费用，执行费用由 wrapper 按交易实际 gas 价格计算；多付部分先尝试退还玩家，失败时记为可领取的退款额度。这是独立于 Bank 的原生资产账本。回调只写入随机数，不结算资金。
-- **结算**：`finalize` 任何人都可调用。模块计算失败或结果超出准备金时，自动全额退款。随后依次计算派彩手续费、按 §4 分配，再由路由器与 Bank 校验。
-- **超时退款**：到达接受投注时固定的退款截止时间（默认 1 小时，治理配置只影响新投注）后，任何人都可为玩家退回本金。
-- **支付与玩家应付款**：Bank 先尝试直接转账给玩家。若代币拒绝转账（例如地址被发行方冻结），或转账因调用方给的 gas 不足而失败，全额记为该玩家的应付款，释放准备金，仓位照常终结。`claimPlayerPayable` 任何人都能触发，暂停期间也可执行，但总是支付给玩家本人；领取失败时债务保留。Keeper 会在下一轮自动代领，遇到仍被冻结的地址则退避重试。成功支付与新增应付款互斥，终结时计入的成本不会在领取时重复扣账。
-- **暂停**：阻止新风险、存入、批次激活、LP 现金与回收领取，以及协议费用与推荐奖励的领取。不阻止结算、退款、玩家应付款领取、取消请求与账目同步。
-- **收据**：分别证明终态金额与支付方式（已转账、已记应付款或证据不足）。终结时记下的应付款是历史事实，不能据此推断当前是否仍未领取。
+- **接受**：规则参数最多 64 字节；最大轮数须由阶段 0 的完整回调与树操作 gas 测量确认，不超过合约硬上限 25 轮。准备金取模块给出的最大赔付，且不低于本金；按 §3 的 G 和现有风险比例检查。下注接受时固定退款截止时间。
+- **随机数请求**：VRFHub 直接使用 Chainlink VRF v2.5 wrapper consumer 基础设施，不保留独立 adapter 或无 adapter 的生产合成报价分支。报价调用 wrapper；玩家以原生资产支付请求与回调所需费用，多付部分直接退还，失败时记为独立的原生资产退款额度。
+- **正常回调**：先在 VRFHub 保存请求对应的随机数，再在同笔交易内尝试 GameHub 的唯一结算实现。正常完成后，本金、派彩、费用、NFT节点权益与准备金同时更新；不需要 keeper 再发一笔常规结算交易。
+- **失败重试**：GameHub 子调用失败不抹掉已经保存的原随机数。任何人或 keeper 可以使用同一个请求、同一个随机数重试，不能重新抽取随机数。模块 revert、无效结果、Router 失败或 gas 不足都保留原仓位与结果，不转换为全额退款；合法玩法结果中的未使用本金退款仍属于正常结算。
+- **已知结果保护**：随机数已经记录、损益尚未入账时，相关 Vault 的入金与提款暂缓；自定义存款可用性视图显示不可执行，先补结算再进出。权威检查沿 Vault → Bank（pause／busy／valid）→ Router → VRF，失败读不能默认放行。该保护不是每日排空，不主动停止新下注。回调成功时没有跨交易的已知结果等待阶段。
+- **永久失败边界**：如果合约缺陷使已接收的结果始终无法结算，该池 LP 门禁会持续生效。公开同 seed 重试不是成功保证；当前接口不提供强制退款、抹账或绕过门禁提款。已得到结果的合法赢家不能为解除门禁而改成退款。此处披露可用性限制，不代表已发现可触发该故障的攻击。
+- **gas 与排序边界**：采用 40 层 LiquidityTree、最多 25 轮，已有实际 wrapper fork 的完整回调样例；所有允许输入与历史状态的预算资格尚未完成。资格须覆盖旧范围与全树回退、模块计算、Router／Bank／Vault、支付失败以及保留随机数的外层 gas。回调同笔结算不消除 fulfillment 上链前的条件排序优势；项目已按 §5.4 接受并披露该经济风险，不把这一裁决作为 gas、部署或外部审计资格完成的证明。
+- **超时退款**：仅在仍等待随机数且已达到开仓时固定的退款截止时间后，任何人可触发；默认 1 小时。已取得结果的有效赢家不能被后续超时变成退款。
+- **支付与玩家应付款**：Bank 先尝试支付给玩家，拒绝转账时记为玩家应付款 PP，仓位可正常终结。`claimPlayerPayable` 任何人都能触发，暂停期间可执行，但只付给玩家本人；失败时债务保留。成功转账与新增债务互斥，不重复扣账。Keeper 保留重试与退避。
+- **暂停**：阻止新风险和 LP 进出，以及协议费用、推荐奖励的可选领取；不阻止既有投注结算、退款或玩家应付款领取。
+- **事件与收据**：正常回调中的 `BetRandomReady` 与 `BetFinalized` 可以同笔出现。订阅乱序、重复和 HTTP 补漏不得使终态倒退。收据分别证明结果与实际付款／应付款；后续代领不能改写当时的支付事实。
 
 ## 7. 失败模式与责任边界
 
-| 事件                           | 直接影响                               | 设计处理                                                                 | 残余风险                               |
-| ------------------------------ | -------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------- |
-| VRF 长时间不回调               | 投注停在等待随机数                     | 超时（≤ 1 天）后任何人可退本金                                           | 等待时间                               |
-| Keeper 停机                    | 结算、退款、激活与代领延迟             | 所有推进函数都无需许可，任何人都可调用                                   | 需要有人支付 gas                       |
-| 玩家地址被发行方冻结           | 直接转账失败                           | 转为玩家应付款，仓位照常终结；keeper 退避重试代领                        | 解冻前无法到账                         |
-| 代币全局暂停                   | 所有转账失败                           | 结算记为应付款；各类领取失败但权利保留                                   | 取决于发行方                           |
-| 结算链路缺陷，某笔永远无法结算 | 该笔准备金锁定                         | 只影响所属历史期的回收；下注与后续退出照常（§5.8）                       | 该期 LP 失去对应回收；该玩家需链下补偿 |
-| 开奖后、结算前抢先退出         | 可能转嫁未入账的赔付                   | 只隔离退出者的风险，留存份额继续承担其余风险                             | 无                                     |
-| LP 集中退出                    | 活跃资本减少                           | 按期定价，下注继续                                                       | 单笔可接受的最大投注下降               |
-| 错误或恶意的模块、hub 被准入   | 可在准备金内给出错误结果               | 多签准入；路由器限额；Bank 准备金上限                                    | LP 需信任准入流程与模块代码            |
-| 治理密钥失陷                   | 可暂停、准入新模块与 hub、在上限内调参 | 多签；参数上限与延迟；已登记游戏的模块不可更换；治理无法直接提取 LP 资金 | 经由新准入恶意模块的间接损失           |
-| RPC 或索引故障                 | 页面与收据暂时不可用                   | 以链上状态为准，索引可从发布区块重放                                     | 展示延迟                               |
+| 事件                     | 直接影响                    | 设计处理                                       | 残余风险                                   |
+| ------------------------ | --------------------------- | ---------------------------------------------- | ------------------------------------------ |
+| VRF 未提供随机数         | 投注等待，准备金占用        | 固定截止时间后公开退款                         | 依赖有人提交交易                           |
+| 回调尝试结算失败         | 原随机数已记录，损益未入账  | 同 seed 公开重试；该池 LP 操作暂缓             | 可能长期不可退出；gas 和失败隔离待验证     |
+| Keeper 停机              | 异常补结算、退款与代领延迟  | 正常回调不依赖 keeper；公开函数与 WS/HTTP 补漏 | 仍需有人处理失败路径                       |
+| 玩家被冻结或代币暂停     | 玩家不能立即收款            | 记为玩家应付款；失败重试不抹债务               | 解冻前不能保证支付；全局暂停也阻止 LP 转账 |
+| 永久无法结算             | 净锁定K占用自由资本         | 保留仓位与原权利，不把赢家强制退款             | 已记录结果时该池 LP 操作受限，无全退期限   |
+| 结果记录前排序、知情进出 | 尚未入账风险可能留给剩余 LP | 保留既定进出及回退规则，明确接受并披露排序风险 | 不承诺资本排序公平；不代表真实 VRF 可预测  |
+| LP 集中退出              | 可用资本减少                | 成熟NFT执行可支付比例；净锁定限制金额          | 最大下注下降；并非人人随时全退             |
+| 恶意模块或 hub 准入      | 准备金内也可提交错误结果    | 多签准入、Router 限额、Bank 校验               | LP 仍信任准入流程和模块代码                |
+| 治理密钥失陷             | 可暂停、准入、受限调参      | 多签和权限边界                                 | 间接损失仍可能发生                         |
+| RPC、WS 或索引故障       | 页面或事件延迟              | 链上状态为准，HTTP 补漏、断线重连与重放        | 展示与异常处理延迟                         |
 
 ## 8. 治理与信任假设
 
-| 合约           | 治理可以                                                                                        | 限制                                                                                                                  |
-| -------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Bank           | 暂停／恢复新风险；设置风险与出金缓冲、holdback 周期、解锁门槛、批次周期、guardian；领取协议费用 | 缓冲不超过 100%；批次周期 1 小时至 7 天；不能动用资产与份额                                                           |
-| GameHub        | 登记游戏模块；排队或取消 edge 调整；切换推荐比例版本；设置超时退款时间                          | 每个游戏 ID 只能登记一次，不能更换或注销；edge ≤ 5%，调整 7 天后生效；新单超时 1 分钟至 1 天，默认 1 小时；推荐 ≤ 35% |
-| PoolRegistry   | 登记资金池；启停资金池；登记 hub 并授予资金池准入                                               | 停用不影响已有投注的结算                                                                                              |
-| VRFHub／适配器 | 设置适配器与请求 gas 价格                                                                       | 回调不能修改已结算的投注                                                                                              |
+| 合约           | 治理可以                                                                            | 限制                                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Bank           | 暂停／恢复新风险；设置下注风险缓冲、holdback 周期、解锁门槛、guardian；领取协议费用 | 缓冲不超过 100%；不能任意动用玩家和NFT权益对应资产                                                                    |
+| LiquidityVault | 按固定Bank状态执行LP规则，不新增任意资金处置能力                                    | 24小时为固定常量；无升级、无surplus提款接口                                                                           |
+| GameHub        | 登记游戏模块；排队或取消 edge 调整；切换推荐比例版本；设置超时退款时间              | 每个游戏 ID 只能登记一次，不能更换或注销；edge ≤ 5%，调整 7 天后生效；新单超时 1 分钟至 1 天，默认 1 小时；推荐 ≤ 35% |
+| PoolRegistry   | 登记资金池；启停资金池；登记 hub 并授予资金池准入                                   | 停用不影响已有投注的结算                                                                                              |
+| VRFHub         | 请求参数与 wrapper 依赖按最终部署规范校验                                           | 不更换已接受请求的随机数，不保留独立适配器切换路径                                                                    |
 
-- **guardian**：可以触发 Bank 暂停（包括新风险、存入、批次激活及 LP 领取，具体见 §6），不能恢复，也不能移动资金或修改其他参数；恢复只能由治理执行。
-- **治理不能做的事**：升级合约、提取 LP 资金、修改 LP 的 50% 份额、改写已接受投注的模块、有效 edge 与推荐比例版本、没收或转移回收权。
-- **退款超时即时生效**：`GameHub.setRefundTimeout` 修改全局超时，已有未终结投注也使用当前值，并非开仓时固定；上限为 1 天。
+- **guardian**：可以触发 Bank 暂停（包括新风险、存入及同步 LP 出金，具体见 §6），不能恢复，也不能移动资金或修改其他参数；恢复只能由治理执行。
+- **治理不能做的事**：升级合约、提取 LP 资金、修改 LP 的 50% 分配比例、改写已接受投注的模块、有效 edge 与推荐比例版本、通过支付失败抹除玩家债务。
+- **退款截止时间固定**：接受投注时保存截止时间，治理修改只作用于之后的新投注；默认 1 小时，上限 1 天。
 - **准入即时生效**：登记游戏模块、hub 与资金池没有时间锁。这是 LP 需要信任的核心治理权限，上线前应评估为准入增加延迟。
 - **外部 LP 准入前待决**：明确模块、hub 和池准入变更是否采用时间锁及其紧急禁用权限；收款权限隔离不能代替准入治理。Guardian 应采用与治理独立的多签，并实测发现到暂停、治理撤换 guardian 到解除暂停的耗时及旧 guardian 失权。
-- **代币发行方风险**：发行方可能冻结、没收或销毁 Bank 的底层资产，使资产不足以覆盖账面负债。应付款记录不保证有足够现金，也不绕开发行方限制；收费转账及 rebasing 资产不受支持。
+- **代币发行方风险**：发行方可能冻结、没收或销毁 Bank或Vault的底层资产，使资产不足以覆盖账面负债。应付款记录不保证有足够现金，也不绕开发行方限制；收费转账及 rebasing 资产不受支持。
 - **外部依赖**：代币发行方、Chainlink VRF、链与 RPC 的可用性，以及有人愿意支付推进交易的 gas。
 - **Keeper**：只推进公开状态，不决定结果，不持有用户授权，也不托管资金。
 
@@ -251,45 +241,59 @@ E = floor(Q × G / S)
 
 ## 10. 实现状态与核对方法
 
-**状态**：合约、SDK、keeper、索引与网站已实现，并通过合约单元、差分、不变量与变异测试，以及前端与本地链集成测试（见[审计范围](audit/v1.6-audit-scope.md)的候选证据）。Base Sepolia 受控候选已完成部署、2/3 Safe 接管及部分真实 VRF/keeper 结算与付款；具体源码、地址、区块与收据见[测试网验收记录](deploy/v16-sepolia-acceptance.md)。完整 LP、异常恢复、容量验收和外部审计仍待完成，不放行主网或外部 LP。后续源码修改须重新冻结身份，不能沿用旧部署的验收结论。
+**本次状态：核心和消费者已实现并完成对应版本的本地验证，发布资格待完成。** Bank/Vault 双托管、NFT 树账本与提款、VRF 回调结算及 SDK、页面、keeper 已接通。后续改动须重新绑定源件验证，不能复用旧版端到端结果冒充最终验收。详细顺序和完整验收矩阵见[实施设计](design/lp-accounting-and-callback-implementation.md)。
+
+当前合约的实现和验证范围见[核心复盘](audit/nft-core-integration-review.md)，消费者见[应用复核](audit/nft-consumer-integration-review.md)，发布义务见[审计范围](audit/v1.6-audit-scope.md)。全新部署须固定源码、编译与部署身份，并按[测试网清单](deploy/v16-sepolia-acceptance.md)完成网络验收与外部审计。
 
 **独立核对**：
 
-1. 固定链、区块、发布身份、Bank、hub 与资产，读取 B、全部负债、准备金与份额，核对活跃 NAV 与偿付不变量。
-2. 用投注记录、随机数、规则输入与分配事件重算每笔结果与分配。以实际转账或应付款事件核对收据。
-3. LP 现金流水以 `Deposit`、`Withdraw` 与 `RecoveryClaimed` 为准。请求、同步、隔离与批次烧毁都不是现金流动；领取给 Bank 自身的记为捐赠。
-4. 验证须覆盖权限、跨批次舍入、零资产、取消边界、链重组与重启、转账失败、最大准入工作量和未终结状态。测试结论只适用于实际测试过的场景与配置；具体实例能否开放，要看部署身份、参数与运行证据是否衔接。
+1. 固定链、区块、发布身份、Bank、Hub 与资产，分别读取Bank／Vault余额、PF、XP、PP、P、R、树根L和NFT节点；核对G、K、旧范围分配、托管需求和surplus，不能靠代币余额伪造树权益。
+2. 用原请求随机数、规则输入和分配事件重算结果；证明重复回调、异常补结算和超时竞态均不重复派彩，不重新抽随机数。
+3. LP现金流水以Vault每NFT的入金／提款事件为准；ERC-721 Transfer单独记录所有权，不算现金入金。成功提款立即降低节点与树资本，没有待激活或待领取权益。费用、玩家债务与投注本金不能混入 LP 收益。
+4. 覆盖新存款节点、比例舍入、24小时与转让、旧范围不足回退、空树利润归属、未结本金套利反例、NFT全额销毁、同笔多事件、重组、支付失败、最大轮数 gas、keeper 竞态和 WS/HTTP 补漏。正常回调通过不证明上链前排序公平。
+5. 外部 LP 材料须披露 §5.4 已接受的排序风险，并另外核验 wrapper 实际 gas 限额、完整集成和独立审计；风险接受不替代这些资格，测试未执行或跳过时如实记录。
 
 ## 11. 术语
 
-| 术语                 | 含义                                                   |
-| -------------------- | ------------------------------------------------------ |
-| 活跃 NAV             | 扣除全部负债与历史回收备付金后，当前 LP 份额对应的净值 |
-| 准备金               | 接受投注时为最大赔付预留的资金                         |
-| 期（epoch）          | 两次赎回激活之间的区间；每次激活封存上一期的未结风险   |
-| 回收池               | 某一期被隔离的准备金及其释放的回收款                   |
-| controller／operator | 赎回请求权利的持有者／其授权的代理人                   |
-| 玩家应付款           | 转账失败时记下的、只能付给该玩家本人的债务             |
-| 虚拟偏移 V           | 份额定价中的虚拟资产与虚拟份额，相当于千分之一个代币   |
-| 协议资本             | 虚拟残值与分配尾差，记入协议应付款但与玩法费用分开核算 |
+| 术语           | 含义                                                    |
+| -------------- | ------------------------------------------------------- |
+| LiquidityVault | 固定绑定Bank的LP资产托管、ERC-721与树账本合约           |
+| L              | LiquidityTree根节点资本；不是统一份额价格或代币余额推算 |
+| P／R           | Bank中未结本金／最大终结支出准备金                      |
+| K／G           | 净锁定R−P／下注偿付基数L+P                              |
+| 存款NFT        | 某次入金节点及当前、未来树分配权利；随ERC-721转让       |
+| withdrawAfter  | 本NFT到期时间；入金和部分提款成功后加24小时，转让保持   |
+| 旧范围截止ID   | 开仓时的lastDepositId，用于以后盈利／亏损的优先分配范围 |
+| 玩家应付款PP   | 支付失败保留的债务，只能付给玩家本人                    |
+| surplus        | 实际余额超出账本需求的独立诊断项，不自动增加树          |
 
 ## English abstract
 
-ArbiGameFi is an unlaunched, wallet-native casino and sportsbook. Each Bank underwrites one asset's bets with LP capital, and its contracts are immutable.
+**Core and application interfaces implemented; local integration verified, release qualification pending, 2026-10-04.** A separate LiquidityVault
+holds LP capital and issues one ERC-721 deposit NFT for each addition. Bank retains bettor principal
+and liability accounting. The tree root L is LP capital; net lock is `K = R - P` and betting solvency
+basis is `G = L + P`. There is no fungible share price, virtual offset or ERC-4626 API.
 
-**Bets and payouts.** Every accepted bet fixes its module, effective edge and referral version and reserves its maximum payout. Terminal obligations cannot exceed that reserve. Refund eligibility uses the current global timeout, which governance can change within the one-day ceiling. One active NAV subtracts all liabilities: protocol fees, referral rewards, priced LP exits, player payables and historical recovery backing.
+Every new NFT has a fixed 24-hour lock. Mature owner-only withdrawal pays the owner; a successful
+partial withdrawal relocks its remainder for 24 hours, while a full withdrawal burns the NFT.
+Transfers preserve maturity. NFT approvals can move ownership and remain economic permissions;
+the official withdrawal flow requests none. The cash cap is `min(nodeValue, max(L-K,0))`, without
+an additional LP buffer. Open bets do not impose a last-NFT guard when K is zero.
 
-**LP economics.** LPs keep a constant half of each casino bet's turnover house edge. Referral rewards and protocol fees come from the other half, capped independently by the settlement router.
+Each bet snapshots the last deposit ID and maximum LP loss k=reserve-stake. At settlement, both profit
+and loss go to that prefix when its current capital covers k, otherwise to the current tree. This
+selection does not use realized PnL. At k=0 the original cutoff/empty-prefix fallback remains. New
+deposits may share old returns and risk; earlier settlements can change later allocation. If the tree is empty,
+subsequent profit belongs to protocol capital. Withdrawn capital has no future recovery right.
 
-**LP exits.**
-
-- Deposits are immediate (ERC-4626). Exits are ERC-7540 requests.
-- Activation, callable by anyone after the batch-period boundary, prices the requester's liquid cash. Only exiting controllers' old risk and recovery rights are segregated. Staying shares continue underwriting; settlement frees their reserve in that same transaction. New deposits buy the remaining active book risk.
-- LP operations impose no betting pause. A stuck position does not block later batches. Available capital, emergency pause and a 128 active-risk-position capacity still constrain new betting.
-- A virtual offset of one thousandth of a token protects first deposits while keeping the virtual position's residual, which goes to protocol capital, negligible.
-
-**Payments.** A refused or gas-starved payout becomes a payable that anyone may trigger but only the player can receive; the keeper claims it on the player's behalf.
-
-**Governance and trust.** Governance can pause, admit modules, hubs and pools, and tune bounded parameters, but cannot upgrade contracts, move LP funds or rewrite the module, effective edge or referral version of accepted bets. Each accepted bet fixes its refund deadline; timeout changes affect only later bets. Guardian pause also blocks deposits, batch activation and LP claims; settlement, refunds and player-payable claims remain live. Admission has no timelock and is the key trust assumption.
-
-**Status.** Sports pools are not admitted. A controlled Base Sepolia casino candidate is deployed, with Safe takeover and some real VRF-to-keeper settlement and payment paths verified. Full network acceptance and external audit remain pending. Later source changes require a new candidate identity and do not update the deployed immutable contracts.
+VRFHub directly consumes the wrapper, stores the original seed and attempts one settlement path.
+Failures, including invalid results, retain the seed for public retry rather than refund or redraw.
+Recorded-but-unbooked results block Vault cash operations. Keeper preserves exception handling and
+WS/HTTP replay. The cap is 25 rounds; measured wrapper-fork examples do not qualify every permitted
+input or lifetime history of the forty-level tree. Earlier 100-round or deployed-candidate evidence
+does not validate this path. Before canonical result receipt, mature free capital may exit and bears
+no subsequently booked outcome; remaining LPs and whole-tree fallbacks absorb it. The project Owner
+explicitly accepted and retained these economics on 2026-10-04. The 24-hour lock and Received gate
+do not eliminate this conditional ordering advantage. This is risk acceptance, not a fix or proof
+that real VRF can be predicted; capital-ordering fairness is not promised. Full gas qualification,
+final-source integration, fresh network acceptance and independent audit remain release gates.

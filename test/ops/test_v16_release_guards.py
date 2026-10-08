@@ -1,5 +1,6 @@
 """Exercise v1.6 release boundaries with real entrypoints and synthetic artifacts."""
 import importlib.util
+import copy
 import json
 import os
 from pathlib import Path
@@ -22,8 +23,9 @@ LINES = {8453: "SSOT_RELEASE_DIGEST_V16", 84532: "SSOT_RELEASE_DIGEST_V16"}
 
 def manifest(chain):
     return {"chainId": chain, "releaseDigest": DIGEST,
-            "meta": {"releaseLock": {"schema": LINES[chain], "chainId": chain, "digest": DIGEST}},
-            "contracts": {"gameHub": "0x" + "2" * 40}, "assets": [{"bank": "0x" + "3" * 40}]}
+            "meta": {"architectureVersion": "v1.6-nft-liquidity", "releaseLock": {"schema": LINES[chain], "chainId": chain, "digest": DIGEST}},
+            "contracts": {"gameHub": "0x" + "2" * 40}, "assets": [{"bank": "0x" + "3" * 40}],
+            "pools": [{"bank": "0x" + "3" * 40, "vault": "0x" + "4" * 40}]}
 
 
 class ImageGuardTests(unittest.TestCase):
@@ -62,6 +64,17 @@ class ImageGuardTests(unittest.TestCase):
                 with patch.object(GUARD.subprocess, "check_output", self.docker), self.assertRaises(subprocess.CalledProcessError):
                     GUARD.check("image", REVISION, 84532, DIGEST)
 
+    def test_old_architecture_and_missing_or_zero_vault_are_rejected(self):
+        for failure in ("old-architecture", "missing-vault", "zero-vault"):
+            with self.subTest(failure=failure):
+                self.manifests = {"84532": manifest(84532)}
+                row = self.manifests["84532"]
+                if failure == "old-architecture": row["meta"]["architectureVersion"] = "v1.6-house-edge-allocation"
+                elif failure == "missing-vault": del row["pools"][0]["vault"]
+                else: row["pools"][0]["vault"] = "0x" + "0" * 40
+                with patch.object(GUARD.subprocess, "check_output", self.docker), self.assertRaises(subprocess.CalledProcessError):
+                    GUARD.check("image", REVISION, 84532, DIGEST)
+
     def test_wrong_baked_chain_rejected_before_running_container(self):
         self.image_chain = "8453"
         with patch.object(GUARD.subprocess, "check_output", self.docker), self.assertRaises(ValueError):
@@ -93,7 +106,7 @@ class ImageGuardTests(unittest.TestCase):
 
 class SyncGuardTests(unittest.TestCase):
     def test_rejected_bundles_leave_active_files_untouched(self):
-        for failure in ("unknown-schema", "wrong-chain", "no-trust-anchor"):
+        for failure in ("unknown-schema", "old-architecture", "wrong-chain", "no-trust-anchor"):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 frontend = root / "frontend"
@@ -104,12 +117,14 @@ class SyncGuardTests(unittest.TestCase):
                 bundle = root / "bundle"
                 (bundle / "deployments").mkdir(parents=True)
                 (bundle / "abis").mkdir()
-                common = {"chainId": 8453, "blockNumber": 100, "architectureVersion": "v1.6-house-edge-allocation"}
+                common = {"chainId": 8453, "blockNumber": 100, "architectureVersion": "v1.6-nft-liquidity"}
                 rows = {"frontend-manifest-latest-v16.json": dict(common), "latest-v16.json": dict(common),
                         "golden-vectors-latest-v16.json": dict(common),
                         "release-latest-v16.json": {**common, "schema": "SSOT_RELEASE_DIGEST_V16"}}
                 if failure == "unknown-schema":
                     rows["release-latest-v16.json"]["schema"] = "SSOT_RELEASE_DIGEST_OTHER"
+                if failure == "old-architecture":
+                    rows["latest-v16.json"]["architectureVersion"] = "v1.6-house-edge-allocation"
                 if failure == "wrong-chain":
                     rows["golden-vectors-latest-v16.json"]["chainId"] = 84532
                 for name, row in rows.items():
@@ -118,10 +133,44 @@ class SyncGuardTests(unittest.TestCase):
                 env = {k: v for k, v in os.environ.items() if k not in ("RELEASE_SIGNER", "RPC_URL")}
                 result = subprocess.run(["node", str(ROOT / "frontend/scripts/ssot-sync.mjs"), "--from", str(bundle)], cwd=frontend, env=env, capture_output=True, timeout=10)
                 self.assertNotEqual(result.returncode, 0)
-                expected = {"unknown-schema": b"Only a v1.6", "wrong-chain": b"Mixed chain or deployment block", "no-trust-anchor": b"trusted RELEASE_SIGNER"}[failure]
+                expected = {"unknown-schema": b"Only a v1.6", "old-architecture": b"Only a v1.6", "wrong-chain": b"Mixed chain or deployment block", "no-trust-anchor": b"trusted RELEASE_SIGNER"}[failure]
                 self.assertIn(expected, result.stderr)
                 self.assertEqual(sentinel.read_bytes(), b"existing active release")
                 self.assertEqual(len(list(frontend.rglob("*.json"))), 1)
+
+
+class EmbeddedSchemaGuardTests(unittest.TestCase):
+    def test_nft_pool_and_game_admission_fields_required_by_actual_checker(self):
+        address = lambda n: '0x' + format(n, '040x')
+        release = {"chainId": 84532, "isPlaceholder": False,
+                   "meta": {"schemaVersion": 2, "architectureVersion": "v1.6-nft-liquidity",
+                            "releaseLock": {"schema": "SSOT_RELEASE_DIGEST_V16"}},
+                   "contracts": {key: address(i + 1) for i, key in enumerate(("gameHub", "settlementRouter",
+                                  "poolRegistry", "vrfHub", "refRegistry", "refEngine"))},
+                   "assets": [{"symbol": "USDC", "decimals": 6}], "games": {"fixture": address(20)},
+                   "gamesMeta": [{"maxBetCount": 25, "callbackGasLimit": 2_447_746}],
+                   "pools": [{"symbol": "USDC", "decimals": 6, "asset": address(30),
+                              "bank": address(31), "vault": address(32)}]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            embedded = root / 'packages/ssot/src/release/embedded'
+            embedded.mkdir(parents=True)
+            def run(data):
+                (embedded / 'chain-84532.json').write_text(json.dumps(data))
+                return subprocess.run(['node', str(ROOT / 'frontend/scripts/check-release.mjs')], cwd=root,
+                                      env={**os.environ, 'STRICT_RELEASE': '1'}, capture_output=True, text=True)
+            control = run(release)
+            self.assertEqual(control.returncode, 0, control.stderr)
+            cases = []
+            changed = copy.deepcopy(release); del changed['pools'][0]['vault']; cases.append(changed)
+            changed = copy.deepcopy(release); changed['pools'][0]['vault'] = address(31); cases.append(changed)
+            changed = copy.deepcopy(release); changed['meta']['architectureVersion'] = 'v1.6-house-edge-allocation'; cases.append(changed)
+            changed = copy.deepcopy(release); changed['contracts']['adapter'] = address(40); cases.append(changed)
+            for field in ('maxBetCount', 'callbackGasLimit'):
+                changed = copy.deepcopy(release); del changed['gamesMeta'][0][field]; cases.append(changed)
+            for changed in cases:
+                with self.subTest(changed=changed):
+                    self.assertNotEqual(run(changed).returncode, 0)
 
 
 class PackageGuardTests(unittest.TestCase):
@@ -151,13 +200,13 @@ class PackageGuardTests(unittest.TestCase):
 
 class VerifyHelperGuardTests(unittest.TestCase):
     def snapshot(self):
-        row = {"chainId": 84532, "architectureVersion": "v1.6-house-edge-allocation", "numPools": 1}
-        for key in ("adapter", "vrfHub", "poolRegistry", "settlementRouter", "refRegistry", "refEngine",
-                    "gameHub", "sportsRiskEngine", "sportsHub", "poolBank_0", "moduleDice", "moduleCoinToss",
+        row = {"chainId": 84532, "architectureVersion": "v1.6-nft-liquidity", "numPools": 1}
+        for key in ("vrfHub", "poolRegistry", "settlementRouter", "refRegistry", "refEngine",
+                    "gameHub", "sportsRiskEngine", "sportsHub", "poolBank_0", "poolVault_0", "moduleDice", "moduleCoinToss",
                     "moduleRoulette", "moduleKeno", "modulePlinko", "moduleSicBo", "moduleSlots", "moduleBaccarat"):
             row[key] = "0x" + "0" * 40
-        for i, (key, ctor_key) in enumerate((("adapter", "ctorArgs_adapter"), ("gameHub", "ctorArgs_gameHub"),
-                                            ("poolBank_0", "ctorArgs_bank_0"), ("moduleDice", "ctorArgs_moduleDice")), 1):
+        for i, (key, ctor_key) in enumerate((("vrfHub", "ctorArgs_vrfHub"), ("gameHub", "ctorArgs_gameHub"),
+                                            ("poolBank_0", "ctorArgs_bank_0"), ("poolVault_0", "ctorArgs_vault_0"), ("moduleDice", "ctorArgs_moduleDice")), 1):
             row[key] = "0x" + str(i) * 40
             row[ctor_key] = "0x" if key == "moduleDice" else "0x" + str(i) * 64
         return row
@@ -185,9 +234,9 @@ class VerifyHelperGuardTests(unittest.TestCase):
             env.pop("VERIFIER_URL", None)
             subprocess.run(["bash", str(helper)], cwd=root, env=env, check=True, capture_output=True, timeout=10)
             calls = [json.loads(line) for line in (root / "calls.jsonl").read_text().splitlines()]
-            self.assertEqual(len(calls), 4)
-            for call, key, ctor_key in zip(calls, ("adapter", "gameHub", "poolBank_0", "moduleDice"),
-                                          ("ctorArgs_adapter", "ctorArgs_gameHub", "ctorArgs_bank_0", "ctorArgs_moduleDice")):
+            self.assertEqual(len(calls), 5)
+            for call, key, ctor_key in zip(calls, ("vrfHub", "gameHub", "poolBank_0", "poolVault_0", "moduleDice"),
+                                          ("ctorArgs_vrfHub", "ctorArgs_gameHub", "ctorArgs_bank_0", "ctorArgs_vault_0", "ctorArgs_moduleDice")):
                 self.assertEqual(call[:2], ["verify-contract", row[key]])
                 self.assertEqual(call[call.index("--chain") + 1], "84532")
                 self.assertEqual(call[call.index("--compilation-profile") + 1], "default")
@@ -210,20 +259,30 @@ class VerifyHelperGuardTests(unittest.TestCase):
             self.assertIn(b"set ETHERSCAN_V2_API_KEY", result.stderr)
 
     def test_missing_or_nonhex_constructor_cannot_emit_helper(self):
-        for value in (None, "", "0x123; touch injected"):
-            with self.subTest(value=value), tempfile.TemporaryDirectory() as directory:
+        for key in ("ctorArgs_vrfHub", "ctorArgs_vault_0"):
+            for value in (None, "", "0x123; touch injected"):
+                with self.subTest(key=key, value=value), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    row = self.snapshot()
+                    if value is None:
+                        del row[key]
+                    else:
+                        row[key] = value
+                    self.assertNotEqual(self.generate(root, row).returncode, 0)
+                    self.assertFalse((root / "deployments/verify-latest-v16.sh").exists())
+                    self.assertFalse((root / "injected").exists())
+
+    def test_missing_vault_or_pool_count_cannot_emit_partial_helper(self):
+        for key in ("poolVault_0", "numPools"):
+            with self.subTest(key=key), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 row = self.snapshot()
-                if value is None:
-                    del row["ctorArgs_adapter"]
-                else:
-                    row["ctorArgs_adapter"] = value
+                del row[key]
                 self.assertNotEqual(self.generate(root, row).returncode, 0)
                 self.assertFalse((root / "deployments/verify-latest-v16.sh").exists())
-                self.assertFalse((root / "injected").exists())
 
     def test_other_snapshots_cannot_generate_executable_helpers(self):
-        for version in ("", "unknown-architecture"):
+        for version in ("", "unknown-architecture", "v1.6-house-edge-allocation"):
             with self.subTest(version=version), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 snapshot = root / "snapshot.json"

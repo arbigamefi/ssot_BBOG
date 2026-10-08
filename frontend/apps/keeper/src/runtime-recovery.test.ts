@@ -6,7 +6,7 @@ import {
   encodeErrorResult,
   encodeEventTopics
 } from "viem";
-import { BANK_REDEMPTION_KEEPER_ABI, GAME_HUB_KEEPER_ABI } from "./abi.js";
+import { BANK_KEEPER_ABI, GAME_HUB_KEEPER_ABI } from "./abi.js";
 import { createMemoryBetIndexStore, type BetIndexStore } from "@ssot/bet-index";
 import { CASINO_TRANSACTION_GAS, createKeeperRuntime, type KeeperRuntime } from "./runtime.js";
 import type { KeeperConfig } from "./types.js";
@@ -59,8 +59,8 @@ const base: KeeperConfig = {
   betIndexWriteEnabled: true,
   betIndexDatabaseUrl: "postgres://unused.invalid",
   betIndexSsl: false,
-  bankProviderLedgerPools: [],
-  bankProviderLedgerScanIntervalMs: 0,
+  vaultProviderLedgerPools: [],
+  vaultProviderLedgerScanIntervalMs: 0,
   sportsTicketIndexEnabled: false,
   sportsTerminalizerEnabled: false,
   sportsTerminalizerMarketIds: [],
@@ -74,8 +74,10 @@ const base: KeeperConfig = {
 
 describe("runtime recovery composition", () => {
   let runtime: KeeperRuntime | undefined;
+  let canonicalState: number;
   beforeEach(() => {
     vi.useFakeTimers();
+    canonicalState = 2;
     mock.store = createMemoryBetIndexStore();
     mock.client = {
       getBlockNumber: vi.fn(async () => 120n),
@@ -107,8 +109,47 @@ describe("runtime recovery composition", () => {
     runtime = undefined;
     vi.useRealTimers();
   });
-  const make = (config: KeeperConfig = base) =>
-    createKeeperRuntime({ config, logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
+  const make = (config: KeeperConfig = base) => {
+    const read = mock.client.readContract as (q: {
+      functionName: string;
+      address: string;
+      args?: bigint[];
+    }) => Promise<unknown>;
+    mock.client.readContract = vi.fn(async (q) => {
+      if (q.functionName === "getRequest")
+        return { bank: hub, hub, betId: q.args[0], state: canonicalState };
+      const pool = config.vaultProviderLedgerPools.find(
+        (p) => p.bank === q.address || p.vault === q.address
+      );
+      if (pool) {
+        if (q.functionName === "getSSOT")
+          return {
+            bankCash: 0n,
+            vaultCash: 100n,
+            L: 100n,
+            P: 0n,
+            R: 0n,
+            K: 0n,
+            G: 100n,
+            PF: 0n,
+            XP: 0n,
+            PP: 0n,
+            accountingValid: true,
+            riskInPaused: false
+          };
+        if (q.functionName === "vault") return pool.vault;
+        if (q.functionName === "bank") return pool.bank;
+        if (q.functionName === "asset") return pool.asset;
+        if (q.functionName === "lpAccounting") return [0n, 0n, 0];
+      }
+      const value = await read(q);
+      return q.functionName === "getBet" ? { bank: hub, ...(value as object) } : value;
+    });
+    return createKeeperRuntime({
+      config,
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    });
+  };
 
   function finalizedLedgerFixture() {
     const bank = "0x0000000000000000000000000000000000000003" as const;
@@ -133,23 +174,27 @@ describe("runtime recovery composition", () => {
     });
     mock.client.getContractEvents = vi.fn(async () => []);
     mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
-      if (functionName === "activeOpenHolds") return 0n;
-      if (functionName === "MAX_ACTIVE_HOLDS") return 128n;
-      if (functionName === "minStake") return 1_000_000n;
-      if (functionName === "currentEpoch") return 1n;
-      if (functionName === "redeemBatch") return { priced: false, shares: 0n, cutoff: 0n };
+      if (functionName === "openHolds") return 0n;
+      if (functionName === "MAX_OPEN_HOLDS") return 128n;
+      if (functionName === "minBetAmount") return 10_000n;
       throw new Error(`Unexpected read ${functionName}`);
     });
     mock.client.getLogs = vi.fn(async (query: LogQuery) =>
-      eventNames(query).includes("Deposit") &&
+      eventNames(query).includes("DepositAdded") &&
       state.deposit != null &&
       query.fromBlock <= state.deposit &&
       query.toBlock >= state.deposit
         ? [
             {
               address: bank,
-              eventName: "Deposit",
-              args: { sender: hub, owner: hub, assets: 100n, shares: 100n },
+              eventName: "DepositAdded",
+              args: {
+                payer: hub,
+                owner: hub,
+                assets: 100n,
+                depositId: 1099511627776n,
+                withdrawAfter: 2000n
+              },
               blockNumber: state.deposit,
               transactionHash: hash,
               logIndex: 0
@@ -163,13 +208,65 @@ describe("runtime recovery composition", () => {
       casinoRecoveryStartBlock: 1n,
       scanMaxChunksPerPass: 1,
       pollIntervalMs: 0,
-      bankProviderLedgerScanIntervalMs: 1000,
-      bankProviderLedgerPools: [{ bank, asset, poolId: 1, decimals: 6 }]
+      vaultProviderLedgerScanIntervalMs: 1000,
+      vaultProviderLedgerPools: [{ bank, vault: bank, asset, poolId: 1, decimals: 6 }]
     };
-    const ranges = () => logQueries().filter((q) => eventNames(q).includes("Deposit"));
-    const query = { chainId: 8453, owner: hub, bank, limit: 10 };
+    const ranges = () => logQueries().filter((q) => eventNames(q).includes("DepositAdded"));
+    const query = { chainId: 8453, owner: hub, vault: bank, limit: 10 };
     return { state, config, ranges, query };
   }
+
+  it("preserves existing Vault rows and the cursor after incomplete RPC identity, then retries the same range", async () => {
+    const f = finalizedLedgerFixture();
+    f.state.deposit = 5n;
+    const pool = f.config.vaultProviderLedgerPools[0]!;
+    await mock.store!.writeVaultProviderLedgerRows([
+      {
+        id: "existing",
+        chainId: 8453,
+        poolId: "1",
+        owner: hub,
+        bank: pool.bank,
+        vault: pool.vault,
+        asset: pool.asset,
+        action: "deposit",
+        depositId: "1099511627776",
+        assets: "100",
+        blockNumber: 5,
+        logIndex: 0,
+        txHash: hash,
+        updatedAt: 0
+      }
+    ]);
+    const original = mock.client.getLogs as (
+      q: LogQuery
+    ) => Promise<Array<Record<string, unknown>>>;
+    let broken = true;
+    mock.client.getLogs = vi.fn(async (q: LogQuery) => {
+      const logs = await original(q);
+      return broken && eventNames(q).includes("DepositAdded")
+        ? logs.map((log) => ({ ...log, transactionHash: null }))
+        : logs;
+    });
+    runtime = make(f.config);
+    const recordError = vi.spyOn(runtime.health, "recordError");
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await mock.store!.getVaultProviderLedger(f.query)).toHaveLength(1);
+    expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBeNull();
+    expect(runtime.health.snapshot().degradedBy).toContain("ledger");
+    expect(recordError).toHaveBeenCalledWith(
+      "Error: Vault ledger log is missing its mined identity",
+      expect.any(Number),
+      "ledger"
+    );
+    broken = false;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(f.ranges().map((q) => q.fromBlock)).toEqual([1n, 1n]);
+    expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(10n);
+    expect(await mock.store!.getVaultProviderLedger(f.query)).toHaveLength(1);
+    expect(runtime.health.snapshot().degradedBy).not.toContain("ledger");
+  });
 
   it("indexes a replacement behind the old moving overlap once it is finalized", async () => {
     const f = finalizedLedgerFixture();
@@ -177,13 +274,13 @@ describe("runtime recovery composition", () => {
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
     for (let i = 0; i < 9; ++i) await vi.advanceTimersByTimeAsync(1000);
-    expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(76n);
+    expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(76n);
     f.state.head = 101n;
     f.state.finalized = 77n;
     await vi.advanceTimersByTimeAsync(1000);
     // A 16-block reorg replaces block 85 after the old scanner's [77, 86] overlap page.
     f.state.deposit = 85n;
-    expect(await mock.store!.getBankProviderLedger(f.query)).toEqual([]);
+    expect(await mock.store!.getVaultProviderLedger(f.query)).toEqual([]);
     for (let i = 0; i < 25; ++i) {
       f.state.head += 9n;
       f.state.finalized = f.state.head - 24n;
@@ -193,9 +290,9 @@ describe("runtime recovery composition", () => {
       expect(f.ranges().at(-1)!.toBlock).toBeLessThanOrEqual(f.state.finalized);
     }
     for (let i = 0; i < 100; ++i) await vi.advanceTimersByTimeAsync(1000);
-    expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(302n);
-    expect(await mock.store!.getBankProviderLedger(f.query)).toMatchObject([
-      { action: "deposit", assets: "100", shares: "100", blockNumber: 85 }
+    expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(302n);
+    expect(await mock.store!.getVaultProviderLedger(f.query)).toMatchObject([
+      { action: "deposit", assets: "100", depositId: "1099511627776", blockNumber: 85 }
     ]);
   });
 
@@ -213,14 +310,14 @@ describe("runtime recovery composition", () => {
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
     expect(f.ranges()).toMatchObject([{ fromBlock: 1n, toBlock: 10n }]);
-    expect(await mock.store!.getBankProviderLedger(f.query)).toHaveLength(1);
+    expect(await mock.store!.getVaultProviderLedger(f.query)).toHaveLength(1);
     await runtime.stop();
     vi.mocked(mock.client.getLogs as ReturnType<typeof vi.fn>).mockClear();
     runtime = make(f.config);
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
     expect(f.ranges()).toMatchObject([{ fromBlock: 11n, toBlock: 20n }]);
-    expect(await mock.store!.getBankProviderLedger(f.query)).toHaveLength(1);
+    expect(await mock.store!.getVaultProviderLedger(f.query)).toHaveLength(1);
   });
 
   it.each(["unavailable", "unnumbered", "regressed"])(
@@ -230,12 +327,14 @@ describe("runtime recovery composition", () => {
       runtime = make(f.config);
       await runtime.start();
       await vi.advanceTimersByTimeAsync(0);
-      const cursor = await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub);
+      const cursor = await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub);
       const count = f.ranges().length;
       if (failure === "regressed") f.state.finalized = 75n;
       else f.state.finalityFailure = failure;
       await vi.advanceTimersByTimeAsync(1000);
-      expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(cursor);
+      expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(
+        cursor
+      );
       expect(f.ranges()).toHaveLength(count);
       expect(runtime.health.snapshot().degradedBy).toContain("ledger");
       expect(runtime.health.snapshot().lastError).toMatch(/finalized/);
@@ -243,7 +342,7 @@ describe("runtime recovery composition", () => {
       f.state.finalized = 76n;
       await vi.advanceTimersByTimeAsync(1000);
       expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("ledger");
-      expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(20n);
+      expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(20n);
     }
   );
 
@@ -305,8 +404,15 @@ describe("runtime recovery composition", () => {
       await vi.advanceTimersByTimeAsync(300_000);
       expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBe(120n);
       // One query per range: the failed range once per pass, then the next range.
-      expect(logQueries().map((query) => query.fromBlock)).toEqual([101n, 101n, 111n]);
-      for (const query of logQueries()) {
+      expect(logQueries().map((query) => query.fromBlock)).toEqual([
+        101n,
+        101n,
+        101n,
+        101n,
+        111n,
+        111n
+      ]);
+      for (const query of logQueries().filter((q) => !eventNames(q).includes("ResultReceived"))) {
         expect(eventNames(query)).toEqual(
           fullScan ? INDEX_EVENTS : ["BetPlaced", "BetRandomReady"]
         );
@@ -411,20 +517,22 @@ describe("runtime recovery composition", () => {
     expect(runtime.health.snapshot().lastScannedBlock).toBe("120");
     expect(logQueries().map(eventNames)).toEqual([
       ["BetPlaced", "BetRandomReady"],
-      ["BetPlaced", "BetRandomReady"]
+      ["ResultReceived", "CallbackAttempt"],
+      ["BetPlaced", "BetRandomReady"],
+      ["ResultReceived", "CallbackAttempt"]
     ]);
   });
 
-  it("indexes and finalizes from one metered query per range", async () => {
+  it("meters one Hub query and one canonical VRF query per range", async () => {
     runtime = make();
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
     expect(runtime.queue.has(1n)).toBe(true);
     expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBe(120n);
-    expect(logQueries().map((query) => query.fromBlock)).toEqual([101n, 111n]);
+    expect(logQueries().map((query) => query.fromBlock)).toEqual([101n, 101n, 111n, 111n]);
     // The heartbeat publishes RPC usage: getLogs is metered and throttled like every tracked method.
     await vi.advanceTimersByTimeAsync(10_000);
-    expect(runtime.health.snapshot().rpc?.total).toMatchObject({ getLogs: 2 });
+    expect(runtime.health.snapshot().rpc?.total).toMatchObject({ getLogs: 4 });
   });
 
   it("recovers indexed bets about every five minutes however short the poll", async () => {
@@ -481,7 +589,8 @@ describe("runtime recovery composition", () => {
   it.each(["BetFinalized", "BetRefunded"] as const)(
     "materializes the actual %s event from the complete Hub ABI",
     async (eventName) => {
-      let state = 3;
+      let state = eventName === "BetRefunded" ? 2 : 3;
+      canonicalState = eventName === "BetRefunded" ? 1 : 2;
       const amounts = {
         payoutGross: 200n,
         payoutNet: 196n,
@@ -491,19 +600,20 @@ describe("runtime recovery composition", () => {
       mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) =>
         functionName === "getBetTerminal"
           ? { state: 4, ...amounts, refundAmount: 0n }
-          : {
-              betId: 1n,
-              requestId: 1n,
-              state,
-              asset: hub,
-              player: hub,
-              gameId: hash,
-              pricingAffiliate: hub,
-              placedAt: 900n,
-              refundDeadline: 1000n,
-              randomHash: hash,
-              stake: 100n
-            }
+          : functionName === "getBetReferralPayees"
+            ? [hub, hub]
+            : {
+                betId: 1n,
+                requestId: 1n,
+                state,
+                asset: hub,
+                player: hub,
+                gameId: hash,
+                placedAt: 900n,
+                refundDeadline: 1000n,
+                randomHash: hash,
+                stake: 100n
+              }
       );
       mock.client.writeContract = vi.fn(async () => {
         state = eventName === "BetFinalized" ? 4 : 5;
@@ -538,9 +648,9 @@ describe("runtime recovery composition", () => {
           [
             { type: "uint256" },
             { type: "uint16" },
-            ...Array.from({ length: 8 }, () => ({ type: "uint256" as const }))
+            ...Array.from({ length: 7 }, () => ({ type: "uint256" as const }))
           ],
-          [100n, 200, 2n, 1n, 1n, 0n, 0n, 0n, 0n, 0n]
+          [100n, 200, 2n, 1n, 1n, 0n, 0n, 0n, 0n]
         )
       };
       mock.client.getTransactionReceipt = vi.fn(async () => ({
@@ -557,7 +667,9 @@ describe("runtime recovery composition", () => {
         state: eventName === "BetFinalized" ? "finalized" : "refunded",
         payout: eventName === "BetFinalized" ? "196" : "100",
         refundAmount: eventName === "BetFinalized" ? "0" : "100",
-        lastEventName: eventName
+        lastEventName: eventName,
+        referrerL1: hub,
+        referrerL2: hub
       });
       if (eventName === "BetFinalized") expect(row?.houseEdge?.edge).toBe("2");
       expect(runtime.queue.size).toBe(0);
@@ -572,20 +684,24 @@ describe("runtime recovery composition", () => {
     mock.client.getBlock = vi.fn(async () => ({ number: 120n, timestamp: 1_601n }));
     mock.client.getContractEvents = vi.fn(async () => []);
     mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
-      if (functionName === "activeOpenHolds") return 0n;
-      if (functionName === "MAX_ACTIVE_HOLDS") return 128n;
-      if (functionName === "minStake") return 1_000_000n;
-      if (functionName === "currentEpoch") return 1n;
-      if (functionName === "redeemBatch") return { priced: false, shares: 0n, cutoff: 0n };
+      if (functionName === "openHolds") return 0n;
+      if (functionName === "MAX_OPEN_HOLDS") return 128n;
+      if (functionName === "minBetAmount") return 10_000n;
       throw new Error(`Unexpected read ${functionName}`);
     });
     mock.client.getLogs = vi.fn(async (query: LogQuery) =>
-      eventNames(query).includes("Deposit") && query.fromBlock === 100n
+      eventNames(query).includes("DepositAdded") && query.fromBlock === 100n
         ? [
             {
               address: bank,
-              eventName: "Deposit",
-              args: { sender: hub, owner: hub, assets: 100n, shares: 100n },
+              eventName: "DepositAdded",
+              args: {
+                payer: hub,
+                owner: hub,
+                assets: 100n,
+                depositId: 1099511627776n,
+                withdrawAfter: 2000n
+              },
               blockNumber: 105n,
               transactionHash: hash,
               logIndex: 0
@@ -593,9 +709,9 @@ describe("runtime recovery composition", () => {
           ]
         : []
     );
-    const replace = mock.store!.replaceBankProviderLedgerRange;
-    vi.spyOn(mock.store!, "replaceBankProviderLedgerRange").mockImplementation(async (request) => {
-      if (request.bank === secondBank && failSecondBank) {
+    const replace = mock.store!.replaceVaultProviderLedgerRange;
+    vi.spyOn(mock.store!, "replaceVaultProviderLedgerRange").mockImplementation(async (request) => {
+      if (request.vault === secondBank && failSecondBank) {
         failSecondBank = false;
         throw new Error("range write failed");
       }
@@ -604,200 +720,31 @@ describe("runtime recovery composition", () => {
     runtime = make({
       ...base,
       casinoRecoveryStartBlock: 100n,
-      bankProviderLedgerScanIntervalMs: 60_000,
-      bankProviderLedgerPools: [
-        { bank, asset, poolId: 1, decimals: 6 },
-        { bank: secondBank, asset, poolId: 2, decimals: 6 }
+      vaultProviderLedgerScanIntervalMs: 60_000,
+      vaultProviderLedgerPools: [
+        { bank, vault: bank, asset, poolId: 1, decimals: 6 },
+        { bank: secondBank, vault: secondBank, asset, poolId: 2, decimals: 6 }
       ]
     });
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
-    expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBeNull();
-    const query = { chainId: 8453, owner: hub, bank, limit: 10 };
-    expect(await mock.store!.getBankProviderLedger(query)).toHaveLength(1);
+    expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBeNull();
+    const query = { chainId: 8453, owner: hub, vault: bank, limit: 10 };
+    expect(await mock.store!.getVaultProviderLedger(query)).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(await mock.store!.getBankProviderLedger(query)).toHaveLength(1);
-    expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(119n);
+    expect(await mock.store!.getVaultProviderLedger(query)).toHaveLength(1);
+    expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(119n);
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(await mock.store!.getCursor(8453, "bank-provider-ledger-finalized", hub)).toBe(120n);
+    expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(120n);
     expect(
       logQueries()
-        .filter((q) => eventNames(q).includes("Deposit"))
+        .filter((q) => eventNames(q).includes("DepositAdded"))
         .map((q) => q.fromBlock)
     ).toEqual([100n, 100n, 110n, 120n]);
   });
 
-  it("activates a due queue despite unavailable historical discovery", async () => {
-    const bank = "0x0000000000000000000000000000000000000003" as const;
-    const asset = "0x0000000000000000000000000000000000000004" as const;
-    let epoch = 1n;
-    mock.client.getBlock = vi.fn(async () => ({ number: 120n, timestamp: 1_601n }));
-    mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
-      switch (functionName) {
-        case "currentEpoch":
-          return epoch;
-        case "redeemBatch":
-          return {
-            cutoff: epoch === 1n ? 1_000n : 0n,
-            priced: false,
-            shares: epoch === 1n ? 10n : 0n
-          };
-        case "activeOpenHolds":
-          return 0n;
-        case "MAX_ACTIVE_HOLDS":
-          return 128n;
-        case "minStake":
-          return 1_000_000n;
-        case "openHolds":
-          return 3n;
-        case "riskInPaused":
-          return false;
-        default:
-          throw new Error(`Unexpected read ${functionName}`);
-      }
-    });
-    mock.client.writeContract = vi.fn(async ({ functionName }: { functionName: string }) => {
-      if (functionName !== "activateBatch") throw new Error(`Unexpected write ${functionName}`);
-      epoch++;
-      return hash;
-    });
-    mock.client.waitForTransactionReceipt = vi.fn(async () => ({ status: "success" }));
-    runtime = make({
-      ...base,
-      startupScanEnabled: false,
-      betIndexWriteEnabled: false,
-      bankProviderLedgerPools: [{ bank, asset, poolId: 1, decimals: 6 }]
-    });
-    await runtime.start();
-    await vi.advanceTimersByTimeAsync(0);
-    for (const method of ["simulateContract", "writeContract"])
-      expect(mock.client[method]).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "activateBatch", address: bank })
-      );
-    expect(mock.client.waitForTransactionReceipt).toHaveBeenCalled();
-    expect(runtime.health.snapshot()).toMatchObject({
-      redemptions: [{ bank }],
-      degradedBy: ["pocket-recovery", "payables"],
-      payables: [{ bank, caughtUp: false, error: expect.stringContaining("release origin") }],
-      pocketDiscovery: [{ bank, caughtUp: false, error: expect.stringContaining("release origin") }]
-    });
-  });
-
-  it("refunds while paused and activates a later queue while an older pocket remains stuck", async () => {
-    const bank = "0x0000000000000000000000000000000000000003" as const;
-    const asset = "0x0000000000000000000000000000000000000004" as const;
-    let betState = 2;
-    let epoch = 2n;
-    let paused = true;
-    mock.client.getBlock = vi.fn(async () => ({ number: 120n, timestamp: 1_601n }));
-    mock.client.getLogs = vi.fn(async (query: LogQuery) =>
-      query.fromBlock === 100n
-        ? [
-            {
-              eventName: "BetPlaced",
-              args: { positionId: 9n, requestId: 9n },
-              blockNumber: 100n,
-              transactionHash: hash,
-              logIndex: 0
-            }
-          ]
-        : []
-    );
-    mock.client.getContractEvents = vi.fn(
-      async ({ fromBlock, toBlock }: { fromBlock: bigint; toBlock: bigint }) =>
-        fromBlock <= 100n && toBlock >= 100n
-          ? [{ args: { batchId: 1n }, blockNumber: 100n, blockHash: hash, logIndex: 1 }]
-          : []
-    );
-    mock.client.readContract = vi.fn(
-      async ({ functionName, args }: { functionName: string; args?: bigint[] }) => {
-        switch (functionName) {
-          case "getBet":
-            return {
-              betId: 9n,
-              requestId: 9n,
-              placedAt: 900n,
-              refundDeadline: 1000n,
-              state: betState
-            };
-          case "currentEpoch":
-            return epoch;
-          case "redeemBatch":
-            return args?.[0] === 1n
-              ? { cutoff: 900n, priced: true, shares: 10n, activatedAt: 1000n }
-              : {
-                  cutoff: epoch === 2n ? 1500n : 0n,
-                  priced: false,
-                  shares: epoch === 2n ? 10n : 0n
-                };
-          case "recoveryEpoch":
-            return { snapshotSupply: 100n, remainingHolds: 1n, remainingReserve: 100n };
-          case "activeOpenHolds":
-            return 0n;
-          case "MAX_ACTIVE_HOLDS":
-            return 128n;
-          case "minStake":
-            return 1_000_000n;
-          case "openHolds":
-            return betState === 2 ? 8n : 7n;
-          case "riskInPaused":
-            return paused;
-          default:
-            throw new Error(`Unexpected ${functionName}`);
-        }
-      }
-    );
-    mock.client.writeContract = vi.fn(async ({ functionName }: { functionName: string }) => {
-      if (functionName === "refund") betState = 5;
-      else if (functionName === "activateBatch") epoch++;
-      else throw new Error(`Unexpected write ${functionName}`);
-      return hash;
-    });
-    mock.client.waitForTransactionReceipt = vi.fn(async () => ({ status: "success" }));
-    await mock.store!.setCursor({
-      chainId: 8453,
-      cursorKey: hub,
-      source: "gamehub-events",
-      blockNumber: 120n
-    });
-    runtime = make({
-      ...base,
-      casinoRecoveryStartBlock: 100n,
-      scanMaxChunksPerPass: 3,
-      bankProviderLedgerPools: [{ bank, asset, poolId: 1, decimals: 6 }]
-    });
-    await runtime.start();
-    await vi.advanceTimersByTimeAsync(0);
-    expect(runtime.queue.has(9n)).toBe(true);
-    expect(runtime.health.snapshot()).toMatchObject({
-      degradedBy: ["pocket"],
-      pockets: [{ epochId: "1", ageSeconds: 601 }]
-    });
-    await vi.advanceTimersByTimeAsync(500);
-    expect(mock.client.writeContract).toHaveBeenCalledWith(
-      expect.objectContaining({ functionName: "refund", args: [9n], gas: CASINO_TRANSACTION_GAS })
-    );
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(mock.client.writeContract).not.toHaveBeenCalledWith(
-      expect.objectContaining({ functionName: "activateBatch" })
-    );
-    paused = false;
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(mock.client.writeContract).toHaveBeenCalledWith(
-      expect.objectContaining({ functionName: "activateBatch", address: bank })
-    );
-    expect(runtime.health.snapshot().degradedBy).toEqual(["pocket"]);
-    expect(runtime.health.snapshot().redemptions).toMatchObject([
-      { bank, activeOpenHolds: "0", maxActiveHolds: "128", capacityHeadroom: "128" }
-    ]);
-    expect(
-      vi
-        .mocked(mock.client.writeContract as ReturnType<typeof vi.fn>)
-        .mock.calls.map(([q]) => q.functionName)
-    ).toEqual(["refund", "activateBatch"]);
-  });
-
   it("rehydrates a still-pending bet after its lifecycle checkpoint and restart", async () => {
+    canonicalState = 1;
     mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) =>
       functionName === "refundTimeoutSeconds"
         ? 86_400n
@@ -853,10 +800,10 @@ describe("runtime recovery composition", () => {
       if (failure === "asset refusal" || failure === "wrong token refusal") {
         throw new BaseError("simulation or send failed", {
           cause: new ContractFunctionRevertedError({
-            abi: BANK_REDEMPTION_KEEPER_ABI,
+            abi: BANK_KEEPER_ABI,
             functionName: "claimPlayerPayable",
             data: encodeErrorResult({
-              abi: BANK_REDEMPTION_KEEPER_ABI,
+              abi: BANK_KEEPER_ABI,
               errorName: "SafeERC20FailedOperation",
               args: [failure === "asset refusal" ? asset : hub]
             })
@@ -865,9 +812,9 @@ describe("runtime recovery composition", () => {
       }
       if (failure === "unknown revert") {
         throw new ContractFunctionRevertedError({
-          abi: BANK_REDEMPTION_KEEPER_ABI,
+          abi: BANK_KEEPER_ABI,
           functionName: "claimPlayerPayable",
-          data: encodeErrorResult({ abi: BANK_REDEMPTION_KEEPER_ABI, errorName: "EnforcedPause" })
+          data: encodeErrorResult({ abi: BANK_KEEPER_ABI, errorName: "EnforcedPause" })
         });
       }
       throw new Error(failure);
@@ -878,11 +825,9 @@ describe("runtime recovery composition", () => {
       eventName === "PlayerPayableCreated" ? [{ args: { player: hub }, blockNumber: 105n }] : []
     );
     mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
-      if (functionName === "activeOpenHolds") return 0n;
-      if (functionName === "MAX_ACTIVE_HOLDS") return 128n;
-      if (functionName === "minStake") return 1_000_000n;
-      if (functionName === "currentEpoch") return 1n;
-      if (functionName === "redeemBatch") return { priced: false, shares: 0n, cutoff: 0n };
+      if (functionName === "openHolds") return 0n;
+      if (functionName === "MAX_OPEN_HOLDS") return 128n;
+      if (functionName === "minBetAmount") return 10_000n;
       if (functionName === "playerPayable") return debt;
       throw new Error(`Unexpected ${functionName}`);
     });
@@ -905,7 +850,7 @@ describe("runtime recovery composition", () => {
       ...base,
       casinoRecoveryStartBlock: 100n,
       scanChunkBlocks: 100n,
-      bankProviderLedgerPools: [{ bank, asset, poolId: 1, decimals: 6 }]
+      vaultProviderLedgerPools: [{ bank, vault: bank, asset, poolId: 1, decimals: 6 }]
     });
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
@@ -926,6 +871,7 @@ describe("runtime recovery composition", () => {
   });
 
   it("does not advance lifecycle recovery over a failed index write and exposes incomplete recovery", async () => {
+    canonicalState = 1;
     mock.client.getLogs = vi.fn(async () => [
       {
         eventName: "BetPlaced",
@@ -956,6 +902,7 @@ describe("runtime recovery composition", () => {
   });
 
   it("replays PendingVRF history after a restart without a database", async () => {
+    canonicalState = 1;
     mock.client.getLogs = vi.fn(async (query: LogQuery) =>
       query.fromBlock === 100n
         ? [

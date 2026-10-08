@@ -7,7 +7,6 @@ export declare const SportsRiskEngineAbi: Abi;
 export declare const SportsHubAbi: Abi;
 export declare const ReferralRegistryAbi: Abi;
 export declare const DefaultReferralEngineAbi: Abi;
-export declare const ChainlinkV2PlusWrapperAdapterAbi: Abi;
 export declare const DiceModuleAbi: Abi;
 export declare const CoinTossModuleAbi: Abi;
 export declare const RouletteModuleAbi: Abi;
@@ -17,6 +16,7 @@ export declare const SicBoModuleAbi: Abi;
 export declare const SlotsModuleAbi: Abi;
 export declare const BaccaratModuleAbi: Abi;
 export declare const BankAbi: Abi;
+export declare const LiquidityVaultAbi: Abi;
 export declare const IGameModuleAbi: Abi;
 export declare function getContractAbis(): {
   readonly GameHubAbi: Abi;
@@ -27,7 +27,6 @@ export declare function getContractAbis(): {
   readonly SportsHubAbi: Abi;
   readonly ReferralRegistryAbi: Abi;
   readonly DefaultReferralEngineAbi: Abi;
-  readonly ChainlinkV2PlusWrapperAdapterAbi: Abi;
   readonly DiceModuleAbi: Abi;
   readonly CoinTossModuleAbi: Abi;
   readonly RouletteModuleAbi: Abi;
@@ -37,5 +36,6 @@ export declare function getContractAbis(): {
   readonly SlotsModuleAbi: Abi;
   readonly BaccaratModuleAbi: Abi;
   readonly BankAbi: Abi;
+  readonly LiquidityVaultAbi: Abi;
   readonly IGameModuleAbi: Abi;
 };

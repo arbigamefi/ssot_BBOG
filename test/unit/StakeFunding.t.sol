@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {BankTestBase, TestRandomnessConsumer, DirectRouterFixture} from "../utils/BankTestBase.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {StakeFunding} from "../../src/libs/StakeFunding.sol";
@@ -29,7 +31,7 @@ contract FundingFeeToken is ERC20 {
 }
 
 // Isolates the shared funding helper and the Router-authorized Bank boundary.
-contract FundingBoundaryHarness {
+contract FundingBoundaryHarness is DirectRouterFixture {
     function open(FundingFeeToken token, Bank bank, uint256 stake) external {
         uint256 beforeBalance = StakeFunding.collect(address(token), address(bank), stake);
         bank.holdBet(1, msg.sender, stake, stake, bytes32(0), address(this));
@@ -37,15 +39,16 @@ contract FundingBoundaryHarness {
     }
 }
 
-contract StakeFundingTest is Test {
+contract StakeFundingTest is BankTestBase {
     function test_exactFundingAndBothTaxedHopsAreAtomic() external {
         FundingFeeToken token = new FundingFeeToken();
-        Bank bank = new Bank(address(token), address(this), 0, "LP", "LP", 18, 1);
+        Bank bank = new Bank(address(token), address(this), 0, 18, 1);
         FundingBoundaryHarness hub = new FundingBoundaryHarness();
         bank.setSettlementRouterOnce(address(hub));
+        _bindTestConsumer(bank);
         token.mint(address(this), 1000);
-        token.approve(address(bank), 1000);
-        bank.deposit(1000, address(this));
+        token.approve(address(bank.vault()), 1000);
+        LiquidityVault(bank.vault()).addDepositFor(address(this), 1000);
         address player = address(0xBEEF);
         token.mint(player, 100);
         token.mint(address(hub), 7); // Donation must never substitute for an underpayment.
@@ -58,7 +61,8 @@ contract StakeFundingTest is Test {
             hub.open(token, bank, 100);
             assertEq(token.balanceOf(player), 100);
             assertEq(token.balanceOf(address(hub)), 7);
-            assertEq(token.balanceOf(address(bank)), 1000);
+            assertEq(token.balanceOf(address(bank)), 0);
+            assertEq(token.balanceOf(bank.vault()), 1000);
             assertEq(token.allowance(player, address(hub)), 100);
             assertEq(token.allowance(address(hub), address(bank)), 0);
             assertEq(bank.openHolds(), 0);
@@ -68,7 +72,8 @@ contract StakeFundingTest is Test {
         hub.open(token, bank, 100);
         assertEq(token.balanceOf(player), 0);
         assertEq(token.balanceOf(address(hub)), 7);
-        assertEq(token.balanceOf(address(bank)), 1100);
+        assertEq(token.balanceOf(address(bank)), 100);
+        assertEq(token.balanceOf(bank.vault()), 1000);
         assertEq(token.allowance(address(hub), address(bank)), 0);
         assertEq(bank.openHolds(), 1);
     }

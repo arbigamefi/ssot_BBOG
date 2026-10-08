@@ -26,9 +26,9 @@
       "types": "./dist/player-payment.d.ts",
       "import": "./dist/player-payment.js"
     },
-    "./bank-cash-ledger": {
-      "types": "./dist/bank-cash-ledger.d.ts",
-      "import": "./dist/bank-cash-ledger.js"
+    "./vault-ledger": {
+      "types": "./dist/vault-ledger.d.ts",
+      "import": "./dist/vault-ledger.js"
     }
   },
   "dependencies": {
@@ -41,7 +41,7 @@
     "vitest": "^2.0.5"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run -c vitest.config.ts"
   }

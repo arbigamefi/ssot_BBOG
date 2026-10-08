@@ -39,7 +39,6 @@ type SequencedTxStepConfig = {
 type SequencedTxActionOptions = {
   steps: SequencedTxStepConfig[];
   finalAction: string;
-  matchWindowMs?: number;
   errorMessage?: string;
 };
 
@@ -255,8 +254,7 @@ export function useDirectTxAction({
       const rows = await db.txJournal.orderBy("createdAt").reverse().limit(100).toArray();
       return (
         rows.find(
-          (row) =>
-            row.chainId === chainId && row.action === action && row.createdAt >= startedAt - 2_000
+          (row) => row.chainId === chainId && row.action === action && row.createdAt >= startedAt
         ) ?? null
       );
     },
@@ -266,6 +264,7 @@ export function useDirectTxAction({
   React.useEffect(() => {
     if (!journalEntry) return;
     setState((current) => {
+      if (current.status === "mined" || current.status === "failed") return current;
       const nextStatus = mapJournalStatus(journalEntry.status);
       const nextHash = isMeaningfulHash(journalEntry.txHash) ? journalEntry.txHash : current.txHash;
       if (
@@ -334,7 +333,6 @@ export function useDirectTxAction({
 export function useSequencedTxAction({
   steps,
   finalAction,
-  matchWindowMs = 2_000,
   errorMessage
 }: SequencedTxActionOptions) {
   const { db } = useSSOTRuntime();
@@ -352,10 +350,7 @@ export function useSequencedTxAction({
     queryFn: async (): Promise<TxJournalRow[]> => {
       const startedAt = state.startedAt;
       if (!db || !startedAt) return [];
-      const rows = await db.txJournal
-        .where("createdAt")
-        .aboveOrEqual(startedAt - matchWindowMs)
-        .toArray();
+      const rows = await db.txJournal.where("createdAt").aboveOrEqual(startedAt).toArray();
       return sortRowsByCreatedAt(
         rows.filter((row) => row.chainId === chainId && trackedActions.includes(row.action))
       );
@@ -366,6 +361,9 @@ export function useSequencedTxAction({
   React.useEffect(() => {
     if (journalRows.length === 0) return;
     setState((current) => {
+      // The awaited operation owns its terminal result. A late approval read
+      // must not turn a cancelled/failed execution back into a pending flow.
+      if (current.status === "mined" || current.status === "failed") return current;
       const nextStatus = deriveSequencedStatus(current.status, journalRows, finalAction);
       const latestRow = journalRows[journalRows.length - 1];
       const nextHash =

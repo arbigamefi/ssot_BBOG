@@ -5,9 +5,10 @@ cd "$(dirname "$0")/../.."
 forge build src src/mocks/MockERC20.sol test/mocks/BlacklistToken.sol
 PORT="${BANK_TEST_PORT:-18549}"
 LOG=$(mktemp)
+ARTIFACTS=$(mktemp -d)
 anvil --host 127.0.0.1 --port "$PORT" --chain-id 84532 --silent >"$LOG" 2>&1 &
 NODE_PID=$!
-cleanup() { kill "$NODE_PID" 2>/dev/null || true; wait "$NODE_PID" 2>/dev/null || true; rm -f "$LOG"; }
+cleanup() { kill "$NODE_PID" 2>/dev/null || true; wait "$NODE_PID" 2>/dev/null || true; rm -f "$LOG"; rm -rf "$ARTIFACTS"; }
 trap cleanup EXIT
 export BANK_ANVIL_RPC="http://127.0.0.1:$PORT"
 for attempt in {1..50}; do
@@ -17,4 +18,11 @@ for attempt in {1..50}; do
 done
 # A failed bind must not attach this suite to a node owned by another process.
 kill -0 "$NODE_PID"
-pnpm -C frontend/packages/ssot test src/sdk/__tests__/bankAsync.anvil.test.ts
+pnpm -C frontend/packages/ssot test src/sdk/__tests__/liquidityVault.anvil.test.ts
+# Use the same owned node and freshly built modules for the UI's exact reserve oracle.
+for module in Dice CoinToss Roulette Keno Plinko Slots Baccarat SicBo; do
+  cp "out/${module}Module.sol/${module}Module.json" "$ARTIFACTS/${module}Module.json"
+done
+export MODULE_ORACLE_RPC="$BANK_ANVIL_RPC"
+export MODULE_ORACLE_ARTIFACTS="$ARTIFACTS"
+pnpm -C frontend/apps/web test src/features/casino/room/reserve-ratio.anvil.test.ts

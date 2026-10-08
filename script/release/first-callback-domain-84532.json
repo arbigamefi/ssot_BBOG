@@ -1,0 +1,43 @@
+{
+  "schema": "ARBIGAMEFI_FIRST_CALLBACK_DOMAIN_V1",
+  "chainId": 84532,
+  "status": "CERTIFIED",
+  "certificateSeal": {
+    "version": "v4",
+    "manifest": "dist/landing-2026-10-08/certificate-v4/CERTIFICATE-v4.sha256",
+    "sha256": "d67a7083a9f3676514339432cc5f690d3cc4de0253935d431c8d9631f8873491",
+    "errata": "dist/landing-2026-10-08/certificate-v4-ERRATA.md",
+    "review": "dist/independent-review-certificate-v4-2026-10-08/MANIFEST.sha256",
+    "reviewSha256": "d6c1619c1ea0d3414c5609ee34cc5520d8c89740b52b1c54115b73372784eb85",
+    "ownerAcceptance": "docs/adr/0006-vrf-callback-settlement.md#owner-risk-acceptance-f6-submitted-2026-10-08",
+    "certifiedOn": "2026-10-08"
+  },
+  "certificate": "docs/audit/first-callback-gas-certificate-2026-10-07.md",
+  "consumerCallbackGasLimit": 2447746,
+  "maxBetCountCeiling": 25,
+  "casinoMinBetAmountFloor": 99,
+  "moduleCodeHashes": {
+    "moduleDice": "0x59b856cd3382ed097317ac14c958495181c02ff813f75200e61602a399758c3a",
+    "moduleCoinToss": "0xdad2715a726366105498b4f2087be4964e30cc1bf74e04a3013beeb963ff58de",
+    "moduleRoulette": "0xc0cf73e055319b3f34e91ea180d41071b820d9dd14e5570394555dcc2fc35f32",
+    "moduleKeno": "0xf1de5ba1efe5687db5b5983fed1fbe172421faa82e6c3696507eb6ca9f9a0f1c",
+    "modulePlinko": "0x6a43f48600cc555118ef7c7f94b239afd16d7024dad02121010c24c66082ebc4",
+    "moduleSicBo": "0x2a89b0e026835e5b7707fa52c393b5f1afa02e4572e28e1fec0fbc830414babc",
+    "moduleSlots": "0x574a8aa25a9edaab1f63cc1291a723b1da3e36cccf1ba63ab0f85e3b402a5c69",
+    "moduleBaccarat": "0x1c9a2222b9ba0f67c8e9fb44aff5735047ed115485871f872e6ef7fdb6a95553"
+  },
+  "providerReference": {
+    "block": 47657524,
+    "wrapper": "0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed",
+    "coordinator": "0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE",
+    "wrapperOverheadGas": 13400,
+    "coordinatorMaxGas": 2500000
+  },
+  "token": {
+    "proxy": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "implementationSlot": "0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3",
+    "implementation": "0xd74cc5d436923b8ba2c179b4bca2841d8a52c5b5",
+    "proxyRuntimeSha256": "e878b99fc0c17354c86c7edeb999c70c18cfd925abb0958496f027cbad996d28",
+    "implementationRuntimeSha256": "9e410c49b2c8f98e4924d5cab8f07e734625c650c940a7ed600b376f010eba77"
+  }
+}

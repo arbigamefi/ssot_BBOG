@@ -12,6 +12,7 @@ export type ReleasePoolLike = {
   active?: boolean;
   asset?: string;
   bank?: string;
+  vault?: string;
   decimals?: number;
   domain?: string;
   domainId?: number;

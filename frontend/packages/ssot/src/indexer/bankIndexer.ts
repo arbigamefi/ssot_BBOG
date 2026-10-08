@@ -14,6 +14,7 @@ export interface BankIndexerConfig {
 export interface BankIndexerStatus {
   chainId: number;
   banks: Address[];
+  vaults: Address[];
   lastSyncedBlock?: number;
   latestBlock?: number;
   lastRunAt?: number;
@@ -41,23 +42,11 @@ const BANK_EVENTS = [
   "XPLockedUnlocked",
   "XPHoldbackReleased",
   "XPAccruedClaimed",
-  "Deposit",
-  "Withdraw",
-  "RedeemRequest",
-  "RedeemRequestCancelled",
-  "RedeemBatchOpened",
-  "RedeemBatchRetired",
-  "RedeemBatchPriced",
-  "RedeemBatchActivated",
-  "BetRiskSettled",
-  "RecoverySynced",
-  "RecoveryClaimed",
   "ProtocolCapitalAccrued",
-  "RedeemClaimable",
-  "RedeemRemainderReleased",
   "PlayerPayableCreated",
   "PlayerPayablePaid"
 ] as const;
+const VAULT_EVENTS = ["DepositAdded", "DepositWithdrawn", "Transfer"] as const;
 
 type BankEventName = (typeof BANK_EVENTS)[number];
 
@@ -89,7 +78,11 @@ export function createBankIndexer(params: {
 
   const banks = Array.from(new Set(release.pools.map((pool) => getAddress(pool.bank) as Address)));
 
-  const status: BankIndexerStatus = { chainId: release.chainId, banks };
+  const vaultBanks = new Map(
+    release.pools.map((pool) => [getAddress(pool.vault).toLowerCase(), getAddress(pool.bank)])
+  );
+  const vaults = [...vaultBanks.keys()] as Address[];
+  const status: BankIndexerStatus = { chainId: release.chainId, banks, vaults };
   let timer: ReturnType<typeof setInterval> | undefined;
   let inFlight: Promise<void> | undefined;
   const bankSet = new Set(banks.map((bank) => bank.toLowerCase()));
@@ -98,7 +91,7 @@ export function createBankIndexer(params: {
 
   // Scope the checkpoint to the deployment and its event source.
   const releaseStartBlock = Number(release.meta?.blockNumber ?? 0);
-  const cursorId = `${release.chainId}:bank-events:${releaseStartBlock}:${[...bankSet].sort().join(",")}`;
+  const cursorId = `${release.chainId}:liquidity-events:${releaseStartBlock}:${[...bankSet].sort().join(",")}:${[...vaultBanks.keys()].sort().join(",")}`;
 
   function syncOnce(): Promise<void> {
     if (!inFlight)
@@ -119,7 +112,59 @@ export function createBankIndexer(params: {
 
       const targetBlock = Math.max(0, latestBlock - config.confirmations);
 
-      const cursor = await db.cursors.get(cursorId);
+      let cursor = await db.cursors.get(cursorId);
+      if (cursor && cursor.lastProcessedBlock > targetBlock) {
+        // A lower head invalidates the old tail, including heights outside the
+        // next fetched range. Rewind facts and coverage together before replay.
+        const replayFrom = Math.max(
+          releaseStartBlock,
+          targetBlock - Math.max(config.rewindBlocks, 1) + 1
+        );
+        await db.transaction(
+          "rw",
+          db.bankEvents,
+          db.vaultEvents,
+          db.xpSnapshots,
+          db.cursors,
+          async () => {
+            const bankKeys = await db.bankEvents
+              .where("blockNumber")
+              .aboveOrEqual(replayFrom)
+              .filter(
+                (row) => row.chainId === release.chainId && bankSet.has(row.bank.toLowerCase())
+              )
+              .primaryKeys();
+            const vaultKeys = await db.vaultEvents
+              .where("blockNumber")
+              .aboveOrEqual(replayFrom)
+              .filter(
+                (row) => row.chainId === release.chainId && vaultBanks.has(row.vault.toLowerCase())
+              )
+              .primaryKeys();
+            const xpKeys = await db.xpSnapshots
+              .where("blockNumber")
+              .aboveOrEqual(replayFrom)
+              .filter(
+                (row) => row.chainId === release.chainId && bankSet.has(row.bank.toLowerCase())
+              )
+              .primaryKeys();
+            await db.bankEvents.bulkDelete(bankKeys);
+            await db.vaultEvents.bulkDelete(vaultKeys);
+            await db.xpSnapshots.bulkDelete(xpKeys);
+            if (replayFrom <= releaseStartBlock) await db.cursors.delete(cursorId);
+            else
+              await db.cursors.put({
+                id: cursorId,
+                chainId: release.chainId,
+                source: banks[0]!,
+                lastProcessedBlock: replayFrom - 1,
+                updatedAt: Date.now()
+              });
+          }
+        );
+        cursor = await db.cursors.get(cursorId);
+        status.lastSyncedBlock = cursor?.lastProcessedBlock;
+      }
 
       let fromBlock = cursor ? cursor.lastProcessedBlock + 1 : releaseStartBlock;
       if (cursor && config.rewindBlocks > 0) {
@@ -130,7 +175,7 @@ export function createBankIndexer(params: {
       }
 
       if (fromBlock > targetBlock) {
-        status.lastSyncedBlock = cursor?.lastProcessedBlock ?? releaseStartBlock;
+        status.lastSyncedBlock = cursor?.lastProcessedBlock;
         return;
       }
 
@@ -146,19 +191,29 @@ export function createBankIndexer(params: {
   }
 
   async function syncRange(fromBlock: number, toBlock: number): Promise<void> {
-    const { BankAbi } = getContractAbis();
+    const { BankAbi, LiquidityVaultAbi } = getContractAbis();
     const bankAbi = BankAbi as Abi;
     const events = BANK_EVENTS.map((name) => getEventAbi(bankAbi, name));
-    const logs =
+    const [logs, vaultLogs] = await Promise.all([
       banks.length === 0
         ? []
-        : await publicClient.getLogs({
+        : publicClient.getLogs({
             address: banks,
             events,
             strict: true,
             fromBlock: BigInt(fromBlock),
             toBlock: BigInt(toBlock)
-          });
+          }),
+      vaults.length === 0
+        ? []
+        : publicClient.getLogs({
+            address: vaults,
+            events: VAULT_EVENTS.map((name) => getEventAbi(LiquidityVaultAbi as Abi, name)),
+            strict: true,
+            fromBlock: BigInt(fromBlock),
+            toBlock: BigInt(toBlock)
+          })
+    ]);
     const logsAll: BankEventNormalized[] = [];
     for (const log of logs as Array<{
       address: Address;
@@ -195,67 +250,101 @@ export function createBankIndexer(params: {
       return a.txHash > b.txHash ? 1 : a.txHash < b.txHash ? -1 : 0;
     });
 
-    await db.transaction("rw", db.bankEvents, db.xpSnapshots, db.cursors, async () => {
-      // Replacing the fetched range also removes orphaned events when a reorg returns no replacement logs.
-      const bankRows = await db.bankEvents
-        .where("blockNumber")
-        .between(fromBlock, toBlock, true, true)
-        .filter((row) => row.chainId === release.chainId && bankSet.has(row.bank.toLowerCase()))
-        .toArray();
-      const bankKeys = bankRows.map((row) => row.id);
-      const xpKeys = await db.xpSnapshots
-        .where("blockNumber")
-        .between(fromBlock, toBlock, true, true)
-        .filter((row) => row.chainId === release.chainId && bankSet.has(row.bank.toLowerCase()))
-        .primaryKeys();
-      await db.bankEvents.bulkDelete(bankKeys);
-      await db.xpSnapshots.bulkDelete(xpKeys);
-      for (const ev of logsAll) {
-        const rowId = `${ev.chainId}:${ev.bank}:${ev.txHash}:${ev.logIndex}`;
-        const argsJson = safeJson(ev.args);
-
-        // Store raw event
-        await db.bankEvents.put({
-          id: rowId,
-          chainId: ev.chainId,
-          bank: ev.bank,
-          blockNumber: ev.blockNumber,
-          txHash: ev.txHash,
-          logIndex: ev.logIndex,
-          eventName: ev.eventName,
-          argsJson,
-          createdAt: Date.now()
-        });
-
-        // Derive XP snapshots for XP-related events
-        if (XP_EVENTS.has(ev.eventName)) {
-          const payee = (ev.args.payee as Address) ?? ("0x0" as Address);
-          const amount = extractPrimaryAmount(ev.eventName as BankXPEventName, ev.args);
-          const snapId = `${ev.chainId}:${payee}:${ev.blockNumber}:${ev.logIndex}`;
-
-          await db.xpSnapshots.put({
-            id: snapId,
-            chainId: ev.chainId,
-            bank: ev.bank,
-            payee,
-            eventType: ev.eventName as BankXPEventName,
-            blockNumber: ev.blockNumber,
-            logIndex: ev.logIndex,
-            txHash: ev.txHash,
-            amount: toBigintString(amount),
-            argsJson,
+    await db.transaction(
+      "rw",
+      db.bankEvents,
+      db.vaultEvents,
+      db.xpSnapshots,
+      db.cursors,
+      async () => {
+        // Replacing the fetched range also removes orphaned events when a reorg returns no replacement logs.
+        const bankRows = await db.bankEvents
+          .where("blockNumber")
+          .between(fromBlock, toBlock, true, true)
+          .filter((row) => row.chainId === release.chainId && bankSet.has(row.bank.toLowerCase()))
+          .toArray();
+        const bankKeys = bankRows.map((row) => row.id);
+        const xpKeys = await db.xpSnapshots
+          .where("blockNumber")
+          .between(fromBlock, toBlock, true, true)
+          .filter((row) => row.chainId === release.chainId && bankSet.has(row.bank.toLowerCase()))
+          .primaryKeys();
+        const vaultKeys = await db.vaultEvents
+          .where("blockNumber")
+          .between(fromBlock, toBlock, true, true)
+          .filter(
+            (row) => row.chainId === release.chainId && vaultBanks.has(row.vault.toLowerCase())
+          )
+          .primaryKeys();
+        await db.vaultEvents.bulkDelete(vaultKeys);
+        for (const log of vaultLogs as any[]) {
+          const vault = String(log.address).toLowerCase();
+          const bank = vaultBanks.get(vault);
+          if (!bank || !VAULT_EVENTS.includes(log.eventName)) continue;
+          if (log.blockNumber == null || log.logIndex == null || log.transactionHash == null)
+            throw new Error("Vault log is missing its mined identity");
+          await db.vaultEvents.put({
+            id: `${release.chainId}:${vault}:${log.transactionHash}:${log.logIndex}`,
+            chainId: release.chainId,
+            bank,
+            vault: vault as Address,
+            blockNumber: Number(log.blockNumber),
+            logIndex: Number(log.logIndex),
+            txHash: log.transactionHash,
+            eventName: log.eventName,
+            argsJson: safeJson(log.args ?? {}),
             createdAt: Date.now()
           });
         }
+        await db.bankEvents.bulkDelete(bankKeys);
+        await db.xpSnapshots.bulkDelete(xpKeys);
+        for (const ev of logsAll) {
+          const rowId = `${ev.chainId}:${ev.bank}:${ev.txHash}:${ev.logIndex}`;
+          const argsJson = safeJson(ev.args);
+
+          // Store raw event
+          await db.bankEvents.put({
+            id: rowId,
+            chainId: ev.chainId,
+            bank: ev.bank,
+            blockNumber: ev.blockNumber,
+            txHash: ev.txHash,
+            logIndex: ev.logIndex,
+            eventName: ev.eventName,
+            argsJson,
+            createdAt: Date.now()
+          });
+
+          // Derive XP snapshots for XP-related events
+          if (XP_EVENTS.has(ev.eventName)) {
+            const payee = (ev.args.payee as Address) ?? ("0x0" as Address);
+            const amount = extractPrimaryAmount(ev.eventName as BankXPEventName, ev.args);
+            const snapId = `${ev.chainId}:${payee}:${ev.blockNumber}:${ev.logIndex}`;
+
+            await db.xpSnapshots.put({
+              id: snapId,
+              chainId: ev.chainId,
+              bank: ev.bank,
+              payee,
+              eventType: ev.eventName as BankXPEventName,
+              blockNumber: ev.blockNumber,
+              logIndex: ev.logIndex,
+              txHash: ev.txHash,
+              amount: toBigintString(amount),
+              argsJson,
+              createdAt: Date.now()
+            });
+          }
+        }
+        await db.cursors.put({
+          id: cursorId,
+          chainId: release.chainId,
+          source: banks[0]!,
+          lastProcessedBlock: toBlock,
+          updatedAt: Date.now()
+        });
       }
-      await db.cursors.put({
-        id: cursorId,
-        chainId: release.chainId,
-        source: banks[0]!,
-        lastProcessedBlock: toBlock,
-        updatedAt: Date.now()
-      });
-    });
+    );
   }
 
   function start(): void {

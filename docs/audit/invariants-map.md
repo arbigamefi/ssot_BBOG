@@ -1,17 +1,29 @@
 # Invariant enforcement map
 
-The [current executable specification](../constitution/ExecutableSSOT.v1.6.md) is the authoritative
-obligation and test map. This index identifies the code boundaries without repeating its formulas.
+Status: core implemented and locally verified; current execution is recorded in the
+[core review](nft-core-integration-review.md). Full product qualification remains pending. The
+[executable specification](../constitution/ExecutableSSOT.v1.6.md) defines the obligations and the
+[implementation plan](../design/lp-accounting-and-callback-implementation.md) defines acceptance scenarios.
 
-| Boundary | Code | Main checks |
-| --- | --- | --- |
-| NAV, reserves and debt ownership | Bank, AccountingLib | BankAsyncRedemption, BankObservability, StatefulSystemDiff |
-| LP request, cutoff, pricing and claims | Bank | BankAsyncRedemption |
-| Pool and Hub isolation; allocation cap | PoolRegistry, SettlementRouter | SettlementRouter, SettlementRouterInvariants |
-| Casino terminal paths and gas limits | GameHub, game modules | GameHubE2E; `make test-casino-admission` |
-| Pricing snapshots and referral allocation | GameHub, DefaultReferralEngine | HouseEdgeAllocationV16, StatefulSystemDiff |
-| Randomness and native fee/credit handling | VRFHub, ChainlinkV2PlusWrapperAdapter | adapter unit/invariant and StatefulSystemDiffAdapter |
-| Sports market/ticket state | SportsHub, SportsRiskEngine | SportsHubLifecycle, SportsHubInvariants |
-| Actual cash receipts, replay and recovery | SDK, bet-index, keeper | package tests and opt-in PostgreSQL/Anvil suites |
+| Boundary                       | Implementation scope                        | Required verification                                                                                                                            |
+| ------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Dual custody                   | Bank, LiquidityVault, accounting libraries  | L=root, G=L+P, K=R−P, both cash balances, all debts and surplus; per-operation conservation                                                      |
+| NFT lifecycle                  | Vault and pinned ERC721Enumerable           | Fresh leaf per deposit; 24-hour maturity; partial relock; transfer preserves deadline; owner-only cash and operator transfer power               |
+| Liquidity and rounding         | Vault and original tree                     | Fraction precision 1e12; L−K free capital; partial-zero rejection; mature zero-NFT closure; no extra LP buffer or last-share rule                |
+| Allocation range               | Vault selection, pinned tree, Bank holds    | Original k=r-s selects prefix iff capital>=k for both signs; equality, k0, burned cutoff, refunds/fees, mixed cutoffs/order, exact prefix replay |
+| k>0 allocation equivalence     | `LiquidityVault._allocate`, pinned tree     | Push + lazy without the vendor preview leaves exactly the limit operation's storage (`testFuzz_settlementMatchesPinnedLimitOperation`, chained `LiquidityVaultChainedDifferential`); theorem and P1–P5 in ADR-0034 amendment 2026-10-07 |
+| Tree consistency (invariant I) | Vault tree, Bank settlement                 | I: every positive internal node has a positive child, so every root unit is held by a used leaf. It holds because a profit on an empty root becomes protocol capital, and every tree write keeps path sums. **Void if** a new path books value into an empty root, writes tree storage directly, or writes a node after `nextNode-1`. Root = Σ used-leaf balances after every step (chained differential); root = Σ live NFT `nodeWithdrawView` (`BankInvariants.invariant_rootCapitalIsHeldByLiveNfts`) |
+| Unused suffix (P3)             | Vendor tree, UNUSED_SUFFIX patch            | Premise P3, no value in nodes wholly after the last used leaf: `AzuroUnusedSuffixEquivalence`, chained differential, `BankInvariants.invariant_noValueAfterLastDeposit`. Only `AzuroUnusedSuffixEquivalence` (patched `_pushLazy` against the pre-patch copy, with an off-by-one mutant rejected) and the vendor hash pin guard the patch itself; the known exception (`_remove` on a never-used tree) is pinned there |
+| Empty root and arithmetic      | Bank/Vault wrapper                          | Positive empty-root P&L belongs to protocol capital; no accidental-transfer windfall; fixed 2^108−1 bound including stale lazy nodes             |
+| Pool/Hub identity and cost cap | Registry and Router                         | Authenticated positions, Bank/Vault/asset/VRF bindings, total terminal cost and cross-pool isolation                                             |
+| Callback and original seed     | VRFHub, GameHub, Router                     | Durable original result, bounded attempt, atomic ack and no overwrite or timeout refund after seed receipt                                       |
+| LP funding gate and interlocks | Vault → Bank → Router → VRFHub              | Full Hub failure, failed reads, busy Bank, token/NFT reentrancy; internal terminalization not self-blocked                                       |
+| Economic ordering              | Mature NFTs, new funding and callback order | Pre-inclusion value-transfer tests and independent review; cooldown is not proof of economic safety                                              |
+| Referrals and player debt      | GameHub, referral engine, Bank              | Existing snapshots and PF/XP rules; PP fixed recipient; later debt payment does not allocate another loss                                        |
+| Gas and deployment             | Tree, Vault construction, direct wrapper    | Worst complete callback for each admitted game/round limit; initcode/runtime sizes and reproducible deployment                                   |
+| Events and consumers           | SDK, bet-index, keeper, web                 | NFT ownership distinct from cash, aggregate liquidity cap once, receipt-block capital, duplicates/reorg and terminal/payment evidence            |
+| Release identity               | Deployment, snapshot, digest and import     | Required Vault, immutable reciprocal bindings, pinned source and generated ABI, negative drift/signature tests                                   |
 
-Passing local tests does not substitute for final audit or deployed-network acceptance.
+Current test filenames are implementation starting points, not proof of new obligations.
+Sports coverage does not admit sports to the casino pool. Local tests do not substitute for
+independent review, external audit or deployed-network acceptance.

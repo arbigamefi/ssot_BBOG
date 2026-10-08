@@ -200,8 +200,8 @@ describe("ClaimsPageClient", () => {
           bank: "0x0000000000000000000000000000000000000002",
           externalPayablesTotal: 4_000_000n,
           protocolFeesPayable: 1_250_000n,
-          totalAssets: 100_000_000n,
-          totalReserved: 10_000_000n
+          G: 100_000_000n,
+          R: 10_000_000n
         })
       }
     };

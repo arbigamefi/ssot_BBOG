@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
 
@@ -21,7 +21,7 @@ contract ContractSizesTest is Test {
             "SportsRiskEngine.sol:SportsRiskEngine",
             "ReferralRegistry.sol:ReferralRegistry",
             "DefaultReferralEngine.sol:DefaultReferralEngine",
-            "ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter",
+            "LiquidityVault.sol:LiquidityVault",
             "DiceModule.sol:DiceModule",
             "CoinTossModule.sol:CoinTossModule",
             "RouletteModule.sol:RouletteModule",

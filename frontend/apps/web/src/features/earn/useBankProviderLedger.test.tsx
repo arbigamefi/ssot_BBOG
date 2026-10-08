@@ -10,11 +10,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("excludes cash received after the valuation snapshot and preserves recovery attribution", async () => {
+it("excludes cash received after the valuation snapshot and preserves NFT owner attribution", async () => {
   const account = "0x0000000000000000000000000000000000000001";
   const sdk = {
     account,
-    release: { chainId: 84532, releaseDigest: "0xabc", pools: [{ poolId: 1, bank: account }] }
+    release: {
+      chainId: 84532,
+      releaseDigest: "0xabc",
+      pools: [{ poolId: 1, bank: account, vault: account }]
+    }
   } as unknown as SSOTSDK;
   vi.stubGlobal(
     "fetch",
@@ -25,22 +29,19 @@ it("excludes cash received after the valuation snapshot and preserves recovery a
             rows: [
               {
                 id: "new",
-                action: "recovery",
+                action: "withdraw",
                 assets: "2000000",
-                shares: "0",
-                epochId: "1",
+                depositId: "1099511627776",
                 blockNumber: 101,
                 logIndex: 0,
                 txHash: "0xaa"
               },
               {
                 id: "old",
-                action: "recovery",
+                action: "withdraw",
                 assets: "1000000",
-                shares: "0",
-                epochId: "1",
-                receiver: account,
-                caller: account,
+                depositId: "1099511627776",
+                owner: account,
                 blockNumber: 99,
                 logIndex: 0,
                 txHash: "0xbb"
@@ -61,10 +62,16 @@ it("excludes cash received after the valuation snapshot and preserves recovery a
   });
   await waitFor(() => expect(result.current.isSuccess).toBe(true));
   expect(result.current.entries).toEqual([
-    expect.objectContaining({ id: "old", assets: 1_000_000n, epochId: 1n, receiver: account })
+    expect.objectContaining({
+      id: "old",
+      assets: 1_000_000n,
+      depositId: 1099511627776n,
+      owner: account
+    })
   ]);
   expect(result.current.coverageComplete).toBe(false);
   expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain("endBlock=100");
+  expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain(`vault=${account}`);
 });
 
 it.each([
@@ -75,7 +82,7 @@ it.each([
   const account = "0x0000000000000000000000000000000000000001";
   const sdk = {
     account,
-    release: { chainId: 84532, pools: [{ poolId: 1, bank: account }] }
+    release: { chainId: 84532, pools: [{ poolId: 1, bank: account, vault: account }] }
   } as unknown as SSOTSDK;
   vi.stubGlobal(
     "fetch",

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -12,6 +13,7 @@ import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
+import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {IVRFHub} from "../../src/core/interfaces/IVRFHub.sol";
 import {IBank} from "../../src/core/interfaces/IBank.sol";
@@ -39,6 +41,8 @@ import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
 import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
 
 contract GameHubE2E is Test {
+    uint256 internal constant ADMISSION_FINALIZE_GAS = 3_000_000;
+    uint256 internal constant ADMISSION_AMOUNT = 0.01 ether;
     uint64 internal constant POOL_A = 1;
     uint64 internal constant POOL_B = 2;
 
@@ -63,17 +67,19 @@ contract GameHubE2E is Test {
     PoolRegistry internal poolRegistry;
     SettlementRouter internal router;
     VRFHub internal vrf;
+    MockVRFV2PlusWrapper internal wrapper;
     GameHub internal gameHub;
 
     function setUp() external {
         assetA = new MockERC20("AssetA", "ASTA", 18);
         assetB = new MockERC20("AssetB", "ASTB", 18);
 
-        bankA = new Bank(address(assetA), gov, 1000, "LP Share ASTA", "LPA", 18, 1);
-        bankB = new Bank(address(assetB), gov, 1000, "LP Share ASTB", "LPB", 18, 1);
+        bankA = new Bank(address(assetA), gov, 1000, 18, 1);
+        bankB = new Bank(address(assetB), gov, 1000, 18, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
-        vrf = new VRFHub(address(this), gov);
+        wrapper = new MockVRFV2PlusWrapper();
+        vrf = new VRFHub(address(wrapper), address(router));
 
         ReferralRegistry refRegistry = new ReferralRegistry(gov);
         DefaultReferralEngine refEngine = new DefaultReferralEngine();
@@ -101,21 +107,23 @@ contract GameHubE2E is Test {
         poolRegistry.setHubAllowedForPool(POOL_B, address(gameHub), true);
 
         bankA.setSettlementRouterOnce(address(router));
+        bankA.setRandomnessConsumerOnce(address(vrf));
         bankB.setSettlementRouterOnce(address(router));
+        bankB.setRandomnessConsumerOnce(address(vrf));
         bankA.setMinPlayerTurnoverForUnlock(20 ether);
         bankA.setHoldbackVestingSeconds(10);
         bankB.setMinPlayerTurnoverForUnlock(20 ether);
         bankB.setHoldbackVestingSeconds(10);
 
         refRegistry.setBinderOnce(address(gameHub));
-        gameHub.registerGame(GAME_DICE, address(new DiceModule()));
-        gameHub.registerGame(GAME_COIN, address(new CoinTossModule()));
-        gameHub.registerGame(GAME_ROULETTE, address(new RouletteModule()));
-        gameHub.registerGame(GAME_KENO, address(new KenoModule()));
-        gameHub.registerGame(GAME_SLOTS, address(new SlotsModule()));
-        gameHub.registerGame(GAME_BACCARAT, address(new BaccaratModule()));
-        gameHub.registerGame(GAME_PLINKO, address(new PlinkoModule()));
-        gameHub.registerGame(GAME_SIC_BO, address(new SicBoModule()));
+        gameHub.registerGame(GAME_DICE, address(new DiceModule()), 25, 2_447_746);
+        gameHub.registerGame(GAME_COIN, address(new CoinTossModule()), 25, 2_447_746);
+        gameHub.registerGame(GAME_ROULETTE, address(new RouletteModule()), 25, 2_447_746);
+        gameHub.registerGame(GAME_KENO, address(new KenoModule()), 25, 2_447_746);
+        gameHub.registerGame(GAME_SLOTS, address(new SlotsModule()), 25, 2_447_746);
+        gameHub.registerGame(GAME_BACCARAT, address(new BaccaratModule()), 25, 2_447_746);
+        gameHub.registerGame(GAME_PLINKO, address(new PlinkoModule()), 25, 2_447_746);
+        gameHub.registerGame(GAME_SIC_BO, address(new SicBoModule()), 25, 2_447_746);
         vm.stopPrank();
 
         assetA.mint(alice, 1_000 ether);
@@ -130,10 +138,10 @@ contract GameHubE2E is Test {
         vm.deal(gov, 100 ether);
 
         vm.startPrank(gov);
-        assetA.approve(address(bankA), type(uint256).max);
-        bankA.deposit(5_000 ether, gov);
-        assetB.approve(address(bankB), type(uint256).max);
-        bankB.deposit(5_000 ether, gov);
+        assetA.approve(address(bankA.vault()), type(uint256).max);
+        LiquidityVault(bankA.vault()).addDepositFor(gov, 5_000 ether);
+        assetB.approve(address(bankB.vault()), type(uint256).max);
+        LiquidityVault(bankB.vault()).addDepositFor(gov, 5_000 ether);
         vm.stopPrank();
 
         vm.startPrank(alice);
@@ -153,18 +161,21 @@ contract GameHubE2E is Test {
         bankA.setRiskInPaused(true);
 
         // Both the VRF callback and the player's payout must stay live while paused.
-        _fulfill(positionId, _findSeedDiceWin(positionId, 50));
         uint256 balanceBefore = assetA.balanceOf(alice);
-        gameHub.finalize(positionId);
+        _fulfill(positionId, _findSeedDiceWin(positionId, 50));
 
         assertEq(assetA.balanceOf(alice) - balanceBefore, 19.6 ether);
         assertEq(bankA.totalReserved(), 0);
         assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
         assertTrue(bankA.riskInPaused());
-        assertEq(bankA.maxWithdraw(gov), 0);
+        assertEq(
+            LiquidityVault(bankA.vault()).depositState(LiquidityVault(bankA.vault()).getLastDepositId()).maxAssets, 0
+        );
+        LiquidityVault pausedVault = LiquidityVault(bankA.vault());
+        uint48 pausedId = pausedVault.getLastDepositId();
         vm.prank(gov);
-        vm.expectRevert(IBank.RiskInPaused.selector);
-        bankA.withdraw(1 ether, gov, gov);
+        vm.expectRevert();
+        pausedVault.withdrawDeposit(pausedId, 1e12);
     }
 
     function test_guardianPauseDoesNotBlockTimedOutRefund() external {
@@ -185,7 +196,7 @@ contract GameHubE2E is Test {
         assertEq(assetA.balanceOf(alice) - balanceBefore, bet.stake);
         assertEq(bankA.totalReserved(), 0);
         assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Refunded));
-        assertEq(vrf.getRequest(bet.requestId).hub, address(0));
+        assertEq(uint256(vrf.getRequest(bet.requestId).state), uint256(IVRFHub.RequestState.Cancelled));
         assertTrue(bankA.riskInPaused());
     }
 
@@ -195,7 +206,6 @@ contract GameHubE2E is Test {
         uint256 settledId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, bob);
         uint256 heldId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, bob);
         _fulfill(settledId, _findSeedDiceLose(settledId, 50));
-        gameHub.finalize(settledId);
 
         SSOTTypes.BetTerminal memory terminal = gameHub.getBetTerminal(settledId);
         SSOTTypes.SSOT memory s = bankA.getSSOT();
@@ -204,7 +214,7 @@ contract GameHubE2E is Test {
         assertEq(s.PF + s.XP, 0.1 ether, "liabilities follow used turnover, not payout fees");
         assertEq(s.R, gameHub.getBet(heldId).reserved);
         assertGt(s.R, 0);
-        assertGe(s.NAV, s.R);
+        assertGe(s.G, s.R);
     }
 
     function test_diceWinSettlesThroughRouterPoolA() external {
@@ -220,13 +230,12 @@ contract GameHubE2E is Test {
         assertEq(pos.bank, address(bankA));
 
         uint256 seed = _findSeedDiceWin(positionId, cap);
+        uint256 balBefore = assetA.balanceOf(alice);
         _fulfill(positionId, seed);
         uint256[] memory words = gameHub.getBetRandomWords(positionId);
         assertEq(words.length, 1);
         assertEq(words[0], seed);
 
-        uint256 balBefore = assetA.balanceOf(alice);
-        gameHub.finalize(positionId);
         uint256 balAfter = assetA.balanceOf(alice);
 
         assertEq(balAfter - balBefore, (196 ether) / 10);
@@ -242,31 +251,13 @@ contract GameHubE2E is Test {
         assertEq(gameHub.getBet(positionId).reserved, 20 ether);
 
         uint256 seed = _findSeedDiceUnderWin(positionId, target);
+        uint256 balBefore = assetA.balanceOf(alice);
         _fulfill(positionId, seed);
 
-        uint256 balBefore = assetA.balanceOf(alice);
-        gameHub.finalize(positionId);
         uint256 balAfter = assetA.balanceOf(alice);
 
         assertEq(balAfter - balBefore, (196 ether) / 10);
         assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
-    }
-
-    function test_finalizeSkipsVrfDetachWhenRequestAlreadyClearedByFulfill() external {
-        uint8 cap = 50;
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-
-        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, cap), spec, address(0));
-        uint256 requestId = gameHub.getBet(positionId).requestId;
-
-        uint256 seed = _findSeedDiceWin(positionId, cap);
-        _fulfill(positionId, seed);
-
-        assertEq(vrf.getRequest(requestId).hub, address(0), "fulfilled callback should clear VRF request storage");
-
-        vm.expectCall(address(vrf), abi.encodeWithSelector(IVRFHub.detach.selector, requestId), 0);
-        gameHub.finalize(positionId);
     }
 
     function test_coinMultirollStopGainRefundsUnusedStakeThroughRouterPoolB() external {
@@ -279,10 +270,9 @@ contract GameHubE2E is Test {
         assertEq(bet.reserved, 100 ether);
 
         uint256 seed = _findSeedCoinWin(positionId, true);
+        uint256 balBefore = assetB.balanceOf(alice);
         _fulfill(positionId, seed);
 
-        uint256 balBefore = assetB.balanceOf(alice);
-        gameHub.finalize(positionId);
         uint256 balAfter = assetB.balanceOf(alice);
 
         assertEq(balAfter - balBefore, 40 ether + (196 ether) / 10);
@@ -298,10 +288,9 @@ contract GameHubE2E is Test {
         uint256 expectedGross = Math.mulDiv(10 ether, 37, 18);
         assertEq(gameHub.getBet(positionId).reserved, expectedGross);
 
+        uint256 balBefore = assetA.balanceOf(alice);
         _fulfill(positionId, _findSeedRouletteHit(positionId, 7));
 
-        uint256 balBefore = assetA.balanceOf(alice);
-        gameHub.finalize(positionId);
         uint256 balAfter = assetA.balanceOf(alice);
 
         uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
@@ -316,10 +305,9 @@ contract GameHubE2E is Test {
         uint256 positionId = _place(alice, GAME_KENO, POOL_A, KenoParams.encode(numbers), spec, address(0));
         assertEq(gameHub.getBet(positionId).reserved, 15 ether);
 
+        uint256 balBefore = assetA.balanceOf(alice);
         _fulfill(positionId, _findSeedKenoHit(positionId, numbers, true));
 
-        uint256 balBefore = assetA.balanceOf(alice);
-        gameHub.finalize(positionId);
         uint256 balAfter = assetA.balanceOf(alice);
 
         uint256 expectedGross = 15 ether;
@@ -335,10 +323,9 @@ contract GameHubE2E is Test {
             _place(alice, GAME_SLOTS, POOL_A, SlotsParams.encode(SlotsParams.PROFILE_CLASSIC), spec, address(0));
         assertEq(gameHub.getBet(positionId).reserved, 640 ether);
 
+        uint256 balBefore = assetA.balanceOf(alice);
         _fulfill(positionId, _findSeedSlotsJackpot(positionId));
 
-        uint256 balBefore = assetA.balanceOf(alice);
-        gameHub.finalize(positionId);
         uint256 balAfter = assetA.balanceOf(alice);
 
         uint256 expectedGross = 640 ether;
@@ -355,10 +342,9 @@ contract GameHubE2E is Test {
         uint256 expectedGross = Math.mulDiv(10 ether, 104_793, 10_000);
         assertEq(gameHub.getBet(positionId).reserved, expectedGross);
 
+        uint256 balBefore = assetA.balanceOf(alice);
         _fulfill(positionId, _findSeedBaccaratOutcome(positionId, BaccaratParams.SIDE_TIE));
 
-        uint256 balBefore = assetA.balanceOf(alice);
-        gameHub.finalize(positionId);
         uint256 balAfter = assetA.balanceOf(alice);
 
         uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
@@ -374,10 +360,9 @@ contract GameHubE2E is Test {
         uint256 expectedGross = Math.mulDiv(10 ether, 246_153, 10_000);
         assertEq(gameHub.getBet(positionId).reserved, expectedGross);
 
+        uint256 balBefore = assetA.balanceOf(alice);
         _fulfill(positionId, _findSeedPlinkoEdge(positionId));
 
-        uint256 balBefore = assetA.balanceOf(alice);
-        gameHub.finalize(positionId);
         uint256 balAfter = assetA.balanceOf(alice);
 
         uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
@@ -394,27 +379,18 @@ contract GameHubE2E is Test {
         uint256 expectedGross = 216 ether;
         assertEq(gameHub.getBet(positionId).reserved, expectedGross);
 
+        uint256 balBefore = assetA.balanceOf(alice);
         _fulfill(positionId, _findSeedSicBoSpecificTriple(positionId, 6));
 
-        uint256 balBefore = assetA.balanceOf(alice);
-        gameHub.finalize(positionId);
         uint256 balAfter = assetA.balanceOf(alice);
 
         uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
         assertEq(balAfter - balBefore, expectedGross - fee);
     }
 
-    function test_referralSkylineAccruesXpOnlyInSettledPool() external {
+    function test_twoTierReferralAccruesXpOnlyInSettledPool() external {
         vm.prank(alice);
         gameHub.bindReferrer(bob);
-
-        vm.prank(gov);
-        gameHub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 100);
-        (, uint64 activatesAt) = gameHub.pendingEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
-        vm.warp(activatesAt);
-        gameHub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
-        vm.prank(bob);
-        gameHub.setAffiliateHouseEdge(300);
 
         uint8 cap = 50;
         SSOTTypes.StakeSpec memory spec =
@@ -422,7 +398,6 @@ contract GameHubE2E is Test {
         uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, cap), spec, bob);
 
         _fulfill(positionId, _findSeedDiceLose(positionId, cap));
-        gameHub.finalize(positionId);
 
         assertEq(bankA.playerTurnover(alice), 10 ether);
         assertEq(bankB.playerTurnover(alice), 0);
@@ -444,616 +419,6 @@ contract GameHubE2E is Test {
 
         assertEq(router.nextPositionId(), 1);
     }
-
-    function test_asyncExitKeepsBettingLiveAndHistoricalRecoveriesSeparate() external {
-        vm.prank(gov);
-        bankA.requestRedeem(2_000 ether, gov, gov);
-        uint256 cutoff = bankA.redeemBatch(bankA.currentEpoch()).cutoff;
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        vm.warp(cutoff - 1);
-        uint256 oldPosition = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0));
-        vm.warp(cutoff);
-        uint256 boundaryPosition = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0));
-        bankA.activateBatch();
-        assertEq(bankA.recoveryEpoch(1).remainingHolds, 2);
-        uint256 liquid = Math.mulDiv(_exitEquity(5_020 ether, 5_000 ether, 2_000 ether, 1e15), 4_980 ether, 5_020 ether);
-        assertEq(bankA.redeemBatch(1).assets, liquid);
-        uint256 backing = bankA.recoveryBacking();
-        uint256 newPosition = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0));
-        assertEq(bankA.recoveryBacking(), backing);
-        assertEq(bankA.recoveryEpoch(1).remainingHolds, 2);
-        _fulfill(oldPosition, _findSeedDiceWin(oldPosition, 50));
-        gameHub.finalize(oldPosition);
-        _fulfill(boundaryPosition, _findSeedDiceLose(boundaryPosition, 50));
-        gameHub.finalize(boundaryPosition);
-        assertEq(bankA.openHolds(), 1);
-        IBank.RecoveryEpoch memory epoch = bankA.recoveryEpoch(1);
-        assertEq(epoch.remainingHolds, 0);
-        uint256 units = Math.mulDiv(20 ether, _exitEquity(5_020 ether, 5_000 ether, 2_000 ether, 1e15), 5_020 ether);
-        uint256 recovery = Math.mulDiv(units, 0.3 ether, 20 ether) + Math.mulDiv(units, 19.9 ether, 20 ether);
-        assertEq(epoch.initialReserve, 2 * units);
-        assertEq(epoch.settledCost, 2 * units - recovery, "only exiting units bear historical cost");
-        uint256 expected = liquid + recovery;
-        assertEq(_claimGovExit(bankA, 2_000 ether, 1), expected);
-        uint256 afterClaim = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0));
-        assertEq(router.getPosition(afterClaim).bank, address(bankA));
-        assertEq(uint256(router.getPosition(newPosition).state), uint256(SSOTTypes.PositionState.Held));
-        uint256 otherPosition = _place(alice, GAME_DICE, POOL_B, abi.encode(true, uint8(50)), spec, address(0));
-        assertEq(router.getPosition(otherPosition).bank, address(bankB));
-    }
-
-    function test_realGamePathKeepsPayingLaterLpExitsWhileAnOldPositionStaysUnresolved() external {
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        uint256 oldPosition = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0));
-        vm.prank(gov);
-        bankA.requestRedeem(1_000 ether, gov, gov);
-        vm.warp(bankA.redeemBatch(1).cutoff);
-        bankA.activateBatch();
-        vm.prank(gov);
-        assertGt(bankA.redeem(1_000 ether, gov, gov), 0);
-        for (uint256 epoch = 2; epoch <= 3; ++epoch) {
-            uint256 later = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0));
-            vm.prank(gov);
-            bankA.requestRedeem(1_000 ether, gov, gov);
-            vm.warp(Math.max(bankA.redeemBatch(epoch).cutoff, block.timestamp + 365 days));
-            bankA.activateBatch();
-            vm.prank(gov);
-            assertGt(bankA.redeem(1_000 ether, gov, gov), 0, "older recovery cannot gate later cash");
-            _fulfill(later, _findSeedDiceLose(later, 50));
-            gameHub.finalize(later);
-            assertEq(bankA.recoveryEpoch(1).remainingHolds, 1);
-            assertEq(uint256(router.getPosition(oldPosition).state), uint256(SSOTTypes.PositionState.Held));
-            assertEq(uint256(gameHub.getBet(oldPosition).state), uint256(SSOTTypes.BetState.PendingVRF));
-        }
-        uint256 activeBefore = bankA.totalAssets();
-        uint256 thirdEpochCost = bankA.recoveryEpoch(3).settledCost;
-        uint256 firstUnits = bankA.recoveryEpoch(1).remainingReserve;
-        uint256 thirdUnits = bankA.recoveryEpoch(3).remainingReserve;
-        uint256 activeOld = 20 ether - firstUnits - bankA.recoveryEpoch(2).remainingReserve - thirdUnits;
-        _fulfill(oldPosition, _findSeedDiceWin(oldPosition, 50));
-        gameHub.finalize(oldPosition);
-        assertEq(bankA.currentEpoch(), 4);
-        assertEq(bankA.recoveryEpoch(1).remainingHolds, 0);
-        assertEq(bankA.recoveryEpoch(1).settledCost, firstUnits - Math.mulDiv(firstUnits, 0.3 ether, 20 ether));
-        assertEq(
-            bankA.recoveryEpoch(3).settledCost,
-            thirdEpochCost + thirdUnits - Math.mulDiv(thirdUnits, 0.3 ether, 20 ether),
-            "each batch bears its own old units"
-        );
-        assertEq(
-            bankA.totalAssets(),
-            activeBefore - Math.mulDiv(activeOld, 19.7 ether, 20 ether),
-            "staying shares keep their original risk"
-        );
-        vm.prank(gov);
-        assertGt(bankA.claimRecovery(1, gov, gov), 0);
-    }
-
-    function test_recoveryContinuityWithNewCapitalAndTwoPartialExits_Win() external {
-        _runRecoveryContinuityWithNewCapital(0);
-    }
-
-    function test_recoveryContinuityWithNewCapitalAndTwoPartialExits_Loss() external {
-        _runRecoveryContinuityWithNewCapital(1);
-    }
-
-    function test_recoveryContinuityWithNewCapitalAndTwoPartialExits_Refund() external {
-        _runRecoveryContinuityWithNewCapital(2);
-    }
-
-    // Reuse the six-decimal pool and real Hub/Router fixture. Only local time and VRF delivery are controlled.
-    function _runRecoveryContinuityWithNewCapital(uint8 terminal) internal {
-        (BlacklistToken token, Bank bank) = _newPayablePool(false);
-        address controller = address(0xCA11);
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
-        uint256 oldPosition = _place(alice, GAME_DICE, 3, abi.encode(true, uint8(50)), spec, address(0));
-        vm.prank(gov);
-        bank.requestRedeem(1_000e6, controller, gov);
-        vm.warp(bank.redeemBatch(1).cutoff);
-        bank.activateBatch();
-        assertFalse(bank.redeemBatch(1).fullExit);
-        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
-        assertGt(bank.recoveryEpoch(1).remainingReserve, 0);
-        vm.prank(controller);
-        assertGt(bank.redeem(1_000e6, controller, controller), 0);
-
-        // New capital buys the remaining active book; it acquires no first-batch recovery rights.
-        token.mint(bob, 200e6);
-        uint256 expectedShares = bank.previewDeposit(200e6);
-        vm.startPrank(bob);
-        token.approve(address(bank), 200e6);
-        assertEq(bank.deposit(200e6, bob), expectedShares);
-        vm.stopPrank();
-        assertEq(bank.getRecovery(1, bob).shares, 0);
-        assertEq(bank.getRecovery(1, controller).shares, 1_000e6);
-        spec.amountPerRoll = 5e6;
-        uint256 newPosition = _place(alice, GAME_DICE, 3, abi.encode(true, uint8(50)), spec, address(0));
-        vm.prank(gov);
-        bank.requestRedeem(1_000e6, controller, gov);
-        vm.warp(bank.redeemBatch(2).cutoff);
-        bank.activateBatch();
-        assertFalse(bank.redeemBatch(2).fullExit);
-        assertEq(bank.recoveryEpoch(1).remainingHolds, 1);
-        assertEq(bank.recoveryEpoch(2).remainingHolds, 2);
-        assertEq(uint256(gameHub.getBet(oldPosition).state), uint256(SSOTTypes.BetState.PendingVRF));
-        vm.prank(controller);
-        assertGt(bank.redeem(1_000e6, controller, controller), 0);
-        assertEq(bank.balanceOf(gov), 3_000e6);
-        assertEq(bank.balanceOf(bob), expectedShares);
-        assertEq(bank.balanceOf(address(bank)), 0);
-
-        // Settle the newer hold first, so the second batch's remaining units unambiguously belong to the old hold.
-        _fulfill(newPosition, _findSeedDiceLose(newPosition, 50));
-        gameHub.finalize(newPosition);
-        assertEq(bank.recoveryEpoch(2).remainingHolds, 1);
-        assertGt(bank.recoveryEpoch(2).remainingReserve, 0);
-        assertEq(bank.openHolds(), 1);
-        assertEq(bank.totalReserved(), 20e6);
-        _assertRecoveryContinuityTerminal(token, bank, oldPosition, controller, terminal);
-    }
-
-    function _assertRecoveryContinuityTerminal(
-        BlacklistToken token,
-        Bank bank,
-        uint256 oldPosition,
-        address controller,
-        uint8 terminal
-    ) internal {
-        IBank.RecoveryEpoch memory first = bank.recoveryEpoch(1);
-        IBank.RecoveryEpoch memory second = bank.recoveryEpoch(2);
-        uint256 activeUnits = 20e6 - first.remainingReserve - second.remainingReserve;
-        uint256 navBefore = bank.totalAssets();
-        uint256 playerBefore = token.balanceOf(alice);
-        uint256 cost = terminal == 0 ? 19_700_000 : terminal == 1 ? 100_000 : 10e6;
-        if (terminal == 2) {
-            assertGe(block.timestamp, gameHub.getBet(oldPosition).refundDeadline);
-            gameHub.refund(oldPosition);
-            assertEq(uint256(gameHub.getBet(oldPosition).state), uint256(SSOTTypes.BetState.Refunded));
-            assertEq(uint256(router.getPosition(oldPosition).state), uint256(SSOTTypes.PositionState.Refunded));
-        } else {
-            _fulfill(
-                oldPosition, terminal == 0 ? _findSeedDiceWin(oldPosition, 50) : _findSeedDiceLose(oldPosition, 50)
-            );
-            gameHub.finalize(oldPosition);
-            assertEq(uint256(gameHub.getBet(oldPosition).state), uint256(SSOTTypes.BetState.Settled));
-            assertEq(uint256(router.getPosition(oldPosition).state), uint256(SSOTTypes.PositionState.Settled));
-        }
-        assertEq(token.balanceOf(alice) - playerBefore, terminal == 0 ? 19_600_000 : terminal == 1 ? 0 : 10e6);
-        assertEq(bank.totalAssets(), navBefore - Math.mulDiv(activeUnits, cost, 20e6));
-        assertEq(
-            bank.recoveryEpoch(1).settledCost,
-            first.settledCost + first.remainingReserve - Math.mulDiv(first.remainingReserve, 20e6 - cost, 20e6)
-        );
-        assertEq(
-            bank.recoveryEpoch(2).settledCost,
-            second.settledCost + second.remainingReserve - Math.mulDiv(second.remainingReserve, 20e6 - cost, 20e6)
-        );
-        assertEq(bank.recoveryEpoch(1).remainingHolds, 0);
-        assertEq(bank.recoveryEpoch(2).remainingHolds, 0);
-        assertEq(bank.getRecovery(1, gov).shares, 0, "the requesting share owner is not the controller");
-        assertEq(bank.getRecovery(2, bob).shares, 0, "new shares do not inherit the requesting controller's rights");
-        vm.prank(bob);
-        vm.expectRevert(Errors.Unauthorized.selector);
-        bank.claimRecovery(1, bob, controller);
-
-        uint256 controllerBefore = token.balanceOf(controller);
-        uint256 navAfterTerminal = bank.totalAssets();
-        vm.startPrank(controller);
-        uint256 recovered = bank.claimRecovery(1, controller, controller);
-        assertGt(recovered, 0);
-        uint256 secondRecovered = bank.claimRecovery(2, controller, controller);
-        assertGt(secondRecovered, 0);
-        assertEq(bank.claimRecovery(1, controller, controller), 0, "a second claim cannot pay twice");
-        vm.stopPrank();
-        assertEq(token.balanceOf(controller) - controllerBefore, recovered + secondRecovered);
-        assertEq(bank.totalAssets(), navAfterTerminal, "paying historical recovery does not charge active LPs again");
-        assertEq(bank.openHolds(), 0);
-        assertEq(bank.totalReserved(), 0);
-        assertEq(bank.activeReserved(), 0);
-        assertEq(bank.exitPayable(), 0);
-        assertEq(bank.recoveryBacking(), 0);
-        assertEq(bank.playerPayableTotal(), 0);
-        assertEq(
-            token.balanceOf(address(bank)),
-            bank.totalAssets() + bank.protocolFeesPayable() + bank.externalPayablesTotal(),
-            "all remaining cash belongs to active LPs or fixed fee and XP liabilities"
-        );
-    }
-
-    // Incremental property from the independent review: compare actual cash, not a second implementation of
-    // Bank's allocation formula. Reuse this fixture's Hub/Router/VRF/modules with a six-decimal pool.
-    function test_exitCashEquivalenceWithReadyAndLateSettledPositions() external {
-        _assertExitCashEquivalence(12345, 12, 1_000_000e6, false);
-    }
-
-    function test_exitCashEquivalenceWithReadyAndTimedOutPositions() external {
-        _assertExitCashEquivalence(67890, 12, 1e6, true);
-    }
-
-    function testFuzz_exitCashEquivalenceAlwaysIncludesOpenRisk(
-        uint256 seed,
-        uint8 nBets,
-        uint256 stayingDeposit,
-        bool refundPending
-    ) external {
-        _assertExitCashEquivalence(seed, bound(nBets, 1, 12), bound(stayingDeposit, 1e6, 3_000_000e6), refundPending);
-    }
-
-    function _assertExitCashEquivalence(uint256 seed, uint256 n, uint256 stayingDeposit, bool refundPending) internal {
-        (BlacklistToken token, Bank pool) = _newPayablePool(false);
-        address earlyLp = address(0xEA);
-        address lateLp = address(0xEB);
-        _depositExitControl(token, pool, earlyLp, 1_000_000e6);
-        _depositExitControl(token, pool, lateLp, 1_000_000e6);
-        _depositExitControl(token, pool, gov, stayingDeposit);
-        uint256 shares = pool.balanceOf(earlyLp);
-        assertEq(shares, pool.balanceOf(lateLp), "both LPs start with identical risk ownership");
-        uint256 earlyBalance = token.balanceOf(earlyLp);
-        uint256 lateBalance = token.balanceOf(lateLp);
-
-        uint256[] memory ids = new uint256[](n);
-        uint8[] memory phases = new uint8[](n); // 0 = settled, 1 = ready, 2 = pending at the early exit
-        uint256 open;
-        for (uint256 i; i < n; ++i) {
-            ids[i] = _placeExitControl(token, seed, i);
-            // A one-bet case always carries open risk; multi-bet cases force both open states and a settled
-            // control when possible. No fuzz sample can pass just because every bet closed before exit.
-            phases[i] = i == 0
-                ? uint8(1 + seed % 2)
-                : i == 1 ? uint8(3 - phases[0]) : i == 2 ? 0 : uint8(uint256(keccak256(abi.encode(seed, i))) % 3);
-            if (phases[i] <= 1) _fulfill(ids[i], uint256(keccak256(abi.encode(seed, i, "ready"))));
-            if (phases[i] == 0) gameHub.finalize(ids[i]);
-            else ++open;
-        }
-        assertGt(open, 0, "the early exit must carry live risk");
-        assertEq(pool.openHolds(), open);
-        assertGt(pool.totalReserved(), 0);
-
-        vm.prank(earlyLp);
-        pool.requestRedeem(shares, earlyLp, earlyLp);
-        vm.warp(pool.redeemBatch(pool.currentEpoch()).cutoff);
-        uint256 epoch = pool.activateBatch();
-        assertEq(pool.recoveryEpoch(epoch).remainingHolds, open);
-        assertGt(pool.recoveryEpoch(epoch).initialReserve, 0, "early LP owns a nonempty recovery claim");
-        vm.prank(earlyLp);
-        uint256 earlyCash = pool.redeem(shares, earlyLp, earlyLp);
-        assertGt(earlyCash, 0, "claim liquid cash while positions are still open");
-        assertEq(pool.openHolds(), open);
-
-        for (uint256 i; i < n; ++i) {
-            if (phases[i] == 1) gameHub.finalize(ids[i]);
-            if (phases[i] == 2) {
-                if (refundPending) {
-                    assertGe(block.timestamp, gameHub.getBet(ids[i]).refundDeadline);
-                    gameHub.refund(ids[i]);
-                } else {
-                    _fulfill(ids[i], uint256(keccak256(abi.encode(seed, i, "late"))));
-                    gameHub.finalize(ids[i]);
-                }
-            }
-            assertEq(
-                uint256(gameHub.getBet(ids[i]).state),
-                uint256(phases[i] == 2 && refundPending ? SSOTTypes.BetState.Refunded : SSOTTypes.BetState.Settled)
-            );
-        }
-        assertEq(pool.openHolds(), 0);
-        assertEq(pool.totalReserved(), 0);
-        assertEq(pool.recoveryEpoch(epoch).remainingHolds, 0);
-        vm.prank(earlyLp);
-        earlyCash += pool.claimRecovery(epoch, earlyLp, earlyLp);
-
-        // No new deposits or bets after the first exit: both LPs bore the same portfolio to completion.
-        vm.prank(lateLp);
-        pool.requestRedeem(shares, lateLp, lateLp);
-        vm.warp(pool.redeemBatch(pool.currentEpoch()).cutoff);
-        pool.activateBatch();
-        vm.prank(lateLp);
-        uint256 lateCash = pool.redeem(shares, lateLp, lateLp);
-
-        assertEq(token.balanceOf(earlyLp) - earlyBalance, earlyCash);
-        assertEq(token.balanceOf(lateLp) - lateBalance, lateCash);
-        // For this bounded six-decimal fixture: per-position/recovery floors plus bounded virtual pricing
-        // drift. This is not a universal tolerance for arbitrary pool sizes or capital flows.
-        assertApproxEqAbs(earlyCash, lateCash, 4 * n + 4, "exit timing changed final LP cash");
-        assertEq(pool.exitPayable(), 0);
-        assertEq(pool.recoveryBacking(), 0);
-    }
-
-    function _depositExitControl(BlacklistToken token, Bank pool, address lp, uint256 assets) internal {
-        token.mint(lp, assets);
-        vm.startPrank(lp);
-        token.approve(address(pool), assets);
-        pool.deposit(assets, lp);
-        vm.stopPrank();
-    }
-
-    function _placeExitControl(BlacklistToken token, uint256 seed, uint256 i) internal returns (uint256) {
-        uint256 amount = bound(uint256(keccak256(abi.encode(seed, i, "amount"))), 1e6, 2_000e6);
-        uint32 count = uint32(bound(uint256(keccak256(abi.encode(seed, i, "count"))), 1, 3));
-        token.mint(alice, amount * count);
-        bool dice = uint256(keccak256(abi.encode(seed, i, "game"))) % 2 == 0;
-        bytes memory params = dice
-            ? abi.encode(true, uint8(bound(uint256(keccak256(abi.encode(seed, i, "target"))), 5, 95)))
-            : abi.encode(seed % 2 == 0);
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec(amount, count, 0, 0);
-        return _place(alice, dice ? GAME_DICE : GAME_COIN, 3, params, spec, address(0));
-    }
-
-    function test_asyncPendingRefundWhilePausedReleasesHistoricalRecovery() external {
-        uint256 cutoff = _requestGovExit(bankA);
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, bob);
-        SSOTTypes.Bet memory bet = gameHub.getBet(positionId);
-        vm.warp(Math.max(cutoff, uint256(bet.placedAt) + gameHub.refundTimeoutSeconds()));
-        bankA.activateBatch();
-
-        assertEq(bankA.recoveryEpoch(1).remainingHolds, 1);
-        assertTrue(bankA.redeemBatch(1).priced);
-        vm.prank(gov);
-        bankA.setRiskInPaused(true);
-        uint256 playerBalance = assetA.balanceOf(alice);
-        vm.prank(bob);
-        gameHub.refund(positionId);
-
-        assertEq(assetA.balanceOf(alice) - playerBalance, bet.stake);
-        assertEq(uint256(gameHub.getBet(positionId).state), uint256(SSOTTypes.BetState.Refunded));
-        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Refunded));
-        assertEq(bankA.openHolds(), 0);
-        assertEq(bankA.totalReserved(), 0);
-        assertEq(bankA.totalBetsSettled(), 0);
-        assertEq(bankA.totalBetsRefunded(), 1);
-        assertEq(vrf.getRequest(bet.requestId).hub, address(0));
-        _fulfill(positionId, 123);
-        _fulfill(positionId, 456);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IGameHub.BadState.selector, positionId, SSOTTypes.BetState.Refunded, SSOTTypes.BetState.PendingVRF
-            )
-        );
-        gameHub.refund(positionId);
-        assertEq(bankA.totalBetsRefunded(), 1, "late callbacks do not refund twice");
-        assertEq(assetA.balanceOf(alice), playerBalance + bet.stake);
-
-        vm.prank(gov);
-        vm.expectRevert(IBank.RiskInPaused.selector);
-        bankA.claimRecovery(1, gov, gov);
-        vm.prank(gov);
-        bankA.setRiskInPaused(false);
-        uint256 lpBalance = assetA.balanceOf(gov);
-        uint256 expectedCash = _fullExitCash(5_010 ether, 5_000 ether, 20 ether, 10 ether, 1e15);
-        assertEq(_claimGovExit(bankA, 5_000 ether, 1), expectedCash);
-        assertEq(assetA.balanceOf(gov) - lpBalance, expectedCash);
-        assertEq(bankA.exitPayable(), 0);
-        assertEq(bankA.maxRedeem(gov), 0);
-    }
-
-    function test_asyncRandomReadyWinnerChargesHistoricalRecoveryAfterLiquidPricing() external {
-        uint256 cutoff = _requestGovExit(bankA);
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, bob);
-        uint256 winningSeed = _findSeedDiceWin(positionId, 50);
-        _fulfill(positionId, winningSeed);
-        _fulfill(positionId, _findSeedDiceLose(positionId, 50));
-        assertEq(gameHub.getBetRandomWords(positionId)[0], winningSeed, "duplicate callback cannot replace the win");
-
-        vm.warp(Math.max(cutoff, uint256(gameHub.getBet(positionId).placedAt) + gameHub.refundTimeoutSeconds()));
-        bankA.activateBatch();
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IGameHub.BadState.selector, positionId, SSOTTypes.BetState.RandomReady, SSOTTypes.BetState.PendingVRF
-            )
-        );
-        gameHub.refund(positionId);
-        assertEq(bankA.recoveryEpoch(1).remainingHolds, 1);
-        assertTrue(bankA.redeemBatch(1).priced);
-        vm.prank(gov);
-        bankA.setRiskInPaused(true);
-        uint256 playerBalance = assetA.balanceOf(alice);
-        vm.prank(bob);
-        gameHub.finalize(positionId);
-
-        assertEq(assetA.balanceOf(alice) - playerBalance, 19.6 ether, "the known winner gets its net award");
-        assertEq(uint256(gameHub.getBet(positionId).state), uint256(SSOTTypes.BetState.Settled));
-        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
-        assertEq(bankA.openHolds(), 0);
-        assertEq(bankA.totalReserved(), 0);
-        assertEq(bankA.totalBetsSettled(), 1);
-        assertEq(bankA.totalBetsRefunded(), 0);
-        assertEq(bankA.totalProtocolFeeAccrued() + bankA.externalPayablesTotal(), 0.1 ether);
-        _fulfill(positionId, winningSeed);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IGameHub.BadState.selector, positionId, SSOTTypes.BetState.Settled, SSOTTypes.BetState.RandomReady
-            )
-        );
-        gameHub.finalize(positionId);
-        assertEq(bankA.totalBetsSettled(), 1, "the callback and finalizer cannot settle twice");
-        assertEq(assetA.balanceOf(alice), playerBalance + 19.6 ether);
-
-        vm.prank(gov);
-        bankA.setRiskInPaused(false);
-        assertEq(
-            _claimGovExit(bankA, 5_000 ether, 1),
-            _fullExitCash(5_010 ether, 5_000 ether, 20 ether, 19.7 ether, 1e15),
-            "the LP bears the win and PF/XP"
-        );
-        assertEq(
-            assetA.balanceOf(address(bankA)),
-            bankA.protocolFeesPayable() + bankA.externalPayablesTotal(),
-            "PF/XP and protocol residual stay backed"
-        );
-        assertEq(bankA.exitPayable(), 0);
-    }
-
-    function test_asyncPartialRefundChargesHistoricalRecoveryExactlyOnce() external {
-        uint256 cutoff = _requestGovExit(bankB);
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 5, stopGain: 10 ether, stopLoss: 0});
-        uint256 positionId = _place(alice, GAME_COIN, POOL_B, abi.encode(true), spec, bob);
-        _fulfill(positionId, _findSeedCoinWin(positionId, true));
-        vm.warp(cutoff);
-        bankB.activateBatch();
-        uint256 playerBalance = assetB.balanceOf(alice);
-        gameHub.finalize(positionId);
-
-        SSOTTypes.BetTerminal memory terminal = gameHub.getBetTerminal(positionId);
-        assertEq(terminal.payoutGross, 20 ether);
-        assertEq(terminal.refundAmount, 40 ether);
-        assertEq(assetB.balanceOf(alice) - playerBalance, 59.6 ether);
-        assertEq(bankB.totalBetsHeld(), 1);
-        assertEq(bankB.totalBetsSettled(), 1);
-        assertEq(bankB.totalBetsRefunded(), 0, "a settle-path refund is not another terminal position");
-        assertEq(bankB.totalRefunded(), 40 ether);
-        assertEq(bankB.playerTurnover(alice), 10 ether);
-        assertEq(bankB.openHolds(), 0);
-        assertEq(bankB.totalReserved(), 0);
-        assertEq(bankB.totalProtocolFeeAccrued() + bankB.externalPayablesTotal(), 0.1 ether);
-        assertEq(
-            _claimGovExit(bankB, 5_000 ether, 1), _fullExitCash(5_050 ether, 5_000 ether, 100 ether, 59.7 ether, 1e15)
-        );
-        assertEq(bankB.exitPayable(), 0);
-        assertEq(bankA.totalAssets(), 5_000 ether, "the other pool's equity is unchanged");
-    }
-
-    function test_asyncBlacklistedWinnerTerminatesAndClaimsLaterWhilePaused() external {
-        (BlacklistToken blockedAsset, Bank blockedBank) = _newPayablePool(false);
-        uint256 cutoff = _requestGovExit(blockedBank);
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
-        uint256 positionId = _place(alice, GAME_DICE, 3, abi.encode(true, uint8(50)), spec, bob);
-        _fulfill(positionId, _findSeedDiceWin(positionId, 50));
-        vm.warp(cutoff);
-        blockedBank.activateBatch();
-        blockedAsset.setBlocked(alice, true);
-        vm.prank(gov);
-        blockedBank.setRiskInPaused(true);
-        gameHub.finalize(positionId);
-
-        assertEq(uint256(gameHub.getBet(positionId).state), uint256(SSOTTypes.BetState.Settled));
-        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
-        assertEq(blockedBank.openHolds(), 0);
-        assertEq(blockedBank.totalReserved(), 0);
-        assertEq(blockedBank.playerPayable(alice), 19_600_000);
-        assertEq(blockedAsset.balanceOf(alice), 90e6, "the refused transfer moved nothing");
-        vm.prank(gov);
-        blockedBank.setRiskInPaused(false);
-        assertEq(_claimGovExit(blockedBank, 5_000e6, 1), _fullExitCash(5_010e6, 5_000e6, 20e6, 19_700_000, 1000));
-
-        vm.prank(gov);
-        blockedBank.setRiskInPaused(true);
-        vm.expectRevert(bytes("blocked"));
-        blockedBank.claimPlayerPayable(alice);
-        assertEq(blockedBank.playerPayable(alice), 19_600_000, "a refused claim preserves the debt");
-        blockedAsset.setBlocked(alice, false);
-        vm.prank(bob);
-        assertEq(blockedBank.claimPlayerPayable(alice), 19_600_000);
-        assertEq(blockedAsset.balanceOf(alice), 109_600_000, "the trigger cannot redirect the claim");
-        assertEq(blockedAsset.balanceOf(bob), 0);
-        assertEq(blockedBank.playerPayableTotal(), 0);
-        assertEq(blockedBank.totalBetsSettled(), 1);
-        assertEq(blockedBank.totalPayoutNet(), 19_600_000, "claiming never counts the award twice");
-        assertEq(
-            blockedAsset.balanceOf(address(blockedBank)),
-            blockedBank.protocolFeesPayable() + blockedBank.externalPayablesTotal(),
-            "only fixed debts and protocol residual remain"
-        );
-    }
-
-    function test_asyncUnderfundedFinalizeRollsBackTheWholeChainAndCanRetry() external {
-        (BlacklistToken proxyAsset, Bank proxyBank) = _newPayablePool(true);
-        uint256 cutoff = _requestGovExit(proxyBank);
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
-        uint256 positionId = _place(alice, GAME_DICE, 3, abi.encode(true, uint8(50)), spec, bob);
-        assertEq(uint256(gameHub.getBet(positionId).state), uint256(SSOTTypes.BetState.PendingVRF));
-        _fulfill(positionId, _findSeedDiceWin(positionId, 50));
-        vm.warp(cutoff);
-        proxyBank.activateBatch();
-        uint256 playerBalance = proxyAsset.balanceOf(alice);
-        uint256 bankBalance = proxyAsset.balanceOf(address(proxyBank));
-        uint256 fixedBefore = proxyBank.protocolFeesPayable() + proxyBank.externalPayablesTotal();
-        proxyAsset.setGasSink(alice, 25_000_000);
-
-        // The outer finalization cannot finish booking the failed transfer, so every layer must roll back.
-        // Both this failed attempt and the later retry must reach the actual token transfer.
-        vm.expectCall(address(proxyAsset), abi.encodeCall(proxyAsset.transfer, (alice, 19_600_000)), 2);
-        vm.expectRevert();
-        gameHub.finalize{gas: 1_000_000}(positionId);
-        assertEq(uint256(gameHub.getBet(positionId).state), uint256(SSOTTypes.BetState.RandomReady));
-        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Held));
-        assertEq(proxyBank.openHolds(), 1);
-        assertEq(proxyBank.totalReserved(), 20e6);
-        assertEq(proxyBank.totalBetsSettled(), 0);
-        assertEq(proxyBank.totalBetsRefunded(), 0);
-        assertEq(proxyBank.totalPayoutNet(), 0);
-        assertEq(proxyBank.protocolFeesPayable() + proxyBank.externalPayablesTotal(), fixedBefore);
-        assertEq(proxyBank.playerPayable(alice), 0);
-        assertEq(proxyBank.playerPayableTotal(), 0);
-        assertEq(proxyAsset.balanceOf(alice), playerBalance);
-        assertEq(proxyAsset.balanceOf(address(proxyBank)), bankBalance);
-        assertEq(proxyBank.recoveryEpoch(1).remainingHolds, 1);
-        assertTrue(proxyBank.redeemBatch(1).priced);
-
-        proxyAsset.setGasSink(address(0), 0);
-        gameHub.finalize(positionId);
-        assertEq(uint256(gameHub.getBet(positionId).state), uint256(SSOTTypes.BetState.Settled));
-        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
-        assertEq(proxyAsset.balanceOf(alice), playerBalance + 19_600_000);
-        assertEq(proxyBank.openHolds(), 0);
-        assertEq(proxyBank.totalReserved(), 0);
-        assertEq(proxyBank.totalBetsSettled(), 1);
-        assertEq(proxyBank.playerPayableTotal(), 0);
-        assertEq(_claimGovExit(proxyBank, 5_000e6, 1), _fullExitCash(5_010e6, 5_000e6, 20e6, 19_700_000, 1000));
-        assertEq(proxyBank.exitPayable(), 0);
-    }
-
-    function test_asyncProxyTransferOogPreservesWinnerDebtAndHistoricalAccounting() external {
-        (BlacklistToken proxyAsset, Bank proxyBank) = _newPayablePool(true);
-        uint256 cutoff = _requestGovExit(proxyBank);
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
-        uint256 positionId = _place(alice, GAME_DICE, 3, abi.encode(true, uint8(50)), spec, bob);
-        _fulfill(positionId, _findSeedDiceWin(positionId, 50));
-        vm.warp(cutoff);
-        proxyBank.activateBatch();
-        uint256 playerBalance = proxyAsset.balanceOf(alice);
-        proxyAsset.setGasSink(alice, 25_000_000);
-
-        // The token fails internally, but the outer call has enough gas left to record the full debt.
-        gameHub.finalize{gas: 20_000_000}(positionId);
-        assertEq(uint256(gameHub.getBet(positionId).state), uint256(SSOTTypes.BetState.Settled));
-        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
-        assertEq(proxyAsset.balanceOf(alice), playerBalance);
-        assertEq(proxyBank.playerPayable(alice), 19_600_000);
-        assertEq(proxyBank.playerPayableTotal(), 19_600_000);
-        assertEq(proxyBank.openHolds(), 0);
-        assertEq(proxyBank.totalReserved(), 0);
-        assertEq(proxyBank.totalBetsSettled(), 1);
-        assertEq(proxyBank.totalBetsRefunded(), 0);
-        assertEq(_claimGovExit(proxyBank, 5_000e6, 1), _fullExitCash(5_010e6, 5_000e6, 20e6, 19_700_000, 1000));
-
-        proxyAsset.setGasSink(address(0), 0);
-        vm.prank(bob);
-        assertEq(proxyBank.claimPlayerPayable(alice), 19_600_000);
-        assertEq(proxyAsset.balanceOf(alice), playerBalance + 19_600_000);
-        assertEq(proxyBank.playerPayableTotal(), 0);
-        assertEq(proxyBank.totalBetsSettled(), 1);
-        assertEq(proxyBank.totalPayoutNet(), 19_600_000);
-        assertEq(
-            proxyAsset.balanceOf(address(proxyBank)),
-            proxyBank.protocolFeesPayable() + proxyBank.externalPayablesTotal()
-        );
-    }
-
-    // Admission is measured at the complete finalize call, separately from the VRF callback budget.
-    // This is a regression envelope for the pinned local contracts, not a production gas estimate.
-    uint256 internal constant ADMISSION_FINALIZE_GAS = 3_000_000;
-    uint256 internal constant ADMISSION_AMOUNT = 0.01 ether;
 
     function test_admissionMaxCoin() external {
         bytes[] memory variants = new bytes[](2);
@@ -1195,39 +560,33 @@ contract GameHubE2E is Test {
         _admissionCase(GAME_SIC_BO, SicBoParams.encode(SicBoParams.KIND_TOTAL, 10), false, seed);
     }
 
-    function testFuzz_admissionGasCannotTurnAValidResultIntoARefund(uint8 game, uint256 seed, uint32 suppliedGas)
-        external
-    {
+    function testFuzz_retryGasCannotTurnAValidResultIntoARefund(uint8 game, uint256 seed, uint32 suppliedGas) external {
         _configureMaxReferral();
         (bytes32 gameId, bytes memory params) = _admissionGame(game % 8);
         SSOTTypes.StakeSpec memory spec = _admissionSpec();
-        uint256 cutoff = _requestGovExit(bankA);
         uint256 id = _place(alice, gameId, POOL_A, params, spec, address(0xAA00));
-        _fulfill(id, seed);
-        vm.warp(cutoff);
-        bankA.activateBatch();
         address module = gameHub.gameModule(gameId);
-        (uint256 gross,) = IGameModule(module).resolve(params, spec, id, gameHub.getBetRandomWords(id));
-        uint256 gasBudget = bound(uint256(suppliedGas), 50_000, ADMISSION_FINALIZE_GAS);
+        vm.mockCallRevert(module, abi.encodeWithSelector(IGameModule.resolve.selector), "temporary failure");
+        _fulfill(id, seed);
+        vm.clearMockedCalls();
+        uint256[] memory words = new uint256[](1);
+        words[0] = seed;
+        (uint256 gross,) = IGameModule(module).resolve(params, spec, id, words);
         uint256 reserve = bankA.totalReserved();
         _coolFinalize(module);
-        (bool ok,) = address(gameHub).call{gas: gasBudget}(abi.encodeCall(gameHub.finalize, (id)));
+        (bool ok,) = address(gameHub).call{gas: bound(uint256(suppliedGas), 50_000, ADMISSION_FINALIZE_GAS)}(
+            abi.encodeCall(gameHub.finalize, (id))
+        );
         if (!ok) {
-            assertEq(uint256(gameHub.getBet(id).state), uint256(SSOTTypes.BetState.RandomReady));
             assertEq(uint256(router.getPosition(id).state), uint256(SSOTTypes.PositionState.Held));
             assertEq(bankA.openHolds(), 1);
             assertEq(bankA.totalReserved(), reserve);
             assertEq(bankA.totalBetsSettled() + bankA.totalBetsRefunded(), 0);
-            assertEq(bankA.totalProtocolFeeAccrued() + bankA.externalPayablesTotal() + bankA.playerPayableTotal(), 0);
-            assertEq(assetA.balanceOf(alice), 999 ether);
-            assertEq(assetA.balanceOf(address(bankA)), 5_001 ether);
-            assertEq(bankA.recoveryEpoch(1).remainingHolds, 1);
-            assertTrue(bankA.redeemBatch(1).priced);
-            _coolFinalize(module);
-            gameHub.finalize{gas: ADMISSION_FINALIZE_GAS}(id);
+            assertEq(vrf.unbookedResultCount(address(bankA)), 1);
+            assertEq(vrf.getRequest(gameHub.getBet(id).requestId).seed, seed);
+            gameHub.finalize(id);
         }
-        _assertAdmissionSettlement(id, gross);
-        _claimAdmissionExit();
+        _assertAdmissionSettlement(id, gross, spec);
     }
 
     function _admissionGame(uint8 index) internal pure returns (bytes32 gameId, bytes memory params) {
@@ -1241,59 +600,50 @@ contract GameHubE2E is Test {
         return (GAME_SIC_BO, SicBoParams.encode(SicBoParams.KIND_TOTAL, 10));
     }
 
-    function test_admissionModuleFailureBranchesTerminateWithoutAllocation() external {
+    function test_moduleFailureKeepsCanonicalSeedAndCannotRefundKnownOutcome() external {
         uint256 baseline = vm.snapshotState();
         for (uint256 mode; mode < 4; ++mode) {
-            uint256 cutoff = _requestGovExit(bankA);
             uint256 id = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), _admissionSpec(), bob);
-            _fulfill(id, 12345);
-            vm.warp(cutoff);
-            bankA.activateBatch();
             SSOTTypes.Bet memory bet = gameHub.getBet(id);
-            address module = gameHub.gameModule(GAME_DICE);
+            address module = gameHub.betModule(id);
             bytes memory callData = abi.encodeWithSelector(IGameModule.resolve.selector);
-            if (mode == 0) {
-                vm.mockCallRevert(module, callData, abi.encodeWithSignature("Error(string)", "module failure"));
-            } else if (mode == 1) {
-                vm.mockCall(module, callData, abi.encode(uint256(0), bet.stake + 1));
-            } else if (mode == 2) {
-                vm.mockCall(module, callData, abi.encode(bet.reserved + 1, uint256(0)));
-            } else {
-                vm.mockCall(module, callData, abi.encode(bet.reserved, uint256(1)));
-            }
-            _coolFinalize(module);
-            gameHub.finalize{gas: ADMISSION_FINALIZE_GAS}(id);
+            if (mode == 0) vm.mockCallRevert(module, callData, "module failure");
+            else if (mode == 1) vm.mockCall(module, callData, abi.encode(uint256(0), bet.stake + 1));
+            else if (mode == 2) vm.mockCall(module, callData, abi.encode(bet.reserved + 1, uint256(0)));
+            else vm.mockCall(module, callData, abi.encode(bet.reserved, uint256(1)));
+            _fulfill(id, 12345);
+            assertEq(uint256(router.getPosition(id).state), uint256(SSOTTypes.PositionState.Held));
+            assertEq(bankA.totalBetsRefunded() + bankA.totalBetsSettled(), 0);
+            assertEq(bankA.totalReserved(), bet.reserved);
+            assertEq(vrf.unbookedResultCount(address(bankA)), 1);
+            vm.warp(block.timestamp + 2 days);
+            vm.expectRevert();
+            gameHub.refund(id);
             vm.clearMockedCalls();
-            assertEq(uint256(gameHub.getBet(id).state), uint256(SSOTTypes.BetState.Refunded));
-            assertEq(uint256(router.getPosition(id).state), uint256(SSOTTypes.PositionState.Refunded));
-            assertEq(gameHub.getBetTerminal(id).refundAmount, bet.stake);
-            assertEq(bankA.totalBetsRefunded(), 1);
-            assertEq(bankA.totalBetsSettled(), 0);
-            assertEq(bankA.openHolds(), 0);
-            assertEq(bankA.totalReserved(), 0);
-            assertEq(bankA.totalProtocolFeeAccrued() + bankA.externalPayablesTotal() + bankA.playerPayableTotal(), 0);
-            assertEq(assetA.balanceOf(alice), 1_000 ether);
-            _claimAdmissionExit();
+            assertTrue(vrf.retry(bet.requestId));
+            assertEq(uint256(gameHub.getBetTerminal(id).state), uint256(SSOTTypes.BetState.Settled));
+            assertEq(bankA.totalBetsRefunded(), 0);
+            assertEq(vrf.unbookedResultCount(address(bankA)), 0);
             assertTrue(vm.revertToState(baseline));
         }
     }
 
     function test_admissionRejectsOversizedParamsBeforeHoldAndVrf() external {
         SSOTTypes.StakeSpec memory spec = _admissionSpec();
-        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount, tx.gasprice);
+        (uint256 fee,) = gameHub.quoteVRFFee(GAME_DICE, spec.betCount, tx.gasprice);
         for (uint256 i; i < 2; ++i) {
             // abi.decode accepts both payloads: canonical Dice fields followed by surplus bytes.
             bytes memory params = bytes.concat(abi.encode(true, uint8(50)), new bytes(i == 0 ? 1 : 49_152));
-            uint256 requestNonce = vrf.nextRequestId();
+            uint256 requestNonce = wrapper.lastRequestId();
             vm.prank(alice);
             vm.expectRevert(Errors.InvalidConfig.selector);
             gameHub.placeBet{value: fee}(GAME_DICE, POOL_A, params, spec, address(0), 10_000);
             assertEq(router.nextPositionId(), 1);
-            assertEq(vrf.nextRequestId(), requestNonce);
+            assertEq(wrapper.lastRequestId(), requestNonce);
             assertEq(bankA.openHolds(), 0);
             assertEq(bankA.totalReserved(), 0);
             assertEq(assetA.balanceOf(alice), 1_000 ether);
-            assertEq(assetA.balanceOf(address(bankA)), 5_000 ether);
+            assertEq(assetA.balanceOf(bankA.vault()), 5_000 ether);
         }
     }
 
@@ -1305,95 +655,72 @@ contract GameHubE2E is Test {
 
     function test_admissionAllocationCapFailureRollsBackThenRetries() external {
         _configureMaxReferral();
-        uint256 cutoff = _requestGovExit(bankA);
         bytes memory params = abi.encode(true, uint8(50));
         SSOTTypes.StakeSpec memory spec = _admissionSpec();
         uint256 id = _place(alice, GAME_DICE, POOL_A, params, spec, address(0xAA00));
-        _fulfill(id, 12345);
-        vm.warp(cutoff);
-        bankA.activateBatch();
-        address module = gameHub.gameModule(GAME_DICE);
-        (uint256 gross,) = IGameModule(module).resolve(params, spec, id, gameHub.getBetRandomWords(id));
         IReferralEngine.Allocation memory invalid;
-        invalid.protocolFee = 1 ether;
-        // Inject an engine defect; the real Router must reject it, not turn a valid game into a refund.
+        invalid.protocolFee = spec.amountPerRoll * uint256(spec.betCount);
         vm.mockCall(
             gameHub.referralEngine(),
             abi.encodeWithSelector(IReferralEngine.allocate.selector),
             abi.encode(invalid, new SSOTTypes.XPAward[](0))
         );
-        vm.expectRevert(
-            abi.encodeWithSelector(ISettlementRouter.AllocationExceedsCap.selector, id, 1 ether, 0.025 ether)
-        );
-        gameHub.finalize(id);
-        vm.clearMockedCalls();
-        assertEq(uint256(gameHub.getBet(id).state), uint256(SSOTTypes.BetState.RandomReady));
+        _fulfill(id, 12345);
         assertEq(uint256(router.getPosition(id).state), uint256(SSOTTypes.PositionState.Held));
-        assertEq(bankA.openHolds(), 1);
-        assertEq(bankA.totalReserved(), 2 ether);
         assertEq(bankA.totalBetsSettled() + bankA.totalBetsRefunded(), 0);
-        assertEq(bankA.totalProtocolFeeAccrued() + bankA.externalPayablesTotal() + bankA.playerPayableTotal(), 0);
-        assertEq(assetA.balanceOf(alice), 999 ether);
-        assertEq(assetA.balanceOf(address(bankA)), 5_001 ether);
-        assertEq(bankA.recoveryEpoch(1).remainingHolds, 1);
-        assertTrue(bankA.redeemBatch(1).priced);
-        _coolFinalize(module);
-        gameHub.finalize{gas: ADMISSION_FINALIZE_GAS}(id);
-        _assertAdmissionSettlement(id, gross);
-        _claimAdmissionExit();
+        assertEq(bankA.totalReserved(), 2 * spec.amountPerRoll * uint256(spec.betCount));
+        assertEq(vrf.unbookedResultCount(address(bankA)), 1);
+        vm.clearMockedCalls();
+        uint256[] memory words = new uint256[](1);
+        words[0] = 12345;
+        (uint256 gross,) = IGameModule(gameHub.betModule(id)).resolve(params, spec, id, words);
+        assertTrue(vrf.retry(gameHub.getBet(id).requestId));
+        _assertAdmissionSettlement(id, gross, spec);
     }
 
     function test_admissionMaxCountStopGainAndStopLossTerminate() external {
         _configureMaxReferral();
         uint256 baseline = vm.snapshotState();
         for (uint256 winning; winning < 2; ++winning) {
-            uint256 cutoff = _requestGovExit(bankA);
             SSOTTypes.StakeSpec memory spec = _admissionSpec();
             spec.stopGain = 1;
             spec.stopLoss = 1;
             uint256 id = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0xAA00));
             _fulfill(id, winning == 1 ? _findSeedDiceWin(id, 50) : _findSeedDiceLose(id, 50));
-            vm.warp(cutoff);
-            bankA.activateBatch();
+
             _coolFinalize(gameHub.gameModule(GAME_DICE));
-            gameHub.finalize{gas: ADMISSION_FINALIZE_GAS}(id);
+
             SSOTTypes.BetTerminal memory terminal = gameHub.getBetTerminal(id);
             assertEq(uint256(gameHub.getBet(id).state), uint256(SSOTTypes.BetState.Settled));
             assertEq(uint256(router.getPosition(id).state), uint256(SSOTTypes.PositionState.Settled));
-            assertEq(terminal.refundAmount, 99 * ADMISSION_AMOUNT);
-            assertEq(terminal.payoutGross, winning == 1 ? 2 * ADMISSION_AMOUNT : 0);
-            assertEq(terminal.payoutNet, winning == 1 ? 0.019 ether : 0);
-            assertEq(assetA.balanceOf(alice), 1_000 ether - ADMISSION_AMOUNT + terminal.payoutNet);
-            assertEq(bankA.playerTurnover(alice), ADMISSION_AMOUNT);
-            assertEq(bankA.totalProtocolFeeAccrued() + bankA.externalPayablesTotal(), 0.00025 ether);
+            uint256 expectedGross = winning == 1 ? 2 * spec.amountPerRoll : 0;
+            assertEq(terminal.refundAmount, spec.amountPerRoll * (uint256(spec.betCount) - 1));
+            assertEq(terminal.payoutGross, expectedGross);
+            assertEq(terminal.payoutNet, expectedGross - Math.mulDiv(expectedGross, 200, 10_000));
+            assertEq(assetA.balanceOf(alice), 1_000 ether - spec.amountPerRoll + terminal.payoutNet);
+            assertEq(bankA.playerTurnover(alice), spec.amountPerRoll);
+            assertEq(
+                bankA.totalProtocolFeeAccrued() + bankA.externalPayablesTotal(),
+                Math.mulDiv(spec.amountPerRoll, 200, 10_000) / 2
+            );
             assertEq(bankA.totalBetsSettled(), 1);
             assertEq(bankA.totalBetsRefunded(), 0, "partial refund is still exactly one settlement");
             assertEq(bankA.openHolds(), 0);
             assertEq(bankA.totalReserved(), 0);
-            _claimAdmissionExit();
+
             assertTrue(vm.revertToState(baseline));
         }
     }
 
     function _configureMaxReferral() internal {
-        vm.prank(gov);
-        gameHub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 300);
-        vm.warp(block.timestamp + 7 days);
-        gameHub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
-        // Six distinct skyline payees; L1 and L2 also receive their separate base-edge awards.
-        for (uint160 i; i < 6; ++i) {
-            address payee = address(0xAA00 + i);
-            vm.startPrank(payee);
-            if (i < 5) gameHub.bindReferrer(address(0xAA01 + i));
-            gameHub.setAffiliateHouseEdge(uint16(250 + 50 * i));
-            vm.stopPrank();
-        }
+        vm.prank(address(0xAA00));
+        gameHub.bindReferrer(address(0xAA01));
     }
 
     function _admissionSpec() internal pure returns (SSOTTypes.StakeSpec memory) {
-        // Both stop branches execute, but cannot shorten the maximum 100-roll workload.
+        // Both stop branches execute, but cannot shorten the maximum 25-roll workload.
         return SSOTTypes.StakeSpec({
-            amountPerRoll: ADMISSION_AMOUNT, betCount: 100, stopGain: type(uint256).max, stopLoss: type(uint256).max
+            amountPerRoll: ADMISSION_AMOUNT, betCount: 25, stopGain: type(uint256).max, stopLoss: type(uint256).max
         });
     }
 
@@ -1403,87 +730,26 @@ contract GameHubE2E is Test {
     {
         vm.prank(gov);
         bankA.setMinPlayerTurnoverForUnlock(eligible ? 0 : 2 ether);
-        uint256 cutoff = _requestGovExit(bankA);
         SSOTTypes.StakeSpec memory spec = _admissionSpec();
         uint256 id = _place(alice, gameId, POOL_A, params, spec, address(0xAA00));
-        assertEq(gameHub.getDeltaSkyline(id).length, 6 * 22, "all six skyline segments accepted");
         uint256[] memory words = new uint256[](1);
         words[0] = seed;
-        SSOTTypes.Bet memory bet = gameHub.getBet(id);
-        address module = gameHub.gameModule(gameId);
-        (uint256 gross, uint256 refundAmount) = IGameModule(module).resolve(params, spec, id, words);
-        assertEq(refundAmount, 0, "all 100 rolls must run");
-        vm.cool(address(gameHub));
-        vm.cool(address(vrf));
-        vrf.fulfillRandomWords{gas: bet.vrfCallbackGasLimit}(bet.requestId, words);
-        assertEq(uint256(gameHub.getBet(id).state), uint256(SSOTTypes.BetState.RandomReady));
-        vm.warp(cutoff);
-        bankA.activateBatch();
-        assertEq(bankA.recoveryEpoch(1).remainingHolds, 1);
-        assertTrue(bankA.redeemBatch(1).priced);
-        _coolFinalize(module);
+        (uint256 gross, uint256 refundAmount) = IGameModule(gameHub.betModule(id)).resolve(params, spec, id, words);
+        assertEq(refundAmount, 0, "all 25 rolls must run");
+        _coolFinalize(gameHub.betModule(id));
         vm.recordLogs();
         uint256 beforeGas = gasleft();
-        gameHub.finalize{gas: ADMISSION_FINALIZE_GAS}(id);
+        _fulfill(id, seed);
         gasUsed = beforeGas - gasleft();
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        this.assertNineAwards(logs, eligible);
-        _assertAdmissionSettlement(id, gross);
-        _claimAdmissionExit();
-    }
-
-    function test_admissionColdHistoricalSettlementKeepsCurrentEpochOpen() external {
-        _configureMaxReferral();
-        vm.prank(gov);
-        bankA.setMinPlayerTurnoverForUnlock(2 ether);
-        vm.prank(bob);
-        assetA.approve(address(gameHub), type(uint256).max);
-        uint256 baseline = vm.snapshotState();
-        uint256 maximumGas;
-        for (uint8 index; index < 8; ++index) {
-            (bytes32 gameId, bytes memory params) = _admissionGame(index);
-            uint256 id = _place(alice, gameId, POOL_A, params, _admissionSpec(), address(0xAA00));
-            vm.prank(gov);
-            bankA.requestRedeem(2_000 ether, gov, gov);
-            vm.warp(bankA.redeemBatch(1).cutoff);
-            bankA.activateBatch();
-            SSOTTypes.StakeSpec memory nextSpec =
-                SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-            uint256 currentId = _place(bob, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), nextSpec, address(0));
-            uint256 activeBefore = bankA.totalAssets();
-            uint256 currentReserve = gameHub.getBet(currentId).reserved;
-            uint256 oldActive = bankA.activeReserved() - currentReserve;
-            _fulfill(id, 12345);
-            _coolFinalize(gameHub.gameModule(gameId));
+        // This suite checks functional outcomes. The independent callback matrix qualifies gas admission.
+        if (vrf.getRequest(gameHub.getBet(id).requestId).state == IVRFHub.RequestState.Received) {
+            assertEq(bankA.totalBetsSettled() + bankA.totalBetsRefunded(), 0, "failed child was atomic");
+            vm.getRecordedLogs();
             vm.recordLogs();
-            uint256 beforeGas = gasleft();
-            gameHub.finalize{gas: ADMISSION_FINALIZE_GAS}(id);
-            uint256 used = beforeGas - gasleft();
-            maximumGas = Math.max(maximumGas, used);
-            this.assertNineAwards(vm.getRecordedLogs(), false);
-            IBank.RecoveryEpoch memory historical = bankA.recoveryEpoch(1);
-            SSOTTypes.BetTerminal memory terminal = gameHub.getBetTerminal(id);
-            assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.Settled));
-            assertEq(terminal.refundAmount, 0);
-            assertEq(historical.remainingHolds, 0);
-            uint256 cost = terminal.payoutNet + 0.025 ether;
-            uint256 originalReserve = gameHub.getBet(id).reserved;
-            uint256 recovered = Math.mulDiv(historical.initialReserve, originalReserve - cost, originalReserve);
-            assertEq(historical.settledCost, historical.initialReserve - recovered);
-            assertEq(historical.recoveredAssets, recovered);
-            uint256 activeAfter = activeBefore - Math.mulDiv(oldActive, cost, originalReserve);
-            assertEq(bankA.totalAssets(), activeAfter);
-            assertEq(bankA.activeReserved(), currentReserve);
-            assertEq(bankA.totalReserved(), currentReserve);
-            assertEq(bankA.activeOpenHolds(), 1);
-            assertEq(uint256(router.getPosition(currentId).state), uint256(SSOTTypes.PositionState.Held));
-            vm.prank(gov);
-            assertEq(bankA.claimRecovery(1, gov, gov), historical.recoveredAssets);
-            assertEq(bankA.totalAssets(), activeAfter, "historical cash claims do not debit active capital");
-            emit log_named_uint("cold historical finalize gas", used);
-            assertTrue(vm.revertToState(baseline));
+            gameHub.finalize(id);
         }
-        emit log_named_uint("maximum cold historical finalize gas", maximumGas);
+        this.assertThreeAwards(vm.getRecordedLogs(), eligible, spec.amountPerRoll * uint256(spec.betCount));
+        _assertAdmissionSettlement(id, gross, spec);
     }
 
     function _coolFinalize(address module) internal {
@@ -1499,12 +765,19 @@ contract GameHubE2E is Test {
     }
 
     // External test assertion avoids optimizer inlining the log decoder into every matrix variant.
-    function assertNineAwards(Vm.Log[] memory logs, bool eligible) external view {
+    function assertThreeAwards(Vm.Log[] memory logs, bool eligible, uint256 usedTurnover) external view {
+        // The fixture uses a 200 bps edge and all three distinct base referral recipients.
+        uint256[3] memory amounts;
+        {
+            uint256 baseEdge = Math.mulDiv(usedTurnover, 200, 10_000);
+            amounts[0] = Math.mulDiv(baseEdge, 1_000, 10_000);
+            amounts[1] = Math.mulDiv(baseEdge, 2_000, 10_000);
+            amounts[2] = Math.mulDiv(baseEdge, 500, 10_000);
+        }
         bytes32 awardTopic = keccak256("XPAwarded(uint256,address,address,uint256,uint256,uint256,bytes32)");
         uint256 n;
         uint256 allocated;
         uint256 reasons;
-        uint256 skylinePayees;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].emitter != address(bankA) || logs[i].topics[0] != awardTopic) continue;
             (uint256 accrued, uint256 locked, uint256 holdback, bytes32 reason) =
@@ -1518,24 +791,18 @@ contract GameHubE2E is Test {
             if (reason == keccak256("REF_L0")) {
                 assertEq(payee, alice);
                 bit = 1;
-                amount = 0.002 ether;
+                amount = amounts[0];
                 assertEq(locked + holdback, 0);
             } else if (reason == keccak256("REF_L1")) {
                 assertEq(payee, address(0xAA00));
                 bit = 2;
-                amount = 0.004 ether;
+                amount = amounts[1];
             } else if (reason == keccak256("REF_L2")) {
                 assertEq(payee, address(0xAA01));
                 bit = 4;
-                amount = 0.001 ether;
+                amount = amounts[2];
             } else {
-                assertEq(reason, keccak256("REF_MARKUP"));
-                assertGe(uint160(payee), 0xAA00);
-                assertLe(uint160(payee), 0xAA05);
-                uint256 payeeBit = uint256(1) << (uint160(payee) - 0xAA00);
-                assertEq(skylinePayees & payeeBit, 0, "unique skyline recipient");
-                skylinePayees |= payeeBit;
-                amount = 0.0025 ether;
+                revert("unexpected reward reason beyond L0/L1/L2");
             }
             assertEq(reasons & bit, 0, "unique base-edge reason");
             reasons |= bit;
@@ -1548,16 +815,15 @@ contract GameHubE2E is Test {
             allocated += accrued + locked + holdback;
             ++n;
         }
-        assertEq(n, 9, "L0, L1, L2 and six markup awards");
+        assertEq(n, 3, "L0 rakeback and two referral awards");
         assertEq(reasons, 7);
-        assertEq(skylinePayees, 63);
         assertEq(bankA.externalPayablesTotal(), allocated);
         // Events and aggregate backing are insufficient: prove each recipient's actual debt ownership.
-        assertEq(bankA.xpAccruedOf(alice), 0.002 ether);
+        assertEq(bankA.xpAccruedOf(alice), amounts[0]);
         assertEq(bankA.xpLockedOf(alice) + bankA.xpHoldbackOf(alice), 0);
-        for (uint160 i; i < 6; ++i) {
+        for (uint160 i; i < 2; ++i) {
             address payee = address(0xAA00 + i);
-            uint256 amount = 0.0025 ether + (i == 0 ? 0.004 ether : i == 1 ? 0.001 ether : 0);
+            uint256 amount = amounts[i + 1];
             uint256 holdback = amount * 3 / 10;
             uint256 locked = eligible ? 0 : amount - holdback;
             assertEq(bankA.xpHoldbackOf(payee), holdback);
@@ -1567,70 +833,29 @@ contract GameHubE2E is Test {
         }
     }
 
-    function _assertAdmissionSettlement(uint256 id, uint256 gross) internal view {
+    function _assertAdmissionSettlement(uint256 id, uint256 gross, SSOTTypes.StakeSpec memory spec) internal view {
+        uint256 expectedStake = spec.amountPerRoll * uint256(spec.betCount);
+        SSOTTypes.Bet memory bet = gameHub.getBet(id);
         SSOTTypes.BetTerminal memory terminal = gameHub.getBetTerminal(id);
-        assertEq(uint256(gameHub.getBet(id).state), uint256(SSOTTypes.BetState.Settled));
+        assertEq(bet.amountPerRoll, spec.amountPerRoll);
+        assertEq(bet.betCount, spec.betCount);
+        assertEq(bet.stake, expectedStake);
+        assertEq(uint256(bet.state), uint256(SSOTTypes.BetState.Settled));
         assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.Settled), "valid results cannot become refunds");
         assertEq(uint256(router.getPosition(id).state), uint256(SSOTTypes.PositionState.Settled));
         assertEq(terminal.payoutGross, gross);
         assertEq(terminal.refundAmount, 0);
-        assertEq(terminal.payoutNet, gross - Math.mulDiv(gross, 500, 10_000));
-        assertEq(assetA.balanceOf(alice), 1_000 ether - 1 ether + terminal.payoutNet);
-        assertEq(bankA.playerTurnover(alice), 1 ether);
+        assertEq(terminal.payoutNet, gross - Math.mulDiv(gross, 200, 10_000));
+        assertEq(assetA.balanceOf(alice), 1_000 ether - expectedStake + terminal.payoutNet);
+        assertEq(bankA.playerTurnover(alice), expectedStake);
         assertEq(bankA.totalBetsSettled(), 1);
         assertEq(bankA.totalBetsRefunded(), 0);
         assertEq(bankA.openHolds(), 0);
         assertEq(bankA.totalReserved(), 0);
         assertEq(bankA.playerPayableTotal(), 0);
-        assertEq(bankA.totalProtocolFeeAccrued() + bankA.externalPayablesTotal(), 0.025 ether);
-        IBank.RecoveryEpoch memory epoch = bankA.recoveryEpoch(1);
-        assertEq(epoch.snapshotNav, 5_001 ether);
-        assertEq(epoch.snapshotSupply, 5_000 ether);
-        uint256 reserve = gameHub.getBet(id).reserved;
-        uint256 units = Math.mulDiv(reserve, _exitEquity(5_001 ether, 5_000 ether, 5_000 ether, 1e15), 5_001 ether);
-        uint256 recovered = Math.mulDiv(units, reserve - terminal.payoutNet - 0.025 ether, reserve);
-        assertEq(epoch.initialReserve, units);
-        assertEq(epoch.settledCost, units - recovered);
-        assertEq(epoch.recoveredAssets, recovered);
-    }
-
-    function _claimAdmissionExit() internal {
-        IBank.RecoveryEpoch memory epoch = bankA.recoveryEpoch(1);
-        uint256 liquid = bankA.redeemBatch(1).assets;
-        uint256 expected = liquid + (epoch.initialReserve - epoch.settledCost - epoch.remainingReserve);
-        uint256 cashBefore = assetA.balanceOf(gov);
-        assertEq(_claimGovExit(bankA, 5_000 ether, 1), expected);
-        assertEq(assetA.balanceOf(gov) - cashBefore, expected);
-        assertEq(bankA.exitPayable(), 0);
-        assertEq(bankA.totalSupply(), 0);
-        assertEq(bankA.recoveryBacking(), 0);
         assertEq(
-            assetA.balanceOf(address(bankA)),
-            bankA.protocolFeesPayable() + bankA.externalPayablesTotal(),
-            "LP cash and recovery leave all referral and protocol liabilities backed"
+            bankA.totalProtocolFeeAccrued() + bankA.externalPayablesTotal(), Math.mulDiv(expectedStake, 200, 10_000) / 2
         );
-    }
-
-    function _claimGovExit(Bank target, uint256 shares, uint256 epoch) internal returns (uint256 amount) {
-        vm.startPrank(gov);
-        amount = target.redeem(shares, gov, gov);
-        amount += target.claimRecovery(epoch, gov, gov);
-        vm.stopPrank();
-    }
-
-    function _exitEquity(uint256 nav_, uint256 supply, uint256 q, uint256 v) internal pure returns (uint256) {
-        return Math.mulDiv(q, Math.min(Math.mulDiv(supply, nav_ + v, supply + v), nav_), supply);
-    }
-
-    function _fullExitCash(uint256 nav_, uint256 supply, uint256 reserve, uint256 cost, uint256 v)
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 equity = _exitEquity(nav_, supply, supply, v);
-        uint256 liquid = Math.mulDiv(equity, nav_ - reserve, nav_);
-        uint256 units = Math.mulDiv(reserve, equity, nav_);
-        return liquid + Math.mulDiv(units, reserve - cost, reserve);
     }
 
     function _newPayablePool(bool useProxy) internal returns (BlacklistToken token, Bank bank) {
@@ -1638,25 +863,19 @@ contract GameHubE2E is Test {
         token = new BlacklistToken();
         if (useProxy) token = BlacklistToken(address(new ERC1967Proxy(address(token), "")));
         // Deploy the compiled artifact to keep this large E2E fixture below the Yul stack limit.
-        bank = Bank(deployCode("Bank.sol:Bank", abi.encode(address(token), gov, 1000, "Payable LP", "PLP", 6, 1)));
+        bank = Bank(deployCode("Bank.sol:Bank", abi.encode(address(token), gov, 1000, 6, 1)));
         vm.startPrank(gov);
         poolRegistry.registerPool(3, address(token), address(bank), SSOTTypes.PoolDomain.Casino);
         poolRegistry.setHubAllowedForPool(3, address(gameHub), true);
         bank.setSettlementRouterOnce(address(router));
+        bank.setRandomnessConsumerOnce(address(vrf));
         token.mint(gov, 5_000e6);
-        token.approve(address(bank), type(uint256).max);
-        bank.deposit(5_000e6, gov);
+        token.approve(address(bank.vault()), type(uint256).max);
+        LiquidityVault(bank.vault()).addDepositFor(gov, 5_000e6);
         vm.stopPrank();
         token.mint(alice, 100e6);
         vm.prank(alice);
         token.approve(address(gameHub), type(uint256).max);
-    }
-
-    function _requestGovExit(Bank target) internal returns (uint256 cutoff) {
-        uint256 shares = target.balanceOf(gov);
-        vm.prank(gov);
-        target.requestRedeem(shares, gov, gov);
-        return target.redeemBatch(target.currentEpoch()).cutoff;
     }
 
     function _place(
@@ -1667,7 +886,7 @@ contract GameHubE2E is Test {
         SSOTTypes.StakeSpec memory spec,
         address affiliate
     ) internal returns (uint256 positionId) {
-        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount, tx.gasprice);
+        (uint256 fee,) = gameHub.quoteVRFFee(gameId, spec.betCount, tx.gasprice);
         vm.prank(player);
         positionId = gameHub.placeBet{value: fee}(gameId, poolId, params, spec, affiliate, 10_000);
     }
@@ -1676,7 +895,7 @@ contract GameHubE2E is Test {
         SSOTTypes.Bet memory bet = gameHub.getBet(positionId);
         uint256[] memory rw = new uint256[](1);
         rw[0] = seed;
-        vrf.fulfillRandomWords(bet.requestId, rw);
+        wrapper.fulfillTo(address(vrf), bet.requestId, rw);
     }
 
     function _rng(uint256 betId, uint256 i, uint256 seed) internal pure returns (uint256) {

@@ -1,26 +1,7 @@
-"use client";
-
 import * as React from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { cn } from "@ssot/ui";
-
-import { formatTokenAmount, shortHex } from "./format";
+import { useTranslations } from "next-intl";
 import type { EarnProviderLedgerEntry } from "./types";
-
-function sumAssets(
-  entries: readonly EarnProviderLedgerEntry[],
-  action: EarnProviderLedgerEntry["action"]
-) {
-  return entries.reduce((acc, row) => (row.action === action ? acc + (row.assets ?? 0n) : acc), 0n);
-}
-
-function formatTime(value: number | undefined, locale: string) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(value));
-}
+import { formatTokenAmount, shortHex } from "./format";
 
 export function BankProviderLedgerPanel({
   connected,
@@ -28,209 +9,101 @@ export function BankProviderLedgerPanel({
   entries,
   error,
   explorerBaseUrl,
-  hasMore = false,
+  hasMore,
   loading,
-  loadingMore = false,
+  loadingMore,
   onLoadMore,
-  positionAssets,
-  positionShares,
-  recoveryComplete = false,
-  hasUnsettledRecovery = false,
   cashFlowComplete = false,
   symbol
 }: {
   connected: boolean;
   decimals: number;
-  entries: readonly EarnProviderLedgerEntry[];
+  entries: EarnProviderLedgerEntry[];
   error?: string;
   explorerBaseUrl?: string;
-  hasMore?: boolean;
+  hasMore: boolean;
   loading: boolean;
-  loadingMore?: boolean;
-  onLoadMore?: () => void;
-  positionAssets?: bigint;
-  positionShares?: bigint;
-  recoveryComplete?: boolean;
-  hasUnsettledRecovery?: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
   cashFlowComplete?: boolean;
   symbol: string;
 }) {
   const t = useTranslations();
-  const locale = useLocale();
-
-  const deposited = sumAssets(entries, "deposit");
-  const withdrawn = sumAssets(entries, "withdraw") + sumAssets(entries, "recovery");
-  const summaryVisible = connected && !loading && !error;
-  const summary = [
-    {
-      key: "deposited",
-      label: t("earn.ledger.summary.deposited"),
-      value: formatTokenAmount(deposited, decimals, symbol, 2)
-    },
-    {
-      key: "withdrawn",
-      label: t("earn.ledger.summary.withdrawn"),
-      value: formatTokenAmount(withdrawn, decimals, symbol, 2)
-    },
-    {
-      key: "openValue",
-      label: t("earn.ledger.summary.openValue"),
-      value: formatTokenAmount(positionAssets, decimals, symbol, 2)
-    },
-    {
-      key: "shares",
-      label: t("earn.ledger.summary.shares"),
-      value: formatTokenAmount(positionShares, decimals, undefined, 4)
-    }
-  ];
-
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-            {t("earn.ledger.eyebrow")}
-          </div>
-          <h2 className="mt-1 text-lg font-bold text-fg">{t("earn.ledger.title")}</h2>
-        </div>
-        <span className="rounded-full border border-success/30 bg-success-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-success">
-          {t("earn.ledger.readModel")}
-        </span>
+      <div className="border-b border-border p-5">
+        <h2 className="text-lg font-bold">{t("earn.nft.history")}</h2>
+        <p className="mt-2 text-sm leading-6 text-fg-muted">{t("earn.nft.historyDetail")}</p>
       </div>
-
-      {connected && (!recoveryComplete || hasUnsettledRecovery) ? (
-        <p role="status" className="border-b border-border-soft px-5 py-3 text-sm text-warn">
-          {t("earn.recovery.incompleteReturn")}
+      {!connected ? <p className="p-5">{t("earn.actions.connectWallet")}</p> : null}
+      {error ? (
+        <p role="alert" className="p-5 text-warn">
+          {error}
         </p>
       ) : null}
-      {connected && !cashFlowComplete ? (
-        <p role="status" className="border-b border-border-soft px-5 py-3 text-sm text-warn">
-          {t("earn.ledger.incomplete")}
+      {loading ? (
+        <p role="status" className="p-5">
+          {t("earn.nft.loading")}
         </p>
       ) : null}
-
-      <div className="grid divide-y divide-border-soft border-b border-border-soft sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-        {summary.map((item) => (
-          <div key={item.key} className="min-w-0 px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
-              {item.label}
+      {connected && !loading && !error && entries.length === 0 ? (
+        <p className="p-5 text-fg-muted">{t("earn.nft.historyEmpty")}</p>
+      ) : null}
+      <div className="divide-y divide-border-soft">
+        {entries.map((entry) => (
+          <article key={entry.id} className="space-y-2 p-5">
+            <div className="flex flex-wrap justify-between gap-2">
+              <span className="font-bold">
+                {t(`earn.nft.action.${entry.action}`)} · NFT #{entry.depositId.toString()}
+              </span>
+              <span className="font-mono">
+                {entry.action === "transfer"
+                  ? t("earn.nft.noCashFlow")
+                  : formatTokenAmount(entry.assets, decimals, symbol, 6)}
+              </span>
             </div>
-            <div
-              className="mt-1 truncate font-mono text-sm font-bold text-fg"
-              title={summaryVisible ? item.value : undefined}
-            >
-              {summaryVisible ? item.value : "—"}
-            </div>
-          </div>
+            {entry.action === "deposit" ? (
+              <p className="text-xs text-fg-muted">
+                {t("earn.nft.payer")}: {shortHex(entry.payer)} · {t("earn.nft.initialOwner")}:{" "}
+                {shortHex(entry.owner)}
+              </p>
+            ) : null}
+            {entry.action === "withdraw" ? (
+              <p className="text-xs text-fg-muted">
+                {t("earn.nft.receiver")}: {shortHex(entry.owner)}
+              </p>
+            ) : null}
+            {entry.action === "transfer" ? (
+              <p className="text-xs text-fg-muted">
+                {shortHex(entry.from)} → {shortHex(entry.to)}
+              </p>
+            ) : null}
+            {explorerBaseUrl ? (
+              <a
+                href={`${explorerBaseUrl}/tx/${entry.txHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-bold text-brand"
+              >
+                {t("earn.toast.viewTransaction")}
+              </a>
+            ) : null}
+          </article>
         ))}
       </div>
-
-      {!connected ? (
-        <div className="px-5 py-8 text-sm text-fg-muted">{t("earn.ledger.connectWallet")}</div>
-      ) : loading ? (
-        <div className="px-5 py-8 text-sm text-fg-muted">{t("earn.ledger.loading")}</div>
-      ) : error ? (
-        <div className="px-5 py-8 text-sm text-danger">{error}</div>
-      ) : entries.length === 0 ? (
-        <div className="px-5 py-8 text-sm text-fg-muted">{t("earn.ledger.empty")}</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <div className="min-w-[760px]">
-            <div className="grid grid-cols-[110px_minmax(150px,1fr)_minmax(130px,0.9fr)_minmax(130px,0.9fr)_minmax(130px,0.9fr)_110px] border-b border-border-soft bg-surface-0 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
-              <div>{t("earn.ledger.columns.type")}</div>
-              <div>{t("earn.ledger.columns.time")}</div>
-              <div className="text-right">{t("earn.ledger.columns.assets")}</div>
-              <div className="text-right">{t("earn.ledger.columns.shares")}</div>
-              <div className="text-right">{t("earn.ledger.columns.sharePrice")}</div>
-              <div className="text-right">{t("earn.ledger.columns.tx")}</div>
-            </div>
-            {entries.map((entry) => {
-              const actionLabel = t(`earn.ledger.actions.${entry.action}`);
-              const tx = shortHex(entry.txHash);
-              return (
-                <div
-                  key={entry.id}
-                  className="grid grid-cols-[110px_minmax(150px,1fr)_minmax(130px,0.9fr)_minmax(130px,0.9fr)_minmax(130px,0.9fr)_110px] items-center border-b border-border-soft px-5 py-4 text-sm last:border-b-0"
-                >
-                  <div
-                    className={cn(
-                      "w-fit rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]",
-                      entry.action === "deposit"
-                        ? "border-success/30 bg-success-soft text-success"
-                        : "border-brand/30 bg-brand-soft text-brand"
-                    )}
-                  >
-                    {actionLabel}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-fg">{formatTime(entry.timestamp, locale)}</div>
-                    <div className="mt-1 font-mono text-[11px] text-fg-subtle">
-                      {t("earn.ledger.block", { blockNumber: entry.blockNumber })}
-                    </div>
-                    {entry.epochId != null ? (
-                      <div className="mt-1 text-xs text-fg-muted">
-                        {t("earn.recovery.epoch", { epoch: entry.epochId.toString() })}
-                      </div>
-                    ) : null}
-                    {entry.receiver ? (
-                      <div className="mt-1 break-all text-xs text-fg-subtle">
-                        {t("earn.async.receiver", { receiver: entry.receiver })}
-                      </div>
-                    ) : null}
-                    {entry.action === "donation" ? (
-                      <div className="mt-1 text-xs text-warn">
-                        {t("earn.recovery.donationNote")}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="truncate text-right font-mono font-bold text-fg">
-                    {formatTokenAmount(entry.assets, decimals, symbol, 4)}
-                  </div>
-                  <div className="truncate text-right font-mono text-fg">
-                    {formatTokenAmount(entry.shares, decimals, undefined, 4)}
-                  </div>
-                  <div className="truncate text-right font-mono text-fg">
-                    {formatTokenAmount(entry.sharePrice, decimals, symbol, 6)}
-                  </div>
-                  <div className="text-right font-mono text-xs">
-                    {explorerBaseUrl ? (
-                      <a
-                        href={`${explorerBaseUrl}/tx/${entry.txHash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-brand hover:text-brand-hover"
-                      >
-                        {tx}
-                      </a>
-                    ) : (
-                      <span className="text-fg-muted">{tx}</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            <div className="flex items-center justify-between gap-3 px-5 py-4 text-xs text-fg-muted">
-              <span>{t("earn.ledger.loadedRows", { count: entries.length })}</span>
-              {hasMore ? (
-                <button
-                  type="button"
-                  onClick={onLoadMore}
-                  disabled={loadingMore}
-                  className="rounded-md border border-border bg-surface-1 px-3 py-2 font-bold uppercase tracking-[0.12em] text-fg transition hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loadingMore ? t("earn.ledger.loadingMore") : t("earn.ledger.loadMore")}
-                </button>
-              ) : (
-                <span>{t("earn.ledger.end")}</span>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <p className="border-t border-border-soft px-5 py-4 text-[10px] leading-4 text-fg-subtle">
-        {t("earn.ledger.note")}
-      </p>
+      {connected && !cashFlowComplete ? (
+        <p className="px-5 py-3 text-xs text-fg-subtle">{t("earn.nft.historyIncomplete")}</p>
+      ) : null}
+      {hasMore ? (
+        <button
+          type="button"
+          disabled={loadingMore}
+          onClick={onLoadMore}
+          className="m-5 font-bold text-brand"
+        >
+          {t(loadingMore ? "earn.ledger.loadingMore" : "earn.ledger.loadMore")}
+        </button>
+      ) : null}
     </section>
   );
 }

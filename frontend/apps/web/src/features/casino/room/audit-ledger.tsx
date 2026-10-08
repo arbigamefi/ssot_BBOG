@@ -16,12 +16,6 @@ import {
   sicBoMultiplier,
   slotsMaxMultiplier
 } from "./params";
-import {
-  formatHouseEdge,
-  resolveHouseEdgeBps,
-  type ReleaseGamePresentationMeta,
-  type ReleasePresentationMeta
-} from "./presentation";
 import { usePlayerBets } from "../../betting/usePlayerBets";
 import { formatUnits } from "../../betting/model/units";
 import { useCasinoLeaderboard, useCasinoStats, useCasinoTimeseries } from "../useCasinoStats";
@@ -144,8 +138,7 @@ export function GameRoomAuditLedger({
   assetDecimals = 6,
   assetContexts = [],
   chainId,
-  gameMeta,
-  releaseMeta
+  houseEdgeBps
 }: {
   game: GameMeta;
   recentBets: readonly GameAuditBet[];
@@ -157,10 +150,8 @@ export function GameRoomAuditLedger({
   assetContexts?: readonly PoolAssetContext[];
   /** Active chain — drives explorer links and the chain badge in the header. */
   chainId?: number;
-  /** Release metadata for fixed, chain-configured game presentation values. */
-  gameMeta?: ReleaseGamePresentationMeta;
-  /** Release defaults, including the chain's default house edge. */
-  releaseMeta?: ReleasePresentationMeta;
+  /** Current on-chain fee, shared with the submitted fee ceiling. */
+  houseEdgeBps?: number;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -337,7 +328,7 @@ export function GameRoomAuditLedger({
           />
         )}
         {activeTab === "info" && (
-          <GameInfoPanel slug={game.slug} t={t} gameMeta={gameMeta} releaseMeta={releaseMeta} />
+          <GameInfoPanel slug={game.slug} t={t} houseEdgeBps={houseEdgeBps} />
         )}
       </div>
     </div>
@@ -613,18 +604,19 @@ function StateFilterStrip({
 function GameInfoPanel({
   slug,
   t,
-  gameMeta,
-  releaseMeta
+  houseEdgeBps
 }: {
   slug: string;
   t: Translate;
-  gameMeta?: ReleaseGamePresentationMeta;
-  releaseMeta?: ReleasePresentationMeta;
+  houseEdgeBps?: number;
 }) {
   const tagline = safeT(t, `casino.room.gameInfo.${slug}.tagline`);
-  const houseEdge = formatHouseEdge(gameMeta, slug, releaseMeta);
-  const houseEdgeBps = resolveHouseEdgeBps(gameMeta, slug, releaseMeta);
-  const bets = readBets(t, slug).map((bet) => applyGameInfoMultiplier(bet, slug, houseEdgeBps, t));
+  const houseEdge = houseEdgeBps == null ? "—" : `${(houseEdgeBps / 100).toFixed(2)}%`;
+  const bets = readBets(t, slug).map((bet) =>
+    houseEdgeBps == null
+      ? { ...bet, multiplier: "—" }
+      : applyGameInfoMultiplier(bet, slug, houseEdgeBps, t)
+  );
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">

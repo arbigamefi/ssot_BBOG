@@ -74,7 +74,7 @@ describe("fetchGameHubLogs", () => {
 
 describe("decodeHouseEdgeLog", () => {
   const txHash = `0x${"cd".repeat(32)}` as Hex;
-  const amounts = [1_000_000n, 200, 20_000n, 10_000n, 10_000n, 3_000n, 2_000n, 4_000n, 1_000n, 0n];
+  const amounts = [1_000_000n, 200, 20_000n, 10_000n, 10_000n, 3_000n, 2_000n, 4_000n, 1_000n];
   function allocationLog(address: Address, positionId: bigint, logIndex: number) {
     return {
       address,
@@ -88,7 +88,7 @@ describe("decodeHouseEdgeLog", () => {
         [
           { type: "uint256" },
           { type: "uint16" },
-          ...Array.from({ length: 8 }, () => ({ type: "uint256" as const }))
+          ...Array.from({ length: 7 }, () => ({ type: "uint256" as const }))
         ],
         amounts as never
       )
@@ -126,15 +126,14 @@ describe("decodeHouseEdgeLog", () => {
     await store.writeGameHubEvents([event!]);
     expect((await store.getBet({ chainId: 84532, gameHub: HUB, betId: 7n }))?.houseEdge).toEqual({
       usedTurnover: "1000000",
-      effectiveHouseEdgeBps: 200,
+      houseEdgeBps: 200,
       edge: "20000",
       operatorShare: "10000",
       lpRetained: "10000",
       protocolFee: "3000",
       r0: "2000",
       r1: "4000",
-      r2: "1000",
-      markup: "0"
+      r2: "1000"
     });
   });
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.37;
 
 interface ISafeGovernance {
     function getStorageAt(uint256 offset, uint256 length) external view returns (bytes memory);

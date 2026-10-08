@@ -1,39 +1,40 @@
 # Pause and configuration drift
 
-Read the affected Bank at a fixed block using the current generated ABI. Record its address, pool
-mapping, governance, guardian, pause state and release digest before deciding which action is needed.
-A frontend flag, inactive pool or insufficient active capital can reject new bets independently of the
-Bank's explicit pause bit. Redemption eligibility and historical recovery never independently close betting.
+Rules implemented and locally verified under the [current plan](../../design/lp-accounting-and-callback-implementation.md);
+final source binding and network qualification remain pending. At one fixed block authenticate Bank, Vault, asset, pool, governance, guardian, pause state
+and release digest. Do not infer Bank identity from an arbitrary NFT collection.
 
-## Bank pause rules
+## Pause and independent gates
 
-| Operation                                                          | While `riskInPaused`                                                  |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| New holds and LP deposits                                          | Rejected                                                              |
-| Casino/Sports settlement and refunds                               | Allowed when their state predicates hold                              |
-| `claimPlayerPayable(player)`                                       | Allowed; destination is the fixed player                              |
-| `requestRedeem`                                                    | Allowed                                                               |
-| `cancelRedeemRequest`                                              | Allowed until actual activation, by controller or authorized operator |
-| `syncRedeem(controller)` / `syncRecovery(epoch, controller)`       | Allowed; bookkeeping only                                             |
-| `activateBatch`                                                    | Rejected                                                              |
-| Priced LP `withdraw` / `redeem`, `claimRecovery`, PF and XP claims | Rejected                                                              |
-| XP unlock / holdback release                                       | Allowed when eligible; no asset transfer                              |
+| Operation                                                           | While risk-in pause is set                                                |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| New holds; Vault addDeposit/addDepositFor/withdrawDeposit           | Rejected                                                                  |
+| Standard NFT transfer/approval                                      | Preserves ownership rules and existing deadline; does not withdraw assets |
+| Callback persistence, original-seed replay, valid settlement/refund | Allowed under their state predicates                                      |
+| Player-payable claim                                                | Allowed; fixed player destination                                         |
+| PF/XP asset claims                                                  | Rejected                                                                  |
+| XP unlock/holdback bookkeeping                                      | Allowed when eligible                                                     |
 
-Governance and the configured guardian may call `setRiskInPaused(true)`. Only governance can unpause.
-A zero guardian disables that role. The guardian cannot change configuration or claim user funds.
+Governance and guardian may pause; only governance may unpause. Guardian has no NFT, payout or
+allocation authority. LP availability separately depends on current ownership, 24-hour maturity,
+L−K, accounting validity, Bank busy state and canonical received results awaiting accounting.
+These conditions are not the pause bit. The fixed timer and immutable Bank/Vault bindings have no
+governance replacement setter.
+
+LP withdrawals never set a betting pause. They reduce free capital and may make a large new bet
+inadmissible. Frontend switches and inactive pools are separate controls.
 
 ## Incident handling
 
-1. Identify the affected pool and the real rejection reason. Read `getSSOT`, `openHolds`,
-   `currentEpoch`, active reserve and due batch cutoff; do not infer pause solely from a disabled UI.
-2. If new risk must stop, the authorized guardian or governance pauses the Bank. Verify the event
-   and the resulting state. Keep the keeper running so valid settlement/refund debt-out can drain.
-3. Compare risk settings, withdrawal buffer, pool/Hub binding, referral configuration, modules, VRF
-   adapter and timeout with the verified release and approved configuration. Investigate unexplained
-   drift before signing a corrective transaction.
-4. Resolve the incident, reconcile outstanding obligations and verify the intended configuration.
-   Governance then unpauses and checks active-capital admission, batch advancement and claims.
-   Old recovery epochs must not gate later activation or adequately funded betting.
+1. Read the exact rejection reason, NFT deadline/owner if relevant, L/K/G/P/R, both cash balances
+   and canonical result records at the same block.
+2. If stopping new risk is required, use the authorized pause path and verify its receipt. Keep
+   valid settlement, timeout checks, original-result retries and player-debt payment available.
+3. Compare risk and PF/XP outflow buffers, Bank/Vault/asset/Router/wrapper identity, snapshotted
+   modules, referrals and deadlines with the signed release. There is no extra LP percentage buffer.
+4. Reconcile both custodians, tree P&L and result acknowledgment, then have governance unpause.
+   Verify a valid deposit, an eligible NFT withdrawal and bet admission separately. Do not erase a
+   received result, bypass NFT maturity or release a live position's reserve to force progress.
 
-Pause is not a bounded-exit mechanism. It blocks activation and LP payments for as long as it remains set,
-while historical recovery age continues from actual activation. See [Bank solvency](bank-solvency.md).
+Pause blocks LP payments until governance clears it. It is not a guaranteed-exit mechanism.
+See [Bank/Vault solvency](bank-solvency.md).

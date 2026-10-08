@@ -4,7 +4,7 @@ import {
   betAmountInputToRaw,
   clampBetAmountInput,
   getMinBetAmountInput,
-  getMinBetAmountRaw,
+  multiplyBetAmountInput,
   normalizeBetAmountInput,
   resolveBetMaxRaw
 } from "./bet-amount";
@@ -21,17 +21,16 @@ describe("bet amount helpers", () => {
     );
   });
 
-  it("derives a valid minimum input for low-decimal assets", () => {
-    expect(getMinBetAmountInput(0, getMinBetAmountRaw(1n, 100))).toBe("1");
-    expect(getMinBetAmountInput(1, getMinBetAmountRaw(10n, 100))).toBe("0.1");
-    expect(getMinBetAmountInput(6, getMinBetAmountRaw(1_000_000n, 100))).toBe("0.01");
+  it("formats the chain minimum per round at the selected asset precision", () => {
+    expect(getMinBetAmountInput(0, 1n)).toBe("1");
+    expect(getMinBetAmountInput(1, 1n)).toBe("0.1");
+    expect(getMinBetAmountInput(6, 10_000n)).toBe("0.01");
   });
 
-  it("uses total-stake minimum with ceiling rounding at every roll count", () => {
-    expect(getMinBetAmountRaw(1_000_000n, 1)).toBe(1_000_000n);
-    expect(getMinBetAmountRaw(1_000_000n, 3)).toBe(333_334n);
-    expect(getMinBetAmountRaw(1_000_000n, 100)).toBe(10_000n);
-    expect(getMinBetAmountRaw(0n, 1)).toBe(0n);
+  it.each([1, 25])("keeps the 0.01 USDC per-round minimum for %i rounds", (count) => {
+    const amount = clampBetAmountInput("0.009999", 6, 100_000_000n, 10_000n);
+    expect(amount).toBe("0.01");
+    expect(multiplyBetAmountInput(amount, count, 6)).toBe(count === 1 ? "0.01" : "0.25");
   });
 
   it("preserves entered stake while the pool minimum is unavailable", () => {

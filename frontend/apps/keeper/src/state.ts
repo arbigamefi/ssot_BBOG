@@ -1,4 +1,4 @@
-import type { BetStateName } from "./types.js";
+import type { BetStateName, RequestStateName } from "./types.js";
 
 export function mapBetState(state: number): BetStateName {
   switch (state) {
@@ -25,4 +25,11 @@ export function shouldFinalize(state: BetStateName) {
 
 export function isTerminalState(state: BetStateName) {
   return state === "settled" || state === "refunded";
+}
+
+export function mapRequestState(state: number): RequestStateName {
+  const names = ["none", "awaiting", "received", "terminal", "cancelled"] as const;
+  const name = names[state];
+  if (!name) throw new Error(`Unknown canonical VRF request state ${state}`);
+  return name;
 }

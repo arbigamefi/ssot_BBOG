@@ -13,12 +13,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-from export_frontend_abis import REQUIRED_CONTRACTS
+from export_frontend_abis import REQUIRED_CONTRACTS, _find_artifact, _load_abi_from_artifact, pool_instances
 
 
 def _load_json(path: Path) -> Dict[str, Any]:
@@ -32,7 +33,7 @@ def _load_json(path: Path) -> Dict[str, Any]:
 
 
 def _as_int(v: Any, *, field: str, path: Path) -> int:
-    if isinstance(v, int):
+    if type(v) is int:
         return v
     if isinstance(v, str):
         s = v.strip()
@@ -57,13 +58,13 @@ def _as_str(v: Any, *, field: str, path: Path) -> str:
 
 def _as_address(v: Any, *, field: str, path: Path) -> str:
     s = _as_str(v, field=field, path=path)
-    if not s.startswith("0x") or len(s) != 42:
+    if not re.fullmatch(r"0x[0-9a-fA-F]{40}", s):
         raise SystemExit(f"{path}: field '{field}' must be address, got: {v!r}")
     return s.lower()
 
 
 EXECUTION_ADDRESSES = (
-    "gov", "gameHub", "settlementRouter", "poolRegistry", "vrfHub", "refRegistry", "refEngine", "adapter",
+    "gov", "gameHub", "settlementRouter", "poolRegistry", "vrfHub", "refRegistry", "refEngine",
     "sportsRiskEngine", "sportsHub", "moduleDice", "moduleCoinToss", "moduleRoulette", "moduleKeno",
     "modulePlinko", "moduleSicBo", "moduleSlots", "moduleBaccarat",
 )
@@ -107,6 +108,12 @@ def _validate_execution(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, m
             raise SystemExit(f"{manifest_path}: incorrect gameId for {slug}")
         if _as_address(game.get("module"), field=f"games.{slug}.module", path=manifest_path) != addresses[key].lower():
             raise SystemExit(f"{manifest_path}: games.{slug}.module does not match authenticated snapshot")
+        for field, prefix, low, high in (("maxBetCount", "gameMaxBetCount", 1, 25),
+                                         ("callbackGasLimit", "gameCallbackGasLimit", 200_000, 2_447_746)):
+            value = _as_int(game.get(field), field=f"games.{slug}.{field}", path=manifest_path)
+            expected = _as_int(snapshot.get(f"{prefix}_{name}"), field=f"{prefix}_{name}", path=snapshot_path)
+            if not low <= value <= high or value != expected:
+                raise SystemExit(f"{manifest_path}: games.{slug}.{field} does not match authenticated snapshot or admission bounds")
 
 
 def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manifest_path: Path, snapshot_path: Path) -> None:
@@ -130,12 +137,12 @@ def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manif
         if not expected_symbol:
             raise SystemExit(f"{snapshot_path}: poolAssetSymbol_{suffix} must be non-empty")
         expected_decimals = _as_int(
-            snapshot.get(f"poolLpDecimals_{suffix}"),
-            field=f"poolLpDecimals_{suffix}",
+            snapshot.get(f"poolAssetDecimals_{suffix}"),
+            field=f"poolAssetDecimals_{suffix}",
             path=snapshot_path,
         )
         if expected_decimals < 0 or expected_decimals > 36:
-            raise SystemExit(f"{snapshot_path}: poolLpDecimals_{suffix} out of range: {expected_decimals}")
+            raise SystemExit(f"{snapshot_path}: poolAssetDecimals_{suffix} out of range: {expected_decimals}")
 
         checks = (
             ("poolId", _as_int(snapshot.get(f"poolId_{suffix}"), field=f"poolId_{suffix}", path=snapshot_path)),
@@ -156,6 +163,11 @@ def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manif
         actual_bank = _as_address(pool.get("bank"), field=f"pools[{i}].bank", path=manifest_path)
         if actual_bank != expected_bank:
             raise SystemExit(f"{manifest_path}: pools[{i}].bank={actual_bank} does not match snapshot {expected_bank}")
+
+        expected_vault = _as_address(snapshot.get(f"poolVault_{suffix}"), field=f"poolVault_{suffix}", path=snapshot_path)
+        actual_vault = _as_address(pool.get("vault"), field=f"pools[{i}].vault", path=manifest_path)
+        if actual_vault != expected_vault:
+            raise SystemExit(f"{manifest_path}: pools[{i}].vault does not match authenticated snapshot")
 
         domain = _as_int(snapshot.get(f"poolDomain_{suffix}"), field=f"poolDomain_{suffix}", path=snapshot_path)
         active = _as_int(snapshot.get(f"poolActive_{suffix}"), field=f"poolActive_{suffix}", path=snapshot_path) != 0
@@ -242,12 +254,12 @@ def _first_active_casino_pool(snapshot: Dict[str, Any], *, snapshot_path: Path) 
         if domain == 1 and active != 0:
             pool_id = _as_int(snapshot.get(f"poolId_{suffix}"), field=f"poolId_{suffix}", path=snapshot_path)
             decimals = _as_int(
-                snapshot.get(f"poolLpDecimals_{suffix}"),
-                field=f"poolLpDecimals_{suffix}",
+                snapshot.get(f"poolAssetDecimals_{suffix}"),
+                field=f"poolAssetDecimals_{suffix}",
                 path=snapshot_path,
             )
             if decimals < 0 or decimals > 36:
-                raise SystemExit(f"{snapshot_path}: poolLpDecimals_{suffix} out of range: {decimals}")
+                raise SystemExit(f"{snapshot_path}: poolAssetDecimals_{suffix} out of range: {decimals}")
             return pool_id, decimals
     raise SystemExit(f"{snapshot_path}: no active casino pool")
 
@@ -283,38 +295,56 @@ def _validate_vectors(vectors: Dict[str, Any], snapshot: Dict[str, Any], *, vect
             )
 
 
-def _validate_abis(index: Dict[str, Any], path: Path) -> None:
-    """The bundle inventory is untrusted; compare it with this checkout's ABI source."""
+def _validate_abis(index: Dict[str, Any], path: Path, manifest: Dict[str, Any], out_dir: Path) -> None:
+    """Compare untrusted inventory with this checkout's compiled source and pool routes."""
     entries = index.get("contracts")
     if not isinstance(entries, list):
         raise SystemExit(f"{path}: contracts must be an array")
-    expected = {name for name, _, _ in REQUIRED_CONTRACTS}
-    current = Path(__file__).resolve().parents[2] / "frontend/packages/ssot/src/abis/contracts"
-    seen = set()
+    expected = {name: (qualified, key) for name, qualified, key in REQUIRED_CONTRACTS}
+    expected_instances = {(row["name"], row["poolId"]): row for row in pool_instances(manifest)}
+    seen, seen_instances = set(), set()
     for entry in entries:
         if not isinstance(entry, dict):
             raise SystemExit(f"{path}: invalid ABI inventory entry")
         name = entry.get("name")
-        if name == "BankInstance":
-            if entry.get("abiFile") != "Bank.abi.json":
-                raise SystemExit(f"{path}: Bank instance must use current Bank ABI")
+        if name in ("BankInstance", "VaultInstance"):
+            pool_id = entry.get("poolId")
+            if type(pool_id) is not int:
+                raise SystemExit(f"{path}: invalid instance poolId")
+            identity = (name, pool_id)
+            if identity in seen_instances or identity not in expected_instances or entry != expected_instances[identity]:
+                raise SystemExit(f"{path}: unexpected, duplicate or mismatched Bank/Vault instance")
+            seen_instances.add(identity)
             continue
         if name not in expected or name in seen:
             raise SystemExit(f"{path}: unexpected or duplicate ABI: {name}")
         seen.add(name)
+        qualified, key = expected[name]
+        expected_address = None if key.startswith("__") else _as_address(
+            manifest["addresses"].get(key), field=key, path=path)
+        actual_address = entry.get("address")
+        if actual_address is not None:
+            actual_address = _as_address(actual_address, field=f"{name}.address", path=path)
+        if entry.get("addressKey") != key or actual_address != expected_address:
+            raise SystemExit(f"{path}: ABI address identity differs from authenticated manifest: {name}")
         filename = f"{name}.abi.json"
         if entry.get("abiFile") != filename:
             raise SystemExit(f"{path}: invalid ABI filename for {name}")
         bundle_file = path.parent / filename
         if not bundle_file.is_file():
             raise SystemExit(f"missing ABI: {bundle_file}")
-        digest = hashlib.sha256(bundle_file.read_bytes()).hexdigest()
-        if entry.get("abiSha256") != digest:
+        if entry.get("abiSha256") != hashlib.sha256(bundle_file.read_bytes()).hexdigest():
             raise SystemExit(f"{path}: ABI digest mismatch for {name}")
-        if _load_json(bundle_file) != _load_json(current / filename):
+        try:
+            abi = _load_abi_from_artifact(_find_artifact(out_dir, qualified))
+        except (FileNotFoundError, ValueError) as error:
+            raise SystemExit(str(error)) from None
+        if _load_json(bundle_file) != {"contract": name, "abi": abi}:
             raise SystemExit(f"{path}: ABI differs from current source build: {name}")
-    if seen != expected:
-        raise SystemExit(f"{path}: missing current ABIs: {sorted(expected - seen)}")
+    if seen != set(expected):
+        raise SystemExit(f"{path}: missing current ABIs: {sorted(set(expected) - seen)}")
+    if seen_instances != set(expected_instances):
+        raise SystemExit(f"{path}: missing Bank/Vault instances")
 
 
 def main() -> None:
@@ -327,6 +357,7 @@ def main() -> None:
     ap.add_argument("--vectors", required=True)
     # Current ABI inventory is mandatory for a strict release check.
     ap.add_argument("--abis-index", default="")
+    ap.add_argument("--out", default=str(Path(__file__).resolve().parents[2] / "out"))
     args = ap.parse_args()
 
     strict = str(args.strict) == "1"
@@ -356,13 +387,19 @@ def main() -> None:
     if rel.get("schema") != "SSOT_RELEASE_DIGEST_V16":
         raise SystemExit(f"{release_path}: expected current v1.6 release schema")
     for artifact, artifact_path in [(manifest, manifest_path), (vectors, vectors_path), (snapshot, snapshot_path)]:
-        if artifact.get("architectureVersion") != "v1.6-house-edge-allocation":
+        if artifact.get("architectureVersion") != "v1.6-nft-liquidity":
             raise SystemExit(f"{artifact_path}: expected current v1.6 architecture")
         if (_as_int(artifact.get("chainId"), field="chainId", path=artifact_path),
             _as_int(artifact.get("blockNumber"), field="blockNumber", path=artifact_path)) != (chain_id, block_number):
             raise SystemExit(f"{artifact_path}: release identity mismatch")
     _require_keys(manifest, keys=manifest_keys, path=manifest_path)
     _require_keys(vectors, keys=("schemaVersion", "chainId", "blockNumber", "vectors"), path=vectors_path)
+
+    # Authenticate routes before using them to validate the ABI inventory.
+    _validate_execution(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
+    _validate_sports(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
+    _validate_pools(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
+    _validate_vectors(vectors, snapshot, vectors_path=vectors_path, snapshot_path=snapshot_path)
 
     # Optional ABI inventory (frontend-only ABIs).
     abis_index_path = Path(args.abis_index) if str(args.abis_index).strip() else None
@@ -382,17 +419,14 @@ def main() -> None:
                 raise SystemExit(
                     f"abis index blockNumber mismatch: expected {block_number}, got {abis_index.get('blockNumber')}"
                 )
-            _validate_abis(abis_index, abis_index_path)
+            if abis_index.get("architectureVersion") != "v1.6-nft-liquidity":
+                raise SystemExit(f"{abis_index_path}: expected current NFT architecture")
+            _validate_abis(abis_index, abis_index_path, manifest, Path(args.out))
 
     if _as_int(manifest["schemaVersion"], field="schemaVersion", path=manifest_path) != 2:
         raise SystemExit(f"{manifest_path}: schemaVersion must be 2")
     if _as_int(vectors["schemaVersion"], field="schemaVersion", path=vectors_path) != 2:
         raise SystemExit(f"{vectors_path}: schemaVersion must be 2")
-
-    _validate_execution(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
-    _validate_sports(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
-    _validate_pools(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
-    _validate_vectors(vectors, snapshot, vectors_path=vectors_path, snapshot_path=snapshot_path)
 
     # Notes must reference digest in strict mode.
     if strict:

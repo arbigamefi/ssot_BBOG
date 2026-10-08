@@ -1,5 +1,5 @@
-import type { BankProviderLedgerAction } from "./bank-cash-ledger.js";
-export { decodeBankProviderCashEvent, type BankProviderLedgerAction } from "./bank-cash-ledger.js";
+import type { VaultProviderLedgerAction } from "./vault-ledger.js";
+export { decodeVaultProviderEvent, type VaultProviderLedgerAction } from "./vault-ledger.js";
 import postgres, { type Sql } from "postgres";
 import { getCasinoFinancials } from "./financials.js";
 import type { Address, Hex } from "viem";
@@ -34,14 +34,14 @@ export type SportsHubEventName =
 
 /**
  * How a settled bet's house edge was allocated, from the GameHub's HouseEdgeAllocated event (v1.6).
- * Amounts are bigint strings in the bet's asset; lpRetained + protocolFee + r0 + r1 + r2 + markup = edge.
+ * Amounts are bigint strings in the bet's asset; lpRetained + protocolFee + r0 + r1 + r2 = edge.
  */
 export type BetHouseEdgeAllocation = {
   /** Stake less the refunded part. */
   usedTurnover: string;
-  effectiveHouseEdgeBps: number;
+  houseEdgeBps: number;
   edge: string;
-  /** The operator's half of the edge, which pays referrals, markup and the protocol fee. */
+  /** The operator's half of the edge, which pays referrals and the protocol fee. */
   operatorShare: string;
   lpRetained: string;
   protocolFee: string;
@@ -51,8 +51,6 @@ export type BetHouseEdgeAllocation = {
   r1: string;
   /** Second-level referrer (L2). */
   r2: string;
-  /** Affiliate markup share. */
-  markup: string;
 };
 
 export type BetRow = {
@@ -66,7 +64,10 @@ export type BetRow = {
   gameId?: Hex;
   asset?: Address;
   player?: Address;
-  pricingAffiliate?: Address;
+  /** Immutable direct referrer recorded when this bet was accepted. */
+  referrerL1?: Address;
+  /** Immutable second-level referrer recorded at the same time. */
+  referrerL2?: Address;
   stake?: string;
   payout?: string;
   payoutGross?: string;
@@ -141,43 +142,44 @@ export type SportsTicketIndexEvent = {
   args: Record<string, unknown>;
 };
 
-export type BankProviderLedgerRow = {
+export type VaultProviderLedgerRow = {
   id: string;
   chainId: number;
   poolId: string;
   owner: Address;
   bank: Address;
   asset: Address;
-  action: BankProviderLedgerAction;
+  action: VaultProviderLedgerAction;
   txHash: Hex;
   blockNumber: number;
   logIndex: number;
   timestamp?: number;
   assets?: string;
-  shares: string;
-  sharePrice?: string;
+  vault: Address;
+  depositId: string;
+  percent?: string;
+  withdrawAfter?: string;
   receiver?: Address;
   caller?: Address;
-  epochId?: string;
   updatedAt: number;
 };
 
-export type BankProviderLedgerRange = {
+export type VaultProviderLedgerRange = {
   chainId: number;
-  bank: Address;
+  vault: Address;
   fromBlock: bigint;
   toBlock: bigint;
-  rows: readonly BankProviderLedgerRow[];
+  rows: readonly VaultProviderLedgerRow[];
 };
 
-function validateLedgerRange(range: BankProviderLedgerRange) {
+function validateLedgerRange(range: VaultProviderLedgerRange) {
   if (range.fromBlock < 0n || range.toBlock < range.fromBlock)
     throw new Error("Invalid cash ledger range.");
   for (const row of range.rows) {
-    normalizeBankProviderLedgerAction(row.action);
+    normalizeVaultProviderLedgerAction(row.action);
     if (
       row.chainId !== range.chainId ||
-      row.bank.toLowerCase() !== range.bank.toLowerCase() ||
+      row.vault.toLowerCase() !== range.vault.toLowerCase() ||
       BigInt(row.blockNumber) < range.fromBlock ||
       BigInt(row.blockNumber) > range.toBlock
     )
@@ -208,12 +210,12 @@ export type SportsTicketIndexQuery = {
   player?: Address;
 };
 
-export type BankProviderLedgerQuery = {
+export type VaultProviderLedgerQuery = {
   chainId: number;
   limit: number;
   owner: Address;
-  /** Contract identity scopes provider cash flow, independently of pool display IDs. */
-  bank: Address;
+  /** Vault identity scopes NFT activity, independently of pool display IDs. */
+  vault: Address;
   beforeBlock?: number;
   beforeLogIndex?: number;
   endBlock?: number;
@@ -322,12 +324,12 @@ export type BetIndexStore = {
   writeGameHubEvents: (events: readonly BetIndexEvent[]) => Promise<BetRow[]>;
   writeBetRows: (rows: readonly BetRow[]) => Promise<BetRow[]>;
   writeSportsHubEvents: (events: readonly SportsTicketIndexEvent[]) => Promise<SportsTicketRow[]>;
-  writeBankProviderLedgerRows: (
-    rows: readonly BankProviderLedgerRow[]
-  ) => Promise<BankProviderLedgerRow[]>;
-  replaceBankProviderLedgerRange: (
-    range: BankProviderLedgerRange
-  ) => Promise<BankProviderLedgerRow[]>;
+  writeVaultProviderLedgerRows: (
+    rows: readonly VaultProviderLedgerRow[]
+  ) => Promise<VaultProviderLedgerRow[]>;
+  replaceVaultProviderLedgerRange: (
+    range: VaultProviderLedgerRange
+  ) => Promise<VaultProviderLedgerRow[]>;
   getRecentBets: (query: BetIndexQuery) => Promise<BetRow[]>;
   getBet: (query: BetIndexReceiptQuery) => Promise<BetRow | null>;
   getPlayerBets: (
@@ -337,7 +339,7 @@ export type BetIndexStore = {
   getPlayerSportsTickets: (
     query: Required<Pick<SportsTicketIndexQuery, "chainId" | "limit" | "player">>
   ) => Promise<SportsTicketRow[]>;
-  getBankProviderLedger: (query: BankProviderLedgerQuery) => Promise<BankProviderLedgerRow[]>;
+  getVaultProviderLedger: (query: VaultProviderLedgerQuery) => Promise<VaultProviderLedgerRow[]>;
   getHeldSportsTicketIdsByMarket: (query: {
     chainId: number;
     limit: number;
@@ -446,7 +448,8 @@ create table if not exists bets (
   game_id text,
   asset text,
   player text,
-  pricing_affiliate text,
+  referrer_l1 text,
+  referrer_l2 text,
   stake text,
   payout text,
   payout_gross text,
@@ -476,7 +479,7 @@ create index if not exists bets_player_idx
   on bets (chain_id, player, updated_block desc);
 
 create index if not exists bets_affiliate_idx
-  on bets (chain_id, pricing_affiliate, updated_block desc);
+  on bets (chain_id, referrer_l1, updated_block desc);
 
 create index if not exists bets_game_idx
   on bets (chain_id, game_id, updated_block desc);
@@ -531,29 +534,35 @@ create index if not exists sport_tickets_market_idx
 create index if not exists sport_tickets_market_state_idx
   on sport_tickets (chain_id, market_id, state, updated_block desc, ticket_id desc);
 
-create table if not exists bank_provider_ledger (
+create table if not exists vault_provider_ledger (
   chain_id integer not null,
   pool_id text not null,
   owner text not null,
   bank text not null,
+  vault text not null,
   asset text not null,
-  action text not null,
+  action text not null check (action in ('deposit', 'withdraw', 'transfer')),
+  deposit_id text not null,
   tx_hash text not null,
   block_number bigint not null,
   log_index integer not null,
   timestamp timestamptz,
   asset_amount text,
-  share_amount text not null,
-  share_price text,
+  percent text,
+  withdraw_after text,
   receiver text,
   caller text,
-  epoch_id text,
   updated_at timestamptz not null default now(),
   primary key (chain_id, tx_hash, log_index)
 );
 
-create index if not exists bank_provider_ledger_owner_idx
-  on bank_provider_ledger (chain_id, bank, owner, block_number desc, log_index desc);
+create index if not exists vault_provider_ledger_owner_idx
+  on vault_provider_ledger (chain_id, vault, owner, block_number desc, log_index desc);
+create index if not exists vault_provider_ledger_receiver_idx
+  on vault_provider_ledger (chain_id, vault, receiver, block_number desc, log_index desc);
+create index if not exists vault_provider_ledger_payer_idx
+  on vault_provider_ledger (chain_id, vault, caller, block_number desc, log_index desc)
+  where action = 'deposit';
 
 create table if not exists indexer_cursors (
   chain_id integer not null,
@@ -574,7 +583,7 @@ export type PostgresBetIndexConfig = {
 export function createMemoryBetIndexStore(): BetIndexStore {
   const bets = new Map<string, BetRow>();
   const sportsTickets = new Map<string, SportsTicketRow>();
-  const bankProviderLedger = new Map<string, BankProviderLedgerRow>();
+  const vaultProviderLedger = new Map<string, VaultProviderLedgerRow>();
   const cursors = new Map<string, bigint>();
   const gameHubEvents = new Map<string, BetIndexEvent>();
   const houseEdges = new Map<string, BetHouseEdgeAllocation>();
@@ -618,13 +627,16 @@ export function createMemoryBetIndexStore(): BetIndexStore {
     }
     return [...changed.values()];
   };
-  const writeBankProviderLedgerRows = async (input: readonly BankProviderLedgerRow[]) => {
-    for (const row of input) normalizeBankProviderLedgerAction(row.action);
+  const writeVaultProviderLedgerRows = async (input: readonly VaultProviderLedgerRow[]) => {
+    for (const row of input) normalizeVaultProviderLedgerAction(row.action);
     for (const row of input) {
-      bankProviderLedger.set(bankProviderLedgerId(row.chainId, row.txHash, row.logIndex), {
+      vaultProviderLedger.set(vaultProviderLedgerId(row.chainId, row.txHash, row.logIndex), {
         ...row,
         asset: row.asset.toLowerCase() as Address,
         bank: row.bank.toLowerCase() as Address,
+        vault: row.vault.toLowerCase() as Address,
+        receiver: row.receiver?.toLowerCase() as Address | undefined,
+        caller: row.caller?.toLowerCase() as Address | undefined,
         owner: row.owner.toLowerCase() as Address,
         poolId: String(row.poolId),
         txHash: row.txHash.toLowerCase() as Hex
@@ -674,19 +686,19 @@ export function createMemoryBetIndexStore(): BetIndexStore {
       return input.map(normalizeBetRow);
     },
     writeSportsHubEvents,
-    writeBankProviderLedgerRows,
-    replaceBankProviderLedgerRange: async (range) => {
+    writeVaultProviderLedgerRows,
+    replaceVaultProviderLedgerRange: async (range) => {
       validateLedgerRange(range);
-      for (const [id, row] of bankProviderLedger) {
+      for (const [id, row] of vaultProviderLedger) {
         if (
           row.chainId === range.chainId &&
-          row.bank.toLowerCase() === range.bank.toLowerCase() &&
+          row.vault.toLowerCase() === range.vault.toLowerCase() &&
           BigInt(row.blockNumber) >= range.fromBlock &&
           BigInt(row.blockNumber) <= range.toBlock
         )
-          bankProviderLedger.delete(id);
+          vaultProviderLedger.delete(id);
       }
-      return writeBankProviderLedgerRows(range.rows);
+      return writeVaultProviderLedgerRows(range.rows);
     },
     getRecentBets: async ({ chainId, gameHub, gameId, limit }) =>
       [...bets.values()]
@@ -712,22 +724,27 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .filter((row) => row.player?.toLowerCase() === player.toLowerCase())
         .sort(compareSportsTicketRows)
         .slice(0, limit),
-    getBankProviderLedger: async ({
+    getVaultProviderLedger: async ({
       beforeBlock,
       beforeLogIndex,
       chainId,
       limit,
       owner,
-      bank,
+      vault,
       endBlock
     }) =>
-      [...bankProviderLedger.values()]
+      [...vaultProviderLedger.values()]
         .filter((row) => row.chainId === chainId)
-        .filter((row) => row.bank.toLowerCase() === bank.toLowerCase())
-        .filter((row) => row.owner.toLowerCase() === owner.toLowerCase())
+        .filter((row) => row.vault.toLowerCase() === vault.toLowerCase())
+        .filter(
+          (row) =>
+            row.owner.toLowerCase() === owner.toLowerCase() ||
+            (row.action === "deposit" && row.caller?.toLowerCase() === owner.toLowerCase()) ||
+            (row.action === "transfer" && row.receiver?.toLowerCase() === owner.toLowerCase())
+        )
         .filter((row) => endBlock == null || row.blockNumber <= endBlock)
-        .filter((row) => isBankProviderLedgerBeforeCursor(row, beforeBlock, beforeLogIndex))
-        .sort(compareBankProviderLedgerRows)
+        .filter((row) => isVaultProviderLedgerBeforeCursor(row, beforeBlock, beforeLogIndex))
+        .sort(compareVaultProviderLedgerRows)
         .slice(0, limit),
     getHeldSportsTicketIdsByMarket: async ({ chainId, limit, marketId }) =>
       [...sportsTickets.values()]
@@ -740,7 +757,7 @@ export function createMemoryBetIndexStore(): BetIndexStore {
     getAffiliateBets: async ({ affiliate, asset, chainId, gameHub, limit }) =>
       [...bets.values()]
         .filter((row) => row.chainId === chainId && sameHub(row, gameHub))
-        .filter((row) => row.pricingAffiliate?.toLowerCase() === affiliate.toLowerCase())
+        .filter((row) => row.referrerL1?.toLowerCase() === affiliate.toLowerCase())
         .filter((row) => !asset || row.asset?.toLowerCase() === asset.toLowerCase())
         .sort(compareBetRows)
         .slice(0, limit)
@@ -752,7 +769,7 @@ export function createMemoryBetIndexStore(): BetIndexStore {
           (row) =>
             row.chainId === chainId &&
             sameHub(row, gameHub) &&
-            row.pricingAffiliate?.toLowerCase() === affiliate.toLowerCase() &&
+            row.referrerL1?.toLowerCase() === affiliate.toLowerCase() &&
             (!asset || row.asset?.toLowerCase() === asset.toLowerCase())
         )
       }),
@@ -856,53 +873,34 @@ export function createPostgresBetIndexStore(config: PostgresBetIndexConfig): Bet
 
 type SqlTag = (strings: TemplateStringsArray, ...parameters: unknown[]) => unknown;
 
-async function upsertBankProviderLedgerRow(sql: SqlTag, row: BankProviderLedgerRow) {
+async function upsertVaultProviderLedgerRow(sql: SqlTag, row: VaultProviderLedgerRow) {
   await sql`
-            insert into bank_provider_ledger (
-              chain_id, pool_id, owner, bank, asset, action, tx_hash, block_number, log_index,
-              timestamp, asset_amount, share_amount, share_price, receiver, caller, epoch_id, updated_at
-            ) values (
-              ${row.chainId},
-              ${String(row.poolId)},
-              ${row.owner.toLowerCase()},
-              ${row.bank.toLowerCase()},
-              ${row.asset.toLowerCase()},
-              ${row.action},
-              ${row.txHash.toLowerCase()},
-              ${row.blockNumber},
-              ${row.logIndex},
-              ${row.timestamp == null ? null : new Date(row.timestamp)},
-              ${row.assets ?? null},
-              ${row.shares},
-              ${row.sharePrice ?? null},
-              ${row.receiver?.toLowerCase() ?? null},
-              ${row.caller?.toLowerCase() ?? null},
-              ${row.epochId ?? null},
-              ${new Date(row.updatedAt)}
-            )
-            on conflict (chain_id, tx_hash, log_index) do update set
-              pool_id = excluded.pool_id,
-              owner = excluded.owner,
-              bank = excluded.bank,
-              asset = excluded.asset,
-              action = excluded.action,
-              block_number = excluded.block_number,
-              timestamp = excluded.timestamp,
-              asset_amount = excluded.asset_amount,
-              share_amount = excluded.share_amount,
-              share_price = excluded.share_price,
-              receiver = excluded.receiver,
-              caller = excluded.caller,
-              epoch_id = excluded.epoch_id,
-              updated_at = excluded.updated_at
-          `;
+    insert into vault_provider_ledger (
+      chain_id, pool_id, owner, bank, vault, asset, action, deposit_id,
+      tx_hash, block_number, log_index, timestamp, asset_amount, percent,
+      withdraw_after, receiver, caller, updated_at
+    ) values (
+      ${row.chainId}, ${String(row.poolId)}, ${row.owner.toLowerCase()},
+      ${row.bank.toLowerCase()}, ${row.vault.toLowerCase()}, ${row.asset.toLowerCase()},
+      ${row.action}, ${row.depositId}, ${row.txHash.toLowerCase()}, ${row.blockNumber},
+      ${row.logIndex}, ${row.timestamp == null ? null : new Date(row.timestamp)},
+      ${row.assets ?? null}, ${row.percent ?? null}, ${row.withdrawAfter ?? null},
+      ${row.receiver?.toLowerCase() ?? null}, ${row.caller?.toLowerCase() ?? null}, ${new Date(row.updatedAt)}
+    ) on conflict (chain_id, tx_hash, log_index) do update set
+      pool_id = excluded.pool_id, owner = excluded.owner, bank = excluded.bank,
+      vault = excluded.vault, asset = excluded.asset, action = excluded.action,
+      deposit_id = excluded.deposit_id, block_number = excluded.block_number,
+      timestamp = excluded.timestamp, asset_amount = excluded.asset_amount,
+      percent = excluded.percent, withdraw_after = excluded.withdraw_after,
+      receiver = excluded.receiver, caller = excluded.caller, updated_at = excluded.updated_at
+  `;
 }
 
 async function upsertBetRow(sql: SqlTag, row: BetRow) {
   const normalized = normalizeBetRow(row);
   await sql`
     insert into bets (
-      chain_id, game_hub, bet_id, state, game_id, asset, player, pricing_affiliate, stake, payout,
+      chain_id, game_hub, bet_id, state, game_id, asset, player, referrer_l1, referrer_l2, stake, payout,
       payout_gross, refund_amount, request_id, random_hash, terminal_tx_hash,
       finalized_tx_hash, refunded_tx_hash, placed_block, placed_at, refund_deadline,
       updated_block, last_tx_hash, last_event_name, updated_at
@@ -914,7 +912,8 @@ async function upsertBetRow(sql: SqlTag, row: BetRow) {
       ${normalized.gameId ?? null},
       ${normalized.asset ?? null},
       ${normalized.player ?? null},
-      ${normalized.pricingAffiliate ?? null},
+      ${normalized.referrerL1 ?? null},
+      ${normalized.referrerL2 ?? null},
       ${normalized.stake ?? null},
       ${normalized.payout ?? null},
       ${normalized.payoutGross ?? null},
@@ -940,7 +939,8 @@ async function upsertBetRow(sql: SqlTag, row: BetRow) {
       game_id = coalesce(excluded.game_id, bets.game_id),
       asset = coalesce(excluded.asset, bets.asset),
       player = coalesce(excluded.player, bets.player),
-      pricing_affiliate = coalesce(excluded.pricing_affiliate, bets.pricing_affiliate),
+      referrer_l1 = coalesce(excluded.referrer_l1, bets.referrer_l1),
+      referrer_l2 = coalesce(excluded.referrer_l2, bets.referrer_l2),
       stake = coalesce(excluded.stake, bets.stake),
       payout = coalesce(excluded.payout, bets.payout),
       payout_gross = coalesce(excluded.payout_gross, bets.payout_gross),
@@ -1173,26 +1173,26 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       });
       return rows;
     },
-    writeBankProviderLedgerRows: async (rows) => {
-      for (const row of rows) normalizeBankProviderLedgerAction(row.action);
+    writeVaultProviderLedgerRows: async (rows) => {
+      for (const row of rows) normalizeVaultProviderLedgerAction(row.action);
       await sql.begin(async (tx) => {
         const identities = [
-          ...new Set(rows.map((row) => `${row.chainId}:${row.bank.toLowerCase()}`))
+          ...new Set(rows.map((row) => `${row.chainId}:${row.vault.toLowerCase()}`))
         ].sort();
         for (const identity of identities)
           await tx`select pg_advisory_xact_lock(hashtextextended(${identity}, 0))`;
-        for (const row of rows) await upsertBankProviderLedgerRow(tx as unknown as SqlTag, row);
+        for (const row of rows) await upsertVaultProviderLedgerRow(tx as unknown as SqlTag, row);
       });
       return [...rows];
     },
-    replaceBankProviderLedgerRange: async (range) => {
+    replaceVaultProviderLedgerRange: async (range) => {
       validateLedgerRange(range);
       await sql.begin(async (tx) => {
-        const identity = `${range.chainId}:${range.bank.toLowerCase()}`;
+        const identity = `${range.chainId}:${range.vault.toLowerCase()}`;
         await tx`select pg_advisory_xact_lock(hashtextextended(${identity}, 0))`;
-        await tx`delete from bank_provider_ledger where chain_id = ${range.chainId} and bank = ${range.bank.toLowerCase()} and block_number >= ${range.fromBlock.toString()} and block_number <= ${range.toBlock.toString()}`;
+        await tx`delete from vault_provider_ledger where chain_id = ${range.chainId} and vault = ${range.vault.toLowerCase()} and block_number >= ${range.fromBlock.toString()} and block_number <= ${range.toBlock.toString()}`;
         for (const row of range.rows)
-          await upsertBankProviderLedgerRow(tx as unknown as SqlTag, row);
+          await upsertVaultProviderLedgerRow(tx as unknown as SqlTag, row);
       });
       return [...range.rows];
     },
@@ -1232,13 +1232,13 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       `;
       return rows.map(sportsTicketRowFromDatabase).sort(compareSportsTicketRows);
     },
-    getBankProviderLedger: async ({
+    getVaultProviderLedger: async ({
       beforeBlock,
       beforeLogIndex,
       chainId,
       limit,
       owner,
-      bank,
+      vault,
       endBlock
     }) => {
       const cursorFilter =
@@ -1251,16 +1251,18 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
             `
           : sql``;
       const rows = await sql`
-        select * from bank_provider_ledger
+        select * from vault_provider_ledger
         where chain_id = ${chainId}
-          and bank = ${bank.toLowerCase()}
-          and owner = ${owner.toLowerCase()}
+          and vault = ${vault.toLowerCase()}
+          and (owner = ${owner.toLowerCase()}
+            or (action = 'deposit' and caller = ${owner.toLowerCase()})
+            or (action = 'transfer' and receiver = ${owner.toLowerCase()}))
           ${cursorFilter}
           ${endBlock == null ? sql`` : sql`and block_number <= ${endBlock}`}
         order by block_number desc, log_index desc
         limit ${limit}
       `;
-      return rows.map(bankProviderLedgerRowFromDatabase).sort(compareBankProviderLedgerRows);
+      return rows.map(vaultProviderLedgerRowFromDatabase).sort(compareVaultProviderLedgerRows);
     },
     getHeldSportsTicketIdsByMarket: async ({ chainId, limit, marketId }) => {
       const rows = await sql`
@@ -1275,7 +1277,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       const assetFilter = asset ? sql`and asset = ${asset.toLowerCase()}` : sql``;
       const rows = await sql`
         select bets.*, house_edge_event.args_json as house_edge from ${betsWithHouseEdge}
-        where chain_id = ${chainId} and pricing_affiliate = ${affiliate.toLowerCase()}
+        where chain_id = ${chainId} and referrer_l1 = ${affiliate.toLowerCase()}
         ${assetFilter} ${hubFilter(gameHub)}
         order by updated_block desc, bet_id desc
         limit ${limit}
@@ -1293,7 +1295,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
           coalesce(sum(${award}), 0)::text as payout,
           coalesce(sum(${gross}), 0)::text as payout_gross
         from bets
-        where chain_id = ${chainId} and pricing_affiliate = ${affiliate.toLowerCase()}
+        where chain_id = ${chainId} and referrer_l1 = ${affiliate.toLowerCase()}
         ${assetFilter} ${hubFilter(gameHub)}
       `;
       const row = rows[0] ?? {};
@@ -1563,8 +1565,7 @@ const HOUSE_EDGE_AMOUNTS = [
   "protocolFee",
   "r0",
   "r1",
-  "r2",
-  "markup"
+  "r2"
 ] as const;
 
 /** Parses HouseEdgeAllocated arguments, as decoded or as stored JSON; undefined if any is malformed. */
@@ -1578,11 +1579,11 @@ function houseEdgeFromArgs(args: unknown): BetHouseEdgeAllocation | undefined {
     if (typeof text !== "string" || !/^\d+$/.test(text)) return undefined;
     amounts[key] = text;
   }
-  const bps = Number(values.effectiveHouseEdgeBps);
+  const bps = Number(values.houseEdgeBps);
   if (!Number.isInteger(bps) || bps < 0) return undefined;
   return {
-    ...(amounts as Omit<BetHouseEdgeAllocation, "effectiveHouseEdgeBps">),
-    effectiveHouseEdgeBps: bps
+    ...(amounts as Omit<BetHouseEdgeAllocation, "houseEdgeBps">),
+    houseEdgeBps: bps
   };
 }
 
@@ -1640,7 +1641,8 @@ function normalizeBetRow({ houseEdge: _derived, ...row }: BetRow): BetRow {
     id: betKey(row.chainId, row.gameHub, row.betId),
     lastTxHash: row.lastTxHash.toLowerCase() as Hex,
     player: row.player?.toLowerCase() as Address | undefined,
-    pricingAffiliate: row.pricingAffiliate?.toLowerCase() as Address | undefined,
+    referrerL1: row.referrerL1?.toLowerCase() as Address | undefined,
+    referrerL2: row.referrerL2?.toLowerCase() as Address | undefined,
     randomHash: row.randomHash?.toLowerCase() as Hex | undefined,
     refundedTxHash: row.refundedTxHash?.toLowerCase() as Hex | undefined,
     terminalTxHash: row.terminalTxHash?.toLowerCase() as Hex | undefined
@@ -1655,13 +1657,16 @@ export function compareSportsTicketRows(a: SportsTicketRow, b: SportsTicketRow) 
   return bId > aId ? 1 : -1;
 }
 
-export function compareBankProviderLedgerRows(a: BankProviderLedgerRow, b: BankProviderLedgerRow) {
+export function compareVaultProviderLedgerRows(
+  a: VaultProviderLedgerRow,
+  b: VaultProviderLedgerRow
+) {
   if (b.blockNumber !== a.blockNumber) return b.blockNumber - a.blockNumber;
   return b.logIndex - a.logIndex;
 }
 
-function isBankProviderLedgerBeforeCursor(
-  row: BankProviderLedgerRow,
+function isVaultProviderLedgerBeforeCursor(
+  row: VaultProviderLedgerRow,
   beforeBlock?: number,
   beforeLogIndex?: number
 ) {
@@ -1978,8 +1983,11 @@ function applyEventToBet(prev: BetRow | undefined, event: BetLifecycleEvent): Be
     if (event.args.asset) next.asset = event.args.asset as BetRow["asset"];
     if (event.args.player) next.player = event.args.player as BetRow["player"];
     if (event.args.user && !next.player) next.player = event.args.user as BetRow["player"];
-    if (event.args.pricingAffiliate) {
-      next.pricingAffiliate = event.args.pricingAffiliate as BetRow["pricingAffiliate"];
+    if (event.args.referrerL1) {
+      next.referrerL1 = event.args.referrerL1 as BetRow["referrerL1"];
+    }
+    if (event.args.referrerL2) {
+      next.referrerL2 = event.args.referrerL2 as BetRow["referrerL2"];
     }
     if (event.args.stake != null) next.stake = toBigintString(event.args.stake);
     if (event.args.requestId != null) next.requestId = toBigintString(event.args.requestId);
@@ -2122,7 +2130,8 @@ function rowFromDatabase(row: Record<string, unknown>): BetRow {
     refundDeadline: optionalDateMs(row.refundDeadline),
     placedBlock: optionalNumber(row.placedBlock),
     player: optionalAddress(row.player),
-    pricingAffiliate: optionalAddress(row.pricingAffiliate),
+    referrerL1: optionalAddress(row.referrerL1),
+    referrerL2: optionalAddress(row.referrerL2),
     randomHash: optionalHex(row.randomHash),
     refundedTxHash: optionalHex(row.refundedTxHash),
     refundAmount: optionalString(row.refundAmount),
@@ -2175,26 +2184,27 @@ function sportsTicketRowFromDatabase(row: Record<string, unknown>): SportsTicket
   };
 }
 
-function bankProviderLedgerRowFromDatabase(row: Record<string, unknown>): BankProviderLedgerRow {
+function vaultProviderLedgerRowFromDatabase(row: Record<string, unknown>): VaultProviderLedgerRow {
   const chainId = Number(row.chainId);
   const txHash = String(row.txHash).toLowerCase() as Hex;
   const logIndex = Number(row.logIndex);
   return {
-    action: normalizeBankProviderLedgerAction(row.action),
+    action: normalizeVaultProviderLedgerAction(row.action),
     asset: String(row.asset).toLowerCase() as Address,
     assets: optionalString(row.assetAmount),
     bank: String(row.bank).toLowerCase() as Address,
+    vault: String(row.vault).toLowerCase() as Address,
+    depositId: String(row.depositId),
+    percent: optionalString(row.percent),
+    withdrawAfter: optionalString(row.withdrawAfter),
     blockNumber: Number(row.blockNumber),
     chainId,
-    id: bankProviderLedgerId(chainId, txHash, logIndex),
+    id: vaultProviderLedgerId(chainId, txHash, logIndex),
     logIndex,
     owner: String(row.owner).toLowerCase() as Address,
     poolId: String(row.poolId),
-    sharePrice: optionalString(row.sharePrice),
     receiver: optionalAddress(row.receiver),
     caller: optionalAddress(row.caller),
-    epochId: optionalString(row.epochId),
-    shares: String(row.shareAmount ?? "0"),
     timestamp: optionalDateMs(row.timestamp),
     txHash,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.getTime() : Date.now()
@@ -2236,9 +2246,8 @@ function normalizeSportsTicketState(value: unknown): SportsTicketLifecycleState 
   return "held";
 }
 
-function normalizeBankProviderLedgerAction(value: unknown): BankProviderLedgerAction {
-  if (value === "deposit" || value === "withdraw" || value === "recovery" || value === "donation")
-    return value;
+function normalizeVaultProviderLedgerAction(value: unknown): VaultProviderLedgerAction {
+  if (value === "deposit" || value === "withdraw" || value === "transfer") return value;
   throw new Error("Invalid cash ledger action.");
 }
 
@@ -2262,6 +2271,6 @@ function cursorId(chainId: number, source: string, cursorKey: string) {
   return `${chainId}:${source}:${cursorKey.toLowerCase()}`;
 }
 
-function bankProviderLedgerId(chainId: number, txHash: Hex, logIndex: number) {
+function vaultProviderLedgerId(chainId: number, txHash: Hex, logIndex: number) {
   return `${chainId}:bank-provider:${txHash.toLowerCase()}:${logIndex}`;
 }
