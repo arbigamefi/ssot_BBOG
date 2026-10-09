@@ -19,7 +19,9 @@ const budgets = [
   // stages, not only the currently selected room's initial stage. Keep this
   // budget tight, but allow the accepted 8-game mobile stage set.
   { route: "/(product)/casino/[slug]/page", publicPath: "/casino/[slug]", maxKb: 205 },
-  { route: "/(product)/earn/page", publicPath: "/earn", maxKb: 180 },
+  // 2026-10-09: the NFT liquidity redesign (ADR-0034) replaced the async-redemption panels with per-deposit
+  // positions, exact percentage quotes and partial-withdrawal relock; measured 181.9 kB after removing the SDK barrel import.
+  { route: "/(product)/earn/page", publicPath: "/earn", maxKb: 190 },
   { route: "/(product)/ops/page", publicPath: "/ops", maxKb: 220 },
   { route: "/(product)/portfolio/page", publicPath: "/portfolio", maxKb: 190 },
   {

@@ -1,11 +1,11 @@
 "use client";
 
-import { NFT_WITHDRAWAL_ONE } from "@ssot/ssot/sdk";
+import { NFT_WITHDRAWAL_ONE } from "@ssot/ssot/domain";
 
 import * as React from "react";
 
 import { useLocale, useTranslations } from "next-intl";
-import { type DomainDepositPosition, type DomainDepositWithdrawalQuote } from "@ssot/ssot";
+import type { DomainDepositPosition, DomainDepositWithdrawalQuote } from "@ssot/ssot";
 import { formatTokenAmount, shortHex } from "./format";
 import { formatUnits, parseDecimalToUnits } from "../betting/model/units";
 

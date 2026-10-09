@@ -44,9 +44,43 @@ jobs:
         run: |
           make tree-equivalence-release
 
+  # The nightly-profile proof suites, one job each (see nightly.yml for the measured runner times). They read only
+  # the checked-out source, not the release bundle.
+  proof-gates:
+    name: proof-gates (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: unit
+            command: FOUNDRY_PROFILE=nightly forge test --threads 1 --match-path "test/unit/*" -vvv
+          - suite: diff
+            command: FOUNDRY_PROFILE=nightly forge test --match-path "test/diff/*" -vvv
+          - suite: invariants
+            command: FOUNDRY_PROFILE=nightly forge test --match-path "test/invariants/*" -vvv
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.5.1 # Foundry pinned to the release candidate toolchain (freeze 2026-10-08); do not use a floating "stable"
+
+      - name: Install pinned dependencies
+        run: |
+          bash script/ci/install_deps.sh
+
+      - name: Proof gate ${{ matrix.suite }} (nightly profile)
+        run: ${{ matrix.command }}
+
   release-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 90
     env:
       RELEASE_SIGNER: ${{ vars.V16_RELEASE_SIGNER }}
     steps:
@@ -93,12 +127,6 @@ jobs:
         run: |
           bash script/ci/install_deps.sh
 
-      - name: Proof gates (nightly profile)
-        run: |
-          FOUNDRY_PROFILE=nightly forge test --threads 1 --match-path "test/unit/*" -vvv
-          FOUNDRY_PROFILE=nightly forge test --match-path "test/diff/*" -vvv
-          FOUNDRY_PROFILE=nightly forge test --match-path "test/invariants/*" -vvv
-
       - name: Release lock must be present and valid
         run: |
           STRICT=1 make release-check
@@ -125,10 +153,10 @@ jobs:
           path: dist/ssot-audit-*.tar.gz
           if-no-files-found: error
 
-  # The release is ready only when both gates pass: judge the release on this job, not on either gate alone.
+  # The release is ready only when every gate passes: judge the release on this job, not on any gate alone.
   release-ready:
     runs-on: ubuntu-latest
-    needs: [tree-equivalence-gate, release-gate]
+    needs: [tree-equivalence-gate, proof-gates, release-gate]
     steps:
-      - name: Both release gates passed
-        run: echo "tree-equivalence-gate and release-gate passed for ${{ inputs.release_tag }}"
+      - name: All release gates passed
+        run: echo "tree-equivalence-gate, proof-gates (unit, diff, invariants) and release-gate passed for ${{ inputs.release_tag }}"

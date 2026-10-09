@@ -8,8 +8,9 @@ import type {
 } from "../domain";
 import { getContractAbis } from "../abis/index.mjs";
 
-export const NFT_WITHDRAWAL_ONE = 1_000_000_000_000n;
-export const MAX_TREE_CAPITAL = (1n << 108n) - 1n;
+import { MAX_TREE_CAPITAL, NFT_WITHDRAWAL_ONE } from "../domain/liquidity";
+
+export { MAX_TREE_CAPITAL, NFT_WITHDRAWAL_ONE };
 const { BankAbi, LiquidityVaultAbi } = getContractAbis();
 const statuses: LPStatus[] = [
   "ready",

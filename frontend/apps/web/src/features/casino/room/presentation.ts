@@ -1,4 +1,4 @@
-import { MAX_TREE_CAPITAL } from "@ssot/ssot/sdk";
+import { MAX_TREE_CAPITAL } from "@ssot/ssot/domain";
 import {
   applyHouseEdgeToMultiplier,
   calculateGameReserveMultiplier,

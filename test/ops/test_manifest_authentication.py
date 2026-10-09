@@ -146,10 +146,13 @@ class SignedImportIntegrationTests(unittest.TestCase):
             cls.rpc(endpoint, 'evm_mine')  # Snapshot start has an observable empty predecessor block.
             directory = cls.fixture_root if state == 'accepted' else cls.fixture_root / 'pending'
             directory.mkdir(exist_ok=True)
-            env = {**os.environ, 'RELEASE_IMPORT_FIXTURE_DIR': str(directory),
+            # FOUNDRY_OFFLINE: no remote contract identification (sourcify) while decoding traces.
+            env = {**os.environ, 'RELEASE_IMPORT_FIXTURE_DIR': str(directory), 'FOUNDRY_OFFLINE': 'true',
                    'RELEASE_IMPORT_ACCEPT_GOVERNANCE': str(state == 'accepted').lower()}
+            # --slow broadcasts one transaction at a time and waits for its receipt. Concurrent broadcast can leave
+            # Anvil 1.5.1 holding the next nonce as "queued" with automine never including it (seen 2026-10-09).
             cls.run_checked(['forge', 'script', 'test/fixtures/ReleaseImportFixture.s.sol:ReleaseImportFixture',
-                             '--rpc-url', endpoint, '--broadcast', '--private-key', fixture_key,
+                             '--rpc-url', endpoint, '--broadcast', '--slow', '--private-key', fixture_key,
                              '--non-interactive'], cwd=ROOT, env=env)
         cls.bundle = cls.fixture_root / 'bundle'
         cls.pending_bundle = cls.fixture_root / 'pending/bundle'

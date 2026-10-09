@@ -6,10 +6,23 @@ on:
   workflow_dispatch:
 
 jobs:
-  nightly:
+  # Each proof suite runs in its own job so that one slow suite cannot exhaust a shared job timeout. Measured on a
+  # GitHub runner at commit 4947ad37f: unit 85 min, diff 1 min, invariants > 64 min (cancelled at the old shared
+  # 150-minute limit). Locally (16 cores) the same suites take 37, 0.4 and 41 minutes.
+  proof:
+    name: proof (${{ matrix.suite }})
     runs-on: ubuntu-latest
-    # The chained Vault differential adds roughly 25 serial minutes at 1,024 runs (measured locally, not on a runner).
-    timeout-minutes: 150
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: unit
+            command: FOUNDRY_PROFILE=nightly forge test --threads 1 --match-path "test/unit/*" -vvv
+          - suite: diff
+            command: FOUNDRY_PROFILE=nightly forge test --match-path "test/diff/*" -vvv
+          - suite: invariants
+            command: FOUNDRY_PROFILE=nightly forge test --match-path "test/invariants/*" -vvv
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,17 +39,24 @@ jobs:
         run: |
           bash script/ci/install_deps.sh
 
-      - name: Run unit tests (nightly profile)
-        run: |
-          FOUNDRY_PROFILE=nightly forge test --threads 1 --match-path "test/unit/*" -vvv
+      - name: Run ${{ matrix.suite }} tests (nightly profile)
+        run: ${{ matrix.command }}
 
-      - name: Run diff tests (nightly profile)
-        run: |
-          FOUNDRY_PROFILE=nightly forge test --match-path "test/diff/*" -vvv
+  fork-and-release-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Run invariants (nightly profile)
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.5.1 # Foundry pinned to the release candidate toolchain (freeze 2026-10-08); do not use a floating "stable"
+
+      - name: Install pinned dependencies
         run: |
-          FOUNDRY_PROFILE=nightly forge test --match-path "test/invariants/*" -vvv
+          bash script/ci/install_deps.sh
 
       - name: Run fork tests (optional)
         run: |
