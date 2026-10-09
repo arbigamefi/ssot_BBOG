@@ -77,6 +77,8 @@ test("connected wallet LP cash flow and casino approval-to-callback accounting",
         JSON.stringify({ version: "2026-05-28", acceptedAt: Date.now() })
       );
       localStorage.setItem("arbigamefi.compliance.cookies.v1", '"rejected"');
+      // The onboarding tour mounts after hydration and its overlay intercepts clicks; it is not under test here.
+      localStorage.setItem("arbigamefi.onboarding.v1", "done");
       let approved = sessionStorage.getItem("bank-test-connected") === "1";
       let currentAccount = account;
       let currentChain = "0x14a34";
