@@ -317,7 +317,7 @@ export function calculateGameWinChance(input: {
 
 export type ReserveRatio = { numerator: bigint; denominator: bigint };
 
-type ReserveSelection = {
+export type ReserveSelection = {
   slug: string;
   diceTarget: number;
   diceDirection: DiceDirection;

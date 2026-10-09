@@ -140,7 +140,9 @@ function checkForbiddenWeb3Imports() {
     exclude: (file) =>
       formatPath(file).startsWith("apps/web/src/app-shell/") ||
       formatPath(file).startsWith("apps/web/src/server/") ||
-      formatPath(file).startsWith("apps/web/src/workers/"),
+      formatPath(file).startsWith("apps/web/src/workers/") ||
+      // Test files are not shipped UI code; node-environment oracles (e.g. *.anvil.test.ts) talk to a local Anvil directly.
+      /\.(test|spec)\.tsx?$/.test(formatPath(file)),
     roots: [resolve(root, "apps/web/src")],
     pattern,
     blocking: true

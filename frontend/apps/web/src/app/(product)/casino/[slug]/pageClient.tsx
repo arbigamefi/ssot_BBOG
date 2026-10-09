@@ -17,15 +17,15 @@ import { requestWalletConnect } from "../../../../app-shell/wallet-connect-event
 import { useCasinoPoolAssetSelection } from "../../../../features/assets/useCasinoPoolAssetSelection";
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
 import {
-  applyHouseEdgeToMultiplier,
   calculateGameWinChance,
-  calculateGameReserveMultiplier,
-  calculateGameReserveRatio,
   type BaccaratSide,
   type PlinkoRisk,
   type SicBoKind
 } from "../../../../features/casino/room/params";
-import { deriveGameRoomLimits } from "../../../../features/casino/room/presentation";
+import {
+  deriveGameRoomLimits,
+  deriveGameRoomPricing
+} from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
 import {
   useGameWalletBalance,
@@ -44,7 +44,6 @@ import { GameRoomShell } from "../../../../features/casino/room/game-room-shell"
 import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
 import { derivePlaceBetButtonPhase } from "../../../../features/casino/room/place-bet-button";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
-import { betAmountInputToNumber } from "../../../../features/casino/room/bet-amount";
 import { useReferralAffiliate } from "../../../../features/referral/useReferralAffiliate";
 import {
   GameRoomAuditLedger,
@@ -386,30 +385,26 @@ export function GamePageClient({ slug }: { slug: string }) {
       />
     );
 
-  const assetDecimals = casinoPoolAsset.asset.decimals;
-  const assetSymbol = casinoPoolAsset.asset.symbol;
+  const { decimals: assetDecimals, symbol: assetSymbol } = casinoPoolAsset.asset;
 
-  const reserveSelection = {
-    slug: game.slug,
-    diceTarget,
-    diceDirection,
-    rouletteSpots,
-    kenoSpots,
-    plinkoRisk,
-    baccaratSide,
-    sicBoKind,
-    sicBoValue
-  };
-  const reserveMultiplier = calculateGameReserveMultiplier(reserveSelection);
-  const reserveRatio = calculateGameReserveRatio(reserveSelection);
   const houseEdgeBps = casinoRound.houseEdgeBps;
-  const multiplier =
-    houseEdgeBps == null ? undefined : applyHouseEdgeToMultiplier(reserveMultiplier, houseEdgeBps);
-  const betAmountNumber = betAmountInputToNumber(betAmount);
-  const expectedPayout = multiplier == null ? undefined : betAmountNumber * multiplier;
+  const { reserveRatio, multiplier, expectedPayout } = deriveGameRoomPricing({
+    selection: {
+      slug: game.slug,
+      diceTarget,
+      diceDirection,
+      rouletteSpots,
+      kenoSpots,
+      plinkoRisk,
+      baccaratSide,
+      sicBoKind,
+      sicBoValue
+    },
+    houseEdgeBps,
+    betAmount
+  });
 
-  // Live, asset-aware header limits derived from the selected pool's free
-  // liquidity (chain-read → verifiable), replacing the old static config tiles.
+  // Live header limits derived from the selected pool's free liquidity (chain-read, verifiable).
   const { maxBet, maxBetRaw, maxTotal, maxBetState, maxPayout, maxPayoutState } =
     deriveGameRoomLimits({
       poolSnapshot,

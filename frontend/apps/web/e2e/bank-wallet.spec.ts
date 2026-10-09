@@ -41,6 +41,13 @@ test("connected wallet LP cash flow and casino approval-to-callback accounting",
       name: new RegExp(`${state.owner.slice(0, 6)}…${state.owner.slice(-4)}`, "i")
     });
     const choice = page.getByRole("button", { name: "Browser Wallet", exact: true });
+    const tour = page.getByRole("dialog", { name: "Getting started tour" });
+    const skipTour = async () => {
+      // The tour overlay intercepts pointer events on everything behind it; dismiss it before clicking.
+      if (await tour.isVisible())
+        await tour.getByRole("button", { name: "Skip", exact: true }).click();
+    };
+    await skipTour();
     if (await connect.isVisible()) {
       await connect.click();
       // SSR may show Connect while injected-wallet rehydration completes. The
@@ -51,9 +58,7 @@ test("connected wallet LP cash flow and casino approval-to-callback accounting",
       if (await choice.isVisible()) await choice.click();
     }
     await expect(connected).toBeVisible();
-    const tour = page.getByRole("dialog", { name: "Getting started tour" });
-    if (await tour.isVisible())
-      await tour.getByRole("button", { name: "Skip", exact: true }).click();
+    await skipTour();
   };
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));

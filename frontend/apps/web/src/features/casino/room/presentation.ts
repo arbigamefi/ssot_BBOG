@@ -1,5 +1,12 @@
 import { MAX_TREE_CAPITAL } from "@ssot/ssot/sdk";
-import type { ReserveRatio } from "./params";
+import {
+  applyHouseEdgeToMultiplier,
+  calculateGameReserveMultiplier,
+  calculateGameReserveRatio,
+  type ReserveRatio,
+  type ReserveSelection
+} from "./params";
+import { betAmountInputToNumber } from "./bet-amount";
 
 /** Minimal bank-snapshot shape needed to derive spendable liquidity. */
 export type BankLiquidityLike = {
@@ -133,4 +140,27 @@ export function deriveGameRoomLimits({
     ),
     maxPayoutState: state
   };
+}
+
+/**
+ * Room pricing for the current selection: the gross reserve multiplier and ratio from the module
+ * tables, and the net multiplier / expected payout once the round's house edge is known. Before the
+ * edge is read from chain the net figures are undefined rather than guessed.
+ */
+export function deriveGameRoomPricing({
+  selection,
+  houseEdgeBps,
+  betAmount
+}: {
+  selection: ReserveSelection;
+  houseEdgeBps: number | null | undefined;
+  betAmount: string;
+}) {
+  const reserveMultiplier = calculateGameReserveMultiplier(selection);
+  const reserveRatio = calculateGameReserveRatio(selection);
+  const multiplier =
+    houseEdgeBps == null ? undefined : applyHouseEdgeToMultiplier(reserveMultiplier, houseEdgeBps);
+  const expectedPayout =
+    multiplier == null ? undefined : betAmountInputToNumber(betAmount) * multiplier;
+  return { reserveMultiplier, reserveRatio, multiplier, expectedPayout };
 }

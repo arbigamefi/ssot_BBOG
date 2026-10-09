@@ -17,7 +17,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.5.1 # Foundry pinned to the release candidate toolchain (freeze 2026-10-08); do not use a floating "stable"
 
       - name: Show Forge version
         run: forge --version
