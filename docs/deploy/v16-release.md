@@ -60,7 +60,10 @@ the universal callback gas proof; its incomplete status is preserved separately 
      compares every deployed core contract (VRFHub, GameHub, SettlementRouter, PoolRegistry, ReferralRegistry,
      DefaultReferralEngine, each Bank and Vault) with the certified build: immutable slots must hold the release
      values, the remaining code must hash to the certified artifact, and the constructor wiring must match the
-     snapshot. `script/ci/fork_release_gate.sh` repeats this at the governance block.
+     snapshot. `script/ci/fork_release_gate.sh` repeats this at the governance block. Without `RPC_URL` the script
+     prints `WARNING: RPC_URL not set; deployed core runtimes were NOT verified (offline mode)` before its `OK`
+     line and skips only this part; with `CALLBACK_REQUIRE_FORK=1` (the fork gate sets it) a missing `RPC_URL`
+     fails instead.
    - `verify_callback_provider.py`, also part of `release-domain-check`, checks the live token and provider at
      one frozen block. It fails unless the USDC implementation and code, the coordinator and its gas parameters
      are the certified ones.
@@ -124,7 +127,9 @@ uploading that bundle to its GitHub release, run **Release Gate** manually with:
 - `bundle_name`: the exact release asset filename;
 - `bundle_sha256`: the independently approved SHA-256 of that archive;
 - `audited_source_tree`: the git tree hash of the externally audited source (from the audit report and the
-  freeze commit record). Every job refuses a tag whose tree differs.
+  freeze commit record). It must equal the repository variable `V16_AUDITED_TREE`, which the Owner sets from the
+  same report, so one person typing a tree hash cannot pass the gate alone; every job refuses a tag whose tree
+  differs from either, and `release-ready` prints the value for the approver.
 
 The workflow downloads that exact asset, checks the digest, commit and file
 inventory, and rejects unsafe archive members before staging it. It then runs the

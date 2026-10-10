@@ -156,7 +156,10 @@ enforces the domain against `script/release/first-callback-domain-<chainId>.json
 
 The Release Gate workflow takes the audited source tree hash as an input and refuses any `release_tag` whose tree
 differs. The seal digests the domain file cites are copied into `script/release/certificates/` and checked by a
-unit test. Dependencies are pinned by content digest in `deps.lock`.
+unit test. Dependencies are installed at the commits recorded in `deps.lock` and refused unless their compiled
+subtrees have the recorded content digests. After the fix review of 2026-10-10 the gate also requires the
+`audited_source_tree` input to equal the repository variable `V16_AUDITED_TREE`, and the fork gate runs the domain
+script with `CALLBACK_REQUIRE_FORK=1`, so a missing RPC fails instead of skipping the runtime comparison.
 
 The module premise M4 (an admitted bet's `resolve` never fails for a non-gas reason) is proved in
 [m4-resolve-census-2026-10-08.md](../audit/m4-resolve-census-2026-10-08.md) and guarded by `CallbackDomainM4Test`.

@@ -11,7 +11,9 @@ below are entrypoints, not a claim that the new tests have been written or run.
 
 ## Dependencies (pinned)
 
-This repo pins its Foundry dependencies via `script/ci/install_deps.sh`.
+This repo pins its Foundry dependencies via `script/ci/install_deps.sh`: each library is installed at the commit
+recorded in `deps.lock` (the tag there is for humans), and the install is refused unless the compiled subtree has
+the recorded content digest (`*_SUBTREE`, `*_SHA256`; the digest command is in the `deps.lock` comment).
 
 ```bash
 bash script/ci/install_deps.sh

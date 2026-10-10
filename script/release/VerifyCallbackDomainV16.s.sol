@@ -17,7 +17,8 @@ import {CertifiedRuntime} from "./CertifiedRuntime.sol";
 ///         parameters against the same file; script/release/verify_governance.py replays GameRegistered so that
 ///         the registered game set is exactly the certified eight. With RPC_URL set, `run` also forks the chain and
 ///         compares the deployed core runtimes and their immutable wiring with the certified build
-///         (CertifiedRuntime; audit 2026-10-10 F-01). Without RPC_URL that part is skipped and said so.
+///         (CertifiedRuntime; audit 2026-10-10 F-01). Without RPC_URL that part is skipped with a WARNING, or
+///         refused when CALLBACK_REQUIRE_FORK=1 (the fork release gate sets it; fix review R-2).
 ///         Outside this domain the first-callback certificate says nothing; see
 ///         docs/audit/first-callback-gas-certificate-2026-10-07.md and ADR-0034 (amendment 2026-10-07).
 contract VerifyCallbackDomainV16 is Script {
@@ -34,14 +35,18 @@ contract VerifyCallbackDomainV16 is Script {
         );
         string memory dom = _readFileOrDie(domainPath);
         verify(snap, dom);
+        string memory rpc = vm.envOr("RPC_URL", string(""));
+        if (bytes(rpc).length == 0) {
+            require(
+                !vm.envOr("CALLBACK_REQUIRE_FORK", false),
+                "CALLBACK_REQUIRE_FORK is set but RPC_URL is empty: deployed core runtimes cannot be verified"
+            );
+            console2.log("WARNING: RPC_URL not set; deployed core runtimes were NOT verified (offline mode)");
+        }
         console2.log("OK v1.6 snapshot inside the certified first-callback domain");
         console2.log("snapshot:", snapshotPath);
         console2.log("domain:", domainPath);
-        string memory rpc = vm.envOr("RPC_URL", string(""));
-        if (bytes(rpc).length == 0) {
-            console2.log("NOTE: RPC_URL not set; deployed core runtimes were NOT verified (offline mode)");
-            return;
-        }
+        if (bytes(rpc).length == 0) return;
         uint256 forkBlock = vm.envOr("CALLBACK_FORK_BLOCK", uint256(0));
         if (forkBlock != 0) vm.createSelectFork(rpc, forkBlock);
         else vm.createSelectFork(rpc);

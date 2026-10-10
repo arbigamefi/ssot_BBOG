@@ -270,11 +270,16 @@ Owner 于 2026-10-08 确认了实施方提出的一揽子方案，而不是架�
 | --- | --- |
 | F-01 发布核验只钉模块 runtime | 域文件 `coreRuntimes`（`gen_certified_runtimes.py` 从受证编译产物生成：哈希、长度、immutable 槽位及其应取值）；`CertifiedRuntime.sol` 在 fork 上核对八个核心合约：槽位先与快照值比对再置零，keccak 与编译产物一致，长度一致，构造接线经 getter 回读；`VerifyCallbackDomainV16.run` 在 `RPC_URL` 下执行，`fork_release_gate.sh` 在治理块再执行；Release Gate 新增 `audited_source_tree` 输入；封存清单副本进仓库并由测试核对摘要。测试：`CertifiedRuntime.t.sol`（真实部署通过；改一字节、改一个 immutable 值、改长度、无代码各被拒），`CallbackDomainV16Test` 核对钉值与编译产物逐项一致 |
 | F-02 Owner 参数无机器门槛 | 域文件 `ownerPolicy`；`VerifyCallbackDomainV16.verify` 要求赌场池 minBet = 10,000、riskReserveBps = 6000、withdrawalBufferBps = 1000 |
-| F-06 依赖按可变 tag 安装 | `deps.lock` 记录 commit 与内容摘要，`install_deps.sh` 安装后校验 |
+| F-06 依赖按可变 tag 安装 | `install_deps.sh` 按 `deps.lock` 记录的 commit 安装，编译子树的内容摘要不符即拒绝（修复复核 N-1：最初的摘要覆盖整个仓库，全新安装对不上） |
 | F-07 对账表条目数 | 重新交付时更正 |
 | F-03、F-04、F-05 | 下一版（合约改动需重新认证）；白皮书第 18 行措辞已改；F-03 的准入时间锁待 Owner 决定 |
 
 合约字节码未变，证书 v4 继续有效；工具改动以 v7 重新冻结并重跑。
+
+修复复核（2026-10-10，`dist/independent-audit-2026-10-10/fix-review/`，清单 `fceaf5fe…`）：F-01、F-02 关闭；F-06 部分关闭，N-1（Medium，流程）指出
+记录的摘要与全新安装不一致、CI 过不了安装步骤；另提 R-1（审计树只有手工输入）、R-2（无 `RPC_URL` 时静默跳过）、I-1（槽位测试只比数量）。四项一并
+处理并以 v8 重新冻结：按记录的 commit 安装 + 编译子树摘要 + 全新安装对比证据；仓库变量 `V16_AUDITED_TREE` 与输入互核；`CALLBACK_REQUIRE_FORK=1`
+与 WARNING 行；偏移集合相等、mock wrapper 的 `link()` 改为非零（唯一的 `src/` 改动，在 `src/mocks/`，受证产物不变）。增量复核待做。
 
 ## 尚未完成
 
@@ -295,7 +300,8 @@ Owner 于 2026-10-08 确认了实施方提出的一揽子方案，而不是架�
    修正六处过时陈述（D-1 至 D-6，只改文档）后以 `FREEZE_MANIFEST-v2.sha256` 重新冻结并完整重跑；重跑结果只记录在 `dist/freeze-2026-10-08/v2/`，
    本文件在 v2 冻结之后不再改动。
 5. ~~架构冻结签核~~ 已完成（2026-10-08，SIGN_OFF_WITH_CONDITIONS，FROZEN_FOR_AUDIT）；~~独立审计~~ 已完成（2026-10-10，见上节）。
-   接下来：审计方对 v7 工具改动做修复复核（fix review），重新交付（更正 F-07 的条目数），然后全新 Base Sepolia 无广播 preflight，最后作部署决策。
+   修复复核已完成（2026-10-10，见上节），N-1 与 R-1/R-2/I-1 以 v8 处理。接下来：审计方对 v8 提交做增量复核，重新交付（更正 F-07 的条目数），
+   然后全新 Base Sepolia 无广播 preflight，最后作部署决策。
 6. 进入任何承载真实资金的网络之前，还需要：
    - 单独的主网证书；
    - M4 的证明；

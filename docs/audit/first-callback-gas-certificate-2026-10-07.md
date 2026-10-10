@@ -202,7 +202,7 @@ v3 与 v4 的四个口径都经复核方用自己的组合实现复算，逐值�
   - K0-1：本文第 2 节。
   - K0-2：已落实，并按两份复核补齐：
     - 离线部分 `VerifyCallbackDomainV16.verify` 在签名前运行（`release-domain-check`，也在 `release-check` 中）：比对 wrapper、赌场资产，以及 Owner 固定参数（每轮最低 10,000、`riskReserveBps` 6000、`withdrawalBufferBps` 1000；域文件 `ownerPolicy`，审计 F-02）；
-    - 在线部分：`VerifyCallbackDomainV16.run` 在 `RPC_URL` 下 fork 链，用 `CertifiedRuntime` 比对八个核心合约的已部署 runtime（每个 immutable 槽位先与快照值比对再置零，余下代码的 keccak 与受证编译产物一致，长度一致）和构造接线（审计 F-01）；`verify_governance.py` 回放 `GameRegistered`；`verify_callback_provider.py` 比对 USDC 实现与 provider 参数；`fork_release_gate.sh` 在治理区块再跑一次核心 runtime 比对；Release Gate 工作流拒绝 tree 不等于 `audited_source_tree` 输入的 tag。
+    - 在线部分：`VerifyCallbackDomainV16.run` 在 `RPC_URL` 下 fork 链，用 `CertifiedRuntime` 比对八个核心合约的已部署 runtime（每个 immutable 槽位先与快照值比对再置零，余下代码的 keccak 与受证编译产物一致，长度一致）和构造接线（审计 F-01）；无 `RPC_URL` 时打印 WARNING 并只跳过这一部分，`CALLBACK_REQUIRE_FORK=1`（fork gate 设置）使之直接失败（修复复核 R-2）；`verify_governance.py` 回放 `GameRegistered`；`verify_callback_provider.py` 比对 USDC 实现与 provider 参数；`fork_release_gate.sh` 在治理区块再跑一次核心 runtime 比对；Release Gate 工作流拒绝 tree 不等于 `audited_source_tree` 输入的 tag。
     - 域文件引用的封存清单与复核清单已复制到 `script/release/certificates/first-callback-v4/`，`CallbackDomainV16Test` 核对它们的摘要等于域文件所引用的值。
     - 域文件状态已于 2026-10-08 切换为 `CERTIFIED`；任何重新认证触发都把它改回 `PENDING_INDEPENDENT_REVIEW`，使发布核验失败。
   - K0-3：治理手册已更新，并补了赌场池的登记与放行路径。

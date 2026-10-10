@@ -132,7 +132,9 @@ contract CallbackDomainV16Test is Test {
         }
     }
 
-    /// The core pins are the compiled artifacts of this build: hash, length and the immutable slot layout.
+    /// The core pins are the compiled artifacts of this build: hash, length and the immutable slot layout. The set of
+    /// pinned offsets equals the set of immutable references in the artifact (fix review I-1), and the artifact holds
+    /// a zero placeholder at each of them.
     function test_committedDomainPinsCurrentCoreRuntimes() public view {
         string[8] memory core = [
             string("VRFHub"),
@@ -151,39 +153,71 @@ contract CallbackDomainV16Test is Test {
                 keccak256(compiled), committed.readBytes32(string.concat(base, ".keccakWithImmutablesZeroed")), core[c]
             );
             assertEq(compiled.length, committed.readUint(string.concat(base, ".runtimeBytes")), core[c]);
-            // Every immutable slot of the artifact is listed exactly once, and the pinned code is zero there.
-            string memory artifact = vm.readFile(string.concat("out/", core[c], ".sol/", core[c], ".json"));
-            uint256 expectedSlots;
-            if (vm.keyExistsJson(artifact, ".deployedBytecode.immutableReferences")) {
-                string[] memory ids = vm.parseJsonKeys(artifact, ".deployedBytecode.immutableReferences");
-                for (uint256 i; i < ids.length; ++i) {
-                    string memory refs = string.concat(".deployedBytecode.immutableReferences.", ids[i]);
-                    for (uint256 r; vm.keyExistsJson(artifact, string.concat(refs, "[", vm.toString(r), "]")); ++r) {
-                        assertEq(
-                            vm.parseJsonUint(artifact, string.concat(refs, "[", vm.toString(r), "].length")),
-                            32,
-                            "immutable slots are one word"
-                        );
-                        ++expectedSlots;
-                    }
+            uint256[] memory expected =
+                _sorted(_artifactSlots(vm.readFile(string.concat("out/", core[c], ".sol/", core[c], ".json"))));
+            uint256[] memory pinned = _sorted(_pinnedSlots(base));
+            assertEq(pinned.length, expected.length, string.concat(core[c], " immutable slot count"));
+            for (uint256 i; i < expected.length; ++i) {
+                assertEq(pinned[i], expected[i], string.concat(core[c], " immutable slot offsets"));
+                if (i != 0) assertTrue(expected[i] != expected[i - 1], "artifact slots are distinct");
+                bytes32 word;
+                uint256 at = expected[i];
+                assembly ("memory-safe") {
+                    word := mload(add(add(compiled, 32), at))
+                }
+                assertEq(word, bytes32(0), "artifact has a placeholder at every pinned slot");
+            }
+        }
+    }
+
+    /// Every `start` of every immutable reference in a compiled artifact; each reference is one 32-byte word.
+    function _artifactSlots(string memory artifact) internal view returns (uint256[] memory slots) {
+        if (!vm.keyExistsJson(artifact, ".deployedBytecode.immutableReferences")) return slots;
+        string[] memory ids = vm.parseJsonKeys(artifact, ".deployedBytecode.immutableReferences");
+        uint256 n;
+        for (uint256 pass; pass < 2; ++pass) {
+            if (pass == 1) slots = new uint256[](n);
+            n = 0;
+            for (uint256 i; i < ids.length; ++i) {
+                string memory refs = string.concat(".deployedBytecode.immutableReferences.", ids[i]);
+                for (uint256 r; vm.keyExistsJson(artifact, string.concat(refs, "[", vm.toString(r), "]")); ++r) {
+                    string memory item = string.concat(refs, "[", vm.toString(r), "]");
+                    assertEq(vm.parseJsonUint(artifact, string.concat(item, ".length")), 32, "immutable slots are one word");
+                    if (pass == 1) slots[n] = vm.parseJsonUint(artifact, string.concat(item, ".start"));
+                    ++n;
                 }
             }
-            uint256 pinnedSlots;
+        }
+    }
+
+    /// Every offset the domain file pins for one core contract.
+    function _pinnedSlots(string memory base) internal view returns (uint256[] memory slots) {
+        uint256 n;
+        for (uint256 pass; pass < 2; ++pass) {
+            if (pass == 1) slots = new uint256[](n);
+            n = 0;
             for (uint256 k; vm.keyExistsJson(committed, string.concat(base, ".immutables[", vm.toString(k), "]")); ++k) {
                 uint256[] memory offsets =
                     committed.readUintArray(string.concat(base, ".immutables[", vm.toString(k), "].offsets"));
                 for (uint256 j; j < offsets.length; ++j) {
-                    bytes32 word;
-                    uint256 at = offsets[j];
-                    assembly ("memory-safe") {
-                        word := mload(add(add(compiled, 32), at))
-                    }
-                    assertEq(word, bytes32(0), "artifact has a placeholder at every pinned slot");
+                    if (pass == 1) slots[n] = offsets[j];
+                    ++n;
                 }
-                pinnedSlots += offsets.length;
             }
-            assertEq(pinnedSlots, expectedSlots, string.concat(core[c], " immutable slot count"));
         }
+    }
+
+    function _sorted(uint256[] memory a) internal pure returns (uint256[] memory) {
+        for (uint256 i = 1; i < a.length; ++i) {
+            uint256 v = a[i];
+            uint256 j = i;
+            while (j > 0 && a[j - 1] > v) {
+                a[j] = a[j - 1];
+                --j;
+            }
+            a[j] = v;
+        }
+        return a;
     }
 
     /// The seals the domain file cites are copied into the repository, so the citation is checkable without dist/.

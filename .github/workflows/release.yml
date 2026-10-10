@@ -38,11 +38,21 @@ jobs:
       - name: Release tag must be the audited source tree
         env:
           AUDITED_TREE: ${{ inputs.audited_source_tree }}
+          REFERENCE_TREE: ${{ vars.V16_AUDITED_TREE }}
         run: |
+          # The input is typed by the dispatcher; the repository variable is set by the Owner from the audit report.
+          # Both must name the tree that is checked out (fix review R-1).
+          if [ -z "$REFERENCE_TREE" ]; then
+            echo "repository variable V16_AUDITED_TREE is not set; the Owner records the audited tree there"; exit 1
+          fi
+          if [ "$AUDITED_TREE" != "$REFERENCE_TREE" ]; then
+            echo "input audited_source_tree $AUDITED_TREE differs from repository variable V16_AUDITED_TREE $REFERENCE_TREE"; exit 1
+          fi
           actual=$(git rev-parse 'HEAD^{tree}')
           if [ "$actual" != "$AUDITED_TREE" ]; then
             echo "release_tag tree $actual differs from the audited tree $AUDITED_TREE"; exit 1
           fi
+          echo "release_tag ${{ inputs.release_tag }} is the audited source tree $actual"
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -82,11 +92,21 @@ jobs:
       - name: Release tag must be the audited source tree
         env:
           AUDITED_TREE: ${{ inputs.audited_source_tree }}
+          REFERENCE_TREE: ${{ vars.V16_AUDITED_TREE }}
         run: |
+          # The input is typed by the dispatcher; the repository variable is set by the Owner from the audit report.
+          # Both must name the tree that is checked out (fix review R-1).
+          if [ -z "$REFERENCE_TREE" ]; then
+            echo "repository variable V16_AUDITED_TREE is not set; the Owner records the audited tree there"; exit 1
+          fi
+          if [ "$AUDITED_TREE" != "$REFERENCE_TREE" ]; then
+            echo "input audited_source_tree $AUDITED_TREE differs from repository variable V16_AUDITED_TREE $REFERENCE_TREE"; exit 1
+          fi
           actual=$(git rev-parse 'HEAD^{tree}')
           if [ "$actual" != "$AUDITED_TREE" ]; then
             echo "release_tag tree $actual differs from the audited tree $AUDITED_TREE"; exit 1
           fi
+          echo "release_tag ${{ inputs.release_tag }} is the audited source tree $actual"
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -114,11 +134,21 @@ jobs:
       - name: Release tag must be the audited source tree
         env:
           AUDITED_TREE: ${{ inputs.audited_source_tree }}
+          REFERENCE_TREE: ${{ vars.V16_AUDITED_TREE }}
         run: |
+          # The input is typed by the dispatcher; the repository variable is set by the Owner from the audit report.
+          # Both must name the tree that is checked out (fix review R-1).
+          if [ -z "$REFERENCE_TREE" ]; then
+            echo "repository variable V16_AUDITED_TREE is not set; the Owner records the audited tree there"; exit 1
+          fi
+          if [ "$AUDITED_TREE" != "$REFERENCE_TREE" ]; then
+            echo "input audited_source_tree $AUDITED_TREE differs from repository variable V16_AUDITED_TREE $REFERENCE_TREE"; exit 1
+          fi
           actual=$(git rev-parse 'HEAD^{tree}')
           if [ "$actual" != "$AUDITED_TREE" ]; then
             echo "release_tag tree $actual differs from the audited tree $AUDITED_TREE"; exit 1
           fi
+          echo "release_tag ${{ inputs.release_tag }} is the audited source tree $actual"
 
       - name: Download explicit release input
         env:
@@ -190,4 +220,12 @@ jobs:
     needs: [tree-equivalence-gate, proof-gates, release-gate]
     steps:
       - name: All release gates passed
-        run: echo "tree-equivalence-gate, proof-gates (unit, diff, invariants) and release-gate passed for ${{ inputs.release_tag }}"
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          AUDITED_TREE: ${{ inputs.audited_source_tree }}
+          BUNDLE_NAME: ${{ inputs.bundle_name }}
+          BUNDLE_SHA256: ${{ inputs.bundle_sha256 }}
+        run: |
+          echo "tree-equivalence-gate, proof-gates (unit, diff, invariants) and release-gate passed for $RELEASE_TAG"
+          echo "audited source tree: $AUDITED_TREE (equal to repository variable V16_AUDITED_TREE)"
+          echo "bundle: $BUNDLE_NAME sha256 $BUNDLE_SHA256"

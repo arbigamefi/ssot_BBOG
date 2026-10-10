@@ -28,8 +28,10 @@ contract MockVRFV2PlusWrapper is IVRFV2PlusWrapper {
     event WrapperRequested(uint256 indexed requestId, address indexed consumer, uint256 paid);
     event WrapperDelivered(uint256 indexed requestId, address indexed consumer, bool success);
 
+    /// @dev A fixed nonzero address, never called: the consumer base stores it in an immutable at construction, and
+    ///      the certified-runtime tests must be able to tell that slot from a zero placeholder (fix review I-1).
     function link() external pure override returns (address) {
-        return address(0);
+        return address(uint160(uint256(keccak256("MockVRFV2PlusWrapper.link"))));
     }
 
     function linkNativeFeed() external pure override returns (address) {

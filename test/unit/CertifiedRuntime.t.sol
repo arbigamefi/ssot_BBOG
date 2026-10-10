@@ -85,8 +85,8 @@ contract CertifiedRuntimeTest is Test {
 
     function test_everyPinnedImmutableSlotHoldsTheReleaseValue() public view {
         // Each pinned slot of each deployed core contract holds the value the release snapshot assigns to that
-        // immutable; every slot except the mock wrapper's LINK token is a nonzero word, so a wrong slot mapping
-        // cannot hide behind a zero placeholder.
+        // immutable, and every one of those values (the mock wrapper's LINK token included) is a nonzero word, so a
+        // wrong slot mapping cannot hide behind a zero placeholder.
         _slotsMatch("vrfHub", "VRFHub", "");
         _slotsMatch("gameHub", "GameHub", "");
         _slotsMatch("settlementRouter", "SettlementRouter", "");
@@ -111,11 +111,9 @@ contract CertifiedRuntimeTest is Test {
         string memory value = dom.readString(string.concat(item, ".value"));
         bytes32 expected = _expected(value, suffix);
         uint256[] memory offsets = dom.readUintArray(string.concat(item, ".offsets"));
-        bool link = keccak256(bytes(value)) == keccak256("wrapperLink");
+        assertTrue(expected != bytes32(0), string.concat(name, ".", value, " release value is nonzero"));
         for (uint256 j; j < offsets.length; ++j) {
-            bytes32 word = _wordAt(code, offsets[j]);
-            assertEq(word, expected, string.concat(name, ".", value));
-            if (!link) assertTrue(word != bytes32(0), string.concat(name, ".", value, " is populated"));
+            assertEq(_wordAt(code, offsets[j]), expected, string.concat(name, ".", value));
         }
     }
 
