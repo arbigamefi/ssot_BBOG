@@ -49,12 +49,18 @@ the universal callback gas proof; its incomplete status is preserved separately 
    Release verification also checks the first-callback certificate domain for the snapshot's chain
    (`script/release/first-callback-domain-<chainId>.json`). `make release-v16` runs this check before anything is
    signed, as `release-domain-check`.
-   - `VerifyCallbackDomainV16` works offline. It fails unless:
+   - `VerifyCallbackDomainV16.verify` works offline. It fails unless:
      - the certificate status is `CERTIFIED`;
      - each game uses the certified callback gas and at most the certified round count;
      - each module runtime matches the certified codehash;
-     - each casino pool's minimum bet is at least the floor that keeps k > 0, and its asset is the certified token;
+     - each casino pool's minimum bet is at least the floor that keeps k > 0 and equals the Owner policy value
+       (10,000), its risk reserve is 6000 bps, its withdrawal buffer 1000 bps, and its asset is the certified token;
      - the VRF wrapper is the certified one.
+   - With `RPC_URL` set (`release-domain-check` always sets it), `VerifyCallbackDomainV16.run` forks the chain and
+     compares every deployed core contract (VRFHub, GameHub, SettlementRouter, PoolRegistry, ReferralRegistry,
+     DefaultReferralEngine, each Bank and Vault) with the certified build: immutable slots must hold the release
+     values, the remaining code must hash to the certified artifact, and the constructor wiring must match the
+     snapshot. `script/ci/fork_release_gate.sh` repeats this at the governance block.
    - `verify_callback_provider.py`, also part of `release-domain-check`, checks the live token and provider at
      one frozen block. It fails unless the USDC implementation and code, the coordinator and its gas parameters
      are the certified ones.
@@ -116,7 +122,9 @@ uploading that bundle to its GitHub release, run **Release Gate** manually with:
 
 - `release_tag`: the tag for the source commit used to deploy and package;
 - `bundle_name`: the exact release asset filename;
-- `bundle_sha256`: the independently approved SHA-256 of that archive.
+- `bundle_sha256`: the independently approved SHA-256 of that archive;
+- `audited_source_tree`: the git tree hash of the externally audited source (from the audit report and the
+  freeze commit record). Every job refuses a tag whose tree differs.
 
 The workflow downloads that exact asset, checks the digest, commit and file
 inventory, and rejects unsafe archive members before staging it. It then runs the

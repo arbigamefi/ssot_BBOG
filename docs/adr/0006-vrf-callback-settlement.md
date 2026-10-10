@@ -140,12 +140,23 @@ The certificate covers k = reserved − stake > 0 only. Lemma P5 keeps k = 0 out
 module pays more than 1x and the minimum bet is at least 99 raw units (official 10,000). Release verification
 enforces the domain against `script/release/first-callback-domain-<chainId>.json`:
 
-- offline (`VerifyCallbackDomainV16`): certificate status `CERTIFIED`; every game at the certified callback gas
-  and at most the certified round count; every module at its certified codehash; every casino pool at or above
-  the minimum-bet floor and on the certified token; the certified VRF wrapper;
+- offline (`VerifyCallbackDomainV16.verify`): certificate status `CERTIFIED`; every game at the certified callback
+  gas and at most the certified round count; every module at its certified codehash; every casino pool at or
+  above the minimum-bet floor, at the Owner's policy values (`ownerPolicy`: 10,000 minimum bet, `riskReserveBps`
+  6000, `withdrawalBufferBps` 1000) and on the certified token; the certified VRF wrapper;
+- live on a fork of the release chain (`VerifyCallbackDomainV16.run` with `RPC_URL`, repeated by the fork release
+  gate at the governance block): every core contract on the callback path (VRFHub, GameHub, SettlementRouter,
+  PoolRegistry, ReferralRegistry, DefaultReferralEngine, each Bank and Vault) has the certified runtime
+  (`coreRuntimes`: each immutable slot is checked against the release value, then zeroed, then keccak256 is
+  compared with the certified artifact) and the certified constructor wiring. Added after the independent audit of
+  2026-10-10 (F-01), which found that only the module runtimes were machine-pinned;
 - live at one frozen block (`verify_governance.py`, `verify_callback_provider.py`): the registered game set is
   exactly the certified eight; the USDC implementation and code and the VRF coordinator and its gas parameters
   are the certified ones.
+
+The Release Gate workflow takes the audited source tree hash as an input and refuses any `release_tag` whose tree
+differs. The seal digests the domain file cites are copied into `script/release/certificates/` and checked by a
+unit test. Dependencies are pinned by content digest in `deps.lock`.
 
 The module premise M4 (an admitted bet's `resolve` never fails for a non-gas reason) is proved in
 [m4-resolve-census-2026-10-08.md](../audit/m4-resolve-census-2026-10-08.md) and guarded by `CallbackDomainM4Test`.

@@ -27,6 +27,8 @@ contract CallbackDomainV16Test is Test {
         uint256 sportsMinBet;
         address wrapper;
         address casinoAsset;
+        uint256 riskReserveBps;
+        uint256 withdrawalBufferBps;
     }
 
     string[8] internal games =
@@ -72,7 +74,9 @@ contract CallbackDomainV16Test is Test {
             10_000,
             1,
             committed.readAddress(".providerReference.wrapper"),
-            committed.readAddress(".token.proxy")
+            committed.readAddress(".token.proxy"),
+            6000,
+            1000
         );
     }
 
@@ -93,9 +97,13 @@ contract CallbackDomainV16Test is Test {
         vm.serializeUint(obj, "numPools", 2);
         vm.serializeUint(obj, "poolDomain_0", 1);
         vm.serializeUint(obj, "poolBankMinBetAmount_0", s.casinoMinBet);
+        vm.serializeUint(obj, "poolBankRiskReserveBps_0", s.riskReserveBps);
+        vm.serializeUint(obj, "poolBankWithdrawalBufferBps_0", s.withdrawalBufferBps);
         vm.serializeAddress(obj, "poolAsset_0", s.casinoAsset);
         vm.serializeUint(obj, "poolDomain_1", 2);
-        vm.serializeAddress(obj, "poolAsset_1", address(0xB0B)); // sports pools are outside the callback domain
+        vm.serializeUint(obj, "poolBankRiskReserveBps_1", 0); // sports pools are outside the callback domain
+        vm.serializeUint(obj, "poolBankWithdrawalBufferBps_1", 0);
+        vm.serializeAddress(obj, "poolAsset_1", address(0xB0B));
         json = vm.serializeUint(obj, "poolBankMinBetAmount_1", s.sportsMinBet);
     }
 
@@ -115,17 +123,87 @@ contract CallbackDomainV16Test is Test {
         assertEq(committed.readUint(".consumerCallbackGasLimit"), 2_447_746);
         assertEq(committed.readUint(".maxBetCountCeiling"), 25);
         assertEq(committed.readUint(".casinoMinBetAmountFloor"), 99);
+        assertEq(committed.readUint(".ownerPolicy.casinoMinBetAmount"), 10_000);
+        assertEq(committed.readUint(".ownerPolicy.riskReserveBps"), 6000);
+        assertEq(committed.readUint(".ownerPolicy.withdrawalBufferBps"), 1000);
         bytes32[8] memory h = _runtimeHashes();
         for (uint256 g; g < modules.length; ++g) {
             assertEq(committed.readBytes32(string.concat(".moduleCodeHashes.", modules[g])), h[g], modules[g]);
         }
     }
 
+    /// The core pins are the compiled artifacts of this build: hash, length and the immutable slot layout.
+    function test_committedDomainPinsCurrentCoreRuntimes() public view {
+        string[8] memory core = [
+            string("VRFHub"),
+            "GameHub",
+            "SettlementRouter",
+            "PoolRegistry",
+            "ReferralRegistry",
+            "DefaultReferralEngine",
+            "Bank",
+            "LiquidityVault"
+        ];
+        for (uint256 c; c < core.length; ++c) {
+            string memory base = string.concat(".coreRuntimes.", core[c]);
+            bytes memory compiled = vm.getDeployedCode(committed.readString(string.concat(base, ".artifact")));
+            assertEq(
+                keccak256(compiled), committed.readBytes32(string.concat(base, ".keccakWithImmutablesZeroed")), core[c]
+            );
+            assertEq(compiled.length, committed.readUint(string.concat(base, ".runtimeBytes")), core[c]);
+            // Every immutable slot of the artifact is listed exactly once, and the pinned code is zero there.
+            string memory artifact = vm.readFile(string.concat("out/", core[c], ".sol/", core[c], ".json"));
+            uint256 expectedSlots;
+            if (vm.keyExistsJson(artifact, ".deployedBytecode.immutableReferences")) {
+                string[] memory ids = vm.parseJsonKeys(artifact, ".deployedBytecode.immutableReferences");
+                for (uint256 i; i < ids.length; ++i) {
+                    string memory refs = string.concat(".deployedBytecode.immutableReferences.", ids[i]);
+                    for (uint256 r; vm.keyExistsJson(artifact, string.concat(refs, "[", vm.toString(r), "]")); ++r) {
+                        assertEq(
+                            vm.parseJsonUint(artifact, string.concat(refs, "[", vm.toString(r), "].length")),
+                            32,
+                            "immutable slots are one word"
+                        );
+                        ++expectedSlots;
+                    }
+                }
+            }
+            uint256 pinnedSlots;
+            for (uint256 k; vm.keyExistsJson(committed, string.concat(base, ".immutables[", vm.toString(k), "]")); ++k) {
+                uint256[] memory offsets =
+                    committed.readUintArray(string.concat(base, ".immutables[", vm.toString(k), "].offsets"));
+                for (uint256 j; j < offsets.length; ++j) {
+                    bytes32 word;
+                    uint256 at = offsets[j];
+                    assembly ("memory-safe") {
+                        word := mload(add(add(compiled, 32), at))
+                    }
+                    assertEq(word, bytes32(0), "artifact has a placeholder at every pinned slot");
+                }
+                pinnedSlots += offsets.length;
+            }
+            assertEq(pinnedSlots, expectedSlots, string.concat(core[c], " immutable slot count"));
+        }
+    }
+
+    /// The seals the domain file cites are copied into the repository, so the citation is checkable without dist/.
+    function test_committedDomainCitesTheSealedCertificateAndReview() public view {
+        string memory seal = vm.readFile("script/release/certificates/first-callback-v4/CERTIFICATE-v4.sha256");
+        assertEq(
+            sha256(bytes(seal)), vm.parseBytes32(string.concat("0x", committed.readString(".certificateSeal.sha256")))
+        );
+        string memory review =
+            vm.readFile("script/release/certificates/first-callback-v4/independent-review.MANIFEST.sha256");
+        assertEq(
+            sha256(bytes(review)),
+            vm.parseBytes32(string.concat("0x", committed.readString(".certificateSeal.reviewSha256")))
+        );
+    }
+
     function test_snapshotInsideCertifiedDomainPasses() public {
         verifier.verify(_json(_good()), committed);
         Snap memory s = _good();
         s.kenoRounds = 1;
-        s.casinoMinBet = 99; // Dice's tightest coefficient 100/99 still leaves r > s
         s.sportsMinBet = 0; // no VRF callback on sports positions
         verifier.verify(_json(s), committed);
     }
@@ -153,6 +231,15 @@ contract CallbackDomainV16Test is Test {
         s = _good();
         s.casinoMinBet = 98;
         _rejects(s, committed, "casino minimum bet below the certified floor");
+        s = _good();
+        s.casinoMinBet = 99; // k > 0 still holds, but the Owner fixed 0.01 USDC per round (audit F-02)
+        _rejects(s, committed, "casino minimum bet is not the Owner policy value");
+        s = _good();
+        s.riskReserveBps = 0;
+        _rejects(s, committed, "risk reserve is not the Owner policy value");
+        s = _good();
+        s.withdrawalBufferBps = 999;
+        _rejects(s, committed, "withdrawal buffer is not the Owner policy value");
         s = _good();
         s.wrapper = address(0xBAD);
         _rejects(s, committed, "VRF wrapper is not the certified provider");

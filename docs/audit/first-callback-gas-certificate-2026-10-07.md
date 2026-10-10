@@ -40,7 +40,7 @@ wrapper → VRFHub → GameHub（外层与自调用子帧）→ SettlementRouter
 | consumer gas | 每个游戏的 `callbackGasLimit` 都等于 2,447,746 | 发布核验 |
 | 轮数 | 1–25 | 发布核验 |
 | 模块 | 八个模块的 runtime 与 `script/release/first-callback-domain-84532.json` 中的 codehash 一致；已登记的游戏恰好是这八个 | 发布核验（离线比对 codehash，在线回放 `GameRegistered`）；`CallbackDomainV16Test` 把域文件钉到当前构建，remapping 已在 `foundry.toml` 中写死 |
-| 核心合约 | VRFHub、GameHub、Router、Bank、Vault 和引擎的可执行代码与本证书分析的字节码逐字节一致（O3），也与固定账本所绑定的构建一致 | `certificate-v4/bindings/component-bindings.json` |
+| 核心合约 | VRFHub、GameHub、Router、Bank、Vault 和引擎的可执行代码与本证书分析的字节码逐字节一致（O3），也与固定账本所绑定的构建一致 | `certificate-v4/bindings/component-bindings.json`；发布核验：域文件 `coreRuntimes` 钉住八个核心合约的编译产物哈希与 immutable 槽位，`CertifiedRuntime` 在 fork 上比对已部署代码、槽位值与构造接线（2026-10-10 独立审计 F-01 的修复） |
 | token | Base Sepolia USDC 代理与实现（已复核的区域与身份） | 发布核验：在线比对实现槽、代理和实现的代码哈希；离线比对赌场池资产 |
 | 赌场池最低注额 | 每轮不少于 99 个原始单位（官方值 10,000） | 发布核验 |
 | 其它 | 参数不超过 64 字节；一个随机字；推荐奖励不超过 3 份（L0/L1/L2） | GameHub 准入 |
@@ -201,8 +201,9 @@ v3 与 v4 的四个口径都经复核方用自己的组合实现复算，逐值�
 - **k=0 范围（K0-1 至 K0-5）**：
   - K0-1：本文第 2 节。
   - K0-2：已落实，并按两份复核补齐：
-    - 离线部分 `VerifyCallbackDomainV16` 在签名前运行（`release-domain-check`），比对 wrapper 和赌场资产；
-    - 在线部分：`verify_governance.py` 回放 `GameRegistered`；`verify_callback_provider.py` 也在签名前运行，比对 USDC 实现与 provider 参数。
+    - 离线部分 `VerifyCallbackDomainV16.verify` 在签名前运行（`release-domain-check`，也在 `release-check` 中）：比对 wrapper、赌场资产，以及 Owner 固定参数（每轮最低 10,000、`riskReserveBps` 6000、`withdrawalBufferBps` 1000；域文件 `ownerPolicy`，审计 F-02）；
+    - 在线部分：`VerifyCallbackDomainV16.run` 在 `RPC_URL` 下 fork 链，用 `CertifiedRuntime` 比对八个核心合约的已部署 runtime（每个 immutable 槽位先与快照值比对再置零，余下代码的 keccak 与受证编译产物一致，长度一致）和构造接线（审计 F-01）；`verify_governance.py` 回放 `GameRegistered`；`verify_callback_provider.py` 比对 USDC 实现与 provider 参数；`fork_release_gate.sh` 在治理区块再跑一次核心 runtime 比对；Release Gate 工作流拒绝 tree 不等于 `audited_source_tree` 输入的 tag。
+    - 域文件引用的封存清单与复核清单已复制到 `script/release/certificates/first-callback-v4/`，`CallbackDomainV16Test` 核对它们的摘要等于域文件所引用的值。
     - 域文件状态已于 2026-10-08 切换为 `CERTIFIED`；任何重新认证触发都把它改回 `PENDING_INDEPENDENT_REVIEW`，使发布核验失败。
   - K0-3：治理手册已更新，并补了赌场池的登记与放行路径。
   - K0-4：配置变更告警属于建议项，**尚未实现**。

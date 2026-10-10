@@ -32,6 +32,10 @@ governance can leave it afterwards. Recertify **before** signing any of these ch
 
 - `Bank.setMinBetAmount` on a casino pool to a value below 99 raw units (the official value is 10,000).
   Below 99, a Dice or Roulette bet can have k = 0, which takes the uncertified k = 0 allocation path.
+- `Bank.setMinBetAmount` to any value other than 10,000, `Bank.setRiskReserveBps` to any value other than 6000
+  and `Bank.setWithdrawalBufferBps` to any value other than 1000. These are Owner decisions, recorded as
+  `ownerPolicy` in the domain file; release verification rejects a snapshot with other values, and the K0-4
+  drift monitor is to report the change.
 - Any `GameHub.registerGame`, whether it adds a new module under a new game ID, changes the round ceiling
   or changes the callback gas limit.
 - Any `PoolRegistry.registerPool`, `setHubAllowedForPool` or `setPoolActive` that admits or reactivates a

@@ -4,16 +4,20 @@ pragma solidity 0.8.37;
 import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 import "forge-std/console2.sol";
+import {CertifiedRuntime} from "./CertifiedRuntime.sol";
 
 /// @notice Fails unless a v1.6 snapshot lies inside its chain's certified first-callback domain:
 ///         - the certificate for that chain is accepted;
 ///         - every game uses the certified consumer gas and at most the certified round count;
 ///         - every module runs its certified runtime;
 ///         - every casino pool's minimum bet is at or above the floor that keeps each position's k > 0;
+///         - every casino pool carries the Owner's policy values (minimum bet, risk reserve, withdrawal buffer);
 ///         - the VRF wrapper and every casino pool's asset are the certified provider and token.
 ///         script/release/verify_callback_provider.py checks the live token implementation and provider gas
 ///         parameters against the same file; script/release/verify_governance.py replays GameRegistered so that
-///         the registered game set is exactly the certified eight.
+///         the registered game set is exactly the certified eight. With RPC_URL set, `run` also forks the chain and
+///         compares the deployed core runtimes and their immutable wiring with the certified build
+///         (CertifiedRuntime; audit 2026-10-10 F-01). Without RPC_URL that part is skipped and said so.
 ///         Outside this domain the first-callback certificate says nothing; see
 ///         docs/audit/first-callback-gas-certificate-2026-10-07.md and ADR-0034 (amendment 2026-10-07).
 contract VerifyCallbackDomainV16 is Script {
@@ -21,17 +25,29 @@ contract VerifyCallbackDomainV16 is Script {
 
     uint256 internal constant CASINO_DOMAIN = 1; // SSOTTypes.PoolDomain.Casino
 
-    function run() external view {
+    function run() external {
         string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v16.json"));
         string memory snap = _readFileOrDie(snapshotPath);
         string memory domainPath = vm.envOr(
             "CALLBACK_DOMAIN_PATH",
             string.concat("script/release/first-callback-domain-", vm.toString(snap.readUint(".chainId")), ".json")
         );
-        verify(snap, _readFileOrDie(domainPath));
+        string memory dom = _readFileOrDie(domainPath);
+        verify(snap, dom);
         console2.log("OK v1.6 snapshot inside the certified first-callback domain");
         console2.log("snapshot:", snapshotPath);
         console2.log("domain:", domainPath);
+        string memory rpc = vm.envOr("RPC_URL", string(""));
+        if (bytes(rpc).length == 0) {
+            console2.log("NOTE: RPC_URL not set; deployed core runtimes were NOT verified (offline mode)");
+            return;
+        }
+        uint256 forkBlock = vm.envOr("CALLBACK_FORK_BLOCK", uint256(0));
+        if (forkBlock != 0) vm.createSelectFork(rpc, forkBlock);
+        else vm.createSelectFork(rpc);
+        require(block.chainid == snap.readUint(".chainId"), "RPC is on another chain");
+        CertifiedRuntime.verify(snap, dom);
+        console2.log("OK deployed core runtimes and wiring match the certified build at block", block.number);
     }
 
     function verify(string memory snap, string memory dom) public pure {
@@ -72,6 +88,10 @@ contract VerifyCallbackDomainV16 is Script {
             "VRF wrapper is not the certified provider"
         );
         uint256 floor = dom.readUint(".casinoMinBetAmountFloor");
+        uint256 policyMinBet = dom.readUint(".ownerPolicy.casinoMinBetAmount");
+        uint256 policyReserve = dom.readUint(".ownerPolicy.riskReserveBps");
+        uint256 policyBuffer = dom.readUint(".ownerPolicy.withdrawalBufferBps");
+        require(policyMinBet >= floor, "Owner policy minimum bet below the certified floor");
         address token = dom.readAddress(".token.proxy");
         uint256 numPools = snap.readUint(".numPools");
         for (uint256 i; i < numPools; ++i) {
@@ -84,6 +104,19 @@ contract VerifyCallbackDomainV16 is Script {
                 require(
                     snap.readAddress(string.concat(".poolAsset_", suffix)) == token,
                     "casino asset is not the certified token"
+                );
+                // Owner decisions, not certificate mathematics: 0.01 USDC per round, 60% retained, 10% buffer.
+                require(
+                    snap.readUint(string.concat(".poolBankMinBetAmount_", suffix)) == policyMinBet,
+                    "casino minimum bet is not the Owner policy value"
+                );
+                require(
+                    snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix)) == policyReserve,
+                    "risk reserve is not the Owner policy value"
+                );
+                require(
+                    snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix)) == policyBuffer,
+                    "withdrawal buffer is not the Owner policy value"
                 );
             }
         }

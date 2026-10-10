@@ -166,7 +166,8 @@ release-digest:
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/ReleaseDigestV16.s.sol:ReleaseDigestV16 --account "$${RELEASE_ACCOUNT:?Set the approved release signer keystore account}" -vvv
 
 # Fails before anything is signed when the snapshot lies outside its chain's accepted first-callback domain:
-# offline snapshot checks, then the live token and VRF provider at one frozen block.
+# snapshot checks, the deployed core runtimes and wiring against the certified build (fork of RPC_URL), then the
+# live token and VRF provider at one frozen block.
 release-domain-check:
 	@test -n "$$SNAPSHOT_PATH" -a -n "$$RPC_URL" || { echo "Set chain-specific SNAPSHOT_PATH and RPC_URL"; exit 1; }
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyCallbackDomainV16.s.sol:VerifyCallbackDomainV16 -vvv

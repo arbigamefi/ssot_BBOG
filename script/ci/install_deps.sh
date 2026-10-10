@@ -28,6 +28,27 @@ forge install "foundry-rs/forge-std@${FORGE_STD_REF}" --no-git --shallow
 forge install "OpenZeppelin/openzeppelin-contracts@${OZ_REF}" --no-git --shallow
 forge install "smartcontractkit/chainlink-brownie-contracts@${CHAINLINK_BC_REF}" --no-git --shallow
 
+# Content pin: the installed trees must match the digests recorded in deps.lock (a tag can move; a digest cannot).
+tree_digest() {
+  (cd "$1" && find . -type f ! -path './.git/*' -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -c1-64)
+}
+expect_digest() {
+  local name=$1 dir=$2 want
+  want=$(sed -n "s/^${name}_SHA256=//p" deps.lock)
+  if [ -z "$want" ]; then echo "deps.lock has no ${name}_SHA256" >&2; exit 1; fi
+  local got
+  got=$(tree_digest "$dir")
+  if [ "$got" != "$want" ]; then
+    echo "dependency content differs from deps.lock: $dir" >&2
+    echo "  expected $want" >&2
+    echo "  got      $got" >&2
+    exit 1
+  fi
+}
+expect_digest FORGE_STD lib/forge-std
+expect_digest OPENZEPPELIN_CONTRACTS lib/openzeppelin-contracts
+expect_digest CHAINLINK_BROWNIE_CONTRACTS lib/chainlink-brownie-contracts
+
 echo "Installed deps:" >&2
 forge --version >&2
 echo "  forge-std: ${FORGE_STD_REF}" >&2

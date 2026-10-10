@@ -81,6 +81,10 @@ GOVERNANCE_RESULT=$(SNAPSHOT_PATH="$SNAPSHOT_PATH" RPC_URL="$RPC_URL" "${PYTHON:
 BLOCK_NUMBER=$(jq -er --argjson chain "$CHAIN_ID" \
   'select(.status == "verified" and .chainId == $chain and .blockNumber > 0) | .blockNumber' <<<"$GOVERNANCE_RESULT")
 
+# Deployed core runtimes, immutable wiring and the certified domain, at the same governance block (audit F-01).
+SNAPSHOT_PATH="$SNAPSHOT_PATH" RPC_URL="$RPC_URL" CALLBACK_FORK_BLOCK="$BLOCK_NUMBER" \
+  forge script script/release/VerifyCallbackDomainV16.s.sol:VerifyCallbackDomainV16 -vvv
+
 export NFT_DIRECT_WRAPPER_FORK=true
 export NFT_FORK_RPC_URL="$RPC_URL"
 export NFT_FORK_CHAIN_ID="$CHAIN_ID"

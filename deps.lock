@@ -8,7 +8,15 @@ SOLC_VERSION=0.8.37
 EVM_VERSION=cancun
 VIA_IR=true
 
-# Solidity libraries
+# Solidity libraries: tag, the commit the tag pointed to when pinned, and the content digest of the installed
+# tree (find -type f | sort | shasum -a 256 | shasum -a 256). install_deps.sh refuses a tree whose digest differs,
+# so a moved tag or a tampered mirror cannot change the audited bytecode silently (audit finding F-06).
 FORGE_STD=v1.14.0
+FORGE_STD_COMMIT=1801b0541f4fda118a10798fd3486bb7051c5dd6
+FORGE_STD_SHA256=e29f6a5e29ace013da63e72e7225b7a37f4519ad6092223d69469140260de08b
 OPENZEPPELIN_CONTRACTS=v5.5.0
+OPENZEPPELIN_CONTRACTS_COMMIT=fcbae5394ae8ad52d8e580a3477db99814b9d565
+OPENZEPPELIN_CONTRACTS_SHA256=3c6a4a972323292d0e8085f2e19ef788d480674385a3bc6cd5e48dddb3ec13dc
 CHAINLINK_BROWNIE_CONTRACTS=1.3.0
+CHAINLINK_BROWNIE_CONTRACTS_COMMIT=5cb41fbc9b525338b6098da5ea7dd0b7e92f89e4
+CHAINLINK_BROWNIE_CONTRACTS_SHA256=77a91bcdd82f389c915d3e93e3ee354f015304dae445c7a23b812ceb7fa3d140

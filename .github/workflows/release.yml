@@ -15,6 +15,10 @@ on:
         description: Approved SHA-256 of that exact archive
         required: true
         type: string
+      audited_source_tree:
+        description: git tree hash of the externally audited source (from the audit report); the gate refuses any release_tag whose tree differs
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -30,6 +34,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.release_tag }}
+
+      - name: Release tag must be the audited source tree
+        env:
+          AUDITED_TREE: ${{ inputs.audited_source_tree }}
+        run: |
+          actual=$(git rev-parse 'HEAD^{tree}')
+          if [ "$actual" != "$AUDITED_TREE" ]; then
+            echo "release_tag tree $actual differs from the audited tree $AUDITED_TREE"; exit 1
+          fi
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -66,6 +79,15 @@ jobs:
         with:
           ref: ${{ inputs.release_tag }}
 
+      - name: Release tag must be the audited source tree
+        env:
+          AUDITED_TREE: ${{ inputs.audited_source_tree }}
+        run: |
+          actual=$(git rev-parse 'HEAD^{tree}')
+          if [ "$actual" != "$AUDITED_TREE" ]; then
+            echo "release_tag tree $actual differs from the audited tree $AUDITED_TREE"; exit 1
+          fi
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
@@ -88,6 +110,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.release_tag }}
+
+      - name: Release tag must be the audited source tree
+        env:
+          AUDITED_TREE: ${{ inputs.audited_source_tree }}
+        run: |
+          actual=$(git rev-parse 'HEAD^{tree}')
+          if [ "$actual" != "$AUDITED_TREE" ]; then
+            echo "release_tag tree $actual differs from the audited tree $AUDITED_TREE"; exit 1
+          fi
 
       - name: Download explicit release input
         env:

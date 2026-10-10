@@ -16,6 +16,11 @@
   "consumerCallbackGasLimit": 2447746,
   "maxBetCountCeiling": 25,
   "casinoMinBetAmountFloor": 99,
+  "ownerPolicy": {
+    "casinoMinBetAmount": 10000,
+    "riskReserveBps": 6000,
+    "withdrawalBufferBps": 1000
+  },
   "moduleCodeHashes": {
     "moduleDice": "0x59b856cd3382ed097317ac14c958495181c02ff813f75200e61602a399758c3a",
     "moduleCoinToss": "0xdad2715a726366105498b4f2087be4964e30cc1bf74e04a3013beeb963ff58de",
@@ -25,6 +30,202 @@
     "moduleSicBo": "0x2a89b0e026835e5b7707fa52c393b5f1afa02e4572e28e1fec0fbc830414babc",
     "moduleSlots": "0x574a8aa25a9edaab1f63cc1291a723b1da3e36cccf1ba63ab0f85e3b402a5c69",
     "moduleBaccarat": "0x1c9a2222b9ba0f67c8e9fb44aff5735047ed115485871f872e6ef7fdb6a95553"
+  },
+  "coreRuntimes": {
+    "VRFHub": {
+      "artifact": "VRFHub.sol:VRFHub",
+      "runtimeBytes": 5941,
+      "keccakWithImmutablesZeroed": "0x63cd06b7ba0a93212948ec419ca48bcda1c88d058316d222bed6a9e26ed8db48",
+      "immutables": [
+        {
+          "value": "wrapperLink",
+          "offsets": [
+            658
+          ]
+        },
+        {
+          "value": "vrfWrapper",
+          "offsets": [
+            381,
+            1169,
+            2586,
+            2983
+          ]
+        },
+        {
+          "value": "settlementRouter",
+          "offsets": [
+            532,
+            1634,
+            2178,
+            2845
+          ]
+        }
+      ]
+    },
+    "GameHub": {
+      "artifact": "GameHub.sol:GameHub",
+      "runtimeBytes": 20046,
+      "keccakWithImmutablesZeroed": "0xe9ac09bfe9c021a156298149fb891cab7c3a282b99f95b9eae0fa8f81831af5d",
+      "immutables": [
+        {
+          "value": "settlementRouter",
+          "offsets": [
+            621,
+            5723,
+            8734,
+            12250,
+            17216,
+            19405
+          ]
+        },
+        {
+          "value": "vrfHub",
+          "offsets": [
+            3249,
+            4144,
+            5097,
+            5384,
+            9585,
+            12524,
+            17381,
+            19146
+          ]
+        },
+        {
+          "value": "refRegistry",
+          "offsets": [
+            1310,
+            3319,
+            7956,
+            11198,
+            11380,
+            11480,
+            11547,
+            14006
+          ]
+        },
+        {
+          "value": "refEngine",
+          "offsets": [
+            3179,
+            16915
+          ]
+        }
+      ]
+    },
+    "SettlementRouter": {
+      "artifact": "SettlementRouter.sol:SettlementRouter",
+      "runtimeBytes": 4598,
+      "keccakWithImmutablesZeroed": "0xf21747dc56930fd233b76214b377a165ba5e24d912be6ca39cf76ece6dc61537",
+      "immutables": [
+        {
+          "value": "poolRegistry",
+          "offsets": [
+            871,
+            2611
+          ]
+        }
+      ]
+    },
+    "PoolRegistry": {
+      "artifact": "PoolRegistry.sol:PoolRegistry",
+      "runtimeBytes": 3304,
+      "keccakWithImmutablesZeroed": "0x98e7a347036cbbea0aae6495437c0e7485be6cbfe1e39b675ed8ab4165d6f3a9",
+      "immutables": []
+    },
+    "ReferralRegistry": {
+      "artifact": "ReferralRegistry.sol:ReferralRegistry",
+      "runtimeBytes": 1211,
+      "keccakWithImmutablesZeroed": "0x58d3794fdcedb87c248fa4ac57a49711cdee535f886be6522e7fd7f3996f3583",
+      "immutables": []
+    },
+    "DefaultReferralEngine": {
+      "artifact": "DefaultReferralEngine.sol:DefaultReferralEngine",
+      "runtimeBytes": 2148,
+      "keccakWithImmutablesZeroed": "0x63e5f6380d5ff7d296c1a91f895ae2e0ab021d6bcf7761420c788d1ee20f98c6",
+      "immutables": []
+    },
+    "Bank": {
+      "artifact": "Bank.sol:Bank",
+      "runtimeBytes": 15808,
+      "keccakWithImmutablesZeroed": "0x784451fd3dbebcc35957222240b5f7ea95faa38ff27a7d5112ccd49ac8bda557",
+      "immutables": [
+        {
+          "value": "poolAsset",
+          "offsets": [
+            3378,
+            9938
+          ]
+        },
+        {
+          "value": "poolVault",
+          "offsets": [
+            832,
+            5929,
+            7295,
+            13964
+          ]
+        },
+        {
+          "value": "poolAssetDecimals",
+          "offsets": [
+            6160,
+            9143
+          ]
+        },
+        {
+          "value": "poolAsset",
+          "offsets": [
+            4790,
+            7203,
+            11929,
+            12773,
+            13628,
+            14237
+          ]
+        },
+        {
+          "value": "poolVault",
+          "offsets": [
+            4545,
+            7402,
+            7510,
+            8380,
+            11581,
+            12481,
+            13497
+          ]
+        }
+      ]
+    },
+    "LiquidityVault": {
+      "artifact": "LiquidityVault.sol:LiquidityVault",
+      "runtimeBytes": 15708,
+      "keccakWithImmutablesZeroed": "0xf27194c9b9714951c449b224d6cffe7292ff4840c553eabbe51c78158066d7b3",
+      "immutables": [
+        {
+          "value": "poolAsset",
+          "offsets": [
+            3382,
+            7828,
+            8234,
+            10219,
+            10853
+          ]
+        },
+        {
+          "value": "poolBank",
+          "offsets": [
+            1408,
+            2438,
+            2893,
+            7634,
+            10153
+          ]
+        }
+      ]
+    }
   },
   "providerReference": {
     "block": 47657524,

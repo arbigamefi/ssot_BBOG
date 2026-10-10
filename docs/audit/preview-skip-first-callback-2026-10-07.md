@@ -262,6 +262,20 @@ Owner 于 2026-10-08 确认了实施方提出的一揽子方案，而不是架�
 - M6：字节精确的具体执行器与抽象解释器共享价格表；192 个全具体输入（含最低注额、最大注额、三种止损形态和随机输入）在 Foundry 中用 `vm.lastCallGas()` 逐 gas 对拍，全部相等，赔付与退款也全部相等。
 - 组合 v4：主口径（解释器界，显式边界）余量 **+127,744**，按供给 +149,917；次口径静态 +7,980 / +30,153。封存清单 `CERTIFICATE-v4.sha256`（SHA-256 `d67a7083…`）。待证书复核方确认。
 
+## 2026-10-10：独立审计与修复
+
+独立审计（AI 复核，`dist/independent-audit-2026-10-10/`，清单 `864b383f…`）对 bf4d04d85 的结论：无 Critical/High，1 项 Medium（F-01），3 项 Low，3 项信息级；合约层面没有发现可利用的资金类漏洞。Owner 决定只改发布工具修 F-01，顺带 F-02、F-06、F-07，出 v7 重跑；F-03、F-04、F-05 涉及合约改动，列入下一版。
+
+| 发现 | 修复 |
+| --- | --- |
+| F-01 发布核验只钉模块 runtime | 域文件 `coreRuntimes`（`gen_certified_runtimes.py` 从受证编译产物生成：哈希、长度、immutable 槽位及其应取值）；`CertifiedRuntime.sol` 在 fork 上核对八个核心合约：槽位先与快照值比对再置零，keccak 与编译产物一致，长度一致，构造接线经 getter 回读；`VerifyCallbackDomainV16.run` 在 `RPC_URL` 下执行，`fork_release_gate.sh` 在治理块再执行；Release Gate 新增 `audited_source_tree` 输入；封存清单副本进仓库并由测试核对摘要。测试：`CertifiedRuntime.t.sol`（真实部署通过；改一字节、改一个 immutable 值、改长度、无代码各被拒），`CallbackDomainV16Test` 核对钉值与编译产物逐项一致 |
+| F-02 Owner 参数无机器门槛 | 域文件 `ownerPolicy`；`VerifyCallbackDomainV16.verify` 要求赌场池 minBet = 10,000、riskReserveBps = 6000、withdrawalBufferBps = 1000 |
+| F-06 依赖按可变 tag 安装 | `deps.lock` 记录 commit 与内容摘要，`install_deps.sh` 安装后校验 |
+| F-07 对账表条目数 | 重新交付时更正 |
+| F-03、F-04、F-05 | 下一版（合约改动需重新认证）；白皮书第 18 行措辞已改；F-03 的准入时间锁待 Owner 决定 |
+
+合约字节码未变，证书 v4 继续有效；工具改动以 v7 重新冻结并重跑。
+
 ## 尚未完成
 
 1. ~~证书复核方确认 v4~~ 已完成：2026-10-08 ACCEPT，无阻断条件（`dist/independent-review-certificate-v4-2026-10-08/`，MANIFEST 摘要 `d6c1619c…`）；非阻断发现记入 `dist/landing-2026-10-08/certificate-v4-ERRATA.md`。
@@ -280,7 +294,8 @@ Owner 于 2026-10-08 确认了实施方提出的一揽子方案，而不是架�
    架构冻结签核（`dist/architecture-decision-freeze-2026-10-08/`，SIGN_OFF_WITH_CONDITIONS，状态 FROZEN_FOR_AUDIT）的 FZ-2 按 Owner 决定选项 A：
    修正六处过时陈述（D-1 至 D-6，只改文档）后以 `FREEZE_MANIFEST-v2.sha256` 重新冻结并完整重跑；重跑结果只记录在 `dist/freeze-2026-10-08/v2/`，
    本文件在 v2 冻结之后不再改动。
-5. 架构冻结签核，然后外部审计，然后全新 Base Sepolia 无广播 preflight，最后作部署决策。
+5. ~~架构冻结签核~~ 已完成（2026-10-08，SIGN_OFF_WITH_CONDITIONS，FROZEN_FOR_AUDIT）；~~独立审计~~ 已完成（2026-10-10，见上节）。
+   接下来：审计方对 v7 工具改动做修复复核（fix review），重新交付（更正 F-07 的条目数），然后全新 Base Sepolia 无广播 preflight，最后作部署决策。
 6. 进入任何承载真实资金的网络之前，还需要：
    - 单独的主网证书；
    - M4 的证明；
@@ -289,4 +304,7 @@ Owner 于 2026-10-08 确认了实施方提出的一揽子方案，而不是架�
 7. 不阻断的改进：
    - 把 `_prepareLargeHistoricalProfit` 搜到的 seed 写入病例文件；
    - 统一测试侧的两份谓词参照；
-   - 下一版删除 `_allocationLeaf` 的死分支。
+   - 下一版删除 `_allocationLeaf` 的死分支；
+   - 下一版处理审计 F-03（准入时间锁，待 Owner 决定）、F-04（guardian NatSpec）、F-05（每玩家持仓上限），均需重新认证；
+   - 下一版升级 Foundry 到 1.8.x（钉版本、修 ops 夹具的 gas 上限、anvil 显式钉硬分叉），并让 forge 测试不依赖网络（先预装 solc）；
+   - 模块界驱动脚本加入逐轮单调性检查（复核 E4）。
