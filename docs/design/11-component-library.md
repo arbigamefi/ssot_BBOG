@@ -15,7 +15,7 @@ standalone platform goal.
 | ---------- | ------------------------------------------------------------- | ----------------------------------- |
 | Primitive  | Button, Input, Dialog, Tabs, Table, Badge                     | Generic, tokenized, accessible.     |
 | Pattern    | AppShell, WalletGate, AmountDisplay, TxStatusChip, EmptyState | Product-aware but reusable.         |
-| Feature UI | CasinoRoom, TicketPanel, PortfolioActivity                    | Lives in `apps/web/src/features/*`. |
+| Feature UI | CasinoRoom, PortfolioActivity                                 | Lives in `apps/web/src/features/*`. |
 
 Prefer feature-local components unless a UI element is reused across routes.
 

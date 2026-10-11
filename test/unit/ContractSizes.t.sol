@@ -11,14 +11,12 @@ contract ContractSizesTest is Test {
     uint256 internal constant SIZE_MARGIN = 1_024;
 
     function test_deployedContractsFitEip170() external view {
-        string[18] memory artifacts = [
+        string[16] memory artifacts = [
             "GameHub.sol:GameHub",
-            "SportsHub.sol:SportsHub",
             "Bank.sol:Bank",
             "SettlementRouter.sol:SettlementRouter",
             "PoolRegistry.sol:PoolRegistry",
             "VRFHub.sol:VRFHub",
-            "SportsRiskEngine.sol:SportsRiskEngine",
             "ReferralRegistry.sol:ReferralRegistry",
             "DefaultReferralEngine.sol:DefaultReferralEngine",
             "LiquidityVault.sol:LiquidityVault",

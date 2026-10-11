@@ -149,7 +149,6 @@ interface IGameHub {
 
     error RiskInPaused(uint64 poolId);
     error UnknownPool(uint64 poolId);
-    error WrongPoolDomain(uint64 poolId, SSOTTypes.PoolDomain domain);
     error UnknownGame(bytes32 gameId);
     error BetNotFound(uint256 positionId);
     error BadState(uint256 positionId, SSOTTypes.BetState got, SSOTTypes.BetState want);

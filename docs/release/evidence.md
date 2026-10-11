@@ -81,8 +81,8 @@ are archive member paths.
 | B0 design review r2                             | post-clean-slate `dist.tar.gz` | `dist/independent-review-b0-2026-10-11/r2/MANIFEST.sha256`            | `6c9ffcee957885c20881eae03b9427b51bafa8d6a83073079554f24caf691c6d` |
 | External pre-review package (B0)                | post-clean-slate `dist.tar.gz` | `dist/external-prereview-b0-2026-10-11.tar.gz`                        | `850d34d7bfe4a58df9c898986f44c9fef72b4053a63c526a21648e8ffc33218f` |
 
-Certificate v4 reproduces from these archives on any checkout with
-`python3 script/certificate/reproduce_first_callback_v4.py` (see the certificate's section 8).
+Certificate v4 reproduces from these archives with `python3 script/certificate/reproduce_first_callback_v4.py` on a
+checkout of commit `4a5762aa3`, the last one with the v4 contracts (see the certificate's section 8).
 
 ## Deleted GitHub releases and tags
 

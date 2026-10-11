@@ -19,7 +19,6 @@ export const release = {
   contracts: {
     gameHub: BANK,
     vrfHub: BANK,
-    sportsHub: BANK,
     refRegistry: BANK,
     settlementRouter: BANK
   },

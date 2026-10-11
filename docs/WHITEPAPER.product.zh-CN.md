@@ -1,6 +1,6 @@
 # ArbiGameFi 项目与商业白皮书
 
-> AGF-WP-BIZ-2026.10-r3 · 2026-10-04 · 中文，附英文概要 · 内部审阅稿，尚未对外发布
+> AGF-WP-BIZ-2026.10-r4 · 2026-10-11 · 中文，附英文概要 · 内部审阅稿，尚未对外发布
 >
 > **首要读者**：战略伙伴、渠道决策者、专业资金合作方；有融资情境时的项目投资者
 >
@@ -10,7 +10,7 @@
 
 ## 摘要
 
-ArbiGameFi 建设单品牌、钱包原生的 casino 与 sportsbook：玩家用自己的钱包参与，规则、费用、随机数、结算与支付都可以在链上核对。首期聚焦 Base 网络与 USDC，面向已经熟悉 EVM 钱包与稳定币、重视支出透明度的成年人。
+ArbiGameFi 建设单品牌、钱包原生的 casino：玩家用自己的钱包参与，规则、费用、随机数、结算与支付都可以在链上核对。首期聚焦 Base 网络与 USDC，面向已经熟悉 EVM 钱包与稳定币、重视支出透明度的成年人。
 
 - **差异**：投注资金由合约而非平台账户托管；结果使用可验证随机数；LP 固定获得每笔流水 house edge 的一半；LP 以存款 NFT 持有资本，固定 24 小时后按可用流动性提款；成功退出部分不再参与后续结果，正常提款不设置计划性停注。
 - **收入**：来自按实际流水计算的 house edge。另一半支付推荐、玩家返水与协议费用。
@@ -53,7 +53,6 @@ ArbiGameFi 建设单品牌、钱包原生的 casino 与 sportsbook：玩家用�
 ## 4. 产品组合
 
 - **Casino**：Dice、Coin Toss、Roulette、Keno、Plinko、Sic Bo、Slots 与 Baccarat 八种玩法，支持多局连投与止盈止损。每笔投注都有报价、钱包确认、等待状态和收据。直接转账失败的款项记为玩家应付款，keeper 公开重试领取；发行方限制等情况仍可使付款失败。收据分别说明结果与实际到账方式。目标是随机数回调同笔尝试结算，失败保留原随机数补结算，不把重抽结果作为恢复方法。
-- **Sportsbook（规划中）**：从赛前足球胜／平／负固定赔率单关起步。共享品牌与钱包体验，但使用独立的资本、数据、结果与争议规则。体育要证明自身完整的终结路径与经营条件后才发布，casino 的测试不能替代它。
 - **LP 资金池**：LP 为指定资产的资金池提供赔付资本，持有每次入金对应的 NFT，按树分配规则参与盈亏。
 - **推荐与推广**：两级推荐与玩家返水，全部由运营方预算支付，不占用 LP 的固定分配比例。
 
@@ -183,14 +182,14 @@ LP 存款 NFT 不是公司股权，不附带代币权利，也不是固定收益
 | ---------- | ---------------------------------------------------- |
 | 渠道与内容 | 受众是否合适、体验、归因方式、报酬来源与实际贡献     |
 | 专业 LP    | 池资产、资本风险、完整负债、退出条件、治理与审计证据 |
-| 体育与服务 | 数据与报价责任、规则、成本、异常处理与可核对的交付   |
+| 服务       | 责任划分、成本、异常处理与可核对的交付               |
 | 审计与合规 | 范围、时间表、责任人与交付物                         |
 
 合作方应核实实际主体、负责人、服务资格与能力。有意进一步沟通的伙伴，可从[项目简介](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)开始，技术尽调请阅读[技术白皮书](WHITEPAPER.zh-CN.md)。
 
 ## English overview
 
-ArbiGameFi is an unlaunched casino and sportsbook project focused initially on Base and USDC.
+ArbiGameFi is an unlaunched casino project focused initially on Base and USDC.
 **NFT liquidity and callback settlement are implemented and locally verified in the core contracts and application interfaces; release qualification remains pending.**
 A dedicated LiquidityVault issues a new deposit NFT for each contribution, with a fixed 24-hour lock.
 Mature owner-only withdrawals pay that owner; partial success relocks the remainder, full withdrawal

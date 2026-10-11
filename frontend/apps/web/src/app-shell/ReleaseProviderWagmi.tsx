@@ -6,13 +6,7 @@ import { useAccount } from "wagmi";
 import { ReleaseProvider } from "../ssot/release/ReleaseProvider";
 import { useActiveChain } from "./ActiveChainProvider";
 
-export function ReleaseProviderWagmi({
-  children,
-  sportsbookEnabledFlag
-}: {
-  children: React.ReactNode;
-  sportsbookEnabledFlag?: string;
-}) {
+export function ReleaseProviderWagmi({ children }: { children: React.ReactNode }) {
   const { selectedChainId, selectedChain } = useActiveChain();
   const { isConnected, chainId: walletChainId } = useAccount();
   return (
@@ -20,7 +14,6 @@ export function ReleaseProviderWagmi({
       chainId={selectedChainId}
       selectedChainName={selectedChain?.name}
       walletChainId={isConnected ? walletChainId : undefined}
-      sportsbookEnabledFlag={sportsbookEnabledFlag}
     >
       {children}
     </ReleaseProvider>

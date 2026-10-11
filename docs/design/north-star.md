@@ -11,7 +11,7 @@ monolithic design constitution.
 
 ## North Star
 
-ArbiGameFi frontend exists to make a protocol-grade casino/sportsbook usable by
+ArbiGameFi frontend exists to make a protocol-grade casino usable by
 real players, LPs, referrers, and operators of this deployment.
 
 The product should feel:
@@ -29,9 +29,7 @@ The product should feel:
    a fallback.
 3. Result receipts show chain-derived facts: bet id, request id, payout, random
    hash, and settlement transaction.
-4. Sportsbook uses fixed odds, signed snapshots, result evidence, and explicit
-   challenge/void semantics.
-5. LP and portfolio pages explain bankroll, reserves, liabilities, and history
+4. LP and portfolio pages explain bankroll, reserves, liabilities, and history
    without leaking unnecessary contract internals into the primary betting flow.
 
 ## Visual Rules

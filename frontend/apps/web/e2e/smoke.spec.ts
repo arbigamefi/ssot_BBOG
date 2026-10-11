@@ -54,13 +54,7 @@ test.describe("current route smoke", () => {
     await gotoReady(page, "/casino");
     const header = page.locator("header").first();
 
-    for (const href of [
-      "/casino",
-      "/sportsbook",
-      "/portfolio/activity",
-      "/earn",
-      "/portfolio/claims"
-    ]) {
+    for (const href of ["/casino", "/portfolio/activity", "/earn", "/portfolio/claims"]) {
       await expect(header.locator(`a[href="${href}"]`).first()).toBeVisible();
     }
   });

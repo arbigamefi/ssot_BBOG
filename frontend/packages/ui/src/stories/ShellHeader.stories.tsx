@@ -26,7 +26,6 @@ export const Solid: Story = {
       <ShellHeaderBrand />
       <ShellHeaderNav>
         <a href="#">Casino</a>
-        <a href="#">Sportsbook</a>
         <a href="#">Earn</a>
         <a href="#">Portfolio</a>
       </ShellHeaderNav>

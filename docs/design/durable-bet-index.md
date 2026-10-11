@@ -5,12 +5,12 @@ Remaining release gates are in the [release notes](../release/README.md). Contra
 authority for executable capital.
 
 `@ssot/bet-index` maintains a replayable PostgreSQL read model for the keeper and web application.
-Contracts remain the settlement authority. The index stores chain events, casino bets, sports tickets,
+Contracts remain the settlement authority. The index stores chain events, casino bets,
 per-NFT Vault cash and ownership events, and scan/recovery checkpoints.
 
 ## Identity and replay
 
-Casino identity is `(chainId, GameHub, betId)`. Sports ticket identity includes SportsHub, and LP cash
+Casino identity is `(chainId, GameHub, betId)`. LP cash
 flows include the issuing Vault and deposit ID. Bank/Vault binding is part of release identity. Identical numeric IDs or assets must never combine different authorities' facts.
 Queries for the current application are scoped to the selected manifest's Hub and Vault.
 
@@ -36,7 +36,7 @@ derivatives together; a successful cursor write cannot get ahead of durable even
 
 ## Runtime
 
-The keeper initializes schema, replays the selected release, and recovers unfinished casino/sports
+The keeper initializes schema, replays the selected release, and recovers unfinished casino
 positions. PendingVRF refunds use the fixed per-bet deadline and authoritative absence of a stored
 random seed; a local GameHub state alone must not turn an already known result into a refund. Recovery must cover
 full history, not a recent-ID tail. Writes serialize by signer; shutdown waits for in-flight work.

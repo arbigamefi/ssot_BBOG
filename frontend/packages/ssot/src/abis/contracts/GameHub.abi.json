@@ -1816,22 +1816,6 @@
       "type": "error"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint64",
-          "name": "poolId",
-          "type": "uint64"
-        },
-        {
-          "internalType": "enum SSOTTypes.PoolDomain",
-          "name": "domain",
-          "type": "uint8"
-        }
-      ],
-      "name": "WrongPoolDomain",
-      "type": "error"
-    },
-    {
       "inputs": [],
       "name": "ZeroAddress",
       "type": "error"

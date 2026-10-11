@@ -9,8 +9,8 @@
  * very Terms they must accept — a catch-22 — and (b) hurt SEO/conversion on
  * the public landing pages.
  */
-const WAGER_EXACT = ["/casino", "/sportsbook"];
-const WAGER_PREFIXES = ["/casino/", "/sportsbook/"];
+const WAGER_EXACT = ["/casino"];
+const WAGER_PREFIXES = ["/casino/"];
 
 export function isWagerRoute(pathname: string): boolean {
   return (

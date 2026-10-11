@@ -22,13 +22,11 @@ import {
   readSettledBetRefund,
   type BetIndexEvent,
   type BetRow,
-  type BetIndexStore,
-  type SportsHubEventName,
-  type SportsTicketIndexEvent
+  type BetIndexStore
 } from "@ssot/bet-index";
 
 import { decodeHouseEdgeLog } from "@ssot/bet-index/house-edge";
-import { GAME_HUB_KEEPER_ABI, SPORTS_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
+import { GAME_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
 import { fetchVaultProviderLedgerRows } from "./vault-provider-ledger.js";
 import { describeError } from "./errors.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
@@ -42,9 +40,7 @@ import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
 import { isScanTruncated, splitBlockRange, type BlockRange } from "./scan.js";
 import { mapBetState, mapRequestState } from "./state.js";
-import { mapSportsMarketState, mapSportsTicketState } from "./sports-terminalizer.js";
 import type { BetRead, KeeperConfig, KeeperEvent, KeeperLogger } from "./types.js";
-import { createSportsRecovery } from "./sports-recovery.js";
 import { BANK_KEEPER_ABI } from "./abi.js";
 import { readPoolHealth } from "./pools.js";
 import { createPayableClaimer } from "./payables.js";
@@ -55,23 +51,6 @@ import type { PayableHealth } from "./health.js";
 export const CASINO_TRANSACTION_GAS = 3_050_000n;
 
 type GameHubEventName = BetIndexEvent["eventName"];
-type SportsTerminalizerEventName =
-  | "MarketVoided"
-  | "ResultChallengeResolved"
-  | "ResultFinalized"
-  | "ResultProposed";
-const SPORTS_TICKET_EVENTS: SportsHubEventName[] = [
-  "TicketPlaced",
-  "TicketSettled",
-  "TicketRefunded",
-  "TicketVoided"
-];
-const SPORTS_TERMINALIZER_EVENTS: SportsTerminalizerEventName[] = [
-  "ResultProposed",
-  "ResultFinalized",
-  "MarketVoided",
-  "ResultChallengeResolved"
-];
 const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
 const VAULT_PROVIDER_LEDGER_CURSOR_SOURCE = "vault-provider-ledger-finalized";
 const CASINO_RECOVERY_PAGE_SIZE = 50;
@@ -220,17 +199,6 @@ export function createKeeperRuntime({
   config: KeeperConfig;
   logger: KeeperLogger;
 }): KeeperRuntime {
-  if (
-    (config.sportsTerminalizerEnabled || config.sportsTicketIndexEnabled) &&
-    (!config.betIndexWriteEnabled ||
-      !config.betIndexDatabaseUrl ||
-      !config.sportsHub ||
-      config.sportsHub.toLowerCase() === "0x0000000000000000000000000000000000000000")
-  ) {
-    throw new Error(
-      "Sports recovery requires BET_INDEX_WRITE_ENABLED=true, BET_INDEX_DATABASE_URL and a sportsHub release address; no transactions were started"
-    );
-  }
   const chain = createKeeperChain(config);
   const account = privateKeyToAccount(config.privateKey);
   const rpcUsage = createRpcUsageMeter();
@@ -492,111 +460,6 @@ export function createKeeperRuntime({
     });
   };
 
-  const waitSportsReceipt = async (txHash: Hex) => {
-    const receipt = await publicClient.waitForTransactionReceipt({
-      checkReplacement: false,
-      hash: txHash,
-      pollingInterval: 1_000
-    });
-    return { status: receipt.status };
-  };
-
-  const readSportsMarket = async (marketId: bigint) => {
-    if (!config.sportsHub) throw new Error("sportsHub is not configured");
-    const market = (await publicClient.readContract({
-      address: config.sportsHub,
-      abi: SPORTS_HUB_KEEPER_ABI,
-      functionName: "getMarket",
-      args: [marketId]
-    })) as unknown as { marketId: bigint; state: number };
-    return {
-      marketId: BigInt(market.marketId),
-      state: mapSportsMarketState(Number(market.state))
-    };
-  };
-
-  const readSportsResult = async (marketId: bigint) => {
-    if (!config.sportsHub) throw new Error("sportsHub is not configured");
-    const result = (await publicClient.readContract({
-      address: config.sportsHub,
-      abi: SPORTS_HUB_KEEPER_ABI,
-      functionName: "getResult",
-      args: [marketId]
-    })) as unknown as { challenged: boolean; finalizesAt: number | bigint; marketId: bigint };
-    return {
-      challenged: Boolean(result.challenged),
-      finalizesAt: Number(result.finalizesAt),
-      marketId: BigInt(result.marketId)
-    };
-  };
-
-  const readSportsTicket = async (ticketId: bigint) => {
-    if (!config.sportsHub) throw new Error("sportsHub is not configured");
-    const ticket = (await publicClient.readContract({
-      address: config.sportsHub,
-      abi: SPORTS_HUB_KEEPER_ABI,
-      functionName: "getTicket",
-      args: [ticketId]
-    })) as unknown as { marketId: bigint | number; state: number; ticketId: bigint };
-    return {
-      marketId: BigInt(ticket.marketId),
-      state: mapSportsTicketState(Number(ticket.state)),
-      ticketId: BigInt(ticket.ticketId)
-    };
-  };
-
-  const simulateSportsWrite = async (
-    functionName: "finalizeResult" | "refundTicket" | "settleTicket",
-    id: bigint
-  ) => {
-    if (!config.sportsHub) throw new Error("sportsHub is not configured");
-    await publicClient.simulateContract({
-      account: account.address,
-      address: config.sportsHub,
-      abi: SPORTS_HUB_KEEPER_ABI,
-      functionName,
-      args: [id]
-    });
-  };
-
-  const writeSportsContract = async (
-    functionName: "finalizeResult" | "refundTicket" | "settleTicket",
-    id: bigint
-  ) => {
-    if (!config.sportsHub) throw new Error("sportsHub is not configured");
-    return walletClient.writeContract({
-      account,
-      address: config.sportsHub,
-      abi: SPORTS_HUB_KEEPER_ABI,
-      functionName,
-      args: [id],
-      chain
-    });
-  };
-
-  const sportsRecovery =
-    betIndexStore && (config.sportsTerminalizerEnabled || config.sportsTicketIndexEnabled)
-      ? createSportsRecovery({
-          config,
-          store: betIndexStore,
-          publicClient,
-          logger,
-          deps: {
-            logger,
-            readMarket: readSportsMarket,
-            readResult: readSportsResult,
-            readTicket: readSportsTicket,
-            simulateFinalizeResult: (id) => simulateSportsWrite("finalizeResult", id),
-            simulateRefundTicket: (id) => simulateSportsWrite("refundTicket", id),
-            simulateSettleTicket: (id) => simulateSportsWrite("settleTicket", id),
-            waitReceipt: waitSportsReceipt,
-            writeFinalizeResult: (id) => writeSportsContract("finalizeResult", id),
-            writeRefundTicket: (id) => writeSportsContract("refundTicket", id),
-            writeSettleTicket: (id) => writeSportsContract("settleTicket", id)
-          }
-        })
-      : undefined;
-
   const processItem = async (item: QueueItem) => {
     if (stopped) {
       queue.complete(item.betId);
@@ -714,54 +577,6 @@ export function createKeeperRuntime({
     }
   };
 
-  const writeSportsTicketIndexLogs = async (
-    eventName: SportsHubEventName,
-    logs: Array<{
-      args?: Record<string, unknown>;
-      blockNumber?: bigint;
-      logIndex?: number;
-      transactionHash?: Hex;
-    }>
-  ) => {
-    if (!betIndexStore || !config.sportsHub || logs.length === 0) return;
-    const events = logs
-      .map((log) => toSportsTicketIndexEvent(config.chainId, config.sportsHub!, eventName, log))
-      .filter((event): event is SportsTicketIndexEvent => Boolean(event));
-    if (events.length === 0) return;
-    try {
-      await betIndexStore.writeSportsHubEvents(events);
-    } catch (error) {
-      logger.error("casino.keeper.sports_ticket_index_write_failed", {
-        eventName,
-        error: describeError(error)
-      });
-    }
-  };
-
-  const scheduleSportsTerminalizerLogs = (
-    _eventName: SportsTerminalizerEventName,
-    logs: Array<{
-      args?: { finalizesAt?: bigint | number; marketId?: bigint | number };
-      blockNumber?: bigint | null;
-    }>
-  ) => {
-    if (!sportsRecovery || !config.sportsTerminalizerEnabled) return;
-    void (async () => {
-      for (const log of logs) {
-        if (log.args?.marketId == null || log.blockNumber == null) continue;
-        await sportsRecovery.enqueue(
-          BigInt(log.args.marketId),
-          log.blockNumber,
-          log.args.finalizesAt == null ? undefined : Number(log.args.finalizesAt)
-        );
-      }
-      await sportsRecovery.scan();
-      await sportsRecovery.runDue();
-    })().catch((error) => {
-      logger.error("sports.terminalizer.enqueue_failed", { error: describeError(error) });
-    });
-  };
-
   const initializeBetIndex = async () => {
     if (!betIndexStore) return;
     try {
@@ -810,7 +625,6 @@ export function createKeeperRuntime({
       logger.error("casino.keeper.bet_index_schema_initialize_failed", {
         error: describeError(error)
       });
-      if (sportsRecovery) throw error;
     }
   };
 
@@ -1212,38 +1026,6 @@ export function createKeeperRuntime({
             })
           );
         }
-        if (config.sportsTicketIndexEnabled && config.sportsHub) {
-          for (const eventName of SPORTS_TICKET_EVENTS) {
-            unwatchers.push(
-              wsClient.watchContractEvent({
-                poll: false,
-                address: config.sportsHub,
-                abi: SPORTS_HUB_KEEPER_ABI,
-                eventName,
-                onLogs: (logs) =>
-                  void trackOperation(
-                    writeSportsTicketIndexLogs(eventName, logs as unknown as GameHubLog[])
-                  ),
-                onError: (error) =>
-                  logWatchError("casino.keeper.sports_ticket_index_watch_error", error, eventName)
-              })
-            );
-          }
-        }
-      }
-      if (config.sportsTerminalizerEnabled && config.sportsHub) {
-        for (const eventName of SPORTS_TERMINALIZER_EVENTS) {
-          unwatchers.push(
-            wsClient.watchContractEvent({
-              poll: false,
-              address: config.sportsHub,
-              abi: SPORTS_HUB_KEEPER_ABI,
-              eventName,
-              onLogs: (logs) => scheduleSportsTerminalizerLogs(eventName, logs),
-              onError: (error) => logWatchError("sports.terminalizer.watch_error", error, eventName)
-            })
-          );
-        }
       }
       for (const eventName of ["ResultReceived", "CallbackAttempt"] as const) {
         unwatchers.push(
@@ -1281,7 +1063,6 @@ export function createKeeperRuntime({
       chainId: config.chainId,
       role: config.role,
       gameHub: config.gameHub,
-      sportsHub: config.sportsHub,
       vrfHub: config.vrfHub,
       keeper: account.address,
       scanIndexEventsEnabled: config.scanIndexEventsEnabled,
@@ -1291,21 +1072,10 @@ export function createKeeperRuntime({
       startupScanEnabled: config.startupScanEnabled,
       wsEnabled: Boolean(wsClient),
       vaultProviderLedgerPoolCount: config.vaultProviderLedgerPools.length,
-      vaultProviderLedgerScanIntervalMs: config.vaultProviderLedgerScanIntervalMs,
-      sportsTicketIndexEnabled: config.sportsTicketIndexEnabled,
-      sportsTerminalizerScanChunkBlocks: config.sportsTerminalizerScanChunkBlocks.toString(),
-      sportsTerminalizerMarketIds: config.sportsTerminalizerMarketIds.map((id) => id.toString()),
-      sportsTicketScanChunkBlocks: config.sportsTicketScanChunkBlocks.toString(),
-
-      sportsTicketScanStartBlock: config.sportsTicketScanStartBlock.toString(),
-      sportsTicketScanMaxBlocks: config.sportsTicketScanMaxBlocks.toString()
+      vaultProviderLedgerScanIntervalMs: config.vaultProviderLedgerScanIntervalMs
     });
-    if (config.sportsTerminalizerEnabled && !config.sportsHub) {
-      logger.warn("sports.terminalizer.disabled_missing_sports_hub");
-    }
     writeHealth(health.recordStarted(lastScannedBlock, queue.size));
     await initializeBetIndex();
-    await sportsRecovery?.prepare();
 
     // Connecting cannot access the store or submit writes. Do not join a stalled
     // handshake on shutdown; the stopped check closes any socket that arrives later.
@@ -1362,7 +1132,6 @@ export function createKeeperRuntime({
         wsEnabled: Boolean(wsClient)
       });
     }
-    await sportsRecovery?.start();
     writeHealth(health.recordRunning(lastScannedBlock, queue.size));
   };
 
@@ -1371,7 +1140,6 @@ export function createKeeperRuntime({
     timers.forEach(clearInterval);
     if (wsRetryTimer != null) clearTimeout(wsRetryTimer);
     stopWebSocketWatchers();
-    await sportsRecovery?.stop();
     // In-flight work can enqueue a final health write while it finishes, so join until empty.
     while (activeOperations.size > 0) await Promise.allSettled([...activeOperations]);
     await writeTail;
@@ -1517,29 +1285,6 @@ async function attachBlockTimestamps<
 function normalizeBlockTimestamp(value: bigint | number | undefined) {
   if (typeof value === "bigint") return Number(value) * 1000;
   return typeof value === "number" ? value : undefined;
-}
-
-function toSportsTicketIndexEvent(
-  chainId: number,
-  sportsHub: Address,
-  eventName: SportsHubEventName,
-  log: {
-    args?: Record<string, unknown>;
-    blockNumber?: bigint;
-    logIndex?: number;
-    transactionHash?: Hex;
-  }
-): SportsTicketIndexEvent | null {
-  if (log.blockNumber == null || log.transactionHash == null || log.logIndex == null) return null;
-  return {
-    args: log.args ?? {},
-    blockNumber: log.blockNumber,
-    chainId,
-    eventName,
-    logIndex: log.logIndex,
-    sportsHub,
-    txHash: log.transactionHash
-  };
 }
 
 type TerminalBetRead = {

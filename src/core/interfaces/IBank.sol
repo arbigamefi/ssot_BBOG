@@ -9,7 +9,7 @@ interface IBank is ILiquidityVaultBank {
     function asset() external view returns (address);
     function assetDecimals() external view returns (uint8);
     function vault() external view returns (address);
-    /// @notice Minimum asset amount per casino round or per sports ticket.
+    /// @notice Minimum asset amount per casino round.
     function minBetAmount() external view returns (uint256);
     function pendingStakeTotal() external view returns (uint256);
     function riskAssets() external view returns (uint256);

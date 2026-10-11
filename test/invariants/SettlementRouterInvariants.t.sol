@@ -16,13 +16,13 @@ import {MockERC20} from "../../src/mocks/MockERC20.sol";
 contract SettlementRouterHandler is BankTestBase {
     MockERC20 public asset;
     Bank public casinoBank;
-    Bank public sportsBank;
+    Bank public secondBank;
     PoolRegistry public poolRegistry;
     SettlementRouter public router;
 
     address public gov;
     address public casinoHub;
-    address public sportsHub;
+    address public secondHub;
     address public attackerHub;
 
     address[] public players;
@@ -30,7 +30,7 @@ contract SettlementRouterHandler is BankTestBase {
     uint256[] public heldPositionIds;
 
     uint256 public openReservedCasino;
-    uint256 public openReservedSports;
+    uint256 public openReservedSecond;
     uint256 public openedCount;
 
     uint256 public vUnauthorizedSettlement;
@@ -63,30 +63,30 @@ contract SettlementRouterHandler is BankTestBase {
     constructor(
         MockERC20 asset_,
         Bank casinoBank_,
-        Bank sportsBank_,
+        Bank secondBank_,
         PoolRegistry poolRegistry_,
         SettlementRouter router_,
         address gov_,
         address casinoHub_,
-        address sportsHub_,
+        address secondHub_,
         address attackerHub_
     ) {
         asset = asset_;
         casinoBank = casinoBank_;
-        sportsBank = sportsBank_;
+        secondBank = secondBank_;
         poolRegistry = poolRegistry_;
         router = router_;
         gov = gov_;
         casinoHub = casinoHub_;
-        sportsHub = sportsHub_;
+        secondHub = secondHub_;
         attackerHub = attackerHub_;
 
         asset.mint(casinoHub, 100_000_000e6);
-        asset.mint(sportsHub, 100_000_000e6);
+        asset.mint(secondHub, 100_000_000e6);
         vm.prank(casinoHub);
         asset.approve(address(casinoBank), type(uint256).max);
-        vm.prank(sportsHub);
-        asset.approve(address(sportsBank), type(uint256).max);
+        vm.prank(secondHub);
+        asset.approve(address(secondBank), type(uint256).max);
 
         for (uint256 i = 0; i < 8; ++i) {
             address player = address(uint160(uint256(keccak256(abi.encode("router-player", i + 1)))));
@@ -94,7 +94,7 @@ contract SettlementRouterHandler is BankTestBase {
             asset.mint(player, 250_000e6);
             vm.startPrank(player);
             asset.approve(address(casinoBank), type(uint256).max);
-            asset.approve(address(sportsBank), type(uint256).max);
+            asset.approve(address(secondBank), type(uint256).max);
             vm.stopPrank();
         }
     }
@@ -115,7 +115,7 @@ contract SettlementRouterHandler is BankTestBase {
         uint256 stake = bound(stakeRaw, 1e6, 5_000e6);
         uint256 reserved = bound(reserveRaw, stake, stake * 10);
         bytes32 snapshotHash = keccak256(abi.encode(poolId, ownerHub, player, stake, reserved, openedCount));
-        // Casino hubs price with an edge up to the cap; sports hubs carry none.
+        // GameHub prices with an edge up to the cap; the second hub opens zero-edge positions.
         uint16 edgeBps = ownerHub == casinoHub ? uint16(bound(edgeRaw, 0, HouseEdgeLib.MAX_HOUSE_EDGE_BPS)) : 0;
 
         vm.prank(ownerHub);
@@ -138,7 +138,7 @@ contract SettlementRouterHandler is BankTestBase {
             });
 
             if (bank == casinoBank) openReservedCasino += reserved;
-            else openReservedSports += reserved;
+            else openReservedSecond += reserved;
         } catch {}
     }
 
@@ -231,7 +231,7 @@ contract SettlementRouterHandler is BankTestBase {
         if (positionId == 0) return;
 
         Mirror storage m = mirrors[positionId];
-        address wrongHub = m.ownerHub == casinoHub ? sportsHub : casinoHub;
+        address wrongHub = m.ownerHub == casinoHub ? secondHub : casinoHub;
         uint256 refundAmount = bound(refundRaw, 0, m.stake);
         SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](0);
 
@@ -260,7 +260,7 @@ contract SettlementRouterHandler is BankTestBase {
 
     function action_registeredHubCannotOpenWrongPool(uint256 seed, uint256 stakeRaw, uint256 reserveRaw) external {
         (uint64 poolId, address ownerHub,) = _pickPool(seed);
-        address wrongHub = ownerHub == casinoHub ? sportsHub : casinoHub;
+        address wrongHub = ownerHub == casinoHub ? secondHub : casinoHub;
         address player = players[seed % players.length];
         uint256 stake = bound(stakeRaw, 1e6, 5_000e6);
         uint256 reserved = bound(reserveRaw, stake, stake * 10);
@@ -329,7 +329,7 @@ contract SettlementRouterHandler is BankTestBase {
 
     function _assertBankHold(uint256 positionId, Mirror storage m) internal view {
         Bank rightBank = Bank(m.bank);
-        Bank wrongBank = rightBank == casinoBank ? sportsBank : casinoBank;
+        Bank wrongBank = rightBank == casinoBank ? secondBank : casinoBank;
 
         (address player, uint256 stake, uint256 reserved,, bool open) = rightBank.holds(positionId);
         assertEq(player, m.player, "right bank player mismatch");
@@ -347,7 +347,7 @@ contract SettlementRouterHandler is BankTestBase {
         if (m.state != SSOTTypes.PositionState.Held) return;
 
         if (m.bank == address(casinoBank)) openReservedCasino -= m.reserved;
-        else openReservedSports -= m.reserved;
+        else openReservedSecond -= m.reserved;
 
         m.state = terminalState;
         _removeHeldPosition(positionId);
@@ -373,7 +373,7 @@ contract SettlementRouterHandler is BankTestBase {
         if (seed % 2 == 0) {
             return (1, casinoHub, casinoBank);
         }
-        return (2, sportsHub, sportsBank);
+        return (2, secondHub, secondBank);
     }
 
     function _pickHeldPosition(uint256 seed) internal view returns (uint256 positionId) {
@@ -386,44 +386,44 @@ contract SettlementRouterHandler is BankTestBase {
 contract SettlementRouterInvariants is StdInvariant, BankTestBase {
     MockERC20 internal usdc;
     Bank internal casinoBank;
-    Bank internal sportsBank;
+    Bank internal secondBank;
     PoolRegistry internal poolRegistry;
     SettlementRouter internal router;
     SettlementRouterHandler internal handler;
 
     address internal gov = address(0xA11CE);
     address internal casinoHub = address(0xCA51);
-    address internal sportsHub = address(0x5B07);
+    address internal secondHub = address(0x5B07);
     address internal attackerHub = address(0xBAD);
 
     function setUp() external {
         usdc = new MockERC20("USD Coin", "USDC", 6);
         casinoBank = new Bank(address(usdc), gov, 0, 6, 1);
-        sportsBank = new Bank(address(usdc), gov, 0, 6, 1);
+        secondBank = new Bank(address(usdc), gov, 0, 6, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
 
         vm.startPrank(gov);
         poolRegistry.registerPool(1, address(usdc), address(casinoBank), SSOTTypes.PoolDomain.Casino);
-        poolRegistry.registerPool(2, address(usdc), address(sportsBank), SSOTTypes.PoolDomain.Sports);
+        poolRegistry.registerPool(2, address(usdc), address(secondBank), SSOTTypes.PoolDomain.Casino);
         poolRegistry.setHubRegistered(casinoHub, true);
-        poolRegistry.setHubRegistered(sportsHub, true);
+        poolRegistry.setHubRegistered(secondHub, true);
         poolRegistry.setHubAllowedForPool(1, casinoHub, true);
-        poolRegistry.setHubAllowedForPool(2, sportsHub, true);
+        poolRegistry.setHubAllowedForPool(2, secondHub, true);
         casinoBank.setSettlementRouterOnce(address(router));
         _bindTestConsumer(casinoBank);
-        sportsBank.setSettlementRouterOnce(address(router));
-        _bindTestConsumer(sportsBank);
+        secondBank.setSettlementRouterOnce(address(router));
+        _bindTestConsumer(secondBank);
 
         usdc.mint(gov, 20_000_000e6);
         usdc.approve(address(casinoBank.vault()), type(uint256).max);
-        usdc.approve(address(sportsBank.vault()), type(uint256).max);
+        usdc.approve(address(secondBank.vault()), type(uint256).max);
         LiquidityVault(casinoBank.vault()).addDepositFor(gov, 5_000_000e6);
-        LiquidityVault(sportsBank.vault()).addDepositFor(gov, 5_000_000e6);
+        LiquidityVault(secondBank.vault()).addDepositFor(gov, 5_000_000e6);
         vm.stopPrank();
 
         handler = new SettlementRouterHandler(
-            usdc, casinoBank, sportsBank, poolRegistry, router, gov, casinoHub, sportsHub, attackerHub
+            usdc, casinoBank, secondBank, poolRegistry, router, gov, casinoHub, secondHub, attackerHub
         );
         targetContract(address(handler));
 
@@ -442,7 +442,7 @@ contract SettlementRouterInvariants is StdInvariant, BankTestBase {
 
     function invariant_router_reserved_matches_bank_reserved_by_pool() external view {
         assertEq(casinoBank.totalReserved(), handler.openReservedCasino(), "casino reserved mismatch");
-        assertEq(sportsBank.totalReserved(), handler.openReservedSports(), "sports reserved mismatch");
+        assertEq(secondBank.totalReserved(), handler.openReservedSecond(), "second pool reserved mismatch");
     }
 
     function invariant_router_positions_are_pool_isolated_and_stable() external view {
@@ -470,7 +470,7 @@ contract SettlementRouterInvariants is StdInvariant, BankTestBase {
     }
 
     /// @dev Deterministic non-vacuity check for the two cap invariants. A per-run minimum would flake: fuzzed runs
-    ///      often hold only zero-edge sports positions, or pools the fuzzer switched off. So this drives the
+    ///      often hold only zero-edge positions of the second hub, or pools the fuzzer switched off. So this drives the
     ///      handler's own settle path once at exactly the cap, with every bucket in use, and once a unit above it.
     function test_handlerSettlesAtTheCapAndIsRefusedAbove() external {
         // Even seeds pick the casino pool. 1,000 USDC at the 5% maximum edge: E = 50 USDC, cap = 25 USDC.

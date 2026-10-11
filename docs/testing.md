@@ -83,7 +83,6 @@ make test
     economic expectations. Detailed replacement mapping is in the implementation plan.
 - **Invariant suite:** `test/invariants/*`
   - `SettlementRouterInvariants.t.sol`: router authority, owner-hub terminality, and pool reserve isolation
-  - `SportsHubInvariants.t.sol`: sports exposure, router position matching, and debt-out liveness
 - **Fork tests (optional):** `test/fork/*`
   - Auto-skip when `FORK_RPC_URL` is not set
   - `NftDirectWrapperFork.t.sol` exercises the direct consumer, real wrapper/USDC and same-seed retry.

@@ -15,7 +15,7 @@ the fullstack strategy wins.
 
 ## 1. Mission
 
-> Build a non-custodial on-chain casino + sportsbook frontend that feels closer
+> Build a non-custodial on-chain casino frontend that feels closer
 > to a **prime brokerage terminal** than a casino lobby. Every screen should
 > communicate provability, isolation of risk, and operational maturity.
 
@@ -75,14 +75,14 @@ If a feature pulls the UI toward any of these non-goals, it is rejected.
 
 ## 5. Decision Rights
 
-| Concern                                                          | Owner                        | Reviewer                     |
-| ---------------------------------------------------------------- | ---------------------------- | ---------------------------- |
-| Charter (this doc)                                               | Frontend Lead + Product Lead | All hands                    |
-| Layer 1 (brand / voice / IA / blueprints)                        | Design Lead                  | Frontend Lead + Product Lead |
-| Layer 2 (tokens / components / UX patterns)                      | Frontend Lead + Design Lead  | Eng team                     |
-| Layer 3 (a11y / perf / security / testing / obs)                 | Frontend Lead                | SRE + Security               |
-| Layer 4 (build / governance / AI)                                | Frontend Lead                | Eng manager                  |
-| Per-feature scope (casino / sportsbook / portfolio / earn / ops) | Feature Lead                 | Frontend Lead                |
+| Concern                                             | Owner                        | Reviewer                     |
+| --------------------------------------------------- | ---------------------------- | ---------------------------- |
+| Charter (this doc)                                  | Frontend Lead + Product Lead | All hands                    |
+| Layer 1 (brand / voice / IA / blueprints)           | Design Lead                  | Frontend Lead + Product Lead |
+| Layer 2 (tokens / components / UX patterns)         | Frontend Lead + Design Lead  | Eng team                     |
+| Layer 3 (a11y / perf / security / testing / obs)    | Frontend Lead                | SRE + Security               |
+| Layer 4 (build / governance / AI)                   | Frontend Lead                | Eng manager                  |
+| Per-feature scope (casino / portfolio / earn / ops) | Feature Lead                 | Frontend Lead                |
 
 Substantive changes to this charter should be reviewed by the listed owner.
 Small wording fixes can land with the relevant implementation PR.
@@ -126,7 +126,7 @@ CI rules enforcing these live in `../frontend/24-testing.md` and
 | **Page**            | A file under `apps/web/src/app/.../page.tsx` that composes one route                                               |
 | **Surface**         | The visible background layer of a UI region (page background, panel, hover fill) — always a token, never a literal |
 | **SSOT**            | Single Source of Truth — for protocol data (chain), or for design / engineering rules (these docs)                 |
-| **Vertical**        | A protocol product area: `casino`, `sportsbook`, `earn`, `portfolio`, `ops`                                        |
+| **Vertical**        | A protocol product area: `casino`, `earn`, `portfolio`, `ops`                                                      |
 | **Provider Island** | A Client Component subtree wrapping wagmi/RainbowKit, mounted only inside the product route group                  |
 
 ## 9. Out Of Scope (for this Charter)

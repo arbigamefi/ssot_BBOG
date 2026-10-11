@@ -4,7 +4,7 @@ Keep one record per incident with the following facts. Never include private key
 credential-bearing URLs or database credentials.
 
 - **Identity:** incident time in UTC, chain ID, verified release digest, source revision, affected
-  Hub/Bank/Vault addresses and bet, ticket, NFT deposit or VRF request IDs.
+  Hub/Bank/Vault addresses and bet, NFT deposit or VRF request IDs.
 - **Impact:** actions currently unavailable, open positions, unresolved player liabilities and constrained LP capital and
   affected users. Distinguish recorded settlement from a completed asset transfer.
 - **Evidence:** block numbers, transaction hashes, decoded errors, relevant contract reads, health

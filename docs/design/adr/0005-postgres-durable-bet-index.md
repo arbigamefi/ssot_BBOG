@@ -83,7 +83,7 @@ not become a dependency of casino settlement.
 
 ## 8. Acceptance Criteria
 
-- Fresh initialization creates the current event, bet, per-NFT Vault cash-ledger/ownership, bet/Sports-recovery and
+- Fresh initialization creates the current event, bet, per-NFT Vault cash-ledger/ownership, bet-recovery and
   cursor tables and indexes. Bet recovery means missed or unresolved lifecycle work; no LP
   redemption batch, historical recovery entitlement or compatibility schema is retained.
   Vault/deposit identity and payer/current-owner/recipient roles are distinct; ERC-721 Transfer

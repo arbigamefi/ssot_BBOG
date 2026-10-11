@@ -14,7 +14,7 @@ The casino directory presents eight games within one product. Giving each
 game its own brand color fragments the directory and increases the number
 of contrast and theme combinations to maintain. The
 [charter](../00-charter.md) calls for restraint and a consistent product
-identity across casino, sportsbook, and earn.
+identity across casino and earn.
 
 ## 2. Decision
 
@@ -25,7 +25,7 @@ icon, shape, and copy — never by color family.
 ## 3. Rationale
 
 - Restraint is a brand principle; eight colors fights it.
-- Casino, sportsbook, earn, portfolio, and ops are facets of one product.
+- Casino, earn, portfolio, and ops are facets of one product.
   Color-coding facets implies they are separate products.
 - Reference brands (Polymarket, Hyperliquid, Linear) consolidate to one
   brand color with semantic exceptions; reference brands we avoid
@@ -40,7 +40,7 @@ icon, shape, and copy — never by color family.
 | Alternative                                  | Pros                            | Cons                                         | Why not chosen            |
 | -------------------------------------------- | ------------------------------- | -------------------------------------------- | ------------------------- |
 | Keep per-game color                          | Maximalist character            | Fragmented brand, audit cost, bloated tokens | Conflicts with Charter §3 |
-| Per-vertical color (casino vs sportsbook)    | Mild differentiation            | Same problem at a coarser level              | Same conflict             |
+| Per-vertical color                           | Mild differentiation            | Same problem at a coarser level              | Same conflict             |
 | Single brand color + per-game geometric icon | Visually distinct without color | Requires icon design discipline              | Chosen                    |
 
 ## 5. Consequences

@@ -40,15 +40,7 @@ const config: KeeperConfig = {
   betIndexWriteEnabled: false,
   betIndexSsl: false,
   vaultProviderLedgerPools: [],
-  vaultProviderLedgerScanIntervalMs: 0,
-  sportsTicketIndexEnabled: false,
-  sportsTerminalizerEnabled: false,
-  sportsTerminalizerMarketIds: [],
-  sportsTerminalizerScanChunkBlocks: 10n,
-  sportsTerminalizerMaxTicketsPerMarket: 2,
-  sportsTicketScanChunkBlocks: 10n,
-  sportsTicketScanMaxBlocks: 50_000n,
-  sportsTicketScanStartBlock: 100n
+  vaultProviderLedgerScanIntervalMs: 0
 };
 type Watcher = {
   eventName: string;

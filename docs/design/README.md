@@ -1,6 +1,6 @@
 # Frontend design
 
-The current product uses one wallet-native casino/sportsbook interface.
+The current product uses one wallet-native casino interface.
 
 - [Product architecture](../strategy/fullstack-product-architecture.md)
 - [Casino transaction UX](casino-placebet-ux.md)

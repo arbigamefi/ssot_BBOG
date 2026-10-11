@@ -14,83 +14,23 @@ type ReleaseContextValue = {
   selectedChainName?: string;
   walletChainId?: number;
   walletChainMismatch: boolean;
-  sportsbook: SportsbookAccess;
-};
-
-export type SportsbookAccess = {
-  enabled: boolean;
-  frontendEnabled: boolean;
-  hasSportsRelease: boolean;
-  enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED";
-  disabledReason?: string;
 };
 
 const ReleaseContext = React.createContext<ReleaseContextValue | null>(null);
-
-const SPORTSBOOK_ENABLEMENT_FLAG = "NEXT_PUBLIC_SPORTSBOOK_ENABLED" as const;
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-
-function isTruthyFeatureFlag(value: string | undefined) {
-  return (
-    String(value ?? "")
-      .trim()
-      .toLowerCase() === "true"
-  );
-}
-
-export function resolveSportsbookAccess(
-  release: SSOTRelease | undefined,
-  rawFlag?: string
-): SportsbookAccess {
-  const frontendEnabled = isTruthyFeatureFlag(rawFlag);
-  const sportsHub = release?.sports?.sportsHub ?? release?.contracts.sportsHub;
-  const hasSportsRelease =
-    release?.sports?.enabled === true && Boolean(sportsHub && sportsHub !== ZERO_ADDRESS);
-
-  if (!frontendEnabled) {
-    return {
-      enabled: false,
-      frontendEnabled,
-      hasSportsRelease,
-      enablementFlag: SPORTSBOOK_ENABLEMENT_FLAG,
-      disabledReason: `${SPORTSBOOK_ENABLEMENT_FLAG} is not true.`
-    };
-  }
-
-  if (!hasSportsRelease) {
-    return {
-      enabled: false,
-      frontendEnabled,
-      hasSportsRelease,
-      enablementFlag: SPORTSBOOK_ENABLEMENT_FLAG,
-      disabledReason: "The active release does not expose enabled SportsHub metadata."
-    };
-  }
-
-  return {
-    enabled: true,
-    frontendEnabled,
-    hasSportsRelease,
-    enablementFlag: SPORTSBOOK_ENABLEMENT_FLAG
-  };
-}
 
 export function ReleaseProvider({
   children,
   chainId,
   selectedChainName,
-  walletChainId,
-  sportsbookEnabledFlag
+  walletChainId
 }: {
   children: React.ReactNode;
   chainId?: number;
   selectedChainName?: string;
   walletChainId?: number;
-  sportsbookEnabledFlag?: string;
 }) {
   const resolvedChainId = chainId ?? embeddedChainIds[0] ?? 84532;
   const value = React.useMemo<ReleaseContextValue>(() => {
-    const rawSportsbookFlag = sportsbookEnabledFlag ?? process.env.NEXT_PUBLIC_SPORTSBOOK_ENABLED;
     const walletChainMismatch = Boolean(walletChainId && walletChainId !== resolvedChainId);
     const walletMismatchReason = walletChainMismatch
       ? `Wallet is connected to chainId=${walletChainId}. Switch wallet network to ${
@@ -107,13 +47,11 @@ export function ReleaseProvider({
         releaseReadOnly: true,
         selectedChainName,
         walletChainId,
-        walletChainMismatch,
-        sportsbook: resolveSportsbookAccess(undefined, rawSportsbookFlag)
+        walletChainMismatch
       };
     }
     const release = r.release;
     const warnings = r.warnings;
-    const sportsbook = resolveSportsbookAccess(release, rawSportsbookFlag);
 
     const releaseReadOnly = warnings.length > 0;
     const readOnly = releaseReadOnly || walletChainMismatch;
@@ -132,10 +70,9 @@ export function ReleaseProvider({
       releaseReadOnly,
       selectedChainName,
       walletChainId,
-      walletChainMismatch,
-      sportsbook
+      walletChainMismatch
     };
-  }, [resolvedChainId, selectedChainName, sportsbookEnabledFlag, walletChainId]);
+  }, [resolvedChainId, selectedChainName, walletChainId]);
 
   return <ReleaseContext.Provider value={value}>{children}</ReleaseContext.Provider>;
 }

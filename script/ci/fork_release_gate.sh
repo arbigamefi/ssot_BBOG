@@ -12,7 +12,7 @@ fi
 # The workflow authenticates the signed bundle before this entrypoint. This
 # fixture covers the first single-USDC casino release, not arbitrary pool sets.
 jq -e '.architectureVersion == "v1.6-nft-liquidity" and
-  .numPools == 1 and .sportsEnabled == 0 and .poolDomain_0 == 1 and
+  .numPools == 1 and .poolDomain_0 == 1 and
   .poolAssetDecimals_0 == 6 and .poolAssetSymbol_0 == "USDC" and .gameMaxBetCount_COIN_TOSS >= 1 and
   .gameCallbackGasLimit_COIN_TOSS >= 200000 and
   .gameCallbackGasLimit_COIN_TOSS <= 2447746' "$SNAPSHOT_PATH" >/dev/null || {

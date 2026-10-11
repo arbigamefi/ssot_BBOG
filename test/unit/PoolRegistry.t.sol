@@ -58,7 +58,7 @@ contract PoolRegistryTest is Test {
     function test_registerPool_supportsSameAssetDistinctBanks() external {
         vm.startPrank(gov);
         registry.registerPool(1, address(usdc), address(usdcBankA), SSOTTypes.PoolDomain.Casino);
-        registry.registerPool(2, address(usdc), address(usdcBankB), SSOTTypes.PoolDomain.Sports);
+        registry.registerPool(2, address(usdc), address(usdcBankB), SSOTTypes.PoolDomain.Casino);
         vm.stopPrank();
 
         assertEq(registry.assetFor(1), address(usdc));
@@ -93,12 +93,12 @@ contract PoolRegistryTest is Test {
         registry.registerPool(1, address(usdc), address(usdcBankA), SSOTTypes.PoolDomain.Casino);
 
         vm.expectRevert(abi.encodeWithSelector(IPoolRegistry.PoolAlreadyRegistered.selector, uint64(1)));
-        registry.registerPool(1, address(usdc), address(usdcBankB), SSOTTypes.PoolDomain.Sports);
+        registry.registerPool(1, address(usdc), address(usdcBankB), SSOTTypes.PoolDomain.Casino);
 
         vm.expectRevert(
             abi.encodeWithSelector(IPoolRegistry.BankAlreadyRegistered.selector, address(usdcBankA), uint64(1))
         );
-        registry.registerPool(2, address(usdc), address(usdcBankA), SSOTTypes.PoolDomain.Sports);
+        registry.registerPool(2, address(usdc), address(usdcBankA), SSOTTypes.PoolDomain.Casino);
         vm.stopPrank();
     }
 

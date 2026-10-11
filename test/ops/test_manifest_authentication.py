@@ -39,28 +39,18 @@ def fixture():
     address = lambda n: '0x' + format(n, '040x')
     common = {'architectureVersion': 'v1.6-nft-liquidity', 'chainId': 84532, 'blockNumber': 10}
     addresses = {key: address(i + 1) for i, key in enumerate(EXECUTION_ADDRESSES)}
-    addresses.update(sportsHub=address(0), sportsRiskEngine=address(0))
-    snapshot = {**common, **addresses, 'refundTimeoutSeconds': 3600, 'sportsEnabled': 0,
+    snapshot = {**common, **addresses, 'refundTimeoutSeconds': 3600,
                 'numPools': 1, 'poolAssetSymbol_0': 'USDC', 'poolAssetDecimals_0': 6, 'poolId_0': 1, 'poolDomain_0': 1,
                 'poolAsset_0': address(21), 'poolBank_0': address(22), 'poolVault_0': address(23), 'poolActive_0': 1}
     for name, _, _ in GAMES:
         snapshot[f'gameMaxBetCount_{name}'] = 25
         snapshot[f'gameCallbackGasLimit_{name}'] = 2_447_746
-    sports = {'enabled': False, 'sportsHub': address(0), 'riskEngine': address(0)}
-    for key in ('resultReporterThreshold', 'resultChallengeTimeoutSeconds', 'maxStake', 'maxPayout',
-                'maxMarketReserved', 'maxOutcomeReserved', 'maxEventReserved'):
-        sports[key] = '0'
-        snapshot['sports' + key[0].upper() + key[1:]] = 0
-    for key in ('oddsSignerSetHash', 'resultReporterSetHash', 'resultChallenger', 'resultArbitrator'):
-        sports[key] = '0x' + '0' * (64 if key.endswith('Hash') else 40)
-        snapshot['sports' + key[0].upper() + key[1:]] = sports[key]
-    manifest = {**common, 'schemaVersion': 2, 'addresses': addresses, 'sports': sports,
-                'refundTimeoutSeconds': 3600,
+    manifest = {**common, 'schemaVersion': 2, 'addresses': addresses, 'refundTimeoutSeconds': 3600,
                 'games': [{'slug': slug, 'gameId': _game_id(name), 'label': GAME_TEXT[name][0], 'module': addresses[key],
                            'maxBetCount': 25, 'callbackGasLimit': 2_447_746, 'paramsEncoding': GAME_TEXT[name][1]}
                           for name, slug, key in GAMES],
                 'pools': [{'poolId': 1, 'domainId': 1, 'domain': 'Casino', 'active': True, 'asset': address(21),
-                           'bank': address(22), 'vault': address(23), 'decimals': 6, 'symbol': 'USDC', 'sportsRisk': None}]}
+                           'bank': address(22), 'vault': address(23), 'decimals': 6, 'symbol': 'USDC'}]}
     digest = '0x' + 'a' * 64
     release = {**common, 'schema': 'SSOT_RELEASE_DIGEST_V16', 'digest': digest}
     vectors = {**common, 'schemaVersion': 2, 'vectors': [{'poolId': 1, 'stakeSpec': {'amountPerRoll': 1_000_000}}]}
@@ -131,7 +121,6 @@ class ManifestAuthenticationTests(unittest.TestCase):
             changed = copy.deepcopy(manifest); del changed['pools'][0]['vault']; cases.append(changed)
             changed = copy.deepcopy(manifest); changed['pools'][0]['active'] = False; cases.append(changed)
             changed = copy.deepcopy(manifest); changed['pools'][0]['vault'] = '0x' + 'f' * 40; cases.append(changed)
-            changed = copy.deepcopy(manifest); changed['sports']['maxStake'] = '1'; cases.append(changed)
             changed = copy.deepcopy(manifest); changed['refundTimeoutSeconds'] = 1; cases.append(changed)
             for changed in cases:
                 with self.subTest(changed=changed):

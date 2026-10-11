@@ -13,7 +13,6 @@ deployments, tests and operations do not establish that this replacement is impl
 - [Pause and configuration drift](pause-config-drift.md)
 - [Casino finalization](game-finalization-diffs.md)
 - [VRF and refund credit](vrf-refundcredit.md)
-- [Sports markets and settlement](sportsbook-ops.md)
 
 See also [metrics](../metrics.md), [alerts](../alerts.md) and the
 [incident record](../incident-templates.md).

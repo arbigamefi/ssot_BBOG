@@ -32,7 +32,7 @@ Use the [detailed plan](../design/lp-accounting-and-callback-implementation.md) 
 - Freeze actual source/tree, vendored sources, ABIs, dependencies and configuration after integration.
 - Deploy fresh contracts. Authenticate Safe, signer, wrapper/Router, Bank↔Vault/asset, both codehashes,
   amount precision, limits and matching web/keeper images. Verify Vault source and Bank child creation.
-- Replay complete Hub/pool/Sports authorization sets from creation at the signed verification block;
+- Replay complete Hub/pool authorization sets from creation at the signed verification block;
   unavailable history rejects the release.
 - Explicitly confirm USDC minimum 0.01 per round and maximum 25 rounds (25 minimum-size rounds total
   0.25 USDC; no additional position-total minimum), one-hour refund default, risk/PF-XP

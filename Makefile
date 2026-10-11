@@ -119,18 +119,6 @@ verify-helpers-v16:
 	@test -n "$$SNAPSHOT_PATH" || { echo "Set SNAPSHOT_PATH to the chain-specific v1.6 snapshot"; exit 1; }
 	$(PYTHON) script/tools/gen_verify_helpers.py "$$SNAPSHOT_PATH"
 
-sports-dry-run-v16:
-	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=pr forge test --threads 1 --match-path test/unit/DeploymentV16.t.sol --match-test testSports -vv
-
-sports-lifecycle-dry-run:
-	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=pr forge test --match-path test/unit/SportsHubLifecycle.t.sol -vv
-
-sports-phase0-readiness:
-	@$(MAKE) sports-dry-run-v16
-	@$(MAKE) sports-lifecycle-dry-run
-
 # --- Release artifacts (digest + signature) ---
 # 1) After a successful deploy that produced deployments/latest-v16.json, sign and package it (the only signing path):
 #      make release-v16    (script/release/release_v16.sh; its header lists the inputs)
@@ -141,7 +129,7 @@ sports-phase0-readiness:
 
 
 # The only supported deployment/release line.
-.PHONY: deploy-v16 deploy-dryrun verify-v16 verify-helpers-v16 sports-dry-run-v16 release-v16 release-governance-check release-domain-check safe-acceptance-v16
+.PHONY: deploy-v16 deploy-dryrun verify-v16 verify-helpers-v16 release-v16 release-governance-check release-domain-check safe-acceptance-v16
 
 deploy-dryrun:
 	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV16.s.sol:DeployV16 --rpc-url "$$RPC_URL" -vvv

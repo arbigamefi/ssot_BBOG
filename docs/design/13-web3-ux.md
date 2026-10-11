@@ -117,8 +117,7 @@ Common cases:
 - tx reverted;
 - RPC temporarily unavailable;
 - result not found yet;
-- keeper delayed;
-- market locked or expired.
+- keeper delayed.
 
 Raw viem, wagmi, JSON-RPC, Solidity selector, and stack trace text do not
 belong in player UI.
@@ -137,27 +136,14 @@ Casino result proof must come from chain state or terminal chain logs:
 Recent-feed indexes and Postgres rows are useful for lists. They are not the
 authority for the final receipt.
 
-## 9. Signatures And Odds
-
-Sportsbook odds signatures show human-readable fields:
-
-- market;
-- outcome;
-- odds;
-- max stake;
-- expiry.
-
-Near expiry, refresh odds instead of letting the user sign stale terms. Do not
-render raw typed-data JSON as the primary UI.
-
-## 10. Privacy
+## 9. Privacy
 
 - Do not put wallet addresses in shareable URLs unless the page is explicitly a
   public wallet view.
 - Do not send raw wallet addresses to analytics.
 - Do not persist signatures or approval payloads.
 
-## 11. Do Not Do
+## 10. Do Not Do
 
 - Do not send a transaction without validating local inputs first.
 - Do not prompt a wallet unexpectedly after the user thinks the action is done.
@@ -166,7 +152,7 @@ render raw typed-data JSON as the primary UI.
 - Do not retry forever without visible state.
 - Do not collapse keeper failures into generic "loading".
 
-## 12. Verification
+## 11. Verification
 
 ```bash
 rg -nE "from ['\\\"]wagmi|from ['\\\"]viem|from ['\\\"]@rainbow" frontend/apps/web/src/app

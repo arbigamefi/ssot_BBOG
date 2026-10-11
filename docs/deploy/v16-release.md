@@ -48,9 +48,9 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    transport failure. Each step's log is kept in `RELEASE_LOG_DIR` (default `dist/release-run-<UTC time>`) with the
    RPC URL and key replaced.
    Governance verification requires an RPC with historical code and complete authorization logs.
-   The signed start block must precede Registry/SportsHub creation. The verifier replays all Hub/pool
-   and Sports role grants, rejects undeclared members and checks the same frozen block in Forge.
-   A zero optional Sports role declares an empty set; provider or coverage failure rejects the release.
+   The signed start block must precede Registry/GameHub creation. The verifier replays all Hub/pool
+   grants, rejects any hub or route the release does not declare and checks the same frozen block in
+   Forge. Provider or coverage failure rejects the release.
    Logs are read in pages of `GOVERNANCE_LOG_PAGE_BLOCKS` blocks (default 200, the Base public RPC limit). Transient
    provider failures (HTTP 408, 425, 429 and 5xx, dropped connections) are retried with backoff (`RPC_MAX_ATTEMPTS`,
    default 6; `RPC_BACKOFF_SECONDS`, default 1); errors name the HTTP status or JSON-RPC code, never the URL. Each run
@@ -82,10 +82,12 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    - The governance check (`verify_governance.py`) replays `GameRegistered` and fails unless the registered game
      set is exactly the certified eight.
 
-   The domain file is `CERTIFIED` for chain 84532 since 2026-10-08, citing certificate v4 (seal
-   `d67a7083…`), its erratum and the independent review (`d6c1619c…`) in its `certificateSeal` block. Any
-   recertification trigger in ADR-0006 sets it back to `PENDING_INDEPENDENT_REVIEW`, after which every release
-   attempt fails by design until a new certificate is accepted. Each chain needs its own certificate.
+   The domain file for chain 84532 was `CERTIFIED` from 2026-10-08, citing certificate v4 (seal `d67a7083…`), its
+   erratum and the independent review (`d6c1619c…`) in its `certificateSeal` block. Any recertification trigger in
+   ADR-0006 sets it back to `PENDING_INDEPENDENT_REVIEW`, after which every release attempt fails by design until a
+   new certificate is accepted. Work package B changes certified runtimes, so since B9 (2026-10-11) the file is
+   `PENDING_INDEPENDENT_REVIEW` with pins regenerated from the current build; the launch candidate's certificate v5
+   replaces v4. Each chain needs its own certificate.
 4. Run the authenticated **Frontend Docker Images** workflow on the same source commit with the
    signed bundle's release tag, exact filename, approved SHA-256, and `chain_id=84532`. Configure the
    independent `V16_RELEASE_SIGNER` repository variable. The workflow verifies the archive's source
@@ -124,7 +126,7 @@ terminal event indexing, duplicate/reorg handling, process restart, alert delive
 Payable discovery and provider cash history may wait for finalized blocks; monitor this coverage separately
 from live Bank reads. Normal callback completion and live capital refresh do not wait for those scanners.
 
-Sports admission is separate. Complete external audit, accepted ordering-risk disclosures, callback gas and chosen
+Complete external audit, accepted ordering-risk disclosures, callback gas and chosen
 business-load qualification before outside LP funding. Local mocks cannot prove signer custody, actual
 Safe execution, provider availability or deployed-network behavior.
 

@@ -40,6 +40,18 @@ describe("current release loading", () => {
     ).toBe(false);
   });
 
+  it.each([
+    [0, "Casino"],
+    [1, "casino"],
+    [2, "Other"]
+  ])("rejects pool domain %i/%s: every pool is a casino pool", (domainId, domain) => {
+    expect(ReleaseSchema.parse(fixture).pools[0]).toMatchObject({ domainId: 1, domain: "Casino" });
+    expect(
+      ReleaseSchema.safeParse({ ...fixture, pools: [{ ...fixture.pools[0], domainId, domain }] })
+        .success
+    ).toBe(false);
+  });
+
   it.each([0, 26, 100])("rejects an advertised game limit of %i rounds", (maxBetCount) => {
     expect(
       ReleaseSchema.safeParse({

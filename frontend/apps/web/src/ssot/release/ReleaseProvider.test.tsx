@@ -5,87 +5,10 @@ vi.mock("@ssot/ssot/release", async () => {
 });
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createCurrentRelease } from "../../test/current-release";
 import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 
-import { ReleaseProvider, resolveSportsbookAccess, useRelease } from "./ReleaseProvider";
-
-const BASE_RELEASE = createCurrentRelease(84532);
-
-describe("resolveSportsbookAccess", () => {
-  it("keeps sportsbook entry disabled by default", () => {
-    const access = resolveSportsbookAccess(
-      {
-        ...BASE_RELEASE,
-        contracts: {
-          ...BASE_RELEASE.contracts,
-          sportsHub: "0x6666666666666666666666666666666666666666"
-        },
-        sports: {
-          enabled: true,
-          sportsHub: "0x6666666666666666666666666666666666666666",
-          riskEngine: "0x7777777777777777777777777777777777777777",
-          oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          resultReporterSetHash:
-            "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          resultReporterThreshold: "1",
-          resultChallengeTimeoutSeconds: "604800",
-          resultChallenger: "0x8888888888888888888888888888888888888888",
-          resultArbitrator: "0x9999999999999999999999999999999999999999",
-          maxStake: "1000000",
-          maxPayout: "2000000",
-          maxMarketReserved: "3000000",
-          maxOutcomeReserved: "4000000",
-          maxEventReserved: "5000000"
-        }
-      },
-      undefined
-    );
-
-    expect(access.enabled).toBe(false);
-    expect(access.frontendEnabled).toBe(false);
-    expect(access.hasSportsRelease).toBe(true);
-    expect(access.disabledReason).toContain("NEXT_PUBLIC_SPORTSBOOK_ENABLED");
-  });
-
-  it("requires enabled SportsHub metadata even when the frontend flag is true", () => {
-    const access = resolveSportsbookAccess(BASE_RELEASE, "true");
-
-    expect(access.enabled).toBe(false);
-    expect(access.frontendEnabled).toBe(true);
-    expect(access.hasSportsRelease).toBe(false);
-    expect(access.disabledReason).toContain("SportsHub metadata");
-  });
-
-  it("enables sportsbook entry only when both the flag and release metadata are present", () => {
-    const access = resolveSportsbookAccess(
-      {
-        ...BASE_RELEASE,
-        sports: {
-          enabled: true,
-          sportsHub: "0x6666666666666666666666666666666666666666",
-          riskEngine: "0x7777777777777777777777777777777777777777",
-          oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          resultReporterSetHash:
-            "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          resultReporterThreshold: "1",
-          maxStake: "1000000",
-          maxPayout: "2000000",
-          maxMarketReserved: "3000000",
-          maxOutcomeReserved: "4000000",
-          maxEventReserved: "5000000"
-        }
-      },
-      "true"
-    );
-
-    expect(access.enabled).toBe(true);
-    expect(access.frontendEnabled).toBe(true);
-    expect(access.hasSportsRelease).toBe(true);
-    expect(access.disabledReason).toBeUndefined();
-  });
-});
+import { ReleaseProvider, useRelease } from "./ReleaseProvider";
 
 function ReleaseProbe() {
   const release = useRelease();

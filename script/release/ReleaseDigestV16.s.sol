@@ -82,15 +82,13 @@ contract ReleaseDigestV16 is Script {
             )
         );
 
-        string[16] memory codeKeys = [
+        string[14] memory codeKeys = [
             string("vrfHub"),
             "poolRegistry",
             "settlementRouter",
             "refRegistry",
             "refEngine",
             "gameHub",
-            "sportsRiskEngine",
-            "sportsHub",
             "moduleDice",
             "moduleCoinToss",
             "moduleRoulette",
@@ -124,9 +122,7 @@ contract ReleaseDigestV16 is Script {
                 snap.readAddress(".settlementRouter"),
                 snap.readAddress(".refRegistry"),
                 snap.readAddress(".refEngine"),
-                snap.readAddress(".gameHub"),
-                snap.readAddress(".sportsRiskEngine"),
-                snap.readAddress(".sportsHub")
+                snap.readAddress(".gameHub")
             )
         );
 
@@ -152,34 +148,8 @@ contract ReleaseDigestV16 is Script {
                 snap.readUint(".lpShareBps"),
                 snap.readUint(".refL0Bps"),
                 snap.readUint(".refL1Bps"),
-                snap.readUint(".refL2Bps")
-            )
-        );
-
-        digest = keccak256(
-            abi.encode(
-                digest,
+                snap.readUint(".refL2Bps"),
                 snap.readUint(".refHoldbackBps"),
-                snap.readUint(".sportsEnabled"),
-                snap.readUint(".sportsMaxStake"),
-                snap.readUint(".sportsMaxPayout"),
-                snap.readUint(".sportsMaxMarketReserved")
-            )
-        );
-
-        digest = keccak256(
-            abi.encode(
-                digest,
-                snap.readUint(".sportsMaxOutcomeReserved"),
-                snap.readUint(".sportsMaxEventReserved"),
-                snap.readBytes32(".sportsOddsSignerSetHash"),
-                snap.readBytes32(".sportsResultReporterSetHash"),
-                snap.readUint(".sportsResultReporterThreshold"),
-                snap.readUint(".sportsResultChallengeTimeoutSeconds"),
-                snap.readAddress(".sportsOddsSigner"),
-                snap.readAddress(".sportsResultReporter"),
-                snap.readAddress(".sportsResultChallenger"),
-                snap.readAddress(".sportsResultArbitrator"),
                 snap.readUint(".numPools")
             )
         );
@@ -223,18 +193,6 @@ contract ReleaseDigestV16 is Script {
                     snap.readUint(string.concat(".poolBankHoldbackVestingSeconds_", suffix)),
                     snap.readUint(string.concat(".poolAssetDecimals_", suffix)),
                     keccak256(bytes(snap.readString(string.concat(".poolAssetSymbol_", suffix))))
-                )
-            );
-
-            digest = keccak256(
-                abi.encode(
-                    digest,
-                    snap.readUint(string.concat(".poolSportsMaxStake_", suffix)),
-                    snap.readUint(string.concat(".poolSportsMaxPayout_", suffix)),
-                    snap.readUint(string.concat(".poolSportsMaxMarketReserved_", suffix)),
-                    snap.readUint(string.concat(".poolSportsMaxOutcomeReserved_", suffix)),
-                    snap.readUint(string.concat(".poolSportsMaxEventReserved_", suffix)),
-                    snap.readBytes32(string.concat(".poolSportsRiskHash_", suffix))
                 )
             );
         }

@@ -63,25 +63,18 @@ describe("toDomainError", () => {
     expect(d.severity).toBe("warning");
   });
 
-  it.each(["GameHubAbi", "SportsHubAbi"] as const)(
-    "decodes real OpenHoldLimit bytes through %s into retryable capacity feedback",
-    (hub) => {
-      const abis = getContractAbis();
-      const abi = [...abis[hub], ...abis.BankAbi.filter((entry) => entry.type === "error")];
-      const data = encodeErrorResult({ abi: abis.BankAbi, errorName: "OpenHoldLimit" });
-      expect(decodeErrorResult({ abi, data }).errorName).toBe("OpenHoldLimit");
-      const reverted = new ContractFunctionRevertedError({
-        abi,
-        data,
-        functionName: hub === "GameHubAbi" ? "placeBet" : "placeTicket"
-      });
-      expect(toDomainError(new BaseError("wrapped", { cause: reverted }))).toMatchObject({
-        code: "OPEN_HOLD_LIMIT",
-        severity: "warning",
-        retryable: true
-      });
-    }
-  );
+  it("decodes real OpenHoldLimit bytes through GameHubAbi into retryable capacity feedback", () => {
+    const abis = getContractAbis();
+    const abi = [...abis.GameHubAbi, ...abis.BankAbi.filter((entry) => entry.type === "error")];
+    const data = encodeErrorResult({ abi: abis.BankAbi, errorName: "OpenHoldLimit" });
+    expect(decodeErrorResult({ abi, data }).errorName).toBe("OpenHoldLimit");
+    const reverted = new ContractFunctionRevertedError({ abi, data, functionName: "placeBet" });
+    expect(toDomainError(new BaseError("wrapped", { cause: reverted }))).toMatchObject({
+      code: "OPEN_HOLD_LIMIT",
+      severity: "warning",
+      retryable: true
+    });
+  });
 
   it("maps ContractFunctionRevertedError → mapRevert (UnknownGame)", () => {
     const err = makeBaseError("ContractFunctionRevertedError");

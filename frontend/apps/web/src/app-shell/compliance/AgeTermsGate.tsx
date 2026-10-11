@@ -15,7 +15,7 @@ import { overlayZ } from "../../components/overlay/z";
 /**
  * Entry gate for wager routes. Renders a non-dismissable overlay until the
  * visitor confirms age + jurisdiction responsibility + accepts the current
- * Terms — but ONLY on wager-bearing routes (casino / sportsbook). Marketing,
+ * Terms — but ONLY on wager-bearing routes (casino). Marketing,
  * legal, support, and status pages are intentionally never gated, so:
  *   1. visitors can read the Terms/Privacy they must accept (no catch-22), and
  *   2. the public landing pages stay open for SEO and conversion.

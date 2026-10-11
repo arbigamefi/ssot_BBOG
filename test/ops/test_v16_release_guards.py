@@ -29,7 +29,7 @@ def verify_snapshot():
     """A v1.6 snapshot with five contracts to verify; the zero-address ones are skipped by the helper."""
     row = {"chainId": 84532, "architectureVersion": "v1.6-nft-liquidity", "numPools": 1}
     for key in ("vrfHub", "poolRegistry", "settlementRouter", "refRegistry", "refEngine",
-                "gameHub", "sportsRiskEngine", "sportsHub", "poolBank_0", "poolVault_0", "moduleDice", "moduleCoinToss",
+                "gameHub", "poolBank_0", "poolVault_0", "moduleDice", "moduleCoinToss",
                 "moduleRoulette", "moduleKeno", "modulePlinko", "moduleSicBo", "moduleSlots", "moduleBaccarat"):
         row[key] = "0x" + "0" * 40
     for i, (key, ctor_key) in enumerate((("vrfHub", "ctorArgs_vrfHub"), ("gameHub", "ctorArgs_gameHub"),

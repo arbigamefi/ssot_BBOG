@@ -24,12 +24,12 @@ describe("casino module registry", () => {
 
   it("narrows known slugs and rejects unknown modules", () => {
     expect(isCasinoModuleSlug("roulette")).toBe(true);
-    expect(isCasinoModuleSlug("sportsbook")).toBe(false);
+    expect(isCasinoModuleSlug("poker")).toBe(false);
     expect(getCasinoModule("dice")?.contractParams).toBe("dice-threshold");
     expect(getCasinoModule("baccarat")?.contractParams).toBe("baccarat-side");
     expect(getCasinoModule("plinko")?.contractParams).toBe("plinko-risk");
     expect(getCasinoModule("slots")?.contractParams).toBe("slots-profile");
-    expect(getCasinoModule("sportsbook")).toBeUndefined();
+    expect(getCasinoModule("poker")).toBeUndefined();
   });
 
   it("keeps canonical modules ahead of release-only metadata", () => {

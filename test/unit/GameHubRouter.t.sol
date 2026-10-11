@@ -67,7 +67,7 @@ contract GameHubRouterTest is Test {
 
     MockERC20 internal asset;
     Bank internal bank;
-    Bank internal sportsBank;
+    Bank internal secondBank;
     PoolRegistry internal poolRegistry;
     SettlementRouter internal router;
     VRFHub internal vrf;
@@ -79,7 +79,7 @@ contract GameHubRouterTest is Test {
     function setUp() external {
         asset = new MockERC20("USD Coin", "USDC", 6);
         bank = new Bank(address(asset), gov, 0, 6, 1);
-        sportsBank = new Bank(address(asset), gov, 0, 6, 1);
+        secondBank = new Bank(address(asset), gov, 0, 6, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
         wrapper = new MockVRFV2PlusWrapper();
@@ -93,14 +93,14 @@ contract GameHubRouterTest is Test {
 
         vm.startPrank(gov);
         poolRegistry.registerPool(1, address(asset), address(bank), SSOTTypes.PoolDomain.Casino);
-        poolRegistry.registerPool(2, address(asset), address(sportsBank), SSOTTypes.PoolDomain.Sports);
+        poolRegistry.registerPool(2, address(asset), address(secondBank), SSOTTypes.PoolDomain.Casino);
         poolRegistry.setHubRegistered(address(gameHub), true);
         poolRegistry.setHubAllowedForPool(1, address(gameHub), true);
         poolRegistry.setHubAllowedForPool(2, address(gameHub), true);
         bank.setSettlementRouterOnce(address(router));
         bank.setRandomnessConsumerOnce(address(vrf));
-        sportsBank.setSettlementRouterOnce(address(router));
-        sportsBank.setRandomnessConsumerOnce(address(vrf));
+        secondBank.setSettlementRouterOnce(address(router));
+        secondBank.setRandomnessConsumerOnce(address(vrf));
         refRegistry.setBinderOnce(address(gameHub));
         gameHub.registerGame(GAME_STAKE, address(new RouterStakePayoutModule()), 25, 2_447_746);
         vm.stopPrank();
@@ -263,7 +263,7 @@ contract GameHubRouterTest is Test {
             else if (mutation == 1) request.betId = type(uint256).max;
             else if (mutation == 2) request.betId = other;
             else if (mutation == 3) request.hub = address(0xBAD);
-            else if (mutation == 4) request.bank = address(sportsBank);
+            else if (mutation == 4) request.bank = address(secondBank);
             else if (mutation == 5) request.payer = gov;
             else if (mutation == 6) request.state = IVRFHub.RequestState.Awaiting;
             else if (mutation == 7) request.seed = 124;
@@ -660,17 +660,5 @@ contract GameHubRouterTest is Test {
         vm.prank(player);
         vm.expectRevert(abi.encodeWithSelector(IGameHub.RiskInPaused.selector, uint64(1)));
         gameHub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, address(0), 10_000);
-    }
-
-    function test_nonCasinoPoolRejectedEvenIfAllowedForGameHub() external {
-        SSOTTypes.StakeSpec memory spec =
-            SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee,) = gameHub.quoteVRFFee(GAME_STAKE, spec.betCount, tx.gasprice);
-
-        vm.prank(player);
-        vm.expectRevert(
-            abi.encodeWithSelector(IGameHub.WrongPoolDomain.selector, uint64(2), SSOTTypes.PoolDomain.Sports)
-        );
-        gameHub.placeBet{value: fee}(GAME_STAKE, 2, "", spec, address(0), 10_000);
     }
 }

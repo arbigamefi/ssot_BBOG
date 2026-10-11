@@ -108,14 +108,13 @@ async function fixture(minBetAmount = 10_000n) {
       gameHub: bank.address,
       vrfHub: vrf.address,
       settlementRouter: router.address,
-      sportsHub: bank.address,
       refRegistry: bank.address
     },
     pools: [
       {
         poolId: 1,
         domainId: 1,
-        domain: "casino",
+        domain: "Casino",
         active: true,
         asset: token.address,
         bank: bank.address,

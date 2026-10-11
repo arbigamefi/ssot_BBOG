@@ -203,9 +203,8 @@ means selecting a new module for future bets does not repair its existing positi
 entry does not prove bounded terminalization under arbitrary contract or oracle failures. Unknown
 stuck positions consume reserve/capacity and may restrict withdrawals.
 
-Sports outcomes can be publicly known before on-chain finality. Casino callback qualification does
-not qualify sports admission. Governance powers, token behavior, workload capacity and real callback
-fees also retain their independent acceptance requirements.
+Governance powers, token behavior, workload capacity and real callback fees retain their
+independent acceptance requirements.
 
 ## Evidence sequence
 

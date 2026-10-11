@@ -12,8 +12,8 @@ const url = process.env.KEEPER_TEST_POSTGRES_URL;
 if (url && !["localhost", "127.0.0.1", "::1", "[::1]"].includes(new URL(url).hostname)) {
   throw new Error("KEEPER_TEST_POSTGRES_URL must target a local disposable PostgreSQL instance");
 }
-const scope = { chainId: 8453, sportsHub: "0x0000000000000000000000000000000000000001" as const };
-const other = { ...scope, sportsHub: "0x0000000000000000000000000000000000000002" as const };
+const HUB = "0x0000000000000000000000000000000000000001" as const;
+const OTHER = "0x0000000000000000000000000000000000000002" as const;
 
 describe.skipIf(!url)("PostgreSQL recovery integration", () => {
   const schema = `keeper_recovery_${randomUUID().replaceAll("-", "")}`;
@@ -50,15 +50,17 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
     await admin?.end();
   });
 
-  it("initializes concurrently and is idempotent after data exists", async () => {
-    await first.sportsRecovery.enqueue({
-      ...scope,
-      marketId: 1n,
-      requiredBlock: 150n,
-      availableAt: 0
+  it("initializes concurrently, stays idempotent after data exists and isolates cursors", async () => {
+    await first.setCursor({
+      chainId: 8453,
+      cursorKey: HUB,
+      source: "gamehub-events",
+      blockNumber: 150n
     });
     await Promise.all([first.initializeSchema(), second.initializeSchema()]);
-    expect((await second.sportsRecovery.due(scope, 0, 10))[0]?.requiredBlock).toBe(150n);
+    expect(await second.getCursor(8453, "gamehub-events", HUB)).toBe(150n);
+    expect(await second.getCursor(8453, "gamehub-events", OTHER)).toBeNull();
+    expect(await second.getCursor(84532, "gamehub-events", HUB)).toBeNull();
   });
 
   it.each([0n, 100_000n])(
@@ -67,7 +69,7 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
       const betId = refundAmount === 0n ? 901n : 902n;
       const event: BetIndexEvent = {
         chainId: 84532,
-        gameHub: scope.sportsHub,
+        gameHub: HUB,
         eventName: "BetFinalized",
         blockNumber: 900n,
         txHash: `0x${betId.toString(16).padStart(64, "0")}`,
@@ -76,13 +78,11 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
       };
       await first.writeGameHubEvents([event]);
       expect(
-        (await second.getBet({ chainId: 84532, gameHub: scope.sportsHub, betId }))?.refundAmount
+        (await second.getBet({ chainId: 84532, gameHub: HUB, betId }))?.refundAmount
       ).toBeUndefined();
       await second.writeGameHubEvents([{ ...event, args: { ...event.args, refundAmount } }]);
       await first.writeGameHubEvents([event]);
-      expect(
-        await second.getBet({ chainId: 84532, gameHub: scope.sportsHub, betId })
-      ).toMatchObject({
+      expect(await second.getBet({ chainId: 84532, gameHub: HUB, betId })).toMatchObject({
         payout: "196000",
         payoutGross: "200000",
         refundAmount: refundAmount.toString()
@@ -90,106 +90,11 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
     }
   );
 
-  it("persists bounded cursors, work and numeric pages across connections without cross-talk", async () => {
-    const input = [2n, 10n, 1n, 2n ** 255n].map((ticketId) => ({ marketId: 2n, ticketId }));
-    await Promise.all([
-      first.sportsRecovery.writeTickets(scope, input),
-      second.sportsRecovery.writeTickets(scope, input)
-    ]);
-    await first.sportsRecovery.writeTickets(other, [{ marketId: 2n, ticketId: 99n }]);
-    await first.setCursor({
-      chainId: 8453,
-      cursorKey: scope.sportsHub,
-      source: "sports-tickets-v1:100",
-      blockNumber: 109n
-    });
-    await first.sportsRecovery.enqueue({
-      ...scope,
-      marketId: 2n,
-      requiredBlock: 109n,
-      availableAt: 1
-    });
-    const [work] = (await second.sportsRecovery.due(scope, 1, 10)).filter((w) => w.marketId === 2n);
-    const page = await second.sportsRecovery.ticketPage(scope, 2n, work!.ticketCursor, 2);
-    expect(page).toEqual([1n, 2n]);
-    await second.sportsRecovery.checkpoint(work!, {
-      ticketCursor: 2n,
-      availableAt: 2,
-      attempts: 0
-    });
-    expect(await first.sportsRecovery.ticketPage(scope, 2n, 2n, 2)).toEqual([10n, 2n ** 255n]);
-    expect(await second.sportsRecovery.ticketPage(other, 2n, 0n, 10)).toEqual([99n]);
-    expect(await second.getCursor(8453, "sports-tickets-v1:100", scope.sportsHub)).toBe(109n);
-    expect(await second.getCursor(8453, "sports-tickets-v1:100", other.sportsHub)).toBeNull();
-    expect(await second.getCursor(84532, "sports-tickets-v1:100", scope.sportsHub)).toBeNull();
-  });
-
-  it("rejects stale page acknowledgements and delete/recreate ABA", async () => {
-    const input = { ...scope, marketId: 3n, requiredBlock: 100n, availableAt: 0 };
-    await first.sportsRecovery.enqueue(input);
-    const [old] = (await second.sportsRecovery.due(scope, 0, 10)).filter((w) => w.marketId === 3n);
-    const done = { complete: true, ticketCursor: 10n, availableAt: 0, attempts: 0 };
-    await first.sportsRecovery.enqueue({ ...input, requiredBlock: 110n });
-    await second.sportsRecovery.checkpoint(old!, done);
-    const [newer] = (await first.sportsRecovery.due(scope, 0, 10)).filter((w) => w.marketId === 3n);
-    expect(newer?.requiredBlock).toBe(110n);
-    await first.sportsRecovery.checkpoint(newer!, done);
-    await first.sportsRecovery.enqueue(input);
-    await second.sportsRecovery.checkpoint(newer!, done);
-    expect((await first.sportsRecovery.due(scope, 0, 10)).some((w) => w.marketId === 3n)).toBe(
-      true
-    );
-  });
-
-  it("rolls back a failed ticket batch before a coverage checkpoint and safely replays", async () => {
-    await expect(
-      first.sportsRecovery.writeTickets(scope, [
-        { marketId: 4n, ticketId: 1n },
-        { marketId: 4n, ticketId: 10n ** 80n }
-      ])
-    ).rejects.toThrow();
-    expect(await second.sportsRecovery.ticketPage(scope, 4n, 0n, 10)).toEqual([]);
-    await first.sportsRecovery.writeTickets(scope, [{ marketId: 4n, ticketId: 1n }]);
-    await first.setCursor({
-      chainId: 8453,
-      cursorKey: scope.sportsHub,
-      source: "sports-tickets-v1:4",
-      blockNumber: 400n
-    });
-    expect(await second.sportsRecovery.ticketPage(scope, 4n, 0n, 10)).toEqual([1n]);
-  });
-
-  it("binds the page checkpoint to the widest coverage origin across workers", async () => {
-    const input = {
-      ...scope,
-      marketId: 5n,
-      requiredBlock: 500n,
-      availableAt: 0,
-      coverageStartBlock: 100n
-    };
-    await first.sportsRecovery.enqueue(input);
-    const [work] = (await second.sportsRecovery.due(scope, 0, 20)).filter((w) => w.marketId === 5n);
-    await second.sportsRecovery.checkpoint(work!, {
-      ticketCursor: 200n,
-      availableAt: 0,
-      attempts: 0
-    });
-    await first.sportsRecovery.enqueue(input);
-    expect(
-      (await second.sportsRecovery.due(scope, 0, 20)).find((w) => w.marketId === 5n)?.ticketCursor
-    ).toBe(200n);
-    await first.sportsRecovery.enqueue({ ...input, coverageStartBlock: 50n });
-    await second.sportsRecovery.enqueue(input);
-    const updated = (await first.sportsRecovery.due(scope, 0, 20)).find((w) => w.marketId === 5n);
-    expect(updated?.ticketCursor).toBe(0n);
-    expect(updated?.coverageStartBlock).toBe(50n);
-  });
-
   it("recovers casino IDs by chain and hub, pages numerically, and excludes terminal events", async () => {
     const ready = (
       id: bigint,
       n: number,
-      gameHub: `0x${string}` = scope.sportsHub,
+      gameHub: `0x${string}` = HUB,
       eventName: BetIndexEvent["eventName"] = "BetRandomReady"
     ): BetIndexEvent => ({
       chainId: 8453,
@@ -204,21 +109,19 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
       ready(1n, 1),
       ready(2n, 2),
       ready(10n, 3),
-      ready(99n, 4, other.sportsHub)
+      ready(99n, 4, OTHER)
     ]);
-    await first.writeGameHubEvents([ready(2n, 5, scope.sportsHub, "BetFinalized")]);
+    await first.writeGameHubEvents([ready(2n, 5, HUB, "BetFinalized")]);
     await first.setCursor({
       chainId: 8453,
-      cursorKey: scope.sportsHub,
+      cursorKey: HUB,
       source: "gamehub-events",
       blockNumber: 200n
     });
-    const query = { chainId: 8453, gameHub: scope.sportsHub, afterBetId: 0n, limit: 1 };
+    const query = { chainId: 8453, gameHub: HUB, afterBetId: 0n, limit: 1 };
     expect(await second.getRandomReadyBetIds(query)).toEqual([1n]);
     expect(await second.getRandomReadyBetIds({ ...query, afterBetId: 1n })).toEqual([10n]);
-    expect(await second.getRandomReadyBetIds({ ...query, gameHub: other.sportsHub })).toEqual([
-      99n
-    ]);
+    expect(await second.getRandomReadyBetIds({ ...query, gameHub: OTHER })).toEqual([99n]);
     expect(await second.getRandomReadyBetIds({ ...query, chainId: 84532 })).toEqual([]);
   });
 
@@ -229,7 +132,7 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
       index: number
     ): BetIndexEvent => ({
       chainId: 31337,
-      gameHub: scope.sportsHub,
+      gameHub: HUB,
       blockNumber: 100n,
       txHash: `0x${index.toString(16).padStart(64, "0")}`,
       logIndex: index,
@@ -245,12 +148,12 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
       event(3n, "BetRefunded", 6),
       event(4n, "BetPlaced", 7),
       event(4n, "BetFinalized", 8),
-      { ...event(1n, "BetPlaced", 9), gameHub: other.sportsHub },
+      { ...event(1n, "BetPlaced", 9), gameHub: OTHER },
       { ...event(1n, "BetPlaced", 10), chainId: 31338 }
     ];
     await first.writeGameHubEvents(events);
     await second.writeGameHubEvents(events);
-    const query = { chainId: 31337, gameHub: scope.sportsHub, afterBetId: 0n, limit: 2 };
+    const query = { chainId: 31337, gameHub: HUB, afterBetId: 0n, limit: 2 };
     expect(await second.getUnresolvedBetIds(query)).toEqual([2n, 10n]);
     expect(await second.getUnresolvedBetIds({ ...query, afterBetId: 10n })).toEqual([2n ** 255n]);
     expect(await first.getRandomReadyBetIds(query)).toEqual([10n]);
@@ -262,10 +165,10 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
     const row = {
       chainId: 31337,
       poolId: "1",
-      owner: scope.sportsHub,
-      vault: scope.sportsHub,
-      bank: scope.sportsHub,
-      asset: other.sportsHub,
+      owner: HUB,
+      vault: HUB,
+      bank: HUB,
+      asset: OTHER,
       id: "unused",
       action: "withdraw" as const,
       assets: "10",
@@ -277,14 +180,14 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
     };
     await first.writeVaultProviderLedgerRows([
       row,
-      { ...row, txHash: "0xbb", vault: other.sportsHub, blockNumber: 21, assets: "999" },
+      { ...row, txHash: "0xbb", vault: OTHER, blockNumber: 21, assets: "999" },
       { ...row, txHash: "0xcc", poolId: "9", blockNumber: 22, assets: "20" },
       { ...row, txHash: "0xdd", chainId: 31338, blockNumber: 23 }
     ]);
     const query = {
       chainId: 31337,
-      owner: scope.sportsHub,
-      vault: scope.sportsHub,
+      owner: HUB,
+      vault: HUB,
       limit: 10
     };
     expect((await second.getVaultProviderLedger(query)).map((item) => item.assets)).toEqual([
@@ -301,10 +204,10 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
     const row = {
       chainId: 777,
       poolId: "1",
-      owner: scope.sportsHub,
-      vault: scope.sportsHub,
-      bank: scope.sportsHub,
-      asset: other.sportsHub,
+      owner: HUB,
+      vault: HUB,
+      bank: HUB,
+      asset: OTHER,
       id: "ignored",
       action: "withdraw" as const,
       assets: "8",
@@ -313,47 +216,45 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
       blockNumber: 20,
       logIndex: 1,
       updatedAt: 0,
-      receiver: other.sportsHub,
-      caller: scope.sportsHub,
+      receiver: OTHER,
+      caller: HUB,
       withdrawAfter: "7"
     };
     await first.writeVaultProviderLedgerRows([
       row,
-      { ...row, txHash: "0x777b", vault: other.sportsHub },
+      { ...row, txHash: "0x777b", vault: OTHER },
       { ...row, txHash: "0x777c", chainId: 778 }
     ]);
-    const query = { chainId: 777, vault: scope.sportsHub, owner: scope.sportsHub, limit: 10 };
+    const query = { chainId: 777, vault: HUB, owner: HUB, limit: 10 };
     await expect(
       first.replaceVaultProviderLedgerRange({
         chainId: 777,
-        vault: scope.sportsHub,
+        vault: HUB,
         fromBlock: 20n,
         toBlock: 20n,
         rows: [{ ...row, blockNumber: 21 }]
       })
     ).rejects.toThrow("outside replacement");
     expect(await second.getVaultProviderLedger(query)).toMatchObject([
-      { action: "withdraw", receiver: other.sportsHub, caller: scope.sportsHub, withdrawAfter: "7" }
+      { action: "withdraw", receiver: OTHER, caller: HUB, withdrawAfter: "7" }
     ]);
     expect(await second.getVaultProviderLedger({ ...query, endBlock: 19 })).toEqual([]);
     await first.replaceVaultProviderLedgerRange({
       chainId: 777,
-      vault: scope.sportsHub,
+      vault: HUB,
       fromBlock: 20n,
       toBlock: 20n,
       rows: []
     });
     expect(await second.getVaultProviderLedger(query)).toEqual([]);
-    expect(await second.getVaultProviderLedger({ ...query, vault: other.sportsHub })).toHaveLength(
-      1
-    );
+    expect(await second.getVaultProviderLedger({ ...query, vault: OTHER })).toHaveLength(1);
     expect(await second.getVaultProviderLedger({ ...query, chainId: 778 })).toHaveLength(1);
     const range = {
       chainId: 777,
-      vault: scope.sportsHub,
+      vault: HUB,
       fromBlock: 20n,
       toBlock: 20n,
-      rows: [{ ...row, action: "deposit" as const, receiver: scope.sportsHub }]
+      rows: [{ ...row, action: "deposit" as const, receiver: HUB }]
     };
     await first.replaceVaultProviderLedgerRange(range);
     await second.replaceVaultProviderLedgerRange(range);
@@ -367,12 +268,12 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
       id: "ignored",
       chainId: 779,
       poolId: "1",
-      bank: scope.sportsHub,
-      vault: scope.sportsHub,
-      asset: other.sportsHub,
-      owner: scope.sportsHub,
-      caller: other.sportsHub,
-      receiver: scope.sportsHub,
+      bank: HUB,
+      vault: HUB,
+      asset: OTHER,
+      owner: HUB,
+      caller: OTHER,
+      receiver: HUB,
       action: "deposit" as const,
       depositId: "1099511627776",
       assets: "100",
@@ -382,17 +283,17 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
       updatedAt: 0
     };
     await first.writeVaultProviderLedgerRows([row, row]);
-    const query = { chainId: 779, vault: scope.sportsHub, limit: 10 };
-    for (const owner of [scope.sportsHub, other.sportsHub]) {
+    const query = { chainId: 779, vault: HUB, limit: 10 };
+    for (const owner of [HUB, OTHER]) {
       expect(await second.getVaultProviderLedger({ ...query, owner })).toMatchObject([
-        { action: "deposit", owner: scope.sportsHub, caller: other.sportsHub, assets: "100" }
+        { action: "deposit", owner: HUB, caller: OTHER, assets: "100" }
       ]);
     }
     expect(
       await second.getVaultProviderLedger({
         ...query,
-        owner: other.sportsHub,
-        vault: other.sportsHub
+        owner: OTHER,
+        vault: OTHER
       })
     ).toEqual([]);
   });

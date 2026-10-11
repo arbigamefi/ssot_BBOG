@@ -7,7 +7,7 @@ import { loadKeeperConfig } from "./env.js";
 
 const PRIVATE_KEY = `0x${"1".repeat(64)}` as const;
 
-function writeRelease(sportsHub = "0x0000000000000000000000000000000000000003") {
+function writeRelease() {
   const dir = mkdtempSync(join(tmpdir(), "keeper-env-"));
   const path = join(dir, "chain-84532.json");
   writeFileSync(
@@ -16,7 +16,6 @@ function writeRelease(sportsHub = "0x0000000000000000000000000000000000000003") 
       chainId: 84532,
       contracts: {
         gameHub: "0x0000000000000000000000000000000000000001",
-        sportsHub,
         vrfHub: "0x0000000000000000000000000000000000000002"
       },
       meta: { blockNumber: 123 }
@@ -39,8 +38,6 @@ describe("loadKeeperConfig", () => {
     const config = loadKeeperConfig(baseEnv());
 
     expect(config.scanChunkBlocks).toBe(10n);
-    expect(config.sportsTerminalizerScanChunkBlocks).toBe(10n);
-    expect(config.sportsTicketScanChunkBlocks).toBe(10n);
   });
 
   it("bounds a catch-up pass, with headroom over Base's block rate", () => {
@@ -64,69 +61,10 @@ describe("loadKeeperConfig", () => {
     );
   });
 
-  it("bounds each durable sports history pass", () => {
-    const config = loadKeeperConfig(baseEnv());
-
-    // Completed chunks persist; this is a per-pass budget, not a deployment age limit.
-    expect(config.sportsTicketScanMaxBlocks).toBe(50_000n);
-  });
-
-  it("requires durable storage for sports but keeps database-free casino configuration valid", () => {
-    expect(() => loadKeeperConfig(baseEnv())).not.toThrow();
-    expect(() => loadKeeperConfig(baseEnv({ KEEPER_SPORTS_TERMINALIZER_ENABLED: "true" }))).toThrow(
-      /BET_INDEX_DATABASE_URL/
+  it("names the offending variable when the scan chunk size is invalid", () => {
+    expect(() => loadKeeperConfig(baseEnv({ KEEPER_SCAN_CHUNK_BLOCKS: "0" }))).toThrow(
+      /KEEPER_SCAN_CHUNK_BLOCKS/
     );
-    expect(() => loadKeeperConfig(baseEnv({ KEEPER_SPORTS_TICKET_INDEX_ENABLED: "true" }))).toThrow(
-      /BET_INDEX_DATABASE_URL/
-    );
-    expect(() =>
-      loadKeeperConfig(
-        baseEnv({
-          KEEPER_SPORTS_TERMINALIZER_ENABLED: "true",
-          BET_INDEX_WRITE_ENABLED: "true",
-          BET_INDEX_DATABASE_URL: "postgres://local/test"
-        })
-      )
-    ).not.toThrow();
-  });
-
-  it("rejects moving sports history past the release block", () => {
-    expect(() =>
-      loadKeeperConfig(
-        baseEnv({
-          KEEPER_SPORTS_TERMINALIZER_ENABLED: "true",
-          BET_INDEX_WRITE_ENABLED: "true",
-          BET_INDEX_DATABASE_URL: "postgres://local/test",
-          KEEPER_SPORTS_TICKET_SCAN_START_BLOCK: "124"
-        })
-      )
-    ).toThrow(/must include the release block/);
-  });
-
-  it("rejects enabling sports against an undeployed zero-address release", () => {
-    const releasePath = writeRelease("0x0000000000000000000000000000000000000000");
-    expect(() => loadKeeperConfig(baseEnv({ KEEPER_RELEASE_PATH: releasePath }))).not.toThrow();
-    expect(() =>
-      loadKeeperConfig(
-        baseEnv({
-          KEEPER_RELEASE_PATH: releasePath,
-          KEEPER_SPORTS_TERMINALIZER_ENABLED: "true",
-          BET_INDEX_WRITE_ENABLED: "true",
-          BET_INDEX_DATABASE_URL: "postgres://local/test"
-        })
-      )
-    ).toThrow(/sportsHub/);
-  });
-
-  it("names the offending variable when a block count is invalid", () => {
-    // The shared parser used to report KEEPER_SCAN_CHUNK_BLOCKS whichever
-    // variable actually failed, which sends operators to the wrong line.
-    expect(() => loadKeeperConfig(baseEnv({ KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS: "0" }))).toThrow(
-      /KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS/
-    );
-    expect(() =>
-      loadKeeperConfig(baseEnv({ KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS: "0" }))
-    ).toThrow(/KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS/);
   });
 
   it("parses the optional in-process RPC throttle interval", () => {

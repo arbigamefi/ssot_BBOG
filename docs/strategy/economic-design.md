@@ -1,6 +1,6 @@
 # Casino 经济设计与参数校准
 
-项目尚未上线。2026-10-04 接受的目标是 **NFT 存款、固定 24 小时冷却、Azuro LiquidityTree 分配、双托管和回调内结算**，核心与消费者已实现并通过本地验证，发布准入尚未完成。唯一规范见 [SSOT v1.6](../constitution/SSOT.v1.6.md)、[ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md) 和 [ADR-0034](../adr/0034-nft-liquidity-deposits.md)，改动顺序及原始代码身份见[实施计划](../design/lp-accounting-and-callback-implementation.md)。本文不定义体育收入分配，也不把旧方案测试结果当作本方案已实现。
+项目尚未上线。2026-10-04 接受的目标是 **NFT 存款、固定 24 小时冷却、Azuro LiquidityTree 分配、双托管和回调内结算**，核心与消费者已实现并通过本地验证，发布准入尚未完成。唯一规范见 [SSOT v1.6](../constitution/SSOT.v1.6.md)、[ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md) 和 [ADR-0034](../adr/0034-nft-liquidity-deposits.md)，改动顺序及原始代码身份见[实施计划](../design/lp-accounting-and-callback-implementation.md)。本文不把旧方案测试结果当作本方案已实现。
 
 ## 玩法分配保持不变
 
@@ -101,7 +101,7 @@ K_after=K+(r-s)=R_after-P_after
 
 正常随机数回调同笔结算；失败保存原结果，公开或 keeper 重试同一个 seed。Vault 通过 Bank 读取 canonical VRFHub 已保存未记账的数量及 pause/busy/账目状态。任何结果已经保存但未正确入账，包括失败在 GameHub 收到之前，都禁止 LP 入金和提款；Bank-only 结算入口不走这个 LP gate，否则无法清除故障。
 
-一小时仍表示没有收到随机数时首次允许申请退款，不是退款机会到期。已经保存 seed 的仓位不能超时作废，也不能因 gas、任意回滚或无效结果元组而改成退款。体育仍须独立验证结果与账务边界。
+一小时仍表示没有收到随机数时首次允许申请退款，不是退款机会到期。已经保存 seed 的仓位不能超时作废，也不能因 gas、任意回滚或无效结果元组而改成退款。
 
 NFT 和 24 小时冷却并未消除成熟 LP 的有信息退出：自由资本允许时，成熟 NFT 可以在亏损入账前退出，损失由留存资金承担；空或不足 prefix 的 fallback 也可能让后入资金取得旧利润或承担旧损失。用户已明确选择保留既定规则，接受并公开披露该风险。条件退出与利润排序的本地见证和接受记录见 [ADR-0034](../adr/0034-nft-liquidity-deposits.md#pre-inclusion-ordering-owner-decision-2026-10-04)；见证不证明真实 VRF 可提前预测，风险接受也不等于排序优势已修复。
 

@@ -18,6 +18,10 @@ The sealed certificate package and the component bounds it reuses were archived 
      against this checkout's out/, the input pins and the composition;
   5. compares the rerun with the sealed package (its own compare_v4.py) and prints the key numbers.
 
+Certificate v4 covers the contracts as they were before work package B, whose first item (B9) changed GameHub and
+SettlementRouter. The O3 bindings compare the certified executable code with this checkout's build, so on a later
+checkout that step fails by design; reproduce v4 on commit 4a5762aa3 (V4_CODE), the last one with the v4 contracts.
+
 The scripts run unchanged on disk. Two adaptations happen in memory: protocol/run_frames.py names the 2026-10-04
 compiler outputs by an absolute path of the original workstation, which is pointed at the extracted copy, and
 keno_index_access.py gets the pinned solc through its SOLC variable. The tree's compiler identity records the solc
@@ -46,6 +50,7 @@ ARCHIVES = {'2026-10-11-clean-slate/dist.tar.gz': [CERT],
 SEAL = ROOT / 'script/release/certificates/first-callback-v4/CERTIFICATE-v4.sha256'
 FRAMES_OLD = '/Users/kevin/arbigamefi_ssot_project_all/dist/callback-cost-certificate-2026-10-04/tree'
 LINKS = ['src', 'lib', 'out', 'script', 'test', 'foundry.toml', 'deps.lock']
+V4_CODE = '4a5762aa3'
 
 
 def fail(message):
@@ -128,7 +133,7 @@ class Runner:
         self.logs = logs
         self.steps = []
 
-    def __call__(self, name, argv, cwd, stdout=None, env=None):
+    def __call__(self, name, argv, cwd, stdout=None, env=None, hint=''):
         started = time.time()
         log = self.logs / f'{len(self.steps):02d}-{name}.log'
         with open(log, 'w') as err:
@@ -143,7 +148,7 @@ class Runner:
         print(f'{name}: exit {result.returncode} in {seconds} s', flush=True)
         if result.returncode:
             sys.stdout.write(''.join(log.read_text().splitlines(keepends=True)[-30:]))
-            fail(f'{name} failed (log {log})')
+            fail(f'{name} failed (log {log}){hint}')
 
 
 def run_frames_source(protocol, reused_tree):
@@ -259,7 +264,8 @@ def main():
     run('module-concrete-oracle', [py, 'concrete_oracle.py', 'run', 'm6-cases.json'], modules)
     run('keno-index-access', [py, 'keno_index_access.py'], modules, env={'SOLC': str(solc)})
 
-    run('bindings', [py, 'component_bindings.py'], cert / 'bindings')
+    run('bindings', [py, 'component_bindings.py'], cert / 'bindings',
+        hint=f'; v4 covers the contracts before work package B, so reproduce it on commit {V4_CODE}')
     run('pin-inputs', [py, 'pin_inputs.py'], cert)
     run('composition', [py, 'composition_v4.py'], cert)
 

@@ -7,7 +7,6 @@ export const coreRoutes = [
   { path: "/portfolio", heading: hasRelease ? "Wallet profile." : "Portfolio" },
   { path: "/portfolio/activity", heading: "Betting activity." },
   { path: "/earn", heading: hasRelease ? /^Provide payout capital to the .+ pool\.$/ : "Pools" },
-  { path: "/sportsbook", heading: hasRelease ? "Sportsbook" : "Sportsbook is in preview" },
   { path: "/ops", heading: "Release and worker pulse." },
   { path: "/legal/privacy", heading: "Privacy Policy" }
 ] as const;

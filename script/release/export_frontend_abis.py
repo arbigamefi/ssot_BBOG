@@ -22,8 +22,6 @@ REQUIRED_CONTRACTS = [
     ("VRFHub", "src/core/VRFHub.sol:VRFHub", "vrfHub"),
     ("PoolRegistry", "src/core/PoolRegistry.sol:PoolRegistry", "poolRegistry"),
     ("SettlementRouter", "src/core/SettlementRouter.sol:SettlementRouter", "settlementRouter"),
-    ("SportsRiskEngine", "src/core/SportsRiskEngine.sol:SportsRiskEngine", "sportsRiskEngine"),
-    ("SportsHub", "src/core/SportsHub.sol:SportsHub", "sportsHub"),
     ("ReferralRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "refRegistry"),
     ("DefaultReferralEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "refEngine"),
     # modules
@@ -67,8 +65,9 @@ def _write_entrypoints(dest: Path) -> None:
         js.append(f'import {name} from "./contracts/{name}.abi.json" with {{ type: "json" }};')
         js.append(f'export const {name}Abi = {name}.abi;')
         types.append(f'export declare const {name}Abi: Abi;')
-    js.extend(['const abis = Object.freeze({', *[f'  {name}Abi,' for name in names], '});',
-               'export function getContractAbis() { return abis; }', ''])
+    # Prettier's layout, so a regeneration leaves the committed files unchanged.
+    js.extend(['const abis = Object.freeze({', ',\n'.join(f'  {name}Abi' for name in names), '});',
+               'export function getContractAbis() {', '  return abis;', '}', ''])
     types.extend(['export declare function getContractAbis(): {',
                   *[f'  readonly {name}Abi: Abi;' for name in names], '};', ''])
     (dest.parent / 'index.mjs').write_text('\n'.join(js))
@@ -105,7 +104,7 @@ def pool_instances(manifest: Dict[str, Any]) -> List[Dict[str, Any]]:
             raise SystemExit("invalid or duplicate poolId")
         ids.add(pool_id)
         domain = pool.get("domain")
-        if domain not in ("Casino", "Sports"):
+        if domain != "Casino":
             raise SystemExit("invalid pool domain")
         asset = _address(pool.get("asset"), "pool.asset", nonzero=True)
         bank = _address(pool.get("bank"), "pool.bank", nonzero=True)

@@ -20,7 +20,6 @@ export type KeeperEvent = {
 export type KeeperConfig = {
   chainId: number;
   gameHub: Address;
-  sportsHub?: Address;
   vrfHub: Address;
   httpRpcUrl: string;
   wsRpcUrl?: string;
@@ -43,15 +42,6 @@ export type KeeperConfig = {
   betIndexWriteEnabled: boolean;
   vaultProviderLedgerPools: VaultProviderLedgerPool[];
   vaultProviderLedgerScanIntervalMs: number;
-  sportsTicketIndexEnabled: boolean;
-  sportsTerminalizerEnabled: boolean;
-  sportsTerminalizerScanChunkBlocks: bigint;
-  sportsTerminalizerMarketIds: bigint[];
-  sportsTerminalizerMaxTicketsPerMarket: number;
-  sportsTicketScanChunkBlocks: bigint;
-  /** Maximum history blocks per pass; completed chunks resume from a durable cursor. */
-  sportsTicketScanMaxBlocks: bigint;
-  sportsTicketScanStartBlock: bigint;
 };
 
 export type BetRead = {

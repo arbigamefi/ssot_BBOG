@@ -129,12 +129,6 @@ contract GenerateReleaseNotesV16 is Script {
             "- GameHub: `",
             vm.toString(snap.readAddress(".gameHub")),
             "`\n",
-            "- SportsRiskEngine: `",
-            vm.toString(snap.readAddress(".sportsRiskEngine")),
-            "`\n",
-            "- SportsHub: `",
-            vm.toString(snap.readAddress(".sportsHub")),
-            "`\n",
             "- ReferralRegistry: `",
             vm.toString(snap.readAddress(".refRegistry")),
             "`\n",
@@ -196,43 +190,6 @@ contract GenerateReleaseNotesV16 is Script {
                 "/",
                 vm.toString(snap.readUint(".refHoldbackBps"))
             ),
-            "\n",
-            "- sportsEnabled: ",
-            snap.readUint(".sportsEnabled") == 0 ? "false" : "true",
-            "\n",
-            "- defaultSportsRiskCaps(raw asset units): maxStake=",
-            vm.toString(snap.readUint(".sportsMaxStake")),
-            ", maxPayout=",
-            vm.toString(snap.readUint(".sportsMaxPayout")),
-            ", maxMarketReserved=",
-            vm.toString(snap.readUint(".sportsMaxMarketReserved")),
-            ", maxOutcomeReserved=",
-            vm.toString(snap.readUint(".sportsMaxOutcomeReserved")),
-            ", maxEventReserved=",
-            vm.toString(snap.readUint(".sportsMaxEventReserved")),
-            "\n",
-            "- sportsOddsSignerSetHash: `",
-            vm.toString(snap.readBytes32(".sportsOddsSignerSetHash")),
-            "`\n",
-            "- sportsResultReporterSetHash: `",
-            vm.toString(snap.readBytes32(".sportsResultReporterSetHash")),
-            "`",
-            "\n",
-            "- sportsResultReporterThreshold: `",
-            vm.toString(snap.readUint(".sportsResultReporterThreshold")),
-            "`",
-            "\n",
-            "- sportsResultChallengeTimeoutSeconds: `",
-            vm.toString(snap.readUint(".sportsResultChallengeTimeoutSeconds")),
-            "`",
-            "\n",
-            "- sportsResultChallenger: `",
-            vm.toString(snap.readAddress(".sportsResultChallenger")),
-            "`",
-            "\n",
-            "- sportsResultArbitrator: `",
-            vm.toString(snap.readAddress(".sportsResultArbitrator")),
-            "`",
             "\n\n"
         );
     }
@@ -258,34 +215,12 @@ contract GenerateReleaseNotesV16 is Script {
                 "`, active=",
                 snap.readUint(string.concat(".poolActive_", suffix)) == 0 ? "false" : "true"
             );
-            if (domainId == 2) {
-                md = string.concat(
-                    md,
-                    ", sportsRiskCaps(raw)=",
-                    "stake:",
-                    vm.toString(snap.readUint(string.concat(".poolSportsMaxStake_", suffix))),
-                    "/payout:",
-                    vm.toString(snap.readUint(string.concat(".poolSportsMaxPayout_", suffix))),
-                    "/market:",
-                    vm.toString(snap.readUint(string.concat(".poolSportsMaxMarketReserved_", suffix))),
-                    "/outcome:",
-                    vm.toString(snap.readUint(string.concat(".poolSportsMaxOutcomeReserved_", suffix))),
-                    "/event:",
-                    vm.toString(snap.readUint(string.concat(".poolSportsMaxEventReserved_", suffix))),
-                    ", riskHash=`",
-                    vm.toString(snap.readBytes32(string.concat(".poolSportsRiskHash_", suffix))),
-                    "`"
-                );
-            }
             md = string.concat(md, "\n");
         }
     }
 
     function _domainLabel(uint256 domainId) internal pure returns (string memory) {
-        if (domainId == 1) return "Casino";
-        if (domainId == 2) return "Sports";
-        if (domainId == 3) return "Future";
-        return "Unknown";
+        return domainId == 1 ? "Casino" : "Unknown";
     }
 
     function _readFileOrDie(string memory path) internal view returns (string memory) {

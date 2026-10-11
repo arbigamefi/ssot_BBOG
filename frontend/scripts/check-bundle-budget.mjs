@@ -30,12 +30,6 @@ const budgets = [
     maxKb: 155
   },
   { route: "/(product)/portfolio/claims/page", publicPath: "/portfolio/claims", maxKb: 170 },
-  { route: "/(product)/sportsbook/page", publicPath: "/sportsbook", maxKb: 180 },
-  {
-    route: "/(product)/sportsbook/[marketId]/page",
-    publicPath: "/sportsbook/[marketId]",
-    maxKb: 200
-  },
   { route: "/(legal)/legal/privacy/page", publicPath: "/legal/privacy", maxKb: 140 }
 ];
 

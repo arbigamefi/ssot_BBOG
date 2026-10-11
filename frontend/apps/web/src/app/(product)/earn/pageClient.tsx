@@ -36,7 +36,6 @@ export function EarnPageClient() {
   const contexts = React.useMemo(
     () =>
       release?.pools
-        .filter((pool) => pool.domainId === 1 || pool.domain?.toLowerCase() === "casino")
         .map((pool) => getPoolAssetContext(release, pool))
         .filter((context): context is PoolAssetContext =>
           Boolean(context?.bank && context.pool.vault)

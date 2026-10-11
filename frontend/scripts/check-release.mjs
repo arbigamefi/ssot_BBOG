@@ -11,7 +11,6 @@ const REQUIRED_CORE_CONTRACTS = [
   "refRegistry",
   "refEngine"
 ];
-const REQUIRED_SPORTS_CONTRACTS = ["sportsHub", "sportsRiskEngine"];
 const requiredChainIds = parseRequiredChainIds(process.env.REQUIRED_EMBEDDED_CHAIN_IDS);
 
 const dir = path.resolve(process.cwd(), "packages/ssot/src/release/embedded");
@@ -56,38 +55,6 @@ for (const f of jsons) {
     }
   }
 
-  if (raw?.sports?.enabled) {
-    for (const key of REQUIRED_SPORTS_CONTRACTS) {
-      const value = contracts[key];
-      if (typeof value !== "string" || value.length === 0) {
-        issues.push(`${key} missing`);
-      } else if (value.toLowerCase() === ZERO_ADDRESS) {
-        issues.push(`${key} is zero`);
-      }
-    }
-    if (
-      !isNonEmptyString(raw.sports.sportsHub) ||
-      raw.sports.sportsHub.toLowerCase() === ZERO_ADDRESS
-    ) {
-      issues.push("sports.sportsHub missing");
-    } else if (
-      contracts.sportsHub &&
-      raw.sports.sportsHub.toLowerCase() !== contracts.sportsHub.toLowerCase()
-    ) {
-      issues.push("sports.sportsHub does not match contracts.sportsHub");
-    }
-    if (
-      !isNonEmptyString(raw.sports.riskEngine) ||
-      raw.sports.riskEngine.toLowerCase() === ZERO_ADDRESS
-    ) {
-      issues.push("sports.riskEngine missing");
-    } else if (
-      contracts.sportsRiskEngine &&
-      raw.sports.riskEngine.toLowerCase() !== contracts.sportsRiskEngine.toLowerCase()
-    ) {
-      issues.push("sports.riskEngine does not match contracts.sportsRiskEngine");
-    }
-  }
   if (!raw?.assets?.length) issues.push("assets empty");
   if (!raw?.games || Object.keys(raw.games).length === 0) issues.push("games empty");
   if (!Array.isArray(raw?.gamesMeta) || raw.gamesMeta.length === 0) issues.push("gamesMeta empty");

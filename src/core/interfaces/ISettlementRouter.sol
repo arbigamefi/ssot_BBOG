@@ -20,8 +20,8 @@ interface ISettlementRouter {
     event RandomnessConsumerBound(address indexed bank, address indexed consumer);
     error InvalidConsumerBinding();
 
-    /// @notice Open a position. `edgeBps` is the house edge the hub prices the position with; casino hubs pass
-    ///         the effective edge and sports hubs pass 0. It bounds what the position may later accrue.
+    /// @notice Open a position. `edgeBps` is the house edge the hub prices the position with (the effective edge
+    ///         of the game). It bounds what the position may later accrue.
     function openPosition(
         uint64 poolId,
         address player,

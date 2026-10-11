@@ -6,16 +6,12 @@ describe("bet index schema", () => {
   it("declares the durable event, bet, and cursor tables", () => {
     expect(BET_INDEX_SCHEMA_SQL).toContain("create table if not exists gamehub_events");
     expect(BET_INDEX_SCHEMA_SQL).toContain("create table if not exists bets");
-    expect(BET_INDEX_SCHEMA_SQL).toContain("create table if not exists sport_tickets");
     expect(BET_INDEX_SCHEMA_SQL).toContain("create table if not exists vault_provider_ledger");
     expect(BET_INDEX_SCHEMA_SQL).toContain("create table if not exists indexer_cursors");
     expect(BET_INDEX_SCHEMA_SQL).toContain("referrer_l1 text");
     expect(BET_INDEX_SCHEMA_SQL).toContain("bets_affiliate_idx");
-    expect(BET_INDEX_SCHEMA_SQL).toContain("sport_tickets_player_idx");
-    expect(BET_INDEX_SCHEMA_SQL).toContain("sport_tickets_market_state_idx");
     expect(BET_INDEX_SCHEMA_SQL).toContain("vault_provider_ledger_owner_idx");
     expect(BET_INDEX_SCHEMA_SQL).toContain("primary key (chain_id, tx_hash, log_index)");
     expect(BET_INDEX_SCHEMA_SQL).toContain("primary key (chain_id, game_hub, bet_id)");
-    expect(BET_INDEX_SCHEMA_SQL).toContain("primary key (chain_id, ticket_id)");
   });
 });

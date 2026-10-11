@@ -116,7 +116,7 @@ All logos are SVG format for:
 
 **v2.0** (June 2026)
 
-- Redesigned for ArbiGameFi's B2C casino/sportsbook product direction
+- Redesigned for ArbiGameFi's B2C casino product direction
 - Adapted the supplied brand shape to the current product palette instead of changing the app's established visual system
 - New hexagon-based design concept
 - Complete set of variants created

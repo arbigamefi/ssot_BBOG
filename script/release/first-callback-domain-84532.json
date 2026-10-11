@@ -1,7 +1,7 @@
 {
   "schema": "ARBIGAMEFI_FIRST_CALLBACK_DOMAIN_V1",
   "chainId": 84532,
-  "status": "CERTIFIED",
+  "status": "PENDING_INDEPENDENT_REVIEW",
   "certificateSeal": {
     "version": "v4",
     "manifest": "landing-2026-10-08/certificate-v4/CERTIFICATE-v4.sha256",
@@ -22,20 +22,20 @@
     "withdrawalBufferBps": 1000
   },
   "moduleCodeHashes": {
-    "moduleDice": "0x59b856cd3382ed097317ac14c958495181c02ff813f75200e61602a399758c3a",
-    "moduleCoinToss": "0xdad2715a726366105498b4f2087be4964e30cc1bf74e04a3013beeb963ff58de",
-    "moduleRoulette": "0xc0cf73e055319b3f34e91ea180d41071b820d9dd14e5570394555dcc2fc35f32",
-    "moduleKeno": "0xf1de5ba1efe5687db5b5983fed1fbe172421faa82e6c3696507eb6ca9f9a0f1c",
-    "modulePlinko": "0x6a43f48600cc555118ef7c7f94b239afd16d7024dad02121010c24c66082ebc4",
-    "moduleSicBo": "0x2a89b0e026835e5b7707fa52c393b5f1afa02e4572e28e1fec0fbc830414babc",
-    "moduleSlots": "0x574a8aa25a9edaab1f63cc1291a723b1da3e36cccf1ba63ab0f85e3b402a5c69",
-    "moduleBaccarat": "0x1c9a2222b9ba0f67c8e9fb44aff5735047ed115485871f872e6ef7fdb6a95553"
+    "moduleDice": "0x749799482c6c44172dea996d0f2fd082642ad1df4b1cdc0e94ea72d478c7cb6b",
+    "moduleCoinToss": "0x8f2e7b126b883f9a419a5486abdafb37ffdaeebb02fc9ddb1eb9fad14194a7a0",
+    "moduleRoulette": "0x2741cb3cdbfbdcf01de6dea57a5198d4d4310a3b8d9039ed5e4c1c2d325070af",
+    "moduleKeno": "0xd9e9f23c2b12776bb2de865d2490cf81caad73c8a11aa017481657bbc17cd189",
+    "modulePlinko": "0x2986686ad6cc244c7629de0019e935fd7b0b8cd94eb44f2fbd55c8dea64b2242",
+    "moduleSicBo": "0x9fd908f827ef9162ee086a5ec2bbc7aff98e84470e98210609caf51f7a834da0",
+    "moduleSlots": "0xdf46412f3b9e9c23a9d29c04f7b8ef9fdf928aed9e108f22cae39a053cbe7cc7",
+    "moduleBaccarat": "0x717d531dc458024f3771032e03e3dd3d7d040eda0d0713103d33ea0da7645b30"
   },
   "coreRuntimes": {
     "VRFHub": {
       "artifact": "VRFHub.sol:VRFHub",
       "runtimeBytes": 5941,
-      "keccakWithImmutablesZeroed": "0x63cd06b7ba0a93212948ec419ca48bcda1c88d058316d222bed6a9e26ed8db48",
+      "keccakWithImmutablesZeroed": "0x08abeaaa5ca4d5a427828cca76fc2623eed4cc168543f2e3718d003296555963",
       "immutables": [
         {
           "value": "wrapperLink",
@@ -65,8 +65,8 @@
     },
     "GameHub": {
       "artifact": "GameHub.sol:GameHub",
-      "runtimeBytes": 20046,
-      "keccakWithImmutablesZeroed": "0xe9ac09bfe9c021a156298149fb891cab7c3a282b99f95b9eae0fa8f81831af5d",
+      "runtimeBytes": 19947,
+      "keccakWithImmutablesZeroed": "0x4416c30c3e2f16b3b9bb8e0801f0e2514f20491e145c9d553428c8a35d6cc400",
       "immutables": [
         {
           "value": "settlementRouter",
@@ -76,7 +76,7 @@
             8734,
             12250,
             17216,
-            19405
+            18725
           ]
         },
         {
@@ -89,7 +89,7 @@
             9585,
             12524,
             17381,
-            19146
+            19433
           ]
         },
         {
@@ -117,7 +117,7 @@
     "SettlementRouter": {
       "artifact": "SettlementRouter.sol:SettlementRouter",
       "runtimeBytes": 4598,
-      "keccakWithImmutablesZeroed": "0xf21747dc56930fd233b76214b377a165ba5e24d912be6ca39cf76ece6dc61537",
+      "keccakWithImmutablesZeroed": "0xec2702c204d43d1bc341cc29486d70770fc3eb43e79b5ffa98aa8e8de3a4e8dd",
       "immutables": [
         {
           "value": "poolRegistry",
@@ -131,7 +131,7 @@
     "PoolRegistry": {
       "artifact": "PoolRegistry.sol:PoolRegistry",
       "runtimeBytes": 3304,
-      "keccakWithImmutablesZeroed": "0x98e7a347036cbbea0aae6495437c0e7485be6cbfe1e39b675ed8ab4165d6f3a9",
+      "keccakWithImmutablesZeroed": "0x9068211cd0187027b6d968ad091cf92beb7c8f654f7d8401493d831b71865390",
       "immutables": []
     },
     "ReferralRegistry": {
@@ -143,13 +143,13 @@
     "DefaultReferralEngine": {
       "artifact": "DefaultReferralEngine.sol:DefaultReferralEngine",
       "runtimeBytes": 2148,
-      "keccakWithImmutablesZeroed": "0x63e5f6380d5ff7d296c1a91f895ae2e0ab021d6bcf7761420c788d1ee20f98c6",
+      "keccakWithImmutablesZeroed": "0xf8045293b627bf7b7de2186b3f0e7b494efe60c47bfb994e538639b150ff4299",
       "immutables": []
     },
     "Bank": {
       "artifact": "Bank.sol:Bank",
       "runtimeBytes": 15808,
-      "keccakWithImmutablesZeroed": "0x784451fd3dbebcc35957222240b5f7ea95faa38ff27a7d5112ccd49ac8bda557",
+      "keccakWithImmutablesZeroed": "0x873fd511db049447c8356df16a93fd91005d6f062d58fb067a2cac1c098443a8",
       "immutables": [
         {
           "value": "poolAsset",

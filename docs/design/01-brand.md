@@ -6,7 +6,7 @@
 | Depends on | `../strategy/fullstack-product-architecture.md`, `10-design-tokens.md` |
 | Supersedes | Draft v1 brand book |
 
-ArbiGameFi should look like a serious, verifiable casino/sportsbook product,
+ArbiGameFi should look like a serious, verifiable casino product,
 not a promo-heavy casino skin.
 
 ## 1. Position
@@ -47,8 +47,7 @@ Avoid these references:
 
 - Use the token palette from [`10-design-tokens.md`](./10-design-tokens.md).
 - One product, one brand color.
-- Casino, sportsbook, portfolio, earn, and ops do not receive separate hue
-  families.
+- Casino, portfolio, earn, and ops do not receive separate hue families.
 - Semantic colors are for state only: success, warning, danger.
 
 ## 5. Typography
@@ -77,7 +76,6 @@ Not allowed:
 
 ## 7. Product Surface Rules
 
-- `/casino` and `/sportsbook` should feel like the same product.
 - Game variety comes from rules, layout, and module visuals, not hue changes.
 - Marketing pages may be more expressive, but still must show the actual
   product and proof surfaces.

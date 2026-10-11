@@ -32,11 +32,10 @@ Avoid:
 | ------------ | --------------------------------------- |
 | Connect      | wallet                                  |
 | Approve      | ERC-20 allowance                        |
-| Place        | casino bet or sportsbook ticket         |
+| Place        | casino bet                              |
 | Sign         | typed-data signature                    |
-| Settle       | sportsbook ticket settlement            |
 | Finalize     | permissionless casino finalize fallback |
-| Refund       | stuck bet/ticket refund                 |
+| Refund       | stuck bet refund                        |
 | Deposit      | LP deposit                              |
 | Withdraw     | LP withdrawal                           |
 | Claim        | accrued XP/refund credit                |

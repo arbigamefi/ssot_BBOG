@@ -157,29 +157,6 @@ query and one canonical VRF receipt/delivery query; each Vault-ledger scan combi
 types into one log request per chunk;
 block timestamps and contract reads add RPC work.
 
-## Sports recovery
-
-Sports indexing and terminalization are separately enabled by
-`KEEPER_SPORTS_TICKET_INDEX_ENABLED` and
-`KEEPER_SPORTS_TERMINALIZER_ENABLED`. They require durable writes, a reachable
-database and a SportsHub in the release. Missing configuration or failed schema
-initialization aborts startup before workers send transactions.
-
-Market events are persisted as pending work before advancing their cursor.
-Independent `TicketPlaced` history builds the recovery ticket index, scoped by
-chain and SportsHub. The market and ticket checkpoints include their coverage
-origin; widening that origin invalidates narrower page progress. Neither a
-casino cursor nor a partial public ticket feed proves complete ticket coverage.
-
-Settlement waits for ticket-history coverage through the market event block,
-then reads finality and current ticket state. Resolved markets finalize and
-settle held tickets; voided markets refund them. Writes are simulated first.
-`KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET` is a page size, not a total
-limit. Pending pages survive restart and retry, and stale workers cannot
-acknowledge a newer work revision. `KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS` bounds
-history per pass. Manual `KEEPER_SPORTS_TERMINALIZER_MARKET_IDS` use the same
-coverage checks.
-
 ## Health
 
 Health JSON includes queue depth, scan progress, transaction outcomes, RPC usage,
@@ -224,8 +201,8 @@ KEEPER_TEST_POSTGRES_URL=postgres://user:password@127.0.0.1:5432/test_db \
 ```
 
 These tests refuse remote hosts and create/remove isolated schemas. They cover
-concurrent initialization, rollback/replay, chain/contract isolation, numeric
-pagination, stale acknowledgements, financial receipts and pending-bet recovery.
+concurrent initialization, replay, chain/contract isolation, numeric pagination,
+atomic ledger replacement, financial receipts and pending-bet recovery.
 Without the explicit URL, SQL integration tests are skipped.
 
 For local durable indexing, `pnpm -C frontend bet-index:db:up` starts the local

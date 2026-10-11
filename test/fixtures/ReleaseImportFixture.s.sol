@@ -63,10 +63,8 @@ contract ReleaseImportFixture is Script {
         }
         vm.setEnv("NUM_POOLS", "1");
         vm.setEnv("POOL_ASSET_0", vm.toString(address(asset)));
-        vm.setEnv("POOL_DOMAIN_0", "1");
         vm.setEnv("POOL_ID_0", "1");
         vm.setEnv("BANK_MIN_BET_AMOUNT_0", "10000");
-        vm.setEnv("SPORTS_DERIVE_ROLE_SET_HASHES", "false");
         vm.setEnv("DEFAULT_HOUSE_EDGE_BPS", "200");
         vm.setEnv("REFUND_TIMEOUT_SECONDS", "3600");
         DeployHarnessV16 deployer = new DeployHarnessV16();

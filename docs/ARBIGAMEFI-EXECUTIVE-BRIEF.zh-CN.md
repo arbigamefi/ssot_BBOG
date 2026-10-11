@@ -1,19 +1,16 @@
 # ArbiGameFi 项目简介
 
-> AGF-BRIEF-2026.10-r3 · 2026-10-04 · 中文与英文 · 内部审阅稿，尚未对外发布
+> AGF-BRIEF-2026.10-r4 · 2026-10-11 · 中文与英文 · 内部审阅稿，尚未对外发布
 >
 > **读者**：首次接触项目的用户、合作方、媒体与研究者
 
 ## 用自己的钱包参与游戏，看清每一次投入与结算
 
-ArbiGameFi 正在建设单品牌、钱包原生的 casino 与 sportsbook，**项目尚未上线**。它把熟悉的玩法与可核对的规则、费用、结果和支付结合起来，首期聚焦 Base 网络与 USDC。
+ArbiGameFi 正在建设单品牌、钱包原生的 casino，**项目尚未上线**。它把熟悉的玩法与可核对的规则、费用、结果和支付结合起来，首期聚焦 Base 网络与 USDC。
 
 **为谁而做。** 已有 EVM 钱包与稳定币经验、所在地允许参与、重视支出透明度的成年人。产品能否赢得自主使用与回访，还需要实际验证；公开代码不等于市场需求。
 
-**产品。**
-
-- **Casino**：围绕八种玩法完成报价、钱包确认、自动结算与收据。
-- **Sportsbook**：规划从赛前足球胜／平／负固定赔率单关起步，使用独立的资本、数据与结果规则，单独满足发布条件。
+**产品。** Casino 围绕八种玩法完成报价、钱包确认、自动结算与收据。
 
 **资金怎样运作。**
 
@@ -35,9 +32,9 @@ ArbiGameFi 正在建设单品牌、钱包原生的 casino 与 sportsbook，**项
 
 **Play from your wallet. Understand each stake and settlement.**
 
-ArbiGameFi is an unlaunched, single-brand, wallet-native casino and sportsbook. It starts on Base with USDC, for adults experienced with EVM wallets and stablecoins who are eligible to take part where they live. Familiar games, clear costs and inspectable payments are the proposition; demand and retention still require validation.
+ArbiGameFi is an unlaunched, single-brand, wallet-native casino. It starts on Base with USDC, for adults experienced with EVM wallets and stablecoins who are eligible to take part where they live. Familiar games, clear costs and inspectable payments are the proposition; demand and retention still require validation.
 
-**Products.** The casino connects quotes, wallet actions, automatic settlement and readable receipts across eight games. A planned sportsbook starts with pre-match football 1X2 singles, with separate capital, odds and result rules and its own release requirements.
+**Product.** The casino connects quotes, wallet actions, automatic settlement and readable receipts across eight games.
 
 **How the money works.**
 

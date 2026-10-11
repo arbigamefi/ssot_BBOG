@@ -17,7 +17,6 @@ The LP/callback signals below are target requirements; their implementation is p
 | Finalize, refund or payable delivery failure                         | Preserve state-aware retries; do not replace valid outcomes with refunds                         |
 | Stale health, RPC failure, signer gas or nonce issue                 | Restore the affected path and reconcile pending receipts                                         |
 | Database/reorg/replay failure                                        | Do not advance unpersisted cursors; verify canonical history and cash evidence                   |
-| Sports missing/disputed result                                       | Use the separately authorized sports process                                                     |
 
 Tree-inclusive callback gas saturation, failure overhead and unsupported game/round settings also require
 alerts. Monitor surplus changes separately from deficits; surplus is not spendable LP headroom.

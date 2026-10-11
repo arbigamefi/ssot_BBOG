@@ -9,9 +9,6 @@
   "blockNumber": 47938596,
   "poolRegistry": "0xff36e19FeF79834c34EC54D82df9435a5792927f",
   "gameHub": "0x6EE24a7659601090380CBcF7D832a33193355bb7",
-  "sportsHub": "0x0000000000000000000000000000000000000000",
-  "sportsRiskEngine": "0x0000000000000000000000000000000000000000",
-  "sportsEnabled": 0,
   "numPools": 1,
   "poolId_0": 1,
   "poolDomain_0": 1,
@@ -41,9 +38,5 @@
   "gameCallbackGasLimit_PLINKO": 2447746,
   "gameCallbackGasLimit_SIC_BO": 2447746,
   "gameCallbackGasLimit_SLOTS": 2447746,
-  "gameCallbackGasLimit_BACCARAT": 2447746,
-  "sportsOddsSigner": "0x0000000000000000000000000000000000000000",
-  "sportsResultReporter": "0x0000000000000000000000000000000000000000",
-  "sportsResultChallenger": "0x0000000000000000000000000000000000000000",
-  "sportsResultArbitrator": "0x0000000000000000000000000000000000000000"
+  "gameCallbackGasLimit_BACCARAT": 2447746
 }

@@ -131,7 +131,7 @@ Object.assign(fixture, {
     {
       poolId: 1,
       domainId: 1,
-      domain: "casino",
+      domain: "Casino",
       active: true,
       asset: token.address,
       bank: bank.address,

@@ -6,9 +6,6 @@ import type {
   DepositCursor,
   DomainBet,
   DomainError,
-  DomainSportsMarket,
-  DomainSportsResult,
-  DomainSportsTicket,
   DomainXPBuckets
 } from "../domain";
 import type { PlayerPaymentProof } from "@ssot/bet-index/player-payment";
@@ -26,15 +23,6 @@ export type TxStep =
       call: {
         contract: "GameHub";
         fn: "placeBet";
-        argsSummary: Record<string, unknown>;
-      };
-    }
-  | {
-      type: "placeSportsTicket";
-      to: Address;
-      call: {
-        contract: "SportsHub";
-        fn: "placeTicket";
         argsSummary: Record<string, unknown>;
       };
     };
@@ -278,115 +266,4 @@ export interface SSOTBankAPI {
 export interface SSOTVRFHubAPI {
   getRefundCredit(user: Address): Promise<bigint>;
   claimRefundCredit(): Promise<TxResult>;
-}
-
-export interface CreateSportsMarketInput {
-  eventId: bigint;
-  poolId: number;
-  outcomeCount: number;
-  startsAt: bigint;
-  lockTime: bigint;
-  resultFinalitySeconds: bigint;
-  marketKey: Hex;
-  rulebookHash: Hex;
-}
-
-export interface ProposeSportsResultInput {
-  marketId: bigint;
-  winningOutcomeId: number;
-  resultSourceHash: Hex;
-  evidenceHash: Hex;
-  observedAt: bigint;
-  reporterSignatures?: readonly Hex[];
-}
-
-export type ResolveSportsChallengeDecision = "upholdResult" | "reopenResult" | "voidMarket";
-
-export interface ResolveSportsChallengeInput {
-  marketId: bigint;
-  decision: ResolveSportsChallengeDecision;
-  decisionHash: Hex;
-}
-
-export interface SportsOddsSnapshotInput {
-  marketId: bigint;
-  outcomeId: number;
-  marketVersion: bigint;
-  oddsWad: bigint;
-  maxStake: bigint;
-  maxPayout: bigint;
-  expiresAt: bigint;
-  nonce: bigint;
-  riskHash: Hex;
-}
-
-export interface PlaceSportsTicketInput {
-  chainId: number;
-  marketId: bigint;
-  outcomeId: number;
-  stake: bigint;
-  odds: SportsOddsSnapshotInput;
-  signature: Hex;
-}
-
-export interface PlaceSportsTicketPlan {
-  chainId: number;
-  releaseDigest: string;
-  warnings: string[];
-  steps: TxStep[];
-  payload: {
-    marketId: bigint;
-    outcomeId: number;
-    stake: bigint;
-    odds: SportsOddsSnapshotInput;
-    signature: Hex;
-    poolId: number;
-  };
-  preview: {
-    allowance: bigint;
-    needsApproval: boolean;
-    approveAmount?: bigint;
-    asset: Address;
-    bank: Address;
-    marketState: DomainSportsMarket["state"];
-    oddsTicketHash?: Hex;
-  };
-}
-
-export interface ExecuteSportsTicketPlanResult {
-  approveTx?: TxResult;
-  placeTicketTx: TxResult;
-  ticketId?: bigint;
-}
-
-export interface SSOTSportsHubAPI {
-  getNextMarketId(): Promise<bigint>;
-  getNextTicketId(): Promise<bigint>;
-  getMarket(marketId: bigint): Promise<DomainSportsMarket>;
-  getTicket(ticketId: bigint): Promise<DomainSportsTicket>;
-  getResult(marketId: bigint): Promise<DomainSportsResult>;
-  getMarketReserved(marketId: bigint): Promise<bigint>;
-  getMarketOutcomeReserved(marketId: bigint, outcomeId: number): Promise<bigint>;
-  getEventReserved(eventId: bigint): Promise<bigint>;
-  getPoolEventReserved(poolId: number, eventId: bigint): Promise<bigint>;
-  hashOddsTicket(odds: SportsOddsSnapshotInput, player: Address, stake: bigint): Promise<Hex>;
-  planPlaceTicket(
-    input: PlaceSportsTicketInput
-  ): Promise<PlaceSportsTicketPlan | { error: DomainError }>;
-  executeTicketPlan(plan: PlaceSportsTicketPlan): Promise<ExecuteSportsTicketPlanResult>;
-  createMarket(input: CreateSportsMarketInput): Promise<TxResult>;
-  openMarket(marketId: bigint): Promise<TxResult>;
-  suspendMarket(marketId: bigint, suspended: boolean): Promise<TxResult>;
-  lockMarket(marketId: bigint): Promise<TxResult>;
-  voidMarket(marketId: bigint, reasonHash: Hex): Promise<TxResult>;
-  proposeResult(input: ProposeSportsResultInput): Promise<TxResult>;
-  challengeResult(marketId: bigint, reasonHash: Hex): Promise<TxResult>;
-  resolveResultChallenge(input: ResolveSportsChallengeInput): Promise<TxResult>;
-  finalizeResult(marketId: bigint): Promise<TxResult>;
-  settleTicket(ticketId: bigint): Promise<TxResult>;
-  settleTickets(ticketIds: readonly bigint[]): Promise<TxResult>;
-  refundTicket(ticketId: bigint): Promise<TxResult>;
-  refundTickets(ticketIds: readonly bigint[]): Promise<TxResult>;
-  voidTicket(ticketId: bigint): Promise<TxResult>;
-  voidTickets(ticketIds: readonly bigint[]): Promise<TxResult>;
 }

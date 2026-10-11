@@ -21,7 +21,6 @@ const REQUIRED_CORE_CONTRACTS = [
   "refRegistry",
   "refEngine"
 ];
-const REQUIRED_SPORTS_CONTRACTS = ["sportsHub", "sportsRiskEngine"];
 const chainId = Number(readArg("--chain-id") ?? process.env.CHAIN_ID ?? 84532);
 const releasePath =
   readArg("--release") ??
@@ -60,8 +59,6 @@ const GameHubAbi = await loadAbi("GameHub");
 const BankAbi = await loadAbi("Bank");
 const LiquidityVaultAbi = await loadAbi("LiquidityVault");
 const PoolRegistryAbi = await loadAbi("PoolRegistry");
-const SportsHubAbi = await loadAbi("SportsHub");
-const SportsRiskEngineAbi = await loadAbi("SportsRiskEngine");
 const ERC20Abi = parseAbi([
   "function decimals() view returns (uint8)",
   "function balanceOf(address) view returns (uint256)"
@@ -142,17 +139,6 @@ await check("release schemaVersion", () => {
       throw new Error(`contracts.${key} is zero`);
     }
   }
-  if (release.sports?.enabled) {
-    for (const key of REQUIRED_SPORTS_CONTRACTS) {
-      const address = contracts[key];
-      if (typeof address !== "string" || address.length === 0) {
-        throw new Error(`contracts.${key} missing`);
-      }
-      if (address.toLowerCase() === ZERO_ADDRESS) {
-        throw new Error(`contracts.${key} is zero`);
-      }
-    }
-  }
   return "v1.6-nft-liquidity";
 });
 
@@ -172,14 +158,6 @@ await check("rpc block height", async () => {
 });
 
 for (const [name, address] of Object.entries(release.contracts ?? {})) {
-  if (
-    !release.sports?.enabled &&
-    REQUIRED_SPORTS_CONTRACTS.includes(name) &&
-    String(address).toLowerCase() === ZERO_ADDRESS
-  ) {
-    console.log(`[skip] contract ${name}: sports disabled`);
-    continue;
-  }
   await checkCode(`contract ${name}`, address);
 }
 
@@ -379,71 +357,15 @@ for (const pool of release.pools ?? []) {
     return validateBankPerformance(performance);
   });
 
-  if (String(pool.domain).toLowerCase() === "casino") {
-    await check(`GameHub riskInPaused pool ${pool.poolId}`, async () => {
-      const paused = await rpcReadContract({
-        address: getAddress(release.contracts.gameHub),
-        abi: GameHubAbi,
-        functionName: "riskInPaused",
-        args: [BigInt(pool.poolId)]
-      });
-      return String(paused);
+  await check(`GameHub riskInPaused pool ${pool.poolId}`, async () => {
+    const paused = await rpcReadContract({
+      address: getAddress(release.contracts.gameHub),
+      abi: GameHubAbi,
+      functionName: "riskInPaused",
+      args: [BigInt(pool.poolId)]
     });
-  }
-}
-
-if (release.sports?.enabled) {
-  await check("SportsHub wiring", async () => {
-    const [poolRegistry, riskEngine, settlementRouter] = await Promise.all([
-      rpcReadContract({
-        address: getAddress(release.contracts.sportsHub),
-        abi: SportsHubAbi,
-        functionName: "poolRegistry",
-        args: []
-      }),
-      rpcReadContract({
-        address: getAddress(release.contracts.sportsHub),
-        abi: SportsHubAbi,
-        functionName: "riskEngine",
-        args: []
-      }),
-      rpcReadContract({
-        address: getAddress(release.contracts.sportsHub),
-        abi: SportsHubAbi,
-        functionName: "settlementRouter",
-        args: []
-      })
-    ]);
-    assertAddressEq("sports poolRegistry", poolRegistry, release.contracts.poolRegistry);
-    assertAddressEq("sports riskEngine", riskEngine, release.contracts.sportsRiskEngine);
-    assertAddressEq(
-      "sports settlementRouter",
-      settlementRouter,
-      release.contracts.settlementRouter
-    );
-    return `risk=${short(riskEngine)} router=${short(settlementRouter)}`;
+    return String(paused);
   });
-
-  const sportsPools = (release.pools ?? []).filter(
-    (pool) => String(pool.domain).toLowerCase() === "sports"
-  );
-  for (const pool of sportsPools) {
-    await check(`SportsRiskEngine pool ${pool.poolId} hash`, async () => {
-      const riskHash = await rpcReadContract({
-        address: getAddress(release.contracts.sportsRiskEngine),
-        abi: SportsRiskEngineAbi,
-        functionName: "currentRiskHashForPool",
-        args: [BigInt(pool.poolId)]
-      });
-      if (
-        pool.sportsRisk?.riskHash &&
-        String(riskHash).toLowerCase() !== pool.sportsRisk.riskHash.toLowerCase()
-      ) {
-        throw new Error(`riskHash mismatch release=${pool.sportsRisk.riskHash} chain=${riskHash}`);
-      }
-      return String(riskHash);
-    });
-  }
 }
 
 if (!ok) {

@@ -82,7 +82,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale, messages } = await getRequestI18n();
   const defaultChainId = process.env.NEXT_PUBLIC_CHAIN_ID;
-  const sportsbookEnabledFlag = process.env.NEXT_PUBLIC_SPORTSBOOK_ENABLED;
 
   return (
     // The product is dark-only by design. Pin dark at the root so every page,
@@ -92,10 +91,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={locale} className={`dark ${inter.variable}`} data-theme="dark">
       <body className="min-h-screen">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <ProductProviders
-            defaultChainId={defaultChainId}
-            sportsbookEnabledFlag={sportsbookEnabledFlag}
-          >
+          <ProductProviders defaultChainId={defaultChainId}>
             <AppShell>{children}</AppShell>
             <Toaster />
           </ProductProviders>

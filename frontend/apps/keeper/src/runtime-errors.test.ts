@@ -36,7 +36,6 @@ const hub = "0x0000000000000000000000000000000000000001" as const;
 const config: KeeperConfig = {
   chainId: 8453,
   gameHub: hub,
-  sportsHub: hub,
   vrfHub: hub,
   httpRpcUrl: `https://base-mainnet.infura.io/v3/${KEY}`,
   wsRpcUrl: `wss://base-mainnet.g.alchemy.com/v2/${KEY}`,
@@ -54,16 +53,7 @@ const config: KeeperConfig = {
   betIndexDatabaseUrl: "postgres://unused.invalid",
   betIndexSsl: false,
   vaultProviderLedgerPools: [],
-  vaultProviderLedgerScanIntervalMs: 0,
-  sportsTicketIndexEnabled: true,
-  sportsTerminalizerEnabled: true,
-  sportsTerminalizerMarketIds: [],
-  sportsTerminalizerScanChunkBlocks: 10n,
-  sportsTerminalizerMaxTicketsPerMarket: 2,
-
-  sportsTicketScanChunkBlocks: 10n,
-  sportsTicketScanMaxBlocks: 50_000n,
-  sportsTicketScanStartBlock: 100n
+  vaultProviderLedgerScanIntervalMs: 0
 };
 
 type Watcher = { eventName: string; onError: (error: unknown) => void };
@@ -156,14 +146,6 @@ describe("runtime error reporting", () => {
       ["casino.keeper.gamehub_index_watch_error", "BetPlaced"],
       ["casino.keeper.gamehub_index_watch_error", "BetFinalized"],
       ["casino.keeper.gamehub_index_watch_error", "BetRefunded"],
-      ["casino.keeper.sports_ticket_index_watch_error", "TicketPlaced"],
-      ["casino.keeper.sports_ticket_index_watch_error", "TicketSettled"],
-      ["casino.keeper.sports_ticket_index_watch_error", "TicketRefunded"],
-      ["casino.keeper.sports_ticket_index_watch_error", "TicketVoided"],
-      ["sports.terminalizer.watch_error", "ResultProposed"],
-      ["sports.terminalizer.watch_error", "ResultFinalized"],
-      ["sports.terminalizer.watch_error", "MarketVoided"],
-      ["sports.terminalizer.watch_error", "ResultChallengeResolved"],
       ["casino.keeper.vrfhub_watch_error", "ResultReceived"],
       ["casino.keeper.vrfhub_watch_error", "CallbackAttempt"]
     ]);
@@ -255,9 +237,7 @@ describe("runtime error reporting", () => {
       config: {
         ...config,
         wsRpcUrl: undefined,
-        betIndexWriteEnabled: false,
-        sportsTicketIndexEnabled: false,
-        sportsTerminalizerEnabled: false
+        betIndexWriteEnabled: false
       },
       logger
     });
@@ -346,9 +326,7 @@ describe("runtime error reporting", () => {
       config: {
         ...config,
         wsRpcUrl: undefined,
-        betIndexWriteEnabled: false,
-        sportsTicketIndexEnabled: false,
-        sportsTerminalizerEnabled: false
+        betIndexWriteEnabled: false
       },
       logger
     });

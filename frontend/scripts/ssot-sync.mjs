@@ -97,14 +97,11 @@ function requireNumeric(value, label) {
 }
 
 function buildEmbeddedAssets(manifest) {
+  // Every pool of the release is a casino pool (the validator binds them to the snapshot).
   const pools = Array.isArray(manifest.pools) ? manifest.pools : [];
-  const casinoPools = pools.filter(
-    (p) => String(p.domain).toLowerCase() === "casino" || Number(p.domainId) === 1
-  );
-  const sourcePools = casinoPools.length > 0 ? casinoPools : pools;
   const seenAssets = new Set();
   const assets = [];
-  for (const pool of sourcePools) {
+  for (const pool of pools) {
     const asset = normalizeAddress(pool.asset);
     if (seenAssets.has(asset)) continue;
     seenAssets.add(asset);
@@ -138,27 +135,6 @@ function buildEmbeddedGamesMeta(manifest) {
   }));
 }
 
-function buildEmbeddedSports(manifest) {
-  if (!manifest.sports || typeof manifest.sports !== "object") return undefined;
-  const s = manifest.sports;
-  return {
-    enabled: Boolean(s.enabled),
-    riskEngine: normalizeAddress(s.riskEngine),
-    sportsHub: normalizeAddress(s.sportsHub),
-    oddsSignerSetHash: s.oddsSignerSetHash,
-    resultReporterSetHash: s.resultReporterSetHash,
-    resultReporterThreshold: String(s.resultReporterThreshold ?? "0"),
-    resultChallengeTimeoutSeconds: String(s.resultChallengeTimeoutSeconds ?? "0"),
-    resultChallenger: normalizeAddress(s.resultChallenger),
-    resultArbitrator: normalizeAddress(s.resultArbitrator),
-    maxStake: String(s.maxStake ?? "0"),
-    maxPayout: String(s.maxPayout ?? "0"),
-    maxMarketReserved: String(s.maxMarketReserved ?? "0"),
-    maxOutcomeReserved: String(s.maxOutcomeReserved ?? "0"),
-    maxEventReserved: String(s.maxEventReserved ?? "0")
-  };
-}
-
 function buildEmbeddedPools(manifest) {
   if (!Array.isArray(manifest.pools)) return undefined;
   return manifest.pools.map((pool, index) => ({
@@ -170,17 +146,7 @@ function buildEmbeddedPools(manifest) {
     bank: normalizeAddress(requireString(pool.bank, `pools[${index}].bank`)),
     vault: normalizeAddress(requireString(pool.vault, `pools[${index}].vault`)),
     symbol: requireString(pool.symbol, `pools[${index}].symbol`),
-    decimals: requireNumeric(pool.decimals, `pools[${index}].decimals`),
-    sportsRisk: pool.sportsRisk
-      ? {
-          maxStake: String(pool.sportsRisk.maxStake ?? "0"),
-          maxPayout: String(pool.sportsRisk.maxPayout ?? "0"),
-          maxMarketReserved: String(pool.sportsRisk.maxMarketReserved ?? "0"),
-          maxOutcomeReserved: String(pool.sportsRisk.maxOutcomeReserved ?? "0"),
-          maxEventReserved: String(pool.sportsRisk.maxEventReserved ?? "0"),
-          riskHash: String(pool.sportsRisk.riskHash ?? "")
-        }
-      : null
+    decimals: requireNumeric(pool.decimals, `pools[${index}].decimals`)
   }));
 }
 
@@ -380,7 +346,6 @@ async function main() {
   const embeddedAssets = buildEmbeddedAssets(manifest);
   const embeddedGames = buildEmbeddedGames(manifest);
   const embeddedGamesMeta = buildEmbeddedGamesMeta(manifest);
-  const embeddedSports = buildEmbeddedSports(manifest);
   const embeddedPools = buildEmbeddedPools(manifest);
 
   // Generate embedded release snapshot consumed by runtime loader
@@ -395,8 +360,6 @@ async function main() {
       gameHub: normalizeAddress(addresses.gameHub),
       settlementRouter: normalizeAddress(addresses.settlementRouter),
       poolRegistry: normalizeAddress(addresses.poolRegistry),
-      sportsHub: normalizeAddress(addresses.sportsHub),
-      sportsRiskEngine: normalizeAddress(addresses.sportsRiskEngine),
       vrfHub: normalizeAddress(addresses.vrfHub),
       refRegistry: normalizeAddress(addresses.refRegistry),
       refEngine: normalizeAddress(addresses.refEngine)
@@ -404,7 +367,6 @@ async function main() {
     assets: embeddedAssets,
     games: embeddedGames,
     gamesMeta: embeddedGamesMeta,
-    sports: embeddedSports,
     pools: embeddedPools,
     meta: {
       architectureVersion: RELEASE_LINE.architectureVersion,

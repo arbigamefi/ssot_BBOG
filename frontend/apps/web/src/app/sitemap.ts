@@ -15,8 +15,7 @@ const CASINO_GAMES = [
 
 /**
  * Public, crawlable routes only. Account, ops, and API surfaces are
- * intentionally excluded (they're noindex / private). Sportsbook is omitted
- * until it ships (currently flag-gated off).
+ * intentionally excluded (they're noindex / private).
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

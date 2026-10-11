@@ -14,7 +14,6 @@ import { Drawer } from "./overlay";
 
 export type AppRoute =
   | "directory"
-  | "sportsbook"
   | "bets"
   | "liquidity"
   | "claims"
@@ -51,7 +50,6 @@ const GAME_NAV_LINKS = [
 ] as const;
 
 const PRODUCT_NAV_LINKS = [
-  { id: "sportsbook", labelKey: "nav.sportsbook", href: "/sportsbook" },
   { id: "liquidity", labelKey: "nav.liquidity", href: "/earn" },
   { id: "referral", labelKey: "nav.affiliates", href: "/portfolio/referral" }
 ] as const;
@@ -297,7 +295,6 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
 
   const navLinks = [
     { id: "directory", label: t("nav.games"), href: "/casino" },
-    { id: "sportsbook", label: t("nav.sportsbook"), href: "/sportsbook" },
     { id: "bets", label: t("nav.bets"), href: "/portfolio/activity" },
     { id: "liquidity", label: t("nav.liquidity"), href: "/earn" },
     { id: "claims", label: t("nav.claims"), href: "/portfolio/claims" },

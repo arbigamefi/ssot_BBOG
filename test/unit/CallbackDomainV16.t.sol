@@ -24,7 +24,8 @@ contract CallbackDomainV16Test is Test {
         uint256 kenoRounds;
         bytes32 kenoCode;
         uint256 casinoMinBet;
-        uint256 sportsMinBet;
+        uint256 secondMinBet;
+        uint256 secondDomain;
         address wrapper;
         address casinoAsset;
         uint256 riskReserveBps;
@@ -45,13 +46,14 @@ contract CallbackDomainV16Test is Test {
     ];
     VerifyCallbackDomainV16 internal verifier;
     string internal committed;
-    string internal pending;
+    /// The committed domain as it will read once a certificate for this build is accepted, to exercise the rules.
+    string internal certified;
     uint256 internal nonce;
 
     function setUp() public {
         verifier = new VerifyCallbackDomainV16();
         committed = vm.readFile("script/release/first-callback-domain-84532.json");
-        pending = vm.replace(committed, "CERTIFIED", "PENDING_INDEPENDENT_REVIEW");
+        certified = vm.replace(committed, "PENDING_INDEPENDENT_REVIEW", "CERTIFIED");
     }
 
     function _runtimeHashes() internal pure returns (bytes32[8] memory h) {
@@ -72,6 +74,7 @@ contract CallbackDomainV16Test is Test {
             25,
             bytes32(0),
             10_000,
+            10_000,
             1,
             committed.readAddress(".providerReference.wrapper"),
             committed.readAddress(".token.proxy"),
@@ -80,7 +83,7 @@ contract CallbackDomainV16Test is Test {
         );
     }
 
-    /// A snapshot with the release keys the verifier reads: one casino pool and one sports pool.
+    /// A snapshot with the release keys the verifier reads: two casino pools.
     function _json(Snap memory s) internal returns (string memory json) {
         string memory obj = string.concat("snap", vm.toString(++nonce));
         bytes32[8] memory h = _runtimeHashes();
@@ -100,11 +103,11 @@ contract CallbackDomainV16Test is Test {
         vm.serializeUint(obj, "poolBankRiskReserveBps_0", s.riskReserveBps);
         vm.serializeUint(obj, "poolBankWithdrawalBufferBps_0", s.withdrawalBufferBps);
         vm.serializeAddress(obj, "poolAsset_0", s.casinoAsset);
-        vm.serializeUint(obj, "poolDomain_1", 2);
-        vm.serializeUint(obj, "poolBankRiskReserveBps_1", 0); // sports pools are outside the callback domain
-        vm.serializeUint(obj, "poolBankWithdrawalBufferBps_1", 0);
-        vm.serializeAddress(obj, "poolAsset_1", address(0xB0B));
-        json = vm.serializeUint(obj, "poolBankMinBetAmount_1", s.sportsMinBet);
+        vm.serializeUint(obj, "poolDomain_1", s.secondDomain);
+        vm.serializeUint(obj, "poolBankRiskReserveBps_1", s.riskReserveBps);
+        vm.serializeUint(obj, "poolBankWithdrawalBufferBps_1", s.withdrawalBufferBps);
+        vm.serializeAddress(obj, "poolAsset_1", s.casinoAsset);
+        json = vm.serializeUint(obj, "poolBankMinBetAmount_1", s.secondMinBet);
     }
 
     function _rejects(Snap memory s, string memory dom, string memory reason) internal {
@@ -115,7 +118,9 @@ contract CallbackDomainV16Test is Test {
 
     function test_committedDomainPinsCurrentModuleRuntimesAndParameters() public view {
         assertEq(committed.readUint(".chainId"), 84532);
-        assertEq(committed.readString(".status"), "CERTIFIED");
+        // The launch candidate changed the core runtimes after certificate v4 (launch candidate B9), so every release
+        // attempt fails until a certificate for this build is accepted.
+        assertEq(committed.readString(".status"), "PENDING_INDEPENDENT_REVIEW");
         assertEq(
             committed.readString(".certificateSeal.sha256"),
             "d67a7083a9f3676514339432cc5f690d3cc4de0253935d431c8d9631f8873491"
@@ -235,50 +240,55 @@ contract CallbackDomainV16Test is Test {
     }
 
     function test_snapshotInsideCertifiedDomainPasses() public {
-        verifier.verify(_json(_good()), committed);
+        verifier.verify(_json(_good()), certified);
         Snap memory s = _good();
         s.kenoRounds = 1;
-        s.sportsMinBet = 0; // no VRF callback on sports positions
-        verifier.verify(_json(s), committed);
+        verifier.verify(_json(s), certified);
     }
 
     function test_pendingCertificateFailsReleaseVerification() public {
-        _rejects(_good(), pending, "first-callback certificate not accepted");
+        _rejects(_good(), committed, "first-callback certificate not accepted");
     }
 
     function test_rejectsEveryDomainViolation() public {
         Snap memory s = _good();
         s.chainId = 8453; // the Sepolia certificate does not carry over to Base mainnet
-        _rejects(s, committed, "certificate is for another chain");
+        _rejects(s, certified, "certificate is for another chain");
         s = _good();
         s.gasLimit = 2_447_745;
-        _rejects(s, committed, "callback gas limit is not the certified value");
+        _rejects(s, certified, "callback gas limit is not the certified value");
         s = _good();
         s.kenoRounds = 26;
-        _rejects(s, committed, "round count outside the certified range");
+        _rejects(s, certified, "round count outside the certified range");
         s = _good();
         s.kenoRounds = 0;
-        _rejects(s, committed, "round count outside the certified range");
+        _rejects(s, certified, "round count outside the certified range");
         s = _good();
         s.kenoCode = keccak256("replacement module");
-        _rejects(s, committed, "module runtime is not the certified code");
+        _rejects(s, certified, "module runtime is not the certified code");
         s = _good();
         s.casinoMinBet = 98;
-        _rejects(s, committed, "casino minimum bet below the certified floor");
+        _rejects(s, certified, "casino minimum bet below the certified floor");
         s = _good();
         s.casinoMinBet = 99; // k > 0 still holds, but the Owner fixed 0.01 USDC per round (audit F-02)
-        _rejects(s, committed, "casino minimum bet is not the Owner policy value");
+        _rejects(s, certified, "casino minimum bet is not the Owner policy value");
         s = _good();
         s.riskReserveBps = 0;
-        _rejects(s, committed, "risk reserve is not the Owner policy value");
+        _rejects(s, certified, "risk reserve is not the Owner policy value");
         s = _good();
         s.withdrawalBufferBps = 999;
-        _rejects(s, committed, "withdrawal buffer is not the Owner policy value");
+        _rejects(s, certified, "withdrawal buffer is not the Owner policy value");
         s = _good();
         s.wrapper = address(0xBAD);
-        _rejects(s, committed, "VRF wrapper is not the certified provider");
+        _rejects(s, certified, "VRF wrapper is not the certified provider");
         s = _good();
         s.casinoAsset = address(0xBAD);
-        _rejects(s, committed, "casino asset is not the certified token");
+        _rejects(s, certified, "casino asset is not the certified token");
+        s = _good();
+        s.secondDomain = 0; // every pool must be a casino pool, so none escapes these checks
+        _rejects(s, certified, "pool is not a casino pool");
+        s = _good();
+        s.secondMinBet = 99;
+        _rejects(s, certified, "casino minimum bet is not the Owner policy value");
     }
 }

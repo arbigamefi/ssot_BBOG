@@ -25,5 +25,4 @@ Status: core implemented and locally verified; current status is in the
 | Release identity               | Deployment, snapshot, digest and import     | Required Vault, immutable reciprocal bindings, pinned source and generated ABI, negative drift/signature tests                                   |
 
 Current test filenames are implementation starting points, not proof of new obligations.
-Sports coverage does not admit sports to the casino pool. Local tests do not substitute for
-independent review, external audit or deployed-network acceptance.
+Local tests do not substitute for independent review, external audit or deployed-network acceptance.

@@ -127,11 +127,7 @@ and per-Bank unbooked count are durable before any fallible GameHub call. A dupl
 the word. Public retry uses the stored seed and original binding. Bank/Vault accounting and terminal
 acknowledgment succeed in the same reverting child call.
 
-### SportsHub and referrals
-
-SportsHub owns market, ticket, finality, challenge and void semantics and settles through Router.
-The first deployment remains a USDC casino pool. Casino callback qualification does not qualify
-sports' externally known outcomes or its admission.
+### Referrals
 
 The referral registry tracks relationships; the engine calculates allocations. Bank owns fixed XP
 liabilities and their claim/vesting state. LP tree allocation does not give recipients control over

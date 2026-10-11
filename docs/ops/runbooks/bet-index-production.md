@@ -41,18 +41,17 @@ replace affected indexed data.
 
 The running keeper also maintains independent unresolved-bet recovery from the release block.
 Ordinary event cursors and `KEEPER_START_BLOCK` cannot skip that history. Persist events before
-advancing coverage, and let failed writes retry. Sports history has its own coverage and durable
-storage requirements; a casino backfill alone does not establish complete Sports coverage.
+advancing coverage, and let failed writes retry.
 
 ## Failure and recovery
 
 Track database availability/capacity, oldest unresolved work, cursor lag against confirmed chain
 head and public read-route errors. Keep the existing per-client rate limits configured for recent,
-player, affiliate and Sports ticket reads. A failed index query must not become an empty successful
+player and affiliate reads. A failed index query must not become an empty successful
 history response.
 
 Repair a database outage without bypassing recovery checkpoints. Already-queued permissionless
-casino work is distinct from durable indexing; Sports recovery explicitly requires a healthy store.
+casino work is distinct from durable indexing.
 Restarted workers replay and re-read current contract state before sending transactions. Do not
 advance a cursor just to make health green.
 

@@ -146,9 +146,6 @@ contract DeploymentV16Test is Test {
         vm.setEnv("BANK_MIN_BET_AMOUNT_1", "10000");
         vm.setEnv("POOL_ASSET_0", vm.toString(address(asset)));
         vm.setEnv("POOL_ASSET_1", vm.toString(address(asset)));
-        vm.setEnv("POOL_DOMAIN_0", "1");
-        vm.setEnv("POOL_DOMAIN_1", "1");
-        vm.setEnv("SPORTS_DERIVE_ROLE_SET_HASHES", "false");
         vm.setEnv("POOL_ID_0", "1");
         vm.setEnv("POOL_ID_1", "3");
         vm.setEnv("DEFAULT_HOUSE_EDGE_BPS", "200");
@@ -180,7 +177,6 @@ contract DeploymentV16Test is Test {
         vm.setEnv("NUM_POOLS", "3");
         vm.setEnv("POOL_ID_2", "4");
         vm.setEnv("POOL_ASSET_2", vm.toString(address(asset)));
-        vm.setEnv("POOL_DOMAIN_2", "1");
         vm.setEnv("BANK_MIN_BET_AMOUNT_2", "10000");
         vm.setEnv("BANK_RISK_RESERVE_BPS_2", "1000");
         vm.setEnv("BANK_WITHDRAWAL_BUFFER_BPS_2", "2500");
@@ -411,27 +407,14 @@ contract DeploymentV16Test is Test {
         digest.digest(changed);
     }
 
-    function testSportsTargetsAreIncludedAndBanksRemainPaused() public isolatedEnv {
-        vm.setEnv("POOL_DOMAIN_1", "2");
-        vm.setEnv("SPORTS_DERIVE_ROLE_SET_HASHES", "true");
-        vm.setEnv("SPORTS_ODDS_SIGNER", vm.toString(address(81)));
-        vm.setEnv("SPORTS_RESULT_REPORTER", vm.toString(address(82)));
-        vm.setEnv("SPORTS_MAX_STAKE", "1000000");
-        vm.setEnv("SPORTS_MAX_PAYOUT", "2000000");
-        vm.setEnv("SPORTS_MAX_MARKET_RESERVED", "10000000");
-        vm.setEnv("SPORTS_MAX_OUTCOME_RESERVED", "10000000");
-        vm.setEnv("SPORTS_MAX_EVENT_RESERVED", "10000000");
-        vm.setEnv("SPORTS_ODDS_SIGNER_SET_HASH", vm.toString(bytes32(uint256(1))));
-        vm.setEnv("SPORTS_RESULT_REPORTER_SET_HASH", vm.toString(bytes32(uint256(2))));
+    function testGovernanceTargetsAreTheCasinoContractsAndBanksRemainPaused() public isolatedEnv {
         (string memory snap, address[] memory list) = _deploy();
-        assertEq(list.length, 7);
-        (,,, bytes32 initialOdds, bytes32 initialReporters) =
-            abi.decode(snap.readBytes(".ctorArgs_sportsHub"), (address, address, address, bytes32, bytes32));
-        assertEq(initialOdds, bytes32(uint256(1)));
-        assertEq(initialReporters, bytes32(uint256(2)));
-        assertNotEq(snap.readBytes32(".sportsOddsSignerSetHash"), initialOdds);
-        assertEq(list[5], snap.readAddress(".sportsRiskEngine"));
-        assertEq(list[6], snap.readAddress(".sportsHub"));
+        assertEq(list.length, 5);
+        assertEq(list[0], snap.readAddress(".poolRegistry"));
+        assertEq(list[1], snap.readAddress(".refRegistry"));
+        assertEq(list[2], snap.readAddress(".gameHub"));
+        assertEq(list[3], snap.readAddress(".poolBank_0"));
+        assertEq(list[4], snap.readAddress(".poolBank_1"));
         verifier.verify(snap, false);
         for (uint256 i; i < list.length; ++i) {
             vm.prank(address(safe));

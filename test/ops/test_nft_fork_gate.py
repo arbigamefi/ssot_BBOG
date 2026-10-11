@@ -39,7 +39,7 @@ class NftForkGateTests(unittest.TestCase):
                          'print(json.dumps({"suite":{"test_results":{str(n):{"status":status} for n in range(count)}}}))\n')
         forge.chmod(0o755)
         self.snapshot = {'architectureVersion': 'v1.6-nft-liquidity', 'chainId': 84532,
-                         'numPools': 1, 'sportsEnabled': 0, 'poolDomain_0': 1, 'poolAssetDecimals_0': 6,
+                         'numPools': 1, 'poolDomain_0': 1, 'poolAssetDecimals_0': 6,
                          'poolAssetSymbol_0': 'USDC',
                          'vrfWrapper': '0x' + '1' * 40, 'poolAsset_0': '0x' + '2' * 40,
                          'gameMaxBetCount_COIN_TOSS': 25, 'gameCallbackGasLimit_COIN_TOSS': 2400000}
@@ -88,7 +88,7 @@ class NftForkGateTests(unittest.TestCase):
 
     def test_old_architecture_and_unsupported_pool_scope_stop_before_forge(self):
         for field, value in (('architectureVersion', 'v1.6-house-edge-allocation'), ('numPools', 2),
-                             ('sportsEnabled', 1), ('poolAssetDecimals_0', 18), ('poolAssetSymbol_0', 'OTHER'),
+                             ('poolDomain_0', 2), ('poolAssetDecimals_0', 18), ('poolAssetSymbol_0', 'OTHER'),
                              ('gameCallbackGasLimit_COIN_TOSS', 3000000)):
             original = self.snapshot[field]
             with self.subTest(field=field):

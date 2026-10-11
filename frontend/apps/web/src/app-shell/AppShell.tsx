@@ -25,12 +25,7 @@ import { InstallPrompt } from "./pwa/InstallPrompt";
 
 function getActiveRoute(pathname: string): AppRoute {
   if (pathname === "/casino") return "directory";
-  if (pathname === "/sportsbook" || pathname.startsWith("/sportsbook/")) return "sportsbook";
-  if (
-    pathname === "/portfolio/activity" ||
-    pathname.startsWith("/portfolio/activity/") ||
-    pathname.startsWith("/portfolio/tickets/")
-  ) {
+  if (pathname === "/portfolio/activity" || pathname.startsWith("/portfolio/activity/")) {
     return "bets";
   }
   if (pathname === "/earn") return "liquidity";

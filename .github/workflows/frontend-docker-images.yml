@@ -111,7 +111,6 @@ jobs:
               NEXT_PUBLIC_ENABLE_ENS_LOOKUP=true
               NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=${{ inputs.casino_enabled && 'true' || 'false' }}
               NEXT_PUBLIC_LP_DEPOSITS_ENABLED=${{ inputs.lp_deposits_enabled && 'true' || 'false' }}
-              NEXT_PUBLIC_SPORTSBOOK_ENABLED=false
           - service: keeper
             image: ghcr.io/arbigamefi/ssot-bbog-keeper
             dockerfile: frontend/deploy/docker/Dockerfile.keeper

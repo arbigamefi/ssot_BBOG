@@ -67,24 +67,13 @@ export function getPoolAssetContext(
 
 export function getCasinoPoolAssetContexts(release: PoolAssetReleaseLike) {
   return (release.pools ?? [])
-    .filter(
-      (pool) =>
-        pool.active !== false &&
-        (String(pool.domain ?? "").toLowerCase() === "casino" || pool.domainId === 1)
-    )
+    .filter((pool) => pool.active !== false)
     .map((pool) => getPoolAssetContext(release, pool))
     .filter((item): item is PoolAssetContext => Boolean(item));
 }
 
 export function getDefaultCasinoPoolAssetContext(release: PoolAssetReleaseLike) {
-  return (
-    getCasinoPoolAssetContexts(release)[0] ??
-    (release.pools ?? [])
-      .filter((pool) => pool.active !== false)
-      .map((pool) => getPoolAssetContext(release, pool))
-      .find((item): item is PoolAssetContext => Boolean(item)) ??
-    null
-  );
+  return getCasinoPoolAssetContexts(release)[0] ?? null;
 }
 
 export function formatAssetAmount(

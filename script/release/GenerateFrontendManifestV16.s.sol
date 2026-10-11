@@ -25,8 +25,6 @@ contract GenerateFrontendManifestV16 is Script {
     bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
 
     uint256 internal constant DOMAIN_CASINO = 1;
-    uint256 internal constant DOMAIN_SPORTS = 2;
-    uint256 internal constant DOMAIN_FUTURE = 3;
 
     function run() external {
         string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", DEFAULT_SNAPSHOT_PATH);
@@ -63,9 +61,6 @@ contract GenerateFrontendManifestV16 is Script {
             "\"addresses\":",
             _buildAddressesJson(snap),
             ",",
-            "\"sports\":",
-            _buildSportsJson(snap),
-            ",",
             "\"games\":",
             _buildGamesJson(snap),
             ",",
@@ -89,8 +84,6 @@ contract GenerateFrontendManifestV16 is Script {
         address vrfHub = snap.readAddress(".vrfHub");
         address refRegistry = snap.readAddress(".refRegistry");
         address refEngine = snap.readAddress(".refEngine");
-        address sportsRiskEngine = snap.readAddress(".sportsRiskEngine");
-        address sportsHub = snap.readAddress(".sportsHub");
 
         address moduleDice = snap.readAddress(".moduleDice");
         address moduleCoinToss = snap.readAddress(".moduleCoinToss");
@@ -108,12 +101,6 @@ contract GenerateFrontendManifestV16 is Script {
             "\",",
             "\"gameHub\":\"",
             vm.toString(gameHub),
-            "\",",
-            "\"sportsRiskEngine\":\"",
-            vm.toString(sportsRiskEngine),
-            "\",",
-            "\"sportsHub\":\"",
-            vm.toString(sportsHub),
             "\",",
             "\"settlementRouter\":\"",
             vm.toString(settlementRouter),
@@ -153,56 +140,6 @@ contract GenerateFrontendManifestV16 is Script {
             "\",",
             "\"moduleBaccarat\":\"",
             vm.toString(moduleBaccarat),
-            "\"",
-            "}"
-        );
-    }
-
-    function _buildSportsJson(string memory snap) internal pure returns (string memory) {
-        uint256 enabled = snap.readUint(".sportsEnabled");
-        return string.concat(
-            "{",
-            "\"enabled\":",
-            enabled == 0 ? "false" : "true",
-            ",",
-            "\"riskEngine\":\"",
-            vm.toString(snap.readAddress(".sportsRiskEngine")),
-            "\",",
-            "\"sportsHub\":\"",
-            vm.toString(snap.readAddress(".sportsHub")),
-            "\",",
-            "\"oddsSignerSetHash\":\"",
-            vm.toString(snap.readBytes32(".sportsOddsSignerSetHash")),
-            "\",",
-            "\"resultReporterSetHash\":\"",
-            vm.toString(snap.readBytes32(".sportsResultReporterSetHash")),
-            "\",",
-            "\"resultReporterThreshold\":\"",
-            vm.toString(snap.readUint(".sportsResultReporterThreshold")),
-            "\",",
-            "\"resultChallengeTimeoutSeconds\":\"",
-            vm.toString(snap.readUint(".sportsResultChallengeTimeoutSeconds")),
-            "\",",
-            "\"resultChallenger\":\"",
-            vm.toString(snap.readAddress(".sportsResultChallenger")),
-            "\",",
-            "\"resultArbitrator\":\"",
-            vm.toString(snap.readAddress(".sportsResultArbitrator")),
-            "\",",
-            "\"maxStake\":\"",
-            vm.toString(snap.readUint(".sportsMaxStake")),
-            "\",",
-            "\"maxPayout\":\"",
-            vm.toString(snap.readUint(".sportsMaxPayout")),
-            "\",",
-            "\"maxMarketReserved\":\"",
-            vm.toString(snap.readUint(".sportsMaxMarketReserved")),
-            "\",",
-            "\"maxOutcomeReserved\":\"",
-            vm.toString(snap.readUint(".sportsMaxOutcomeReserved")),
-            "\",",
-            "\"maxEventReserved\":\"",
-            vm.toString(snap.readUint(".sportsMaxEventReserved")),
             "\"",
             "}"
         );
@@ -295,40 +232,6 @@ contract GenerateFrontendManifestV16 is Script {
             "\",",
             "\"decimals\":",
             vm.toString(uint256(dec)),
-            ",",
-            "\"sportsRisk\":",
-            _poolSportsRiskJson(snap, suffix, domainId),
-            "}"
-        );
-    }
-
-    function _poolSportsRiskJson(string memory snap, string memory suffix, uint256 domainId)
-        internal
-        pure
-        returns (string memory)
-    {
-        if (domainId != DOMAIN_SPORTS) return "null";
-
-        return string.concat(
-            "{",
-            "\"maxStake\":\"",
-            vm.toString(snap.readUint(string.concat(".poolSportsMaxStake_", suffix))),
-            "\",",
-            "\"maxPayout\":\"",
-            vm.toString(snap.readUint(string.concat(".poolSportsMaxPayout_", suffix))),
-            "\",",
-            "\"maxMarketReserved\":\"",
-            vm.toString(snap.readUint(string.concat(".poolSportsMaxMarketReserved_", suffix))),
-            "\",",
-            "\"maxOutcomeReserved\":\"",
-            vm.toString(snap.readUint(string.concat(".poolSportsMaxOutcomeReserved_", suffix))),
-            "\",",
-            "\"maxEventReserved\":\"",
-            vm.toString(snap.readUint(string.concat(".poolSportsMaxEventReserved_", suffix))),
-            "\",",
-            "\"riskHash\":\"",
-            vm.toString(snap.readBytes32(string.concat(".poolSportsRiskHash_", suffix))),
-            "\"",
             "}"
         );
     }
@@ -378,10 +281,7 @@ contract GenerateFrontendManifestV16 is Script {
     }
 
     function _domainLabel(uint256 domainId) internal pure returns (string memory) {
-        if (domainId == DOMAIN_CASINO) return "Casino";
-        if (domainId == DOMAIN_SPORTS) return "Sports";
-        if (domainId == DOMAIN_FUTURE) return "Future";
-        return "Unknown";
+        return domainId == DOMAIN_CASINO ? "Casino" : "Unknown";
     }
 
     function _safe(string memory s) internal pure returns (string memory) {

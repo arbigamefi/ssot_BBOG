@@ -69,7 +69,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     uint256 public override minPlayerTurnoverForUnlock;
 
     uint256 public override riskReserveBps; // [0..10000], gates new risk-in.
-    /// @notice Minimum amount for one casino round or one sports ticket, in asset units.
+    /// @notice Minimum amount for one casino round, in asset units.
     uint256 public override minBetAmount;
     event MinBetAmountSet(uint256 minBetAmount);
     event SettlementRouterSet(address indexed router);
@@ -484,8 +484,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     ) external override onlySettlementRouter nonReentrant {
         if (paused()) revert RiskInPaused();
         if (openHolds() >= MAX_OPEN_HOLDS) revert OpenHoldLimit();
-        // A common hold has no casino round count. GameHub enforces the same minimum
-        // per amountPerRoll before funding; a sports hold is one ticket.
+        // A hold has no round count; GameHub enforces the same minimum per amountPerRoll before funding.
         if (stake < minBetAmount) revert BetAmountBelowMinimum(stake, minBetAmount);
         if (player == address(0) || fundingHub == address(0)) revert Errors.ZeroAddress();
         if (player == address(this) || player == vault) revert Errors.InvalidConfig();

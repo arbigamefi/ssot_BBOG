@@ -2,7 +2,7 @@
 
 Under the [implemented design](../../design/lp-accounting-and-callback-implementation.md), locally verified with final release qualification pending,
 the keeper submits exceptional settlement retries, eligible refunds and fixed-player debt payments. Give it a
-dedicated funded signer; it must not hold governance, guardian, odds-signing, result-reporting or
+dedicated funded signer; it must not hold governance, guardian or
 LP NFT approval/operator authority. An ERC721 operator can transfer a user's NFT to itself and
 then withdraw as owner; it is not a harmless convenience permission. The official Earn flow requires
 no NFT approval for withdrawal. Use independent signer credentials for redundant workers.

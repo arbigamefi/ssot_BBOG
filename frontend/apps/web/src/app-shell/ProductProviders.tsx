@@ -13,12 +13,10 @@ import { WalletProviderIsland } from "./WalletProviderIsland";
 
 export function ProductProviders({
   children,
-  defaultChainId,
-  sportsbookEnabledFlag
+  defaultChainId
 }: {
   children: React.ReactNode;
   defaultChainId?: string;
-  sportsbookEnabledFlag?: string;
 }) {
   return (
     // ComplianceProvider sits above analytics so consent can gate tracking.
@@ -26,7 +24,7 @@ export function ProductProviders({
       <ActiveChainProvider initialChainId={defaultChainId}>
         <WalletProviderIsland>
           <AnalyticsProvider>
-            <ReleaseProviderWagmi sportsbookEnabledFlag={sportsbookEnabledFlag}>
+            <ReleaseProviderWagmi>
               <SSOTRuntimeProvider>
                 <SSOTSDKProvider>
                   <ReferralAttributionCapture />

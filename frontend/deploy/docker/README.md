@@ -2,7 +2,7 @@
 
 One deployment runs one explicitly selected chain, one primary keeper, the web
 app, Caddy, and the dedicated `arbigamefi` PostgreSQL database. The first release
-uses Base Sepolia (`84532`) and one USDC casino pool; sportsbook stays disabled.
+uses Base Sepolia (`84532`) and one USDC casino pool.
 No mainnet keeper is started by this stack. Browser RPC uses official public Base
 endpoints; keeper HTTP uses Infura and keeper WebSocket uses Alchemy.
 
@@ -54,7 +54,7 @@ therefore precede this image build.
 The `casino_enabled` and `lp_deposits_enabled` workflow inputs default to false
 for the initial operational smoke check. Enable them only in a separately reviewed
 build after the required acceptance checks; this reuses the same signed contract
-release without changing source. Sportsbook stays disabled for this first release.
+release without changing source.
 
 Images are published to `ghcr.io/arbigamefi/ssot-bbog-web` and
 `ghcr.io/arbigamefi/ssot-bbog-keeper`. Tags are lookup conveniences; deploy only

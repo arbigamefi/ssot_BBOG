@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import type { BetRow } from "@ssot/ssot/indexer";
-import type { SportsTicketRow } from "@ssot/bet-index";
 
 import { PageTransition } from "../../../../components/PageTransition";
 import { ActivityFilterTabs } from "../../../../features/portfolio/activity/activity-filter-tabs";
@@ -19,14 +18,11 @@ import {
   shortHex
 } from "../../../../features/portfolio/activity/format";
 import type {
-  EnrichedActivityRow,
   BetMetric,
   BetStatusFilter,
   EnrichedBetRow
 } from "../../../../features/portfolio/activity/types";
-import { getPoolAssetContext } from "../../../../features/assets/pool-asset";
 import { usePlayerBets } from "../../../../features/betting/usePlayerBets";
-import { usePlayerSportsTickets } from "../../../../features/sportsbook/usePlayerSportsTickets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 
@@ -41,11 +37,6 @@ export function PortfolioActivityPageClient() {
     serverRows
   } = usePlayerBets({
     errorMessage: t("app.errors.playerBetsFailed"),
-    limit: 500,
-    player: sdk?.account
-  });
-  const { data: sportsTickets = [], isLoading: sportsTicketsLoading } = usePlayerSportsTickets({
-    errorMessage: t("app.errors.playerSportsTicketsFailed"),
     limit: 500,
     player: sdk?.account
   });
@@ -69,21 +60,6 @@ export function PortfolioActivityPageClient() {
     return { symbols, decimals };
   }, [release?.assets]);
 
-  const sportsAssetByPoolId = React.useMemo(() => {
-    const assets = new Map<string, { symbol: string; decimals: number }>();
-    if (!release) return assets;
-    for (const pool of release?.pools ?? []) {
-      const context = getPoolAssetContext(release, pool);
-      if (context) {
-        assets.set(String(pool.poolId), {
-          decimals: context.asset.decimals,
-          symbol: context.asset.symbol
-        });
-      }
-    }
-    return assets;
-  }, [release]);
-
   const enrichedBets = React.useMemo<EnrichedBetRow[]>(
     () =>
       bets.map((row) =>
@@ -106,34 +82,15 @@ export function PortfolioActivityPageClient() {
     [assetMaps.decimals, assetMaps.symbols, bets, gameLabelById, t]
   );
 
-  const enrichedSportsTickets = React.useMemo(
+  const activityRows = React.useMemo<EnrichedBetRow[]>(
     () =>
-      sportsTickets.map((row) =>
-        enrichSportsTicketRow({
-          row,
-          labels: {
-            pending: t("portfolio.activity.common.pending"),
-            sportsbook: t("portfolio.activity.common.sportsbook"),
-            justNow: t("portfolio.activity.time.justNow"),
-            minutesAgo: (minutes) => t("portfolio.activity.time.minutesAgo", { minutes }),
-            hoursAgo: (hours) => t("portfolio.activity.time.hoursAgo", { hours }),
-            daysAgo: (days) => t("portfolio.activity.time.daysAgo", { days })
-          },
-          assetByPoolId: sportsAssetByPoolId
-        })
-      ),
-    [sportsAssetByPoolId, sportsTickets, t]
-  );
-
-  const activityRows = React.useMemo<EnrichedActivityRow[]>(
-    () =>
-      [...enrichedBets, ...enrichedSportsTickets]
+      [...enrichedBets]
         .sort((a, b) => {
           if (b.updatedBlock !== a.updatedBlock) return b.updatedBlock - a.updatedBlock;
           return b.id.localeCompare(a.id);
         })
         .slice(0, 500),
-    [enrichedBets, enrichedSportsTickets]
+    [enrichedBets]
   );
 
   const filteredBets = React.useMemo(() => {
@@ -157,7 +114,7 @@ export function PortfolioActivityPageClient() {
         value: activityRows.length.toLocaleString("en-US"),
         detail: sdk?.account
           ? t("portfolio.activity.metrics.indexed.connected", {
-              serverRows: serverRows.length + sportsTickets.length,
+              serverRows: serverRows.length,
               localRows: localRows.length
             })
           : t("portfolio.activity.metrics.indexed.disconnected")
@@ -173,14 +130,14 @@ export function PortfolioActivityPageClient() {
         detail: t("portfolio.activity.metrics.settled.detail")
       }
     ];
-  }, [activityRows, localRows.length, sdk?.account, serverRows.length, sportsTickets.length, t]);
+  }, [activityRows, localRows.length, sdk?.account, serverRows.length, t]);
 
   return (
     <PageTransition pageKey="portfolio-activity">
       <div className="space-y-8">
         <ActivityHero metrics={metrics} />
         <ActivityFilterTabs active={statusFilter} onChange={setStatusFilter} />
-        <ActivityLedger rows={filteredBets} loading={isLoading || sportsTicketsLoading} />
+        <ActivityLedger rows={filteredBets} loading={isLoading} />
       </div>
     </PageTransition>
   );
@@ -219,7 +176,6 @@ function enrichBetRow({
   const decimals = row.asset ? (assetDecimals.get(row.asset.toLowerCase()) ?? 18) : 18;
 
   return {
-    kind: "casino",
     id: row.id,
     detailHref: `/portfolio/activity/${row.betId}`,
     row,
@@ -240,62 +196,4 @@ function enrichBetRow({
     relativeTime: formatRelativeTime(row.updatedAt, labels),
     updatedBlock: row.updatedBlock
   };
-}
-
-function enrichSportsTicketRow({
-  row,
-  labels,
-  assetByPoolId
-}: {
-  row: SportsTicketRow;
-  labels: {
-    pending: string;
-    sportsbook: string;
-    justNow: string;
-    minutesAgo: (minutes: number) => string;
-    hoursAgo: (hours: number) => string;
-    daysAgo: (days: number) => string;
-  };
-  assetByPoolId: ReadonlyMap<string, { symbol: string; decimals: number }>;
-}): EnrichedActivityRow {
-  const stake = row.stake ? BigInt(row.stake) : 0n;
-  const payout = row.payout ? BigInt(row.payout) : undefined;
-  const status = mapSportsTicketState(row.state, payout, stake);
-  const poolAsset = row.poolId ? assetByPoolId.get(String(row.poolId)) : undefined;
-  const symbol = poolAsset?.symbol ?? labels.pending;
-  const decimals = poolAsset?.decimals ?? 18;
-
-  return {
-    kind: "sports",
-    id: row.id,
-    detailHref: `/portfolio/tickets/${row.ticketId}`,
-    row,
-    status,
-    gameLabel: `${labels.sportsbook} #${row.marketId ?? labels.pending}`,
-    assetSymbol: symbol,
-    decimals,
-    stake,
-    payout,
-    outcomeLabel: formatOutcome({
-      status,
-      stake,
-      payout,
-      decimals,
-      symbol,
-      pendingLabel: labels.pending
-    }),
-    relativeTime: formatRelativeTime(row.updatedAt, labels),
-    updatedBlock: row.updatedBlock
-  };
-}
-
-function mapSportsTicketState(
-  state: SportsTicketRow["state"],
-  payout: bigint | undefined,
-  stake: bigint
-) {
-  if (state === "held") return "placed";
-  if (state === "voided" || state === "refunded") return "refunded";
-  if (state === "settled") return payout && payout > stake ? "won" : "lost";
-  return "placed";
 }

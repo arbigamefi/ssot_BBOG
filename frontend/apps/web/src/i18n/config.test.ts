@@ -38,9 +38,9 @@ describe("i18n config", () => {
       description: expect.stringContaining("Dice")
     });
     expect(
-      buildPageMetadata(getMessages("zh-Hans"), "sportsbookMarket", { marketId: "7" })
+      buildPageMetadata(getMessages("zh-Hans"), "portfolioBetDetail", { betId: "7" })
     ).toMatchObject({
-      title: "体育市场 7",
+      title: "投注 7",
       description: expect.stringContaining("7")
     });
   });

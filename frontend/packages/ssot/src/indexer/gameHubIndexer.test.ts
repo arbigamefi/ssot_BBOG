@@ -16,8 +16,6 @@ const MOCK_RELEASE: SSOTRelease = {
     gameHub: "0x1111111111111111111111111111111111111111",
     settlementRouter: "0x2222222222222222222222222222222222222222",
     poolRegistry: "0x3333333333333333333333333333333333333333",
-    sportsHub: "0x7777777777777777777777777777777777777777",
-    sportsRiskEngine: "0x8888888888888888888888888888888888888888",
     vrfHub: "0x9999999999999999999999999999999999999999",
     refRegistry: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     refEngine: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -45,19 +43,6 @@ const MOCK_RELEASE: SSOTRelease = {
       module: "0x6666666666666666666666666666666666666666"
     }
   ],
-  sports: {
-    enabled: false,
-    riskEngine: "0x8888888888888888888888888888888888888888",
-    sportsHub: "0x7777777777777777777777777777777777777777",
-    oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    resultReporterSetHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    resultReporterThreshold: "1",
-    maxStake: "1",
-    maxPayout: "1",
-    maxMarketReserved: "1",
-    maxOutcomeReserved: "1",
-    maxEventReserved: "1"
-  },
   pools: [
     {
       poolId: 1,
@@ -68,8 +53,7 @@ const MOCK_RELEASE: SSOTRelease = {
       vault: "0xcccccccccccccccccccccccccccccccccccccccc",
       bank: "0x5555555555555555555555555555555555555555",
       symbol: "USDC",
-      decimals: 6,
-      sportsRisk: null
+      decimals: 6
     }
   ],
   meta: {

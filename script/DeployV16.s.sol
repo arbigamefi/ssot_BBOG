@@ -11,8 +11,6 @@ import {Bank} from "../src/core/Bank.sol";
 import {GameHub} from "../src/core/GameHub.sol";
 import {PoolRegistry} from "../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../src/core/SettlementRouter.sol";
-import {SportsHub} from "../src/core/SportsHub.sol";
-import {SportsRiskEngine} from "../src/core/SportsRiskEngine.sol";
 import {VRFHub} from "../src/core/VRFHub.sol";
 import {SSOTTypes} from "../src/core/interfaces/SSOTTypes.sol";
 import {HouseEdgeLib} from "../src/libs/HouseEdgeLib.sol";
@@ -44,7 +42,6 @@ interface IERC20MetadataLikeV16 {
 /// Per-pool env:
 ///   POOL_ID_i                         default i + 1
 ///   POOL_ASSET_i                      required
-///   POOL_DOMAIN_i                     default 1; 1=Casino, 2=Sports, 3=Future
 ///   BANK_MIN_BET_AMOUNT_i             required, minimum per casino round in asset units
 ///   BANK_RISK_RESERVE_BPS_i                default 6000
 ///   BANK_WITHDRAWAL_BUFFER_BPS_i      default 1000 (independent PF/XP outflow policy)
@@ -52,19 +49,7 @@ interface IERC20MetadataLikeV16 {
 ///   BANK_HOLDBACK_VESTING_SECONDS_i   default 86400
 ///   Asset decimals are read from the token
 ///
-/// Required when any pool uses POOL_DOMAIN_i=2 (Sports):
-///   SPORTS_MAX_STAKE, SPORTS_MAX_PAYOUT, SPORTS_MAX_MARKET_RESERVED,
-///   SPORTS_MAX_OUTCOME_RESERVED, SPORTS_MAX_EVENT_RESERVED,
-///   SPORTS_ODDS_SIGNER_SET_HASH, SPORTS_RESULT_REPORTER_SET_HASH
-/// Optional per-Sports-pool overrides:
-///   SPORTS_MAX_STAKE_POOL_i, SPORTS_MAX_PAYOUT_POOL_i, SPORTS_MAX_MARKET_RESERVED_POOL_i,
-///   SPORTS_MAX_OUTCOME_RESERVED_POOL_i, SPORTS_MAX_EVENT_RESERVED_POOL_i
-/// Optional Sports bootstrap allowlists:
-///   SPORTS_ODDS_SIGNER, SPORTS_RESULT_REPORTER, SPORTS_RESULT_CHALLENGER, SPORTS_RESULT_ARBITRATOR
-/// Optional Sports dispute policy:
-///   SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS default 604800; minimum 600
-/// Optional Sports role-set hash policy:
-///   SPORTS_DERIVE_ROLE_SET_HASHES=true derives final hashes from deployed SportsHub + bootstrap roles
+/// Every pool is a casino pool served by GameHub.
 ///
 /// Example:
 ///   forge script script/DeployV16.s.sol:DeployV16 --rpc-url $RPC_URL --broadcast -vvv
@@ -77,8 +62,6 @@ contract DeployV16 is Script {
     bytes32 internal constant GAME_SIC_BO = keccak256("SIC_BO");
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
     bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
-    uint64 internal constant MIN_RESULT_CHALLENGE_TIMEOUT_SECONDS = 10 minutes;
-    uint64 internal constant DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS = 7 days;
 
     /// @dev SSOT v1.6 referral schedule: rates are bps of the base turnover edge, l0 + l1 + l2 <= 3500.
     struct RefConfig {
@@ -86,26 +69,6 @@ contract DeployV16 is Script {
         uint16 l1Bps;
         uint16 l2Bps;
         uint16 holdbackBps;
-    }
-
-    struct SportsConfig {
-        bool enabled;
-        uint256 maxStake;
-        uint256 maxPayout;
-        uint256 maxMarketReserved;
-        uint256 maxOutcomeReserved;
-        uint256 maxEventReserved;
-        bytes32 oddsSignerSetHash;
-        bytes32 initialOddsSignerSetHash;
-        bytes32 resultReporterSetHash;
-        bytes32 initialResultReporterSetHash;
-        uint8 resultReporterThreshold;
-        uint64 resultChallengeTimeoutSeconds;
-        bool deriveRoleSetHashes;
-        address oddsSigner;
-        address resultReporter;
-        address resultChallenger;
-        address resultArbitrator;
     }
 
     struct DeployConfig {
@@ -124,7 +87,6 @@ contract DeployV16 is Script {
         uint16 defaultHouseEdgeBps;
         uint256 poolCount;
         RefConfig refConfig;
-        SportsConfig sportsConfig;
     }
 
     struct PoolConfig {
@@ -138,11 +100,6 @@ contract DeployV16 is Script {
         uint256 minTurnoverForUnlock;
         uint256 holdbackVestingSeconds;
         uint8 assetDecimals;
-        uint256 sportsMaxStake;
-        uint256 sportsMaxPayout;
-        uint256 sportsMaxMarketReserved;
-        uint256 sportsMaxOutcomeReserved;
-        uint256 sportsMaxEventReserved;
     }
 
     struct Deployed {
@@ -152,8 +109,6 @@ contract DeployV16 is Script {
         ReferralRegistry refRegistry;
         DefaultReferralEngine refEngine;
         GameHub gameHub;
-        SportsRiskEngine sportsRiskEngine;
-        SportsHub sportsHub;
         DiceModule dice;
         CoinTossModule coin;
         RouletteModule roulette;
@@ -177,10 +132,6 @@ contract DeployV16 is Script {
             require(pools[i].riskReserveBps <= 10_000, "BANK_RISK_RESERVE_BPS_i out of range");
             require(pools[i].withdrawalBufferBps <= 10_000, "BANK_WITHDRAWAL_BUFFER_BPS_i out of range");
         }
-        bool hasSports = _hasSportsPool(pools);
-        require(_hasCasinoPool(pools) || hasSports, "at least one Casino or Sports pool required");
-        cfg.sportsConfig = _readSportsConfig(hasSports);
-        _readSportsPoolLimits(cfg.sportsConfig, pools);
 
         vm.startBroadcast(cfg.deployer);
 
@@ -209,69 +160,6 @@ contract DeployV16 is Script {
         d.refRegistry.setBinderOnce(address(d.gameHub));
         d.poolRegistry.setHubRegistered(address(d.gameHub), true);
 
-        if (cfg.sportsConfig.enabled) {
-            d.sportsRiskEngine = new SportsRiskEngine(
-                cfg.gov,
-                cfg.sportsConfig.maxStake,
-                cfg.sportsConfig.maxPayout,
-                cfg.sportsConfig.maxMarketReserved,
-                cfg.sportsConfig.maxOutcomeReserved,
-                cfg.sportsConfig.maxEventReserved
-            );
-            d.sportsHub = new SportsHub(
-                address(d.router),
-                address(d.sportsRiskEngine),
-                cfg.gov,
-                cfg.sportsConfig.oddsSignerSetHash,
-                cfg.sportsConfig.resultReporterSetHash
-            );
-            d.poolRegistry.setHubRegistered(address(d.sportsHub), true);
-            if (cfg.sportsConfig.resultReporterThreshold != 1) {
-                d.sportsHub.setResultReporterThreshold(cfg.sportsConfig.resultReporterThreshold);
-            }
-            if (cfg.sportsConfig.resultChallengeTimeoutSeconds != DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS) {
-                d.sportsHub.setResultChallengeTimeoutSeconds(cfg.sportsConfig.resultChallengeTimeoutSeconds);
-            }
-            if (cfg.sportsConfig.deriveRoleSetHashes) {
-                require(
-                    cfg.sportsConfig.oddsSigner != address(0) && cfg.sportsConfig.resultReporter != address(0),
-                    "derived sports hashes require signer/reporter"
-                );
-                cfg.sportsConfig.oddsSignerSetHash =
-                    _derivedOddsSignerSetHash(address(d.sportsHub), cfg.sportsConfig.oddsSigner);
-                cfg.sportsConfig.resultReporterSetHash = _derivedResultReporterSetHash(
-                    address(d.sportsHub), cfg.sportsConfig.resultReporter, cfg.sportsConfig.resultReporterThreshold
-                );
-                d.sportsHub.setOddsSignerSetHash(cfg.sportsConfig.oddsSignerSetHash);
-                d.sportsHub.setResultReporterSetHash(cfg.sportsConfig.resultReporterSetHash);
-            }
-            if (cfg.sportsConfig.oddsSigner != address(0)) {
-                d.sportsHub.setOddsSigner(cfg.sportsConfig.oddsSigner, true);
-            }
-            if (cfg.sportsConfig.resultReporter != address(0)) {
-                d.sportsHub.setResultReporter(cfg.sportsConfig.resultReporter, true);
-            }
-            if (cfg.sportsConfig.resultChallenger != address(0)) {
-                d.sportsHub.setResultChallenger(cfg.sportsConfig.resultChallenger, true);
-            }
-            if (cfg.sportsConfig.resultArbitrator != address(0)) {
-                d.sportsHub.setResultArbitrator(cfg.sportsConfig.resultArbitrator, true);
-            }
-            for (uint256 i = 0; i < pools.length; ++i) {
-                if (pools[i].domain == SSOTTypes.PoolDomain.Sports) {
-                    d.sportsRiskEngine
-                        .setPoolLimits(
-                            pools[i].poolId,
-                            pools[i].sportsMaxStake,
-                            pools[i].sportsMaxPayout,
-                            pools[i].sportsMaxMarketReserved,
-                            pools[i].sportsMaxOutcomeReserved,
-                            pools[i].sportsMaxEventReserved
-                        );
-                }
-            }
-        }
-
         for (uint256 i = 0; i < pools.length; ++i) {
             Bank bank = new Bank(
                 pools[i].asset, cfg.gov, pools[i].riskReserveBps, pools[i].assetDecimals, pools[i].minBetAmount
@@ -289,11 +177,7 @@ contract DeployV16 is Script {
                 bank.setWithdrawalBufferBps(pools[i].withdrawalBufferBps);
             }
 
-            if (pools[i].domain == SSOTTypes.PoolDomain.Casino) {
-                d.poolRegistry.setHubAllowedForPool(pools[i].poolId, address(d.gameHub), true);
-            } else if (pools[i].domain == SSOTTypes.PoolDomain.Sports) {
-                d.poolRegistry.setHubAllowedForPool(pools[i].poolId, address(d.sportsHub), true);
-            }
+            d.poolRegistry.setHubAllowedForPool(pools[i].poolId, address(d.gameHub), true);
         }
 
         d.dice = new DiceModule();
@@ -375,59 +259,6 @@ contract DeployV16 is Script {
         );
     }
 
-    function _readSportsConfig(bool enabled) internal view returns (SportsConfig memory cfg) {
-        if (!enabled) return cfg;
-
-        cfg.enabled = true;
-        cfg.maxStake = vm.envUint("SPORTS_MAX_STAKE");
-        cfg.maxPayout = vm.envUint("SPORTS_MAX_PAYOUT");
-        cfg.maxMarketReserved = vm.envUint("SPORTS_MAX_MARKET_RESERVED");
-        cfg.maxOutcomeReserved = vm.envUint("SPORTS_MAX_OUTCOME_RESERVED");
-        cfg.maxEventReserved = vm.envUint("SPORTS_MAX_EVENT_RESERVED");
-        cfg.oddsSignerSetHash = vm.envBytes32("SPORTS_ODDS_SIGNER_SET_HASH");
-        cfg.resultReporterSetHash = vm.envBytes32("SPORTS_RESULT_REPORTER_SET_HASH");
-        cfg.initialOddsSignerSetHash = cfg.oddsSignerSetHash;
-        cfg.initialResultReporterSetHash = cfg.resultReporterSetHash;
-        uint256 resultReporterThreshold = vm.envOr("SPORTS_RESULT_REPORTER_THRESHOLD", uint256(1));
-        require(
-            resultReporterThreshold > 0 && resultReporterThreshold <= type(uint8).max,
-            "SPORTS_RESULT_REPORTER_THRESHOLD out of range"
-        );
-        cfg.resultReporterThreshold = uint8(resultReporterThreshold);
-        uint256 resultChallengeTimeoutSeconds =
-            vm.envOr("SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS", uint256(DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS));
-        require(
-            resultChallengeTimeoutSeconds >= MIN_RESULT_CHALLENGE_TIMEOUT_SECONDS
-                && resultChallengeTimeoutSeconds <= type(uint64).max,
-            "SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS out of range"
-        );
-        cfg.resultChallengeTimeoutSeconds = uint64(resultChallengeTimeoutSeconds);
-        cfg.deriveRoleSetHashes = vm.envOr("SPORTS_DERIVE_ROLE_SET_HASHES", false);
-        cfg.oddsSigner = vm.envOr("SPORTS_ODDS_SIGNER", address(0));
-        cfg.resultReporter = vm.envOr("SPORTS_RESULT_REPORTER", address(0));
-        cfg.resultChallenger = vm.envOr("SPORTS_RESULT_CHALLENGER", address(0));
-        cfg.resultArbitrator = vm.envOr("SPORTS_RESULT_ARBITRATOR", address(0));
-    }
-
-    function _readSportsPoolLimits(SportsConfig memory sportsConfig, PoolConfig[] memory pools) internal view {
-        if (!sportsConfig.enabled) return;
-
-        for (uint256 i = 0; i < pools.length; ++i) {
-            if (pools[i].domain != SSOTTypes.PoolDomain.Sports) continue;
-
-            string memory suffix = vm.toString(i);
-            pools[i].sportsMaxStake = vm.envOr(string.concat("SPORTS_MAX_STAKE_POOL_", suffix), sportsConfig.maxStake);
-            pools[i].sportsMaxPayout =
-                vm.envOr(string.concat("SPORTS_MAX_PAYOUT_POOL_", suffix), sportsConfig.maxPayout);
-            pools[i].sportsMaxMarketReserved =
-                vm.envOr(string.concat("SPORTS_MAX_MARKET_RESERVED_POOL_", suffix), sportsConfig.maxMarketReserved);
-            pools[i].sportsMaxOutcomeReserved =
-                vm.envOr(string.concat("SPORTS_MAX_OUTCOME_RESERVED_POOL_", suffix), sportsConfig.maxOutcomeReserved);
-            pools[i].sportsMaxEventReserved =
-                vm.envOr(string.concat("SPORTS_MAX_EVENT_RESERVED_POOL_", suffix), sportsConfig.maxEventReserved);
-        }
-    }
-
     function _readPoolConfig(uint256 i) internal view returns (PoolConfig memory cfg) {
         string memory suffix = vm.toString(i);
         uint256 poolId = vm.envOr(string.concat("POOL_ID_", suffix), i + 1);
@@ -438,8 +269,7 @@ contract DeployV16 is Script {
         (, uint8 assetDecimals) = _tryAssetMetadata(cfg.asset);
         uint256 oneAssetUnit = 10 ** uint256(assetDecimals);
 
-        uint256 domainRaw = vm.envOr(string.concat("POOL_DOMAIN_", suffix), uint256(1));
-        cfg.domain = _domainFromRaw(domainRaw);
+        cfg.domain = SSOTTypes.PoolDomain.Casino;
 
         cfg.minBetAmount = vm.envUint(string.concat("BANK_MIN_BET_AMOUNT_", suffix));
         require(cfg.minBetAmount > 0, "BANK_MIN_BET_AMOUNT_i must be positive");
@@ -464,13 +294,6 @@ contract DeployV16 is Script {
         return uint16(value);
     }
 
-    function _domainFromRaw(uint256 raw) internal pure returns (SSOTTypes.PoolDomain) {
-        require(
-            raw >= uint256(SSOTTypes.PoolDomain.Casino) && raw <= uint256(SSOTTypes.PoolDomain.Future), "bad domain"
-        );
-        return SSOTTypes.PoolDomain(raw);
-    }
-
     function _logDeployment(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d)
         internal
         pure
@@ -485,8 +308,6 @@ contract DeployV16 is Script {
         console2.log("refRegistry", address(d.refRegistry));
         console2.log("refEngine", address(d.refEngine));
         console2.log("gameHub", address(d.gameHub));
-        console2.log("sportsRiskEngine", address(d.sportsRiskEngine));
-        console2.log("sportsHub", address(d.sportsHub));
         console2.log("NUM_POOLS", pools.length);
         for (uint256 i = 0; i < pools.length; ++i) {
             string memory suffix = vm.toString(i);
@@ -529,8 +350,6 @@ contract DeployV16 is Script {
         json = vm.serializeAddress(obj, "refRegistry", address(d.refRegistry));
         json = vm.serializeAddress(obj, "refEngine", address(d.refEngine));
         json = vm.serializeAddress(obj, "gameHub", address(d.gameHub));
-        json = vm.serializeAddress(obj, "sportsRiskEngine", address(d.sportsRiskEngine));
-        json = vm.serializeAddress(obj, "sportsHub", address(d.sportsHub));
 
         json = vm.serializeAddress(obj, "moduleDice", address(d.dice));
         json = vm.serializeAddress(obj, "moduleCoinToss", address(d.coin));
@@ -547,8 +366,6 @@ contract DeployV16 is Script {
         json = vm.serializeBytes32(obj, "codeHash_refRegistry", address(d.refRegistry).codehash);
         json = vm.serializeBytes32(obj, "codeHash_refEngine", address(d.refEngine).codehash);
         json = vm.serializeBytes32(obj, "codeHash_gameHub", address(d.gameHub).codehash);
-        json = vm.serializeBytes32(obj, "codeHash_sportsRiskEngine", address(d.sportsRiskEngine).codehash);
-        json = vm.serializeBytes32(obj, "codeHash_sportsHub", address(d.sportsHub).codehash);
         json = vm.serializeBytes32(obj, "codeHash_moduleDice", address(d.dice).codehash);
         json = vm.serializeBytes32(obj, "codeHash_moduleCoinToss", address(d.coin).codehash);
         json = vm.serializeBytes32(obj, "codeHash_moduleRoulette", address(d.roulette).codehash);
@@ -590,22 +407,6 @@ contract DeployV16 is Script {
         json = vm.serializeUint(obj, "refL1Bps", cfg.refConfig.l1Bps);
         json = vm.serializeUint(obj, "refL2Bps", cfg.refConfig.l2Bps);
         json = vm.serializeUint(obj, "refHoldbackBps", cfg.refConfig.holdbackBps);
-        json = vm.serializeUint(obj, "sportsEnabled", cfg.sportsConfig.enabled ? 1 : 0);
-        json = vm.serializeUint(obj, "sportsMaxStake", cfg.sportsConfig.maxStake);
-        json = vm.serializeUint(obj, "sportsMaxPayout", cfg.sportsConfig.maxPayout);
-        json = vm.serializeUint(obj, "sportsMaxMarketReserved", cfg.sportsConfig.maxMarketReserved);
-        json = vm.serializeUint(obj, "sportsMaxOutcomeReserved", cfg.sportsConfig.maxOutcomeReserved);
-        json = vm.serializeUint(obj, "sportsMaxEventReserved", cfg.sportsConfig.maxEventReserved);
-        json = vm.serializeBytes32(obj, "sportsOddsSignerSetHash", cfg.sportsConfig.oddsSignerSetHash);
-        json = vm.serializeBytes32(obj, "sportsResultReporterSetHash", cfg.sportsConfig.resultReporterSetHash);
-        json = vm.serializeUint(obj, "sportsResultReporterThreshold", cfg.sportsConfig.resultReporterThreshold);
-        json = vm.serializeUint(
-            obj, "sportsResultChallengeTimeoutSeconds", cfg.sportsConfig.resultChallengeTimeoutSeconds
-        );
-        json = vm.serializeAddress(obj, "sportsOddsSigner", cfg.sportsConfig.oddsSigner);
-        json = vm.serializeAddress(obj, "sportsResultReporter", cfg.sportsConfig.resultReporter);
-        json = vm.serializeAddress(obj, "sportsResultChallenger", cfg.sportsConfig.resultChallenger);
-        json = vm.serializeAddress(obj, "sportsResultArbitrator", cfg.sportsConfig.resultArbitrator);
         return json;
     }
 
@@ -628,8 +429,6 @@ contract DeployV16 is Script {
         json = vm.serializeString(obj, "ctorArgs_moduleBaccarat", "0x");
         string memory gameHubCtorArgs = _gameHubCtorArgs(cfg, d);
         json = vm.serializeString(obj, "ctorArgs_gameHub", gameHubCtorArgs);
-        json = vm.serializeString(obj, "ctorArgs_sportsRiskEngine", _sportsRiskEngineCtorArgs(cfg));
-        json = vm.serializeString(obj, "ctorArgs_sportsHub", _sportsHubCtorArgs(cfg, d));
         return json;
     }
 
@@ -685,22 +484,6 @@ contract DeployV16 is Script {
             );
             json = vm.serializeUint(obj, string.concat("poolAssetDecimals_", suffix), pools[i].assetDecimals);
             json = vm.serializeUint(obj, string.concat("poolActive_", suffix), 1);
-            json = vm.serializeUint(obj, string.concat("poolSportsMaxStake_", suffix), pools[i].sportsMaxStake);
-            json = vm.serializeUint(obj, string.concat("poolSportsMaxPayout_", suffix), pools[i].sportsMaxPayout);
-            json = vm.serializeUint(
-                obj, string.concat("poolSportsMaxMarketReserved_", suffix), pools[i].sportsMaxMarketReserved
-            );
-            json = vm.serializeUint(
-                obj, string.concat("poolSportsMaxOutcomeReserved_", suffix), pools[i].sportsMaxOutcomeReserved
-            );
-            json = vm.serializeUint(
-                obj, string.concat("poolSportsMaxEventReserved_", suffix), pools[i].sportsMaxEventReserved
-            );
-            bytes32 sportsRiskHash = bytes32(0);
-            if (pools[i].domain == SSOTTypes.PoolDomain.Sports && address(d.sportsRiskEngine) != address(0)) {
-                sportsRiskHash = d.sportsRiskEngine.currentRiskHashForPool(pools[i].poolId);
-            }
-            json = vm.serializeBytes32(obj, string.concat("poolSportsRiskHash_", suffix), sportsRiskHash);
 
             json = vm.serializeString(
                 obj,
@@ -733,70 +516,10 @@ contract DeployV16 is Script {
         );
     }
 
-    function _sportsRiskEngineCtorArgs(DeployConfig memory cfg) internal pure returns (string memory) {
-        return vm.toString(
-            abi.encode(
-                cfg.gov,
-                cfg.sportsConfig.maxStake,
-                cfg.sportsConfig.maxPayout,
-                cfg.sportsConfig.maxMarketReserved,
-                cfg.sportsConfig.maxOutcomeReserved,
-                cfg.sportsConfig.maxEventReserved
-            )
-        );
-    }
-
-    function _sportsHubCtorArgs(DeployConfig memory cfg, Deployed memory d) internal pure returns (string memory) {
-        return vm.toString(
-            abi.encode(
-                address(d.router),
-                address(d.sportsRiskEngine),
-                cfg.gov,
-                cfg.sportsConfig.initialOddsSignerSetHash,
-                cfg.sportsConfig.initialResultReporterSetHash
-            )
-        );
-    }
-
-    function _derivedOddsSignerSetHash(address sportsHub, address oddsSigner) internal view returns (bytes32) {
-        return
-            keccak256(abi.encodePacked("BASE_SEPOLIA_SPORTS_ODDS_SIGNER_SET_V1", block.chainid, sportsHub, oddsSigner));
-    }
-
-    function _derivedResultReporterSetHash(address sportsHub, address reporter, uint8 threshold)
-        internal
-        view
-        returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                "BASE_SEPOLIA_SPORTS_RESULT_REPORTER_SET_V1", block.chainid, sportsHub, reporter, threshold
-            )
-        );
-    }
-
-    function _hasCasinoPool(PoolConfig[] memory pools) internal pure returns (bool) {
-        for (uint256 i = 0; i < pools.length; ++i) {
-            if (pools[i].domain == SSOTTypes.PoolDomain.Casino) return true;
-        }
-        return false;
-    }
-
-    function _hasSportsPool(PoolConfig[] memory pools) internal pure returns (bool) {
-        for (uint256 i = 0; i < pools.length; ++i) {
-            if (pools[i].domain == SSOTTypes.PoolDomain.Sports) return true;
-        }
-        return false;
-    }
-
     function _nominateGovernance(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d) internal {
         d.poolRegistry.transferGovernance(cfg.finalGovernance);
         d.refRegistry.transferGovernance(cfg.finalGovernance);
         d.gameHub.transferGovernance(cfg.finalGovernance);
-        if (cfg.sportsConfig.enabled) {
-            d.sportsRiskEngine.transferGovernance(cfg.finalGovernance);
-            d.sportsHub.transferGovernance(cfg.finalGovernance);
-        }
         for (uint256 i; i < pools.length; ++i) {
             Bank(pools[i].bank).transferGovernance(cfg.finalGovernance);
         }
@@ -824,9 +547,6 @@ contract DeployV16 is Script {
     }
 
     function _domainLabel(SSOTTypes.PoolDomain domain) internal pure returns (string memory) {
-        if (domain == SSOTTypes.PoolDomain.Casino) return "Casino";
-        if (domain == SSOTTypes.PoolDomain.Sports) return "Sports";
-        if (domain == SSOTTypes.PoolDomain.Future) return "Future";
-        return "Unknown";
+        return domain == SSOTTypes.PoolDomain.Casino ? "Casino" : "Unknown";
     }
 }

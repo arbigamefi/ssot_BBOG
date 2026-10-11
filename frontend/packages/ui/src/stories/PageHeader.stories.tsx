@@ -14,8 +14,8 @@ type Story = StoryObj<typeof PageHeader>;
 
 export const Default: Story = {
   args: {
-    title: "Sportsbook",
-    description: "Browse open markets, compare odds, and track tickets from one surface."
+    title: "Casino",
+    description: "Pick a game, set your stake, and verify every round on-chain."
   }
 };
 

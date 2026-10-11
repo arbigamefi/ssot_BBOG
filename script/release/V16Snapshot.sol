@@ -9,8 +9,6 @@ import {GameHub} from "../../src/core/GameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
-import {SportsHub} from "../../src/core/SportsHub.sol";
-import {SportsRiskEngine} from "../../src/core/SportsRiskEngine.sol";
 import {SafeGovernance} from "../common/SafeGovernance.sol";
 
 /// @dev Shared target enumeration prevents acceptance packages and release checks diverging.
@@ -24,17 +22,12 @@ library V16Snapshot {
         );
         uint256 pools = snap.readUint(".numPools");
         require(pools > 0 && pools <= 32, "bad pool count");
-        bool sports = snap.readUint(".sportsEnabled") == 1;
-        list = new address[](3 + pools + (sports ? 2 : 0));
+        list = new address[](3 + pools);
         list[0] = snap.readAddress(".poolRegistry");
         list[1] = snap.readAddress(".refRegistry");
         list[2] = snap.readAddress(".gameHub");
         for (uint256 i; i < pools; ++i) {
             list[3 + i] = snap.readAddress(string.concat(".poolBank_", vm.toString(i)));
-        }
-        if (sports) {
-            list[3 + pools] = snap.readAddress(".sportsRiskEngine");
-            list[4 + pools] = snap.readAddress(".sportsHub");
         }
         for (uint256 i; i < list.length; ++i) {
             require(list[i] != address(0), "zero governance target");
@@ -55,15 +48,13 @@ library V16Snapshot {
         );
         address bootstrap = snap.readAddress(".bootstrapGovernance");
         require(bootstrap != safe && bootstrap != address(0), "invalid bootstrap");
-        string[16] memory keys = [
+        string[14] memory keys = [
             string("vrfHub"),
             "poolRegistry",
             "settlementRouter",
             "refRegistry",
             "refEngine",
             "gameHub",
-            "sportsRiskEngine",
-            "sportsHub",
             "moduleDice",
             "moduleCoinToss",
             "moduleRoulette",
@@ -75,15 +66,11 @@ library V16Snapshot {
         ];
         for (uint256 i; i < keys.length; ++i) {
             address target = snap.readAddress(string.concat(".", keys[i]));
-            if (target == address(0)) {
-                require((i == 6 || i == 7) && snap.readUint(".sportsEnabled") == 0, "missing contract");
-            } else {
-                require(
-                    target.code.length != 0
-                        && target.codehash == snap.readBytes32(string.concat(".codeHash_", keys[i])),
-                    "runtime code mismatch"
-                );
-            }
+            require(target != address(0), "missing contract");
+            require(
+                target.code.length != 0 && target.codehash == snap.readBytes32(string.concat(".codeHash_", keys[i])),
+                "runtime code mismatch"
+            );
         }
         address[] memory list = targets(snap);
         for (uint256 i; i < list.length; ++i) {
@@ -105,20 +92,14 @@ library V16Snapshot {
                 registry.poolIdAt(i) == poolId && registry.bankFor(poolId) == address(bank), "pool binding mismatch"
             );
             uint256 domain = snap.readUint(string.concat(".poolDomain_", suffix));
+            require(domain == 1, "not a casino pool");
             require(
                 uint256(registry.domainFor(poolId)) == domain && registry.isPoolActive(poolId), "pool status mismatch"
             );
-            address hub = snap.readAddress(domain == 1 ? ".gameHub" : ".sportsHub");
+            address hub = snap.readAddress(".gameHub");
             require(
                 registry.isRegisteredHub(hub) && registry.isHubAllowedForPool(poolId, hub), "hub permission mismatch"
             );
-            if (domain == 2) {
-                require(
-                    SportsRiskEngine(snap.readAddress(".sportsRiskEngine")).currentRiskHashForPool(poolId)
-                        == snap.readBytes32(string.concat(".poolSportsRiskHash_", suffix)),
-                    "sports risk mismatch"
-                );
-            }
             require(
                 address(bank).codehash == snap.readBytes32(string.concat(".codeHash_poolBank_", vm.toString(i))),
                 "bank code mismatch"
@@ -204,16 +185,5 @@ library V16Snapshot {
                 && vrf.settlementRouter() == snap.readAddress(".settlementRouter"),
             "VRF configuration mismatch"
         );
-        if (snap.readUint(".sportsEnabled") == 1) {
-            SportsHub sports = SportsHub(snap.readAddress(".sportsHub"));
-            require(
-                sports.riskEngine() == snap.readAddress(".sportsRiskEngine")
-                    && sports.oddsSignerSetHash() == snap.readBytes32(".sportsOddsSignerSetHash")
-                    && sports.resultReporterSetHash() == snap.readBytes32(".sportsResultReporterSetHash")
-                    && sports.resultReporterThreshold() == snap.readUint(".sportsResultReporterThreshold")
-                    && sports.resultChallengeTimeoutSeconds() == snap.readUint(".sportsResultChallengeTimeoutSeconds"),
-                "sports configuration mismatch"
-            );
-        }
     }
 }

@@ -14,9 +14,7 @@ are not a separate framework project.
 This document covers:
 
 - casino bet slips;
-- sportsbook ticket slips;
-- deposit, withdraw, claim, and referral forms;
-- operator forms in `/ops`.
+- deposit, withdraw, claim, and referral forms.
 
 Legal copy and long-form content are outside this document.
 
@@ -58,7 +56,7 @@ Write flows validate in this order:
 
 1. Local shape: required fields, allowed option, valid address or hash.
 2. Amount math: min, max, decimals, allowance, balance.
-3. Quote or estimate: VRF fee, odds expiry, gas-sensitive preview.
+3. Quote or estimate: VRF fee, gas-sensitive preview.
 4. Contract simulation or typed SDK preflight.
 5. Wallet signature.
 6. Receipt and terminal readback.
@@ -67,7 +65,7 @@ Do not let a user sign while any earlier layer is unresolved.
 
 ## 5. Canonical Write Flow
 
-Casino, sportsbook, earn, and claims use the same product contract:
+Casino, earn, and claims use the same product contract:
 
 ```text
 edit -> validate -> quote -> approve if needed -> simulate/preflight
@@ -117,16 +115,13 @@ continue. If the button is blocked, the blocking reason must be visible nearby.
 
 Persist drafts only when it improves repeat play or prevents obvious loss:
 
-- casino advanced bet options;
-- sportsbook partially built ticket;
-- operator market form.
+- casino advanced bet options.
 
 Do not persist:
 
 - wallet signatures;
 - private keys or secrets;
-- approval payloads;
-- stale odds beyond their expiry.
+- approval payloads.
 
 Use a namespaced key:
 

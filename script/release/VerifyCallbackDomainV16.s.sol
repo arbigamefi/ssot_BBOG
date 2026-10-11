@@ -101,29 +101,28 @@ contract VerifyCallbackDomainV16 is Script {
         uint256 numPools = snap.readUint(".numPools");
         for (uint256 i; i < numPools; ++i) {
             string memory suffix = vm.toString(i);
-            if (snap.readUint(string.concat(".poolDomain_", suffix)) == CASINO_DOMAIN) {
-                require(
-                    snap.readUint(string.concat(".poolBankMinBetAmount_", suffix)) >= floor,
-                    "casino minimum bet below the certified floor"
-                );
-                require(
-                    snap.readAddress(string.concat(".poolAsset_", suffix)) == token,
-                    "casino asset is not the certified token"
-                );
-                // Owner decisions, not certificate mathematics: 0.01 USDC per round, 60% retained, 10% buffer.
-                require(
-                    snap.readUint(string.concat(".poolBankMinBetAmount_", suffix)) == policyMinBet,
-                    "casino minimum bet is not the Owner policy value"
-                );
-                require(
-                    snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix)) == policyReserve,
-                    "risk reserve is not the Owner policy value"
-                );
-                require(
-                    snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix)) == policyBuffer,
-                    "withdrawal buffer is not the Owner policy value"
-                );
-            }
+            // Every pool of the release is a casino pool, so every pool lies inside the callback domain.
+            require(snap.readUint(string.concat(".poolDomain_", suffix)) == CASINO_DOMAIN, "pool is not a casino pool");
+            require(
+                snap.readUint(string.concat(".poolBankMinBetAmount_", suffix)) >= floor,
+                "casino minimum bet below the certified floor"
+            );
+            require(
+                snap.readAddress(string.concat(".poolAsset_", suffix)) == token, "casino asset is not the certified token"
+            );
+            // Owner decisions, not certificate mathematics: 0.01 USDC per round, 60% retained, 10% buffer.
+            require(
+                snap.readUint(string.concat(".poolBankMinBetAmount_", suffix)) == policyMinBet,
+                "casino minimum bet is not the Owner policy value"
+            );
+            require(
+                snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix)) == policyReserve,
+                "risk reserve is not the Owner policy value"
+            );
+            require(
+                snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix)) == policyBuffer,
+                "withdrawal buffer is not the Owner policy value"
+            );
         }
     }
 

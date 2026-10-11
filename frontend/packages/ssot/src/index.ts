@@ -15,25 +15,14 @@ export type {
   DomainDepositPage,
   DepositCursor,
   LPStatus,
-  DomainSportsMarket,
-  DomainSportsTicket,
-  DomainSportsResult,
   DomainXPBuckets
 } from "./domain";
 
 // Flat re-exports of commonly used SDK types
 export type {
-  CreateSportsMarketInput,
   PlaceBetInput,
   PlaceBetPlan,
-  PlaceSportsTicketInput,
-  PlaceSportsTicketPlan,
-  SportsOddsSnapshotInput,
-  ProposeSportsResultInput,
-  ResolveSportsChallengeDecision,
-  ResolveSportsChallengeInput,
   ExecutePlanResult,
-  ExecuteSportsTicketPlanResult,
   TxStep,
   GameHubTerminalProof,
   GameHubSettlementProof,
@@ -47,7 +36,6 @@ export type {
   VaultProviderLedgerEntry,
   GameConfig,
   SSOTVRFHubAPI,
-  SSOTSportsHubAPI,
   Address,
   Hex
 } from "./sdk";

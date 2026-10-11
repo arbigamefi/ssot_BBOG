@@ -8,7 +8,7 @@ The project has not launched. This plan defines how to validate the product and 
 
 ## Audience and scope
 
-Begin with adults who already understand EVM wallets and stablecoins and are eligible for the eventual service. Base and USDC are the initial product focus. Casino establishes the first repeatable operating loop; a separately funded sportsbook has its own odds, evidence and release requirements.
+Begin with adults who already understand EVM wallets and stablecoins and are eligible for the eventual service. Base and USDC are the initial product focus. Casino establishes the first repeatable operating loop.
 
 The hypothesis is that enjoyable familiar games, understandable total costs, inspectable payments and reliable wallet flows can earn voluntary repeat use. Public source code alone does not validate that hypothesis.
 
@@ -21,7 +21,6 @@ The hypothesis is that enjoyable familiar games, understandable total costs, ins
 | Operations | Atomic callback, same-result retry, eligible refunds, payables, alerts and restart/WS/HTTP recovery are exercised with bounded resources |
 | Economics  | Current 50% LP allocation, referral costs, player costs and operating budget reconcile across outcome and stress scenarios               |
 | Research   | Defined participants, observation window and decision criteria precede usage or channel experiments                                      |
-| Sports     | Independent rulebook, provider evidence, deadlines, bankroll and operation acceptance                                                    |
 
 The [economic design](economic-design.md) fixes the allocation model. Calibration adjusts permitted parameters within it, not LP's fixed share. The [architecture](fullstack-product-architecture.md) defines implementation ownership.
 

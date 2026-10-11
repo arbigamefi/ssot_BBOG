@@ -7,7 +7,6 @@ type ReleaseLike = {
   chainId: number;
   contracts: {
     gameHub: Address;
-    sportsHub?: Address;
     vrfHub: Address;
   };
   pools?: Array<{
@@ -82,20 +81,6 @@ function parsePositiveInteger(value: string | undefined, fallback: number, name:
   return parsed;
 }
 
-function parseBigintList(value: string | undefined, name: string) {
-  const raw = String(value ?? "").trim();
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => {
-      const parsed = BigInt(part);
-      if (parsed <= 0n) throw new Error(`${name} must contain positive integer ids`);
-      return parsed;
-    });
-}
-
 function resolveVaultProviderLedgerPools(release: ReleaseLike) {
   return (release.pools ?? [])
     .filter((pool) => pool.active !== false)
@@ -128,12 +113,6 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     10n,
     "KEEPER_SCAN_CHUNK_BLOCKS"
   );
-  const sportsEnabled =
-    parseBool(env.KEEPER_SPORTS_TERMINALIZER_ENABLED) ||
-    parseBool(env.KEEPER_SPORTS_TICKET_INDEX_ENABLED);
-  const sportsTicketScanStartBlock =
-    parseOptionalBlock(env.KEEPER_SPORTS_TICKET_SCAN_START_BLOCK) ??
-    BigInt(release.meta?.blockNumber ?? 0);
   const casinoRecoveryStartBlock =
     parseOptionalBlock(env.KEEPER_CASINO_RECOVERY_START_BLOCK) ??
     BigInt(release.meta?.blockNumber ?? 0);
@@ -145,31 +124,10 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
       "KEEPER_CASINO_RECOVERY_START_BLOCK must include the release block; advancing it can omit PendingVRF positions"
     );
   }
-  if (sportsEnabled) {
-    if (
-      !parseBool(env.BET_INDEX_WRITE_ENABLED) ||
-      !env.BET_INDEX_DATABASE_URL?.trim() ||
-      !release.contracts.sportsHub ||
-      release.contracts.sportsHub.toLowerCase() === "0x0000000000000000000000000000000000000000"
-    ) {
-      throw new Error(
-        "Sports recovery requires BET_INDEX_WRITE_ENABLED=true, BET_INDEX_DATABASE_URL and a sportsHub release address"
-      );
-    }
-    if (
-      sportsTicketScanStartBlock < 0n ||
-      sportsTicketScanStartBlock > BigInt(release.meta?.blockNumber ?? 0)
-    ) {
-      throw new Error(
-        "KEEPER_SPORTS_TICKET_SCAN_START_BLOCK must include the release block; advancing past it can omit outstanding tickets"
-      );
-    }
-  }
 
   return {
     chainId,
     gameHub: release.contracts.gameHub,
-    sportsHub: release.contracts.sportsHub,
     vrfHub: release.contracts.vrfHub,
     httpRpcUrl: requireEnv(env, "KEEPER_RPC_HTTP"),
     wsRpcUrl: env.KEEPER_RPC_WS?.trim() || undefined,
@@ -213,36 +171,6 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     vaultProviderLedgerScanIntervalMs: parseMs(
       env.KEEPER_VAULT_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS,
       60_000
-    ),
-    sportsTicketIndexEnabled: parseBool(env.KEEPER_SPORTS_TICKET_INDEX_ENABLED),
-    sportsTerminalizerEnabled: parseBool(env.KEEPER_SPORTS_TERMINALIZER_ENABLED),
-    sportsTerminalizerScanChunkBlocks: parseBlockCount(
-      env.KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS,
-      scanChunkBlocks,
-      "KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS"
-    ),
-    sportsTerminalizerMarketIds: parseBigintList(
-      env.KEEPER_SPORTS_TERMINALIZER_MARKET_IDS,
-      "KEEPER_SPORTS_TERMINALIZER_MARKET_IDS"
-    ),
-    sportsTerminalizerMaxTicketsPerMarket: parsePositiveInteger(
-      env.KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET,
-      200,
-      "KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET"
-    ),
-    sportsTicketScanChunkBlocks: parseBlockCount(
-      env.KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS,
-      scanChunkBlocks,
-      "KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS"
-    ),
-    // This is a per-pass history budget. Successful chunks persist an independent
-    // checkpoint; deployment age never disables ticket recovery. Markets remain
-    // pending until complete history coverage reaches their settlement read.
-    sportsTicketScanMaxBlocks: parseBlockCount(
-      env.KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS,
-      50_000n,
-      "KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS"
-    ),
-    sportsTicketScanStartBlock
+    )
   };
 }

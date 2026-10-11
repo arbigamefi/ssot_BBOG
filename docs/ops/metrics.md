@@ -73,9 +73,3 @@ Current `pools[]` health rows include Bank/Vault identity, cash, L/P/R/K/G/PF/XP
 `observedBlock`. An unbooked result is reported as a pool degradation; it must not look like
 a healthy pool whose LP entry is inexplicably unavailable. Age/latency qualification is separate
 from this state snapshot.
-
-## Sports
-
-Sports is separately admitted. Monitor result disclosure, market finality/challenge, missing reports,
-tickets and correlated exposure. Casino's canonical VRF gate does not cover public sports outcomes.
-See [Sports operations](runbooks/sportsbook-ops.md).

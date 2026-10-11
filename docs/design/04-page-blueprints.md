@@ -15,12 +15,11 @@ Purpose: acquisition and trust.
 
 Must show:
 
-- what ArbiGameFi is: non-custodial casino/sportsbook with verifiable
-  settlement;
-- casino/sportsbook entry points;
+- what ArbiGameFi is: non-custodial casino with verifiable settlement;
+- casino entry points;
 - release/proof signal;
 - bankroll or activity proof where available;
-- clear CTA to `/casino` or `/sportsbook`.
+- clear CTA to `/casino`.
 
 Failure behavior: proof/live data may degrade to `—`; the page still renders.
 
@@ -62,20 +61,7 @@ Result receipt must show:
 
 Raw RPC/viem/contract errors must never render as product copy.
 
-## 4. `/sportsbook` and `/sportsbook/[marketId]`
-
-Purpose: fixed-odds market discovery and ticket placement.
-
-Must support:
-
-- market list and lock/status information;
-- signed odds snapshot before ticket placement;
-- market detail and ticket preview;
-- result/finality/void/challenge states;
-- clear disabled states when sportsbook feature gates or provider readiness
-  are not satisfied.
-
-## 5. `/portfolio`
+## 4. `/portfolio`
 
 Purpose: user account overview without becoming a second home page.
 
@@ -86,7 +72,7 @@ Must show:
 - LP position summary if any;
 - links to full activity and claims.
 
-## 6. `/portfolio/activity` and `/portfolio/activity/[betId]`
+## 5. `/portfolio/activity` and `/portfolio/activity/[betId]`
 
 Purpose: ledger and detail proof.
 
@@ -94,14 +80,14 @@ Must show:
 
 - player-scoped history;
 - chain/index fallback state;
-- bet/ticket lifecycle;
+- bet lifecycle;
 - transaction links;
 - release/chain context.
 
 The detail page is the right place for dense proof data that would overload the
 game room.
 
-## 7. `/portfolio/claims`
+## 6. `/portfolio/claims`
 
 Purpose: XP/refund credit claimability.
 
@@ -112,7 +98,7 @@ Must show:
 - disabled state with reason;
 - transaction result.
 
-## 8. `/earn`
+## 7. `/earn`
 
 Purpose: LP bankroll entry.
 
@@ -123,7 +109,7 @@ Must show:
 - deposit/withdraw actions;
 - clear explanation when risk or free-liquidity rules block an action.
 
-## 9. `/ops`
+## 8. `/ops`
 
 Purpose: operator and auditor control room.
 
@@ -132,12 +118,11 @@ Must show:
 - release and chain context;
 - keeper health;
 - bet-index/API health;
-- sportsbook provider/readiness state;
 - recent operational events or links to runbooks.
 
 Ops pages may use denser terminology than player pages.
 
-## 10. `/legal/*`
+## 9. `/legal/*`
 
 Purpose: static legal disclosure.
 
@@ -147,7 +132,7 @@ Must:
 - avoid wallet requirements;
 - avoid marketing claims not supported by the protocol.
 
-## 11. Cross-Page Requirements
+## 10. Cross-Page Requirements
 
 - Every CTA points to a real current route.
 - Every page has a loading and degraded state.
@@ -155,7 +140,7 @@ Must:
 - Chain/release facts come from release artifacts or SDK reads, not guesses.
 - Error states tell the user what to do next.
 
-## 12. Verification
+## 11. Verification
 
 ```bash
 pnpm -C frontend/apps/web test

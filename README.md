@@ -7,7 +7,7 @@ Current status is in the [release notes](docs/release/README.md): one launch can
 explicitly accepts and discloses, every known issue before real money. Per-game gas admission is redone
 for it as v5 of the [first-callback gas certificate](docs/audit/first-callback-gas-certificate-2026-10-07.md).
 
-ArbiGameFi is designed as a single-brand B2C casino/sportsbook product built on
+ArbiGameFi is designed as a single-brand B2C casino product built on
 a protocol-grade settlement kernel. It serves players, LPs, referrers and the
 operators of this deployment. The [product architecture commitment](docs/strategy/fullstack-product-architecture.md)
 sets that direction and keeps future third-party infrastructure an option to
@@ -37,9 +37,8 @@ The accepted target follows a **Single Source of Truth (SSOT)** architecture:
 
 - **Bank / LiquidityVault SSOT (Accounting Truth):** Vault tree capital `L`; Bank pending principal `P` and gross reserve `R`; net lock `K=R-P`, betting solvency basis `G=L+P`
 - **PoolRegistry SSOT (Routing Truth):** pool -> asset/bank/domain/hub permissions
-- **SettlementRouter SSOT (Position Truth):** cross-vertical position lifecycle and Bank authority
+- **SettlementRouter SSOT (Position Truth):** position lifecycle and Bank authority
 - **GameHub SSOT (Casino Lifecycle Truth):** casino `betId` registry + one settlement implementation, attempted in the callback and publicly retryable
-- **SportsHub SSOT (Sports Lifecycle Truth):** fixed-odds market/ticket lifecycle
 - **VRFHub SSOT (Casino RNG Transport Truth):** direct wrapper consumer, canonical stored randomness and retryable same-result downstream settlement
 - **Modules (Game Semantics):** pure, deterministic payout logic (`IGameModule`)
 
@@ -73,10 +72,8 @@ atomic settlement and the 24-hour lock do not eliminate it. See the
 - `src/core/Bank.sol` — bettor principal, player/protocol/referral debt, gross reserve and per-bet deposit cutoff (**only SettlementRouter** for bet funds)
 - `src/core/LiquidityVault.sol` — LP custody, ERC-721 deposits, fixed 24-hour locks and pinned LiquidityTree, bound to its Bank
 - `src/core/PoolRegistry.sol` — pool registry for asset, Bank, domain, and hub permissions
-- `src/core/SettlementRouter.sol` — shared settlement authority between vertical hubs and Bank pools
+- `src/core/SettlementRouter.sol` — settlement authority between GameHub and Bank pools
 - `src/core/GameHub.sol` — casino registry + one settlement path for callback/public retry + eligible timeout refunds
-- `src/core/SportsHub.sol` — fixed-odds sports market/ticket lifecycle
-- `src/core/SportsRiskEngine.sol` — sports exposure and risk hash controls
 - `src/core/VRFHub.sol` — VRF transport + direct wrapper consumer, canonical stored randomness and retryable same-result downstream settlement
 - `src/modules/*` — pure game modules (`IGameModule`)
 - `src/engines/referral/*` — referral registry + deterministic referral engine (pure math)

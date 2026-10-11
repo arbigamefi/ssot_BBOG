@@ -187,7 +187,7 @@ guardian 是独立多签，签名人与 Safe 不重叠，不使用 EOA。它能�
 | B6 | 单个游戏即时停用（无重新启用） | §7.1 | `src/core/GameHub.sol` | 停用后该游戏下注被拒，已有下注照常结算、退款或作废 |
 | B7 | 宪法与规范对应修订的合约侧注释 | 复核 M-6 | 见 C5 | — |
 | B8 | 审计 PoC 与复核 PoC（P1–P6）并入回归 | 审计；复核 | `test/` | 全部通过 |
-| B9 | 体育移出本版：`SportsHub`、`SportsRiskEngine` 及接口；`SSOTTypes` 中的体育域与类型；DeployV16 的体育参数；发布脚本中的体育角色核验；体育测试与夹具 | Owner 选项 A | `src/core/Sports*.sol`、`src/core/interfaces/`、`script/DeployV16.s.sol`、`script/release/`、`test/` | 编译与全部门槛通过；`git grep -i sports` 只剩 ADR 与路线图中的未来规划 |
+| B9 | 体育移出本版：`SportsHub`、`SportsRiskEngine` 及接口；`SSOTTypes` 中的体育域与类型；DeployV16 的体育参数；发布脚本中的体育角色核验；体育测试与夹具 | Owner 选项 A | `src/core/Sports*.sol`、`src/core/interfaces/`、`script/DeployV16.s.sol`、`script/release/`、`test/` | 编译与全部门槛通过；`git grep -i sports` 只剩 ADR 与路线图中的未来规划。**已完成**（2026-10-11，本地）：删除 SportsHub、SportsRiskEngine 及其接口；`PoolDomain` 只剩 `Unknown, Casino`，PoolRegistry 拒绝 Unknown、ABI 解码拒绝其他值，所以 GameHub 的逐笔域检查（`_casinoPool`、`WrongPoolDomain`）一并删除，GameHub 运行时 20,046 → 19,947 字节；DeployV16、V16Snapshot、发布摘要、清单、说明、回调域核验、`verify_governance.py`、校验助手与前端 ABI 不再含体育；前端、keeper 与下注索引的体育页面、API、恢复与终结器因 ABI 删除提前移除（原随 D），release schema 只接受 `domainId 1` 与 `"Casino"`；文档见 C8。认证运行时改变是 ADR-0006 的重新认证触发：84532 域文件改为 `PENDING_INDEPENDENT_REVIEW`，钉定按当前构建重生成，证书 v5 取代 v4；v4 只在 `4a5762aa3` 上复现。本地：unit 420、部署 25、准入 13、差分 18、不变量 5、ops 161，前端 typecheck、lint、测试（1198 通过，31 项缺 Postgres 或 Anvil 条件跳过）与构建通过。`git grep -i sports` 剩 ADR-0029（加了修订说明）、ADR-0032、宪法（修订见 C5）、本规划、路线图，以及代码里 `transports` 的误报 |
 
 ## 8. 工作包 D：应用层（复核 M-7）
 
@@ -241,14 +241,14 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 
 | 编号 | 内容 | 来源 |
 | --- | --- | --- |
-| C1 | 更正 `README.md:176`：tag 上 CI 跑的是非严格 `make release-check`；严格检查只在手动 dispatch 的 Release Gate 中执行 | 复核 3 I-6 |
+| C1 | 更正 `README.md:175`：tag 上 CI 跑的是非严格 `make release-check`；严格检查只在手动 dispatch 的 Release Gate 中执行 | 复核 3 I-6 |
 | C2 | 文档清理（第一项工作）。一档直接删除：`docs/audit/` 的 `contract-simplification-review-2026-10-04.md`、`h1-first-callback-review-2026-10-04.md`、`max-bet-and-compiler-review-2026-10-04.md`、`nft-tree-gas-reachability.md`、`prefix-threshold-validation-2026-10-05.md`、`tree-range-optimization-2026-10-04.md`，`docs/design/first-callback-settlement-qualification.md`，`docs/deploy/fresh-base-sepolia-preflight-2026-10-05.md`。二档先迁移再删除：`callback-and-lp-admission-review-2026-10-04.md`（排序取舍的接受记录迁入 ADR-0034）、`nft-core-integration-review.md`、`nft-consumer-integration-review.md`、`nft-callback-gas-qualification.md`、`preview-skip-first-callback-2026-10-07.md`（状态改为指向发布文档）。**已完成**（2026-10-11）：13 篇删除，排序取舍的接受记录迁入 ADR-0034 的 “Pre-inclusion ordering” 一节，状态引用改指发布说明，资格引用改指证书与测试 | Owner；验收：`git grep` 不再命中已归档目录（复核 S-4，18 个文件） |
-| C3 | 发布手册：隔离副本部署、EIP-7702 检查、从标签 dispatch 并核对 `head_sha` 与作业列表、RPC 选择（§3 的 key 分配、包装脚本用法、本机绝不使用 `*_PROD_KEEPER`）；时间锁接管与解除暂停的时间表；更正 `v16-release.md:127` 的 “one person … cannot pass the gate alone”，写明 `V16_AUDITED_TREE` 是复核接受的树而非外审树；`docs/release/README.md` 与 `checklist.md` 更新到当前状态 | 复核 S-1 |
+| C3 | 发布手册：隔离副本部署、EIP-7702 检查、从标签 dispatch 并核对 `head_sha` 与作业列表、RPC 选择（§3 的 key 分配、包装脚本用法、本机绝不使用 `*_PROD_KEEPER`）；时间锁接管与解除暂停的时间表；更正 `v16-release.md:152` 的 “one person … cannot pass the gate alone”，写明 `V16_AUDITED_TREE` 是复核接受的树而非外审树；`docs/release/README.md` 与 `checklist.md` 更新到当前状态 | 复核 S-1 |
 | C4 | 条款与 LP 材料：作废规则（VRF 原生费不退）；准入时间锁与 LP 退出窗口；暂停不阻止提款；每玩家 2 个持仓；guardian 否决权；§9 全部残余 | §7、§9 |
-| C5 | 规范修订（宪法的修订需 Owner 明确批准并留记录）：`docs/constitution/SSOT.v1.6.md:125, 128-130, 137`；`ExecutableSSOT.v1.6.md:48-52, 243-249, 302`；`docs/adr/0006-vrf-callback-settlement.md:87-90, 197-204, 229`；`docs/adr/0034-nft-liquidity-deposits.md:30, 145`；`docs/architecture/overview.md:95, 116`；`docs/audit/v1.6-audit-scope.md:49, 172`；`docs/audit/threat-model.md:140`；`WHITEPAPER.zh-CN.md:18, 197, 201, 212, 215-216, 223, 229, 232-233`；`WHITEPAPER.product.zh-CN.md:109`；`docs/strategy/economic-design.md:104`；`docs/ops/runbooks/pause-config-drift.md:11, 18, 36-39`；`docs/ops/alerts.md:26`；`docs/ops/runbooks/governance-safe-setup.md:22-61` | 复核 M-6 |
+| C5 | 规范修订（宪法的修订需 Owner 明确批准并留记录）：`docs/constitution/SSOT.v1.6.md:125, 128-130, 137`；`ExecutableSSOT.v1.6.md:48-52, 243-249, 302`；`docs/adr/0006-vrf-callback-settlement.md:87-90, 197-204, 229`；`docs/adr/0034-nft-liquidity-deposits.md:30, 145`；`docs/architecture/overview.md:95, 116`；`docs/audit/v1.6-audit-scope.md:49, 171`；`docs/audit/threat-model.md:140`；`WHITEPAPER.zh-CN.md:18, 196, 200, 211, 214-215, 222, 228, 231-232`；`WHITEPAPER.product.zh-CN.md:108`；`docs/strategy/economic-design.md:104`；`docs/ops/runbooks/pause-config-drift.md:11, 18, 36-39`；`docs/ops/alerts.md:25`；`docs/ops/runbooks/governance-safe-setup.md:22-61`。B9 另需：`SSOT.v1.6.md:18, 147, 230, 265` 与 `ExecutableSSOT.v1.6.md:64-66, 266, 302` 删去或改写体育（草案已备，随本项送 Owner），`docs/adr/0032-fixed-lp-share-operator-funded-referrals.md:74` 的体育分配句 | 复核 M-6 |
 | C6 | ADR-0006 的两处改进（M4 范围限定、确认记录的位置）；本版外审交付按 FZ-6 清单打包 | 复核 S-8 |
 | C7 | legacy Bank 地址登记：18 个 Bank 的链、地址、是否暂停、余额、治理方、退役计划与 RPC key 轮换记录（2026-10-11：四个 key 按用途改名；OPS 与 PROD_KEEPER 分属不同账户，旧 Alchemy key 已重建，均经 Owner 确认） | 复核 M-12 |
-| C8 | 体育文档移出本版（随 B9），路线图保留体育作为未来能力 | Owner 选项 A |
+| C8 | 体育文档移出本版（随 B9），路线图保留体育作为未来能力。**已完成**（2026-10-11，随 B9）：删除 sportsbook 运维手册、两篇赔率 provider 文档与体育生产路线；42 篇文档去掉体育定位、组件、告警、指标与运维内容（含 `docs/design/adr/` 三篇的措辞）；路线图 §4 改为“体育作为未来能力”；简介、两本白皮书升到 r4、路线图升到 r2（2026-10-11）；ADR-0029 加修订说明，其余 ADR 正文与宪法未改（见 C5） | Owner 选项 A |
 
 ## 12. 运营事项
 

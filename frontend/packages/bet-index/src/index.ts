@@ -3,17 +3,9 @@ export { decodeVaultProviderEvent, type VaultProviderLedgerAction } from "./vaul
 import postgres, { type Sql } from "postgres";
 import { getCasinoFinancials } from "./financials.js";
 import type { Address, Hex } from "viem";
-import {
-  createMemorySportsRecoveryStore,
-  createPostgresSportsRecoveryStore,
-  SPORTS_RECOVERY_SCHEMA_SQL,
-  type SportsRecoveryStore
-} from "./sports-recovery.js";
-export type { SportsMarketWork, SportsRecoveryStore } from "./sports-recovery.js";
 export { enrichFinalizedBetEvents, readSettledBetRefund } from "./terminal-refund.js";
 
 export type BetLifecycleState = "placed" | "randomReady" | "finalized" | "refunded";
-export type SportsTicketLifecycleState = "held" | "settled" | "refunded" | "voided";
 
 /** GameHub events that move a bet through its lifecycle. */
 export type GameHubLifecycleEventName =
@@ -26,11 +18,6 @@ export type GameHubLifecycleEventName =
  * bet: it annotates the bet and never changes its lifecycle.
  */
 export type GameHubEventName = GameHubLifecycleEventName | "HouseEdgeAllocated";
-export type SportsHubEventName =
-  | "TicketPlaced"
-  | "TicketSettled"
-  | "TicketRefunded"
-  | "TicketVoided";
 
 /**
  * How a settled bet's house edge was allocated, from the GameHub's HouseEdgeAllocated event (v1.6).
@@ -104,44 +91,6 @@ export type BetIndexEvent = {
   args: Record<string, unknown>;
 };
 
-export type SportsTicketRow = {
-  id: string;
-  chainId: number;
-  ticketId: string;
-  positionId?: string;
-  marketId?: string;
-  eventId?: string;
-  poolId?: string;
-  outcomeId?: number;
-  player?: Address;
-  stake?: string;
-  payout?: string;
-  reserved?: string;
-  refundAmount?: string;
-  oddsSnapshotHash?: Hex;
-  rulebookHash?: Hex;
-  state: SportsTicketLifecycleState;
-  placedBlock?: number;
-  updatedBlock: number;
-  lastTxHash: Hex;
-  lastEventName: string;
-  terminalTxHash?: Hex;
-  settledTxHash?: Hex;
-  refundedTxHash?: Hex;
-  voidedTxHash?: Hex;
-  updatedAt: number;
-};
-
-export type SportsTicketIndexEvent = {
-  chainId: number;
-  sportsHub: Address;
-  blockNumber: bigint;
-  txHash: Hex;
-  logIndex: number;
-  eventName: SportsHubEventName;
-  args: Record<string, unknown>;
-};
-
 export type VaultProviderLedgerRow = {
   id: string;
   chainId: number;
@@ -202,12 +151,6 @@ export type BetIndexReceiptQuery = {
   betId: string | number | bigint;
   chainId: number;
   gameHub: Address;
-};
-
-export type SportsTicketIndexQuery = {
-  chainId: number;
-  limit: number;
-  player?: Address;
 };
 
 export type VaultProviderLedgerQuery = {
@@ -306,7 +249,6 @@ export type BetIndexCursor = {
 };
 
 export type BetIndexStore = {
-  sportsRecovery: SportsRecoveryStore;
   getRandomReadyBetIds: (query: {
     chainId: number;
     gameHub: Address;
@@ -323,7 +265,6 @@ export type BetIndexStore = {
   initializeSchema: () => Promise<void>;
   writeGameHubEvents: (events: readonly BetIndexEvent[]) => Promise<BetRow[]>;
   writeBetRows: (rows: readonly BetRow[]) => Promise<BetRow[]>;
-  writeSportsHubEvents: (events: readonly SportsTicketIndexEvent[]) => Promise<SportsTicketRow[]>;
   writeVaultProviderLedgerRows: (
     rows: readonly VaultProviderLedgerRow[]
   ) => Promise<VaultProviderLedgerRow[]>;
@@ -336,15 +277,7 @@ export type BetIndexStore = {
     query: Required<Pick<BetIndexQuery, "chainId" | "limit" | "player">> &
       Pick<BetIndexQuery, "gameHub">
   ) => Promise<BetRow[]>;
-  getPlayerSportsTickets: (
-    query: Required<Pick<SportsTicketIndexQuery, "chainId" | "limit" | "player">>
-  ) => Promise<SportsTicketRow[]>;
   getVaultProviderLedger: (query: VaultProviderLedgerQuery) => Promise<VaultProviderLedgerRow[]>;
-  getHeldSportsTicketIdsByMarket: (query: {
-    chainId: number;
-    limit: number;
-    marketId: string;
-  }) => Promise<bigint[]>;
   getAffiliateBets: (
     query: Required<Pick<BetIndexQuery, "chainId" | "limit" | "affiliate">> &
       Pick<BetIndexQuery, "asset" | "gameHub">
@@ -421,9 +354,7 @@ export type BetIndexStore = {
   close?: () => Promise<void>;
 };
 
-export const BET_INDEX_SCHEMA_SQL =
-  SPORTS_RECOVERY_SCHEMA_SQL +
-  `
+export const BET_INDEX_SCHEMA_SQL = `
 create table if not exists gamehub_events (
   chain_id integer not null,
   game_hub text not null,
@@ -494,46 +425,6 @@ create index if not exists gamehub_events_recovery_idx
   on gamehub_events (chain_id, game_hub, event_name,
     (coalesce(args_json->>'positionId', args_json->>'betId', '0')::numeric));
 
-create table if not exists sport_tickets (
-  chain_id integer not null,
-  ticket_id text not null,
-  position_id text,
-  market_id text,
-  event_id text,
-  pool_id text,
-  outcome_id integer,
-  player text,
-  stake text,
-  payout text,
-  reserved text,
-  refund_amount text,
-  odds_snapshot_hash text,
-  rulebook_hash text,
-  state text not null,
-  placed_block bigint,
-  updated_block bigint not null,
-  last_tx_hash text not null,
-  last_event_name text not null,
-  terminal_tx_hash text,
-  settled_tx_hash text,
-  refunded_tx_hash text,
-  voided_tx_hash text,
-  updated_at timestamptz not null default now(),
-  primary key (chain_id, ticket_id)
-);
-
-create index if not exists sport_tickets_recent_idx
-  on sport_tickets (chain_id, updated_block desc, ticket_id desc);
-
-create index if not exists sport_tickets_player_idx
-  on sport_tickets (chain_id, player, updated_block desc);
-
-create index if not exists sport_tickets_market_idx
-  on sport_tickets (chain_id, market_id, updated_block desc);
-
-create index if not exists sport_tickets_market_state_idx
-  on sport_tickets (chain_id, market_id, state, updated_block desc, ticket_id desc);
-
 create table if not exists vault_provider_ledger (
   chain_id integer not null,
   pool_id text not null,
@@ -582,7 +473,6 @@ export type PostgresBetIndexConfig = {
 
 export function createMemoryBetIndexStore(): BetIndexStore {
   const bets = new Map<string, BetRow>();
-  const sportsTickets = new Map<string, SportsTicketRow>();
   const vaultProviderLedger = new Map<string, VaultProviderLedgerRow>();
   const cursors = new Map<string, bigint>();
   const gameHubEvents = new Map<string, BetIndexEvent>();
@@ -607,21 +497,6 @@ export function createMemoryBetIndexStore(): BetIndexStore {
       const next = applyEventToBet(existing, event);
       if (!existing || next.updatedBlock >= existing.updatedBlock) {
         bets.set(key, next);
-        changed.set(key, next);
-      }
-    }
-    return [...changed.values()];
-  };
-  const writeSportsHubEvents = async (input: readonly SportsTicketIndexEvent[]) => {
-    const changed = new Map<string, SportsTicketRow>();
-    const sorted = [...input].sort(compareEvents);
-    for (const event of sorted) {
-      const ticketId = String(event.args.ticketId ?? "0");
-      const key = `${event.chainId}:${ticketId}`;
-      const existing = sportsTickets.get(key);
-      const next = applyEventToSportsTicket(existing, event);
-      if (!existing || next.updatedBlock >= existing.updatedBlock) {
-        sportsTickets.set(key, next);
         changed.set(key, next);
       }
     }
@@ -674,7 +549,6 @@ export function createMemoryBetIndexStore(): BetIndexStore {
   };
   return {
     initializeSchema: async () => undefined,
-    sportsRecovery: createMemorySportsRecoveryStore(),
     getRandomReadyBetIds: (query) => getRecoverableBetIds(query, false),
     getUnresolvedBetIds: (query) => getRecoverableBetIds(query, true),
     writeGameHubEvents,
@@ -685,7 +559,6 @@ export function createMemoryBetIndexStore(): BetIndexStore {
       }
       return input.map(normalizeBetRow);
     },
-    writeSportsHubEvents,
     writeVaultProviderLedgerRows,
     replaceVaultProviderLedgerRange: async (range) => {
       validateLedgerRange(range);
@@ -718,12 +591,6 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .sort(compareBetRows)
         .slice(0, limit)
         .map(withHouseEdge),
-    getPlayerSportsTickets: async ({ chainId, player, limit }) =>
-      [...sportsTickets.values()]
-        .filter((row) => row.chainId === chainId)
-        .filter((row) => row.player?.toLowerCase() === player.toLowerCase())
-        .sort(compareSportsTicketRows)
-        .slice(0, limit),
     getVaultProviderLedger: async ({
       beforeBlock,
       beforeLogIndex,
@@ -746,14 +613,6 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .filter((row) => isVaultProviderLedgerBeforeCursor(row, beforeBlock, beforeLogIndex))
         .sort(compareVaultProviderLedgerRows)
         .slice(0, limit),
-    getHeldSportsTicketIdsByMarket: async ({ chainId, limit, marketId }) =>
-      [...sportsTickets.values()]
-        .filter((row) => row.chainId === chainId)
-        .filter((row) => row.marketId === marketId)
-        .filter((row) => row.state === "held")
-        .sort(compareSportsTicketRows)
-        .slice(0, limit)
-        .map((row) => BigInt(row.ticketId)),
     getAffiliateBets: async ({ affiliate, asset, chainId, gameHub, limit }) =>
       [...bets.values()]
         .filter((row) => row.chainId === chainId && sameHub(row, gameHub))
@@ -1038,7 +897,6 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
     return rows.map((row) => BigInt(row.betId));
   };
   return {
-    sportsRecovery: createPostgresSportsRecoveryStore(sql),
     getRandomReadyBetIds: (query) => getRecoverableBetIds(query, false),
     getUnresolvedBetIds: (query) => getRecoverableBetIds(query, true),
     initializeSchema: async () => {
@@ -1086,92 +944,6 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         }
       });
       return rows.map(normalizeBetRow);
-    },
-    writeSportsHubEvents: async (events: readonly SportsTicketIndexEvent[]) => {
-      if (events.length === 0) return [];
-      const rows = foldSportsTicketIndexEvents(events);
-      await sql.begin(async (tx) => {
-        for (const row of rows) {
-          await tx`
-            insert into sport_tickets (
-              chain_id, ticket_id, position_id, market_id, event_id, pool_id, outcome_id, player,
-              stake, payout, reserved, refund_amount, odds_snapshot_hash, rulebook_hash, state,
-              placed_block, updated_block, last_tx_hash, last_event_name, terminal_tx_hash,
-              settled_tx_hash, refunded_tx_hash, voided_tx_hash, updated_at
-            ) values (
-              ${row.chainId},
-              ${row.ticketId},
-              ${row.positionId ?? null},
-              ${row.marketId ?? null},
-              ${row.eventId ?? null},
-              ${row.poolId ?? null},
-              ${row.outcomeId ?? null},
-              ${row.player?.toLowerCase() ?? null},
-              ${row.stake ?? null},
-              ${row.payout ?? null},
-              ${row.reserved ?? null},
-              ${row.refundAmount ?? null},
-              ${row.oddsSnapshotHash?.toLowerCase() ?? null},
-              ${row.rulebookHash?.toLowerCase() ?? null},
-              ${row.state},
-              ${row.placedBlock ?? null},
-              ${row.updatedBlock},
-              ${row.lastTxHash.toLowerCase()},
-              ${row.lastEventName},
-              ${row.terminalTxHash?.toLowerCase() ?? null},
-              ${row.settledTxHash?.toLowerCase() ?? null},
-              ${row.refundedTxHash?.toLowerCase() ?? null},
-              ${row.voidedTxHash?.toLowerCase() ?? null},
-              ${new Date(row.updatedAt)}
-            )
-            on conflict (chain_id, ticket_id) do update set
-              position_id = coalesce(excluded.position_id, sport_tickets.position_id),
-              market_id = coalesce(excluded.market_id, sport_tickets.market_id),
-              event_id = coalesce(excluded.event_id, sport_tickets.event_id),
-              pool_id = coalesce(excluded.pool_id, sport_tickets.pool_id),
-              outcome_id = coalesce(excluded.outcome_id, sport_tickets.outcome_id),
-              player = coalesce(excluded.player, sport_tickets.player),
-              stake = coalesce(excluded.stake, sport_tickets.stake),
-              payout = coalesce(excluded.payout, sport_tickets.payout),
-              reserved = coalesce(excluded.reserved, sport_tickets.reserved),
-              refund_amount = coalesce(excluded.refund_amount, sport_tickets.refund_amount),
-              odds_snapshot_hash = coalesce(
-                excluded.odds_snapshot_hash,
-                sport_tickets.odds_snapshot_hash
-              ),
-              rulebook_hash = coalesce(excluded.rulebook_hash, sport_tickets.rulebook_hash),
-              state = case
-                when excluded.updated_block >= sport_tickets.updated_block then excluded.state
-                else sport_tickets.state
-              end,
-              placed_block = coalesce(sport_tickets.placed_block, excluded.placed_block),
-              updated_block = greatest(sport_tickets.updated_block, excluded.updated_block),
-              last_tx_hash = case
-                when excluded.updated_block >= sport_tickets.updated_block then excluded.last_tx_hash
-                else sport_tickets.last_tx_hash
-              end,
-              last_event_name = case
-                when excluded.updated_block >= sport_tickets.updated_block then excluded.last_event_name
-                else sport_tickets.last_event_name
-              end,
-              terminal_tx_hash = coalesce(
-                excluded.terminal_tx_hash,
-                sport_tickets.terminal_tx_hash
-              ),
-              settled_tx_hash = coalesce(excluded.settled_tx_hash, sport_tickets.settled_tx_hash),
-              refunded_tx_hash = coalesce(
-                excluded.refunded_tx_hash,
-                sport_tickets.refunded_tx_hash
-              ),
-              voided_tx_hash = coalesce(excluded.voided_tx_hash, sport_tickets.voided_tx_hash),
-              updated_at = case
-                when excluded.updated_block >= sport_tickets.updated_block then excluded.updated_at
-                else sport_tickets.updated_at
-              end
-          `;
-        }
-      });
-      return rows;
     },
     writeVaultProviderLedgerRows: async (rows) => {
       for (const row of rows) normalizeVaultProviderLedgerAction(row.action);
@@ -1223,15 +995,6 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       `;
       return rows.map(rowFromDatabase).sort(compareBetRows);
     },
-    getPlayerSportsTickets: async ({ chainId, player, limit }) => {
-      const rows = await sql`
-        select * from sport_tickets
-        where chain_id = ${chainId} and player = ${player.toLowerCase()}
-        order by updated_block desc, ticket_id desc
-        limit ${limit}
-      `;
-      return rows.map(sportsTicketRowFromDatabase).sort(compareSportsTicketRows);
-    },
     getVaultProviderLedger: async ({
       beforeBlock,
       beforeLogIndex,
@@ -1263,15 +1026,6 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         limit ${limit}
       `;
       return rows.map(vaultProviderLedgerRowFromDatabase).sort(compareVaultProviderLedgerRows);
-    },
-    getHeldSportsTicketIdsByMarket: async ({ chainId, limit, marketId }) => {
-      const rows = await sql`
-        select ticket_id from sport_tickets
-        where chain_id = ${chainId} and market_id = ${marketId} and state = 'held'
-        order by updated_block desc, ticket_id desc
-        limit ${limit}
-      `;
-      return rows.map((row) => BigInt(String(row.ticketId)));
     },
     getAffiliateBets: async ({ affiliate, asset, chainId, gameHub, limit }) => {
       const assetFilter = asset ? sql`and asset = ${asset.toLowerCase()}` : sql``;
@@ -1613,8 +1367,8 @@ export function foldBetIndexEvents(events: readonly BetIndexEvent[]) {
 }
 
 function compareEvents(
-  a: Pick<BetIndexEvent | SportsTicketIndexEvent, "blockNumber" | "logIndex">,
-  b: Pick<BetIndexEvent | SportsTicketIndexEvent, "blockNumber" | "logIndex">
+  a: Pick<BetIndexEvent, "blockNumber" | "logIndex">,
+  b: Pick<BetIndexEvent, "blockNumber" | "logIndex">
 ) {
   const blockDelta = Number(a.blockNumber - b.blockNumber);
   if (blockDelta !== 0) return blockDelta;
@@ -1649,14 +1403,6 @@ function normalizeBetRow({ houseEdge: _derived, ...row }: BetRow): BetRow {
   };
 }
 
-export function compareSportsTicketRows(a: SportsTicketRow, b: SportsTicketRow) {
-  if (b.updatedBlock !== a.updatedBlock) return b.updatedBlock - a.updatedBlock;
-  const aId = BigInt(a.ticketId);
-  const bId = BigInt(b.ticketId);
-  if (bId === aId) return 0;
-  return bId > aId ? 1 : -1;
-}
-
 export function compareVaultProviderLedgerRows(
   a: VaultProviderLedgerRow,
   b: VaultProviderLedgerRow
@@ -1673,19 +1419,6 @@ function isVaultProviderLedgerBeforeCursor(
   if (beforeBlock == null || beforeLogIndex == null) return true;
   if (row.blockNumber < beforeBlock) return true;
   return row.blockNumber === beforeBlock && row.logIndex < beforeLogIndex;
-}
-
-export function foldSportsTicketIndexEvents(events: readonly SportsTicketIndexEvent[]) {
-  const rows = new Map<string, SportsTicketRow>();
-  const sorted = [...events].sort(compareEvents);
-
-  for (const event of sorted) {
-    const ticketId = String(event.args.ticketId ?? "0");
-    const key = `${event.chainId}:${ticketId}`;
-    rows.set(key, applyEventToSportsTicket(rows.get(key), event));
-  }
-
-  return [...rows.values()];
 }
 
 function requireRowFinancials(row: BetRow) {
@@ -2028,80 +1761,6 @@ function applyEventToBet(prev: BetRow | undefined, event: BetLifecycleEvent): Be
   return next;
 }
 
-function applyEventToSportsTicket(
-  prev: SportsTicketRow | undefined,
-  event: SportsTicketIndexEvent
-): SportsTicketRow {
-  const ticketId = String(event.args.ticketId ?? "0");
-  const next: SportsTicketRow = prev
-    ? { ...prev }
-    : {
-        chainId: event.chainId,
-        id: `${event.chainId}:sports:${ticketId}`,
-        lastEventName: event.eventName,
-        lastTxHash: event.txHash,
-        state: "held",
-        ticketId,
-        updatedAt: Date.now(),
-        updatedBlock: Number(event.blockNumber)
-      };
-
-  if (event.eventName === "TicketPlaced") {
-    if (event.args.positionId != null) next.positionId = toBigintString(event.args.positionId);
-    if (event.args.marketId != null) next.marketId = toBigintString(event.args.marketId);
-    if (event.args.eventId != null) next.eventId = toBigintString(event.args.eventId);
-    if (event.args.poolId != null) next.poolId = toBigintString(event.args.poolId);
-    if (event.args.outcomeId != null) next.outcomeId = Number(event.args.outcomeId);
-    if (event.args.player) next.player = event.args.player as SportsTicketRow["player"];
-    if (event.args.stake != null) next.stake = toBigintString(event.args.stake);
-    if (event.args.payout != null) next.payout = toBigintString(event.args.payout);
-    if (event.args.reserved != null) next.reserved = toBigintString(event.args.reserved);
-    if (event.args.oddsSnapshotHash) {
-      next.oddsSnapshotHash = event.args.oddsSnapshotHash as SportsTicketRow["oddsSnapshotHash"];
-    }
-    if (event.args.rulebookHash) {
-      next.rulebookHash = event.args.rulebookHash as SportsTicketRow["rulebookHash"];
-    }
-    next.placedBlock = Number(event.blockNumber);
-  }
-
-  if (event.eventName === "TicketSettled") {
-    if (event.args.positionId != null) next.positionId = toBigintString(event.args.positionId);
-    if (event.args.payout != null) next.payout = toBigintString(event.args.payout);
-    next.state = "settled";
-    next.terminalTxHash = event.txHash;
-    next.settledTxHash = event.txHash;
-  }
-
-  if (event.eventName === "TicketRefunded") {
-    if (event.args.positionId != null) next.positionId = toBigintString(event.args.positionId);
-    if (event.args.refundAmount != null) {
-      next.refundAmount = toBigintString(event.args.refundAmount);
-      next.payout = next.refundAmount;
-    }
-    next.state = "refunded";
-    next.terminalTxHash = event.txHash;
-    next.refundedTxHash = event.txHash;
-  }
-
-  if (event.eventName === "TicketVoided") {
-    if (event.args.positionId != null) next.positionId = toBigintString(event.args.positionId);
-    if (event.args.refundAmount != null) {
-      next.refundAmount = toBigintString(event.args.refundAmount);
-      next.payout = next.refundAmount;
-    }
-    next.state = "voided";
-    next.terminalTxHash = event.txHash;
-    next.voidedTxHash = event.txHash;
-  }
-
-  next.updatedBlock = Math.max(next.updatedBlock, Number(event.blockNumber));
-  next.lastTxHash = event.txHash;
-  next.lastEventName = event.eventName;
-  next.updatedAt = Date.now();
-  return next;
-}
-
 function reduceState(prev: BetLifecycleState, eventName: BetIndexEvent["eventName"]) {
   if (eventName === "BetRefunded") return "refunded";
   if (eventName === "BetFinalized") return "finalized";
@@ -2152,36 +1811,6 @@ function optionalDateMs(value: unknown) {
     return Number.isFinite(parsed) ? parsed : undefined;
   }
   return undefined;
-}
-
-function sportsTicketRowFromDatabase(row: Record<string, unknown>): SportsTicketRow {
-  return {
-    chainId: Number(row.chainId),
-    eventId: optionalString(row.eventId),
-    id: `${Number(row.chainId)}:sports:${String(row.ticketId)}`,
-    lastEventName: String(row.lastEventName),
-    lastTxHash: String(row.lastTxHash) as Hex,
-    marketId: optionalString(row.marketId),
-    oddsSnapshotHash: optionalHex(row.oddsSnapshotHash),
-    outcomeId: optionalNumber(row.outcomeId),
-    payout: optionalString(row.payout),
-    placedBlock: optionalNumber(row.placedBlock),
-    player: optionalAddress(row.player),
-    poolId: optionalString(row.poolId),
-    positionId: optionalString(row.positionId),
-    refundAmount: optionalString(row.refundAmount),
-    refundedTxHash: optionalHex(row.refundedTxHash),
-    reserved: optionalString(row.reserved),
-    rulebookHash: optionalHex(row.rulebookHash),
-    settledTxHash: optionalHex(row.settledTxHash),
-    stake: optionalString(row.stake),
-    state: normalizeSportsTicketState(row.state),
-    terminalTxHash: optionalHex(row.terminalTxHash),
-    ticketId: String(row.ticketId),
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.getTime() : Date.now(),
-    updatedBlock: Number(row.updatedBlock),
-    voidedTxHash: optionalHex(row.voidedTxHash)
-  };
 }
 
 function vaultProviderLedgerRowFromDatabase(row: Record<string, unknown>): VaultProviderLedgerRow {
@@ -2237,13 +1866,6 @@ function normalizeState(value: unknown): BetLifecycleState {
     return value;
   }
   return "placed";
-}
-
-function normalizeSportsTicketState(value: unknown): SportsTicketLifecycleState {
-  if (value === "held" || value === "settled" || value === "refunded" || value === "voided") {
-    return value;
-  }
-  return "held";
 }
 
 function normalizeVaultProviderLedgerAction(value: unknown): VaultProviderLedgerAction {

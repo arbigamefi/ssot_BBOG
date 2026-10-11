@@ -66,11 +66,7 @@ function toUnits(amount: string | number, decimals: number) {
 }
 
 export function findCasinoPool(pools: readonly ReleasePoolLike[]) {
-  return (
-    pools.find((pool) => pool.active !== false && String(pool.domain).toLowerCase() === "casino") ??
-    pools.find((pool) => pool.active !== false && pool.domainId === 1) ??
-    pools.find((pool) => pool.active !== false)
-  );
+  return pools.find((pool) => pool.active !== false);
 }
 
 export function buildGamePlaceBetInput({

@@ -87,7 +87,7 @@ def _as_address(v: Any, *, field: str, path: Path) -> str:
 
 EXECUTION_ADDRESSES = (
     "gov", "gameHub", "settlementRouter", "poolRegistry", "vrfHub", "refRegistry", "refEngine",
-    "sportsRiskEngine", "sportsHub", "moduleDice", "moduleCoinToss", "moduleRoulette", "moduleKeno",
+    "moduleDice", "moduleCoinToss", "moduleRoulette", "moduleKeno",
     "modulePlinko", "moduleSicBo", "moduleSlots", "moduleBaccarat",
 )
 GAMES = (
@@ -195,79 +195,19 @@ def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manif
             raise SystemExit(f"{manifest_path}: pools[{i}].vault does not match authenticated snapshot")
 
         domain = _as_int(snapshot.get(f"poolDomain_{suffix}"), field=f"poolDomain_{suffix}", path=snapshot_path)
+        if domain != 1:
+            raise SystemExit(f"{snapshot_path}: poolDomain_{suffix} is not the casino domain")
         active = _as_int(snapshot.get(f"poolActive_{suffix}"), field=f"poolActive_{suffix}", path=snapshot_path) != 0
         if type(pool.get("active")) is not bool or pool["active"] != active:
             raise SystemExit(f"{manifest_path}: pool active status does not match snapshot")
-        if str(pool.get("domain", "")).lower() != {1: "casino", 2: "sports", 3: "future"}.get(domain, "unknown"):
+        if pool.get("domain") != "Casino":
             raise SystemExit(f"{manifest_path}: pool domain label does not match snapshot")
-        risk = pool.get("sportsRisk")
-        if domain != 2:
-            if risk is not None:
-                raise SystemExit(f"{manifest_path}: non-sports pool has sportsRisk")
-        else:
-            if not isinstance(risk, dict):
-                raise SystemExit(f"{manifest_path}: missing pool sportsRisk")
-            for field in ("maxStake", "maxPayout", "maxMarketReserved", "maxOutcomeReserved", "maxEventReserved"):
-                key = f"poolSports{field[0].upper() + field[1:]}_{suffix}"
-                if _as_int(risk.get(field), field=field, path=manifest_path) != _as_int(snapshot.get(key), field=key, path=snapshot_path):
-                    raise SystemExit(f"{manifest_path}: pool sportsRisk.{field} does not match snapshot")
-            if str(risk.get("riskHash", "")).lower() != str(snapshot.get(f"poolSportsRiskHash_{suffix}")).lower():
-                raise SystemExit(f"{manifest_path}: pool sportsRisk.riskHash does not match snapshot")
 
         actual_symbol = _as_str(pool.get("symbol"), field=f"pools[{i}].symbol", path=manifest_path)
         if actual_symbol != expected_symbol:
             raise SystemExit(
                 f"{manifest_path}: pools[{i}].symbol={actual_symbol!r} does not match snapshot {expected_symbol!r}"
             )
-
-
-def _validate_sports(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manifest_path: Path, snapshot_path: Path) -> None:
-    sports = manifest.get("sports")
-    if not isinstance(sports, dict):
-        raise SystemExit(f"{manifest_path}: sports must be object")
-    _require_keys(
-        sports,
-        keys=(
-            "enabled",
-            "riskEngine",
-            "sportsHub",
-            "oddsSignerSetHash",
-            "resultReporterSetHash",
-            "resultReporterThreshold",
-            "maxStake",
-            "maxPayout",
-            "maxMarketReserved",
-            "maxOutcomeReserved",
-            "maxEventReserved",
-        ),
-        path=manifest_path,
-    )
-    enabled = _as_int(snapshot.get("sportsEnabled"), field="sportsEnabled", path=snapshot_path) != 0
-    if type(sports.get("enabled")) is not bool or sports["enabled"] != enabled:
-        raise SystemExit(f"{manifest_path}: sports.enabled does not match snapshot")
-    for field in ("resultReporterThreshold", "resultChallengeTimeoutSeconds", "maxStake", "maxPayout", "maxMarketReserved", "maxOutcomeReserved", "maxEventReserved"):
-        key = "sports" + field[0].upper() + field[1:]
-        if _as_int(sports.get(field), field=field, path=manifest_path) != _as_int(snapshot.get(key), field=key, path=snapshot_path):
-            raise SystemExit(f"{manifest_path}: sports.{field} does not match snapshot")
-    for field in ("oddsSignerSetHash", "resultReporterSetHash", "resultChallenger", "resultArbitrator"):
-        key = "sports" + field[0].upper() + field[1:]
-        expected = _as_str(snapshot.get(key), field=key, path=snapshot_path).lower()
-        if _as_str(sports.get(field), field=field, path=manifest_path).lower() != expected:
-            raise SystemExit(f"{manifest_path}: sports.{field} does not match snapshot")
-    if "hub" in sports:
-        raise SystemExit(f"{manifest_path}: sports.hub is not a valid frontend field; use sports.sportsHub")
-
-    expected_hub = _as_address(snapshot.get("sportsHub"), field="sportsHub", path=snapshot_path)
-    actual_hub = _as_address(sports.get("sportsHub"), field="sports.sportsHub", path=manifest_path)
-    if actual_hub != expected_hub:
-        raise SystemExit(f"{manifest_path}: sports.sportsHub={actual_hub} does not match snapshot {expected_hub}")
-
-    expected_risk_engine = _as_address(snapshot.get("sportsRiskEngine"), field="sportsRiskEngine", path=snapshot_path)
-    actual_risk_engine = _as_address(sports.get("riskEngine"), field="sports.riskEngine", path=manifest_path)
-    if actual_risk_engine != expected_risk_engine:
-        raise SystemExit(
-            f"{manifest_path}: sports.riskEngine={actual_risk_engine} does not match snapshot {expected_risk_engine}"
-        )
 
 
 def _first_active_casino_pool(snapshot: Dict[str, Any], *, snapshot_path: Path) -> Tuple[int, int]:
@@ -465,7 +405,7 @@ def main() -> None:
     snapshot = _load_json(snapshot_path)
 
     # Schema requirements.
-    manifest_keys = ("schemaVersion", "chainId", "blockNumber", "architectureVersion", "addresses", "sports", "games", "pools")
+    manifest_keys = ("schemaVersion", "chainId", "blockNumber", "architectureVersion", "addresses", "games", "pools")
     if rel.get("schema") != "SSOT_RELEASE_DIGEST_V16":
         raise SystemExit(f"{release_path}: expected current v1.6 release schema")
     for artifact, artifact_path in [(manifest, manifest_path), (vectors, vectors_path), (snapshot, snapshot_path)]:
@@ -479,7 +419,6 @@ def main() -> None:
 
     # Authenticate routes before using them to validate the ABI inventory.
     _validate_execution(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
-    _validate_sports(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
     _validate_pools(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)
     _validate_vectors(vectors, snapshot, vectors_path=vectors_path, snapshot_path=snapshot_path)
 

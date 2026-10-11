@@ -249,9 +249,13 @@ Baccarat 约 2 小时、峰值 31 GB。比较时不用 `diff -r`：`module-bound
 `d67a7083a9f3676514339432cc5f690d3cc4de0253935d431c8d9631f8873491`。
 
 复现依赖的证据目录 `landing-2026-10-08/`、`callback-cost-certificate-2026-10-04/`、`h1-callback-cost-certificate-2026-10-04/`
-与 `takeover-2026-10-07/` 已归档，摘要见[证据索引](../release/evidence.md)。在任一检出上运行：
+与 `takeover-2026-10-07/` 已归档，摘要见[证据索引](../release/evidence.md)。v4 覆盖工作包 B 之前的合约，最后一个
+带 v4 合约的提交是 `4a5762aa3`；B9 起 GameHub 与 SettlementRouter 的可执行代码已变，O3 绑定一步在之后的检出上按设计
+失败。在该提交的检出上运行：
 
 ```sh
+git worktree add ../arbigamefi-v4 4a5762aa3
+cd ../arbigamefi-v4 && bash script/ci/install_deps.sh
 python3 script/certificate/reproduce_first_callback_v4.py --modules rerun
 ```
 

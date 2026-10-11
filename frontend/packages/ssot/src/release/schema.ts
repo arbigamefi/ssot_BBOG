@@ -14,46 +14,17 @@ export const AssetSchema = z.object({
   vault: Address
 });
 
-const NumericString = z.string().regex(/^[0-9]+$/);
-
-export const SportsReleaseSchema = z.object({
-  enabled: z.boolean(),
-  riskEngine: Address,
-  sportsHub: Address,
-  oddsSignerSetHash: z.string().min(8),
-  resultReporterSetHash: z.string().min(8),
-  resultReporterThreshold: NumericString,
-  resultChallengeTimeoutSeconds: NumericString.optional(),
-  resultChallenger: Address.optional(),
-  resultArbitrator: Address.optional(),
-  maxStake: NumericString,
-  maxPayout: NumericString,
-  maxMarketReserved: NumericString,
-  maxOutcomeReserved: NumericString,
-  maxEventReserved: NumericString
-});
-
+// Every release pool is a casino pool (SSOTTypes.PoolDomain.Casino).
 export const PoolSchema = z.object({
   poolId: z.number().int().positive(),
-  domainId: z.number().int().nonnegative(),
-  domain: z.string().min(1),
+  domainId: z.literal(1),
+  domain: z.literal("Casino"),
   active: z.boolean(),
   asset: Address,
   bank: Address,
   vault: Address,
   symbol: z.string().min(1),
-  decimals: z.number().int().min(0).max(36),
-  sportsRisk: z
-    .object({
-      maxStake: NumericString,
-      maxPayout: NumericString,
-      maxMarketReserved: NumericString,
-      maxOutcomeReserved: NumericString,
-      maxEventReserved: NumericString,
-      riskHash: z.string().min(8)
-    })
-    .nullable()
-    .optional()
+  decimals: z.number().int().min(0).max(36)
 });
 
 export const ReleaseSchema = z.object({
@@ -67,8 +38,6 @@ export const ReleaseSchema = z.object({
     gameHub: Address,
     settlementRouter: Address,
     poolRegistry: Address,
-    sportsHub: Address,
-    sportsRiskEngine: Address,
     vrfHub: Address,
     refRegistry: Address,
     refEngine: Address
@@ -91,7 +60,6 @@ export const ReleaseSchema = z.object({
       })
     )
     .min(1),
-  sports: SportsReleaseSchema,
   pools: z.array(PoolSchema).min(1),
   // Current authenticated deployment identity; no inferred deployment or older LP architecture.
   meta: z.object({

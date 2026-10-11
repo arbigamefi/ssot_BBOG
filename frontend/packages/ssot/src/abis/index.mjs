@@ -7,10 +7,6 @@ import PoolRegistry from "./contracts/PoolRegistry.abi.json" with { type: "json"
 export const PoolRegistryAbi = PoolRegistry.abi;
 import SettlementRouter from "./contracts/SettlementRouter.abi.json" with { type: "json" };
 export const SettlementRouterAbi = SettlementRouter.abi;
-import SportsRiskEngine from "./contracts/SportsRiskEngine.abi.json" with { type: "json" };
-export const SportsRiskEngineAbi = SportsRiskEngine.abi;
-import SportsHub from "./contracts/SportsHub.abi.json" with { type: "json" };
-export const SportsHubAbi = SportsHub.abi;
 import ReferralRegistry from "./contracts/ReferralRegistry.abi.json" with { type: "json" };
 export const ReferralRegistryAbi = ReferralRegistry.abi;
 import DefaultReferralEngine from "./contracts/DefaultReferralEngine.abi.json" with { type: "json" };
@@ -42,8 +38,6 @@ const abis = Object.freeze({
   VRFHubAbi,
   PoolRegistryAbi,
   SettlementRouterAbi,
-  SportsRiskEngineAbi,
-  SportsHubAbi,
   ReferralRegistryAbi,
   DefaultReferralEngineAbi,
   DiceModuleAbi,

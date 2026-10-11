@@ -71,29 +71,14 @@ The user must always understand three things:
 Avoid fixed-height game stages. Dice, roulette, coin toss, and keno must scale
 to the available viewport without pushing the primary CTA out of reach.
 
-## 5. Sportsbook
-
-Mobile sportsbook order:
-
-```text
-Market header
-Outcome list
-Ticket slip
-Market status and rules
-Recent activity
-```
-
-Outcome chips can wrap to two columns. The ticket slip should stay close to the
-selected outcomes, not hidden below a long market history.
-
-## 6. Portfolio, Earn, And Ops
+## 5. Portfolio, Earn, And Ops
 
 - Portfolio activity uses stacked rows on mobile.
 - Earn deposit/withdraw forms use full-width panels, not cramped modals.
 - Ops remains functional but can use horizontal table scroll; ops is not the
   primary mobile surface.
 
-## 7. Viewport And Keyboard
+## 6. Viewport And Keyboard
 
 - Use `100dvh` for viewport-height layouts.
 - Do not block pinch zoom.
@@ -101,7 +86,7 @@ selected outcomes, not hidden below a long market history.
 - Use `touch-action: manipulation` on primary CTAs when appropriate.
 - Respect safe-area insets for sticky or bottom-adjacent controls.
 
-## 8. PWA
+## 7. PWA
 
 v1 may ship a manifest and icons. It should not ship a custom service worker or
 offline-first behavior unless there is a concrete product need.
@@ -109,7 +94,7 @@ offline-first behavior unless there is a concrete product need.
 No automatic install prompt. If install support is present, expose it as a
 small drawer item only after the browser fires the install event.
 
-## 9. Do Not Do
+## 8. Do Not Do
 
 - Do not create mobile-only routes.
 - Do not use hover-only controls.
@@ -118,7 +103,7 @@ small drawer item only after the browser fires the install event.
 - Do not add custom pull-to-refresh.
 - Do not hide transaction or settlement state below the fold after a user signs.
 
-## 10. Verification
+## 9. Verification
 
 For UI changes touching product routes, smoke at least one mobile viewport and
 one desktop viewport.

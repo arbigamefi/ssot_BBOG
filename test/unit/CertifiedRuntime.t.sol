@@ -69,9 +69,6 @@ contract CertifiedRuntimeTest is Test {
         vm.setEnv("BANK_MIN_BET_AMOUNT_1", "10000");
         vm.setEnv("POOL_ASSET_0", vm.toString(address(asset)));
         vm.setEnv("POOL_ASSET_1", vm.toString(address(asset)));
-        vm.setEnv("POOL_DOMAIN_0", "1");
-        vm.setEnv("POOL_DOMAIN_1", "1");
-        vm.setEnv("SPORTS_DERIVE_ROLE_SET_HASHES", "false");
         vm.setEnv("POOL_ID_0", "1");
         vm.setEnv("POOL_ID_1", "3");
         vm.setEnv("DEFAULT_HOUSE_EDGE_BPS", "200");

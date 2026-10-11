@@ -3,8 +3,6 @@ export declare const GameHubAbi: Abi;
 export declare const VRFHubAbi: Abi;
 export declare const PoolRegistryAbi: Abi;
 export declare const SettlementRouterAbi: Abi;
-export declare const SportsRiskEngineAbi: Abi;
-export declare const SportsHubAbi: Abi;
 export declare const ReferralRegistryAbi: Abi;
 export declare const DefaultReferralEngineAbi: Abi;
 export declare const DiceModuleAbi: Abi;
@@ -23,8 +21,6 @@ export declare function getContractAbis(): {
   readonly VRFHubAbi: Abi;
   readonly PoolRegistryAbi: Abi;
   readonly SettlementRouterAbi: Abi;
-  readonly SportsRiskEngineAbi: Abi;
-  readonly SportsHubAbi: Abi;
   readonly ReferralRegistryAbi: Abi;
   readonly DefaultReferralEngineAbi: Abi;
   readonly DiceModuleAbi: Abi;

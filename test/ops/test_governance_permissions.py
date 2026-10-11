@@ -30,12 +30,10 @@ def word(n):
 
 
 class Chain:
-    def __init__(self, sports=False):
+    def __init__(self):
         self.start, self.end = 10, 1250
         self.snap = {'architectureVersion': 'v1.6-nft-liquidity', 'chainId': 84532,
-                     'blockNumber': self.start, 'poolRegistry': addr(1), 'gameHub': addr(2),
-                     'sportsHub': addr(3) if sports else addr(0), 'sportsRiskEngine': addr(4) if sports else addr(0),
-                     'sportsEnabled': int(sports), 'numPools': 2 if sports else 1}
+                     'blockNumber': self.start, 'poolRegistry': addr(1), 'gameHub': addr(2), 'numPools': 1}
         self.logs, self.values, self.requests = [], {}, []
         self.calls = self.retries = 0
         self.old_code = '0x'
@@ -44,9 +42,6 @@ class Chain:
         self.fail_method = None
         self.add('HubRegistered(address,bool)', addr(1), [2], 1)
         self.put(addr(1), 'isRegisteredHub(address)', [2], 1)
-        if sports:
-            self.add('HubRegistered(address,bool)', addr(1), [3], 1)
-            self.put(addr(1), 'isRegisteredHub(address)', [3], 1)
         for i in range(self.snap['numPools']):
             pool, hub = i + 1, i + 2
             self.snap.update({f'poolId_{i}': pool, f'poolDomain_{i}': pool,
@@ -76,11 +71,6 @@ class Chain:
         for i, (name, key) in enumerate(CHECK.GAMES):
             self.snap.update({key: addr(60 + i), 'gameMaxBetCount_' + name: 25, 'gameCallbackGasLimit_' + name: 2447746})
             self.register_game(name, 60 + i, 25, 2447746)
-        for i, role in enumerate(CHECK.ROLES):
-            self.snap['sports' + role] = addr(40 + i) if sports else addr(0)
-            if sports:
-                self.add(role + 'Set(address,bool)', addr(3), [40 + i], 1)
-                self.put(addr(3), role[0].lower() + role[1:] + '(address)', [40 + i], 1)
 
     def add(self, name, target, topics, value, block=10):
         self.logs.append({'address': target, 'topics': [CHECK.signature(name)] + [word(n) for n in topics],
@@ -129,21 +119,20 @@ class PermissionHistoryTests(unittest.TestCase):
         with self.assertRaisesRegex(CHECK.VerificationError, reason):
             CHECK.verify_permissions(chain, chain.snap, chain.end)
 
-    def test_casino_and_sports_controls_freeze_calls_and_bound_every_page(self):
-        for sports in (False, True):
-            chain = Chain(sports)
-            blocks = []
-            result = CHECK.verify(chain.snap, chain, blocks.append)
-            self.assertEqual(blocks, [chain.end])
-            self.assertEqual(result['blockHash'], chain.hash)
-            pages = [params[0] for method, params in chain.requests if method == 'eth_getLogs']
-            # Registry and GameHub always replay their history; SportsHub roles only when sports is enabled.
-            per_target = math.ceil((chain.end - chain.start + 1) / CHECK.DEFAULT_PAGE_BLOCKS)
-            self.assertEqual(len(pages), per_target * (3 if sports else 2))
-            self.assertEqual({page['address'] for page in pages}, {addr(1), addr(2)} | ({addr(3)} if sports else set()))
-            for page in pages:
-                self.assertLessEqual(int(page['toBlock'], 16) - int(page['fromBlock'], 16) + 1, 200)
-            self.assertTrue(all(params[1] == hex(chain.end) for method, params in chain.requests if method == 'eth_call'))
+    def test_controls_freeze_calls_and_bound_every_page(self):
+        chain = Chain()
+        blocks = []
+        result = CHECK.verify(chain.snap, chain, blocks.append)
+        self.assertEqual(blocks, [chain.end])
+        self.assertEqual(result['blockHash'], chain.hash)
+        pages = [params[0] for method, params in chain.requests if method == 'eth_getLogs']
+        # PoolRegistry and GameHub replay their whole history.
+        per_target = math.ceil((chain.end - chain.start + 1) / CHECK.DEFAULT_PAGE_BLOCKS)
+        self.assertEqual(len(pages), per_target * 2)
+        self.assertEqual({page['address'] for page in pages}, {addr(1), addr(2)})
+        for page in pages:
+            self.assertLessEqual(int(page['toBlock'], 16) - int(page['fromBlock'], 16) + 1, 200)
+        self.assertTrue(all(params[1] == hex(chain.end) for method, params in chain.requests if method == 'eth_call'))
 
     def test_game_registrations_must_equal_the_certified_set(self):
         chain = Chain()
@@ -191,42 +180,12 @@ class PermissionHistoryTests(unittest.TestCase):
         chain.put(addr(1), 'isHubAllowedForPool(uint64,address)', [1, 99], 1)
         self.reject(chain, 'mapping differs from history')
 
-    def test_each_sports_role_checks_missing_extra_revoked_and_mapping(self):
-        for role in CHECK.ROLES:
-            for failure in ('extra', 'missing', 'mapping'):
-                with self.subTest(role=role, failure=failure):
-                    chain = Chain(True)
-                    expected = int(chain.snap['sports' + role], 16)
-                    if failure == 'extra':
-                        chain.add(role + 'Set(address,bool)', addr(3), [99], 1, block=1100)
-                    elif failure == 'missing':
-                        chain.add(role + 'Set(address,bool)', addr(3), [expected], 0, block=1100)
-                    else:
-                        chain.put(addr(3), role[0].lower() + role[1:] + '(address)', [expected], 0)
-                    self.reject(chain, 'sports ' + role)
-            chain = Chain(True)
-            chain.add(role + 'Set(address,bool)', addr(3), [99], 1)
-            chain.add(role + 'Set(address,bool)', addr(3), [99], 0, block=600)
-            CHECK.verify_permissions(chain, chain.snap, chain.end)
-
     def test_no_creation_coverage_archive_failure_and_log_failure_reject(self):
         chain = Chain(); chain.old_code = '0x6000'
         self.reject(chain, 'starts after contract creation')
         for method in ('eth_getCode', 'eth_getLogs', 'eth_call'):
             chain = Chain(); chain.fail_method = method
             self.reject(chain, 'RPC ' + method + ' failed')
-
-    def test_optional_sports_role_can_be_empty_but_cannot_have_undeclared_members(self):
-        for role in CHECK.ROLES:
-            with self.subTest(role=role):
-                chain = Chain(True)
-                expected = int(chain.snap['sports' + role], 16)
-                chain.snap['sports' + role] = addr(0)
-                chain.add(role + 'Set(address,bool)', addr(3), [expected], 0, block=600)
-                chain.put(addr(3), role[0].lower() + role[1:] + '(address)', [expected], 0)
-                CHECK.verify_permissions(chain, chain.snap, chain.end)
-                chain.add(role + 'Set(address,bool)', addr(3), [99], 1, block=1100)
-                self.reject(chain, 'sports ' + role + ' set differs')
 
     def test_omitted_expected_event_and_malformed_or_duplicate_logs_reject(self):
         chain = Chain(); chain.logs.pop(0)
@@ -236,12 +195,10 @@ class PermissionHistoryTests(unittest.TestCase):
         chain = Chain(); chain.logs[0]['removed'] = True
         self.reject(chain, 'removed authorization log')
 
-    def test_sports_disabled_rejects_role_address_or_pool_or_additional_pool(self):
-        chain = Chain(); chain.snap['sportsResultArbitrator'] = addr(9)
-        self.reject(chain, 'sports-disabled role route')
+    def test_only_casino_pools_and_no_additional_pool(self):
         chain = Chain(); chain.snap['poolDomain_0'] = 2
-        self.reject(chain, 'sports-disabled pool route')
-        chain = Chain(); chain.add('PoolRegistered(uint64,address,address,uint8)', addr(1), [2, 22, 32], 2)
+        self.reject(chain, 'not a casino pool')
+        chain = Chain(); chain.add('PoolRegistered(uint64,address,address,uint8)', addr(1), [2, 22, 32], 1)
         self.reject(chain, 'pool history differs')
 
     def test_final_block_reorg_rejects_after_existing_governance_check(self):
@@ -411,9 +368,6 @@ class CheckpointTests(unittest.TestCase):
         other = Chain(); other.snap['poolRegistry'] = addr(9)
         with self.assertRaisesRegex(CHECK.VerificationError, 'another release'):
             CHECK.verify_permissions(other, other.snap, other.end, document)
-        sports = Chain(True)
-        with self.assertRaisesRegex(CHECK.VerificationError, 'casino-only'):
-            CHECK.verify_permissions(sports, sports.snap, sports.end, document)
         tampered = copy.deepcopy(document); tampered['state']['registeredHubs'][addr(99)] = True
         with self.assertRaisesRegex(CHECK.VerificationError, 'registered hub set'):
             CHECK.verify_permissions(Chain(), chain.snap, chain.end, tampered)

@@ -13,8 +13,6 @@ and operating procedures; they are not evidence of a running service. Start with
 - [Alerts and delivery](alerts.md)
 - [Runbooks](runbooks/README.md)
 - [Casino frontend access](casino-frontend-access.md)
-- [Sports result evidence](sportsbook-provider-evidence-policy.md)
-- [The Odds API integration](sportsbook-provider-the-odds-api.md)
 - [Incident record](incident-templates.md)
 
 Use the verified release digest, chain ID and contract addresses in every operational record.

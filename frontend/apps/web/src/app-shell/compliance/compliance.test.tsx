@@ -103,8 +103,8 @@ describe("compliance", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("does gate casino + sportsbook wager routes", () => {
-    for (const route of ["/casino", "/casino/roulette", "/sportsbook", "/sportsbook/x"]) {
+  it("does gate casino wager routes", () => {
+    for (const route of ["/casino", "/casino/roulette"]) {
       cleanup();
       mockPathname = route;
       render(

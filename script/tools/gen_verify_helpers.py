@@ -83,8 +83,6 @@ def main() -> int:
         ("refRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "ctorArgs_refRegistry"),
         ("refEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "ctorArgs_refEngine"),
         ("gameHub", "src/core/GameHub.sol:GameHub", "ctorArgs_gameHub"),
-        ("sportsRiskEngine", "src/core/SportsRiskEngine.sol:SportsRiskEngine", "ctorArgs_sportsRiskEngine"),
-        ("sportsHub", "src/core/SportsHub.sol:SportsHub", "ctorArgs_sportsHub"),
     ]
 
     # Each Bank creates its immutable LiquidityVault; both have verified source.

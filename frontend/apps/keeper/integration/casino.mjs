@@ -163,15 +163,7 @@ const config = {
   vaultProviderLedgerPools: [
     { bank: bank.address, vault: vault.address, asset: token.address, poolId: 1, decimals: 6 }
   ],
-  vaultProviderLedgerScanIntervalMs: 1000,
-  sportsTicketIndexEnabled: false,
-  sportsTerminalizerEnabled: false,
-  sportsTerminalizerScanChunkBlocks: 100n,
-  sportsTerminalizerMarketIds: [],
-  sportsTerminalizerMaxTicketsPerMarket: 2,
-  sportsTicketScanChunkBlocks: 100n,
-  sportsTicketScanMaxBlocks: 100n,
-  sportsTicketScanStartBlock: startBlock
+  vaultProviderLedgerScanIntervalMs: 1000
 };
 const events = [];
 const logger = {
@@ -758,6 +750,6 @@ try {
   await wsRelay?.stop();
   await store.close();
 }
-// viem keeps shared websocket transports alive after unsubscribing. All runtime
+// viem keeps a shared websocket transport alive after unsubscribing. All runtime
 // operations and database clients have been joined above; end the owned test process.
 process.exit(0);

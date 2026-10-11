@@ -1,6 +1,10 @@
 # ADR-0029: Settlement Router and domain hubs
 
-Status: Implemented in the current prelaunch architecture.
+Status: Implemented in the current prelaunch architecture. Amended 2026-10-11 by the
+[launch candidate](../release/launch-candidate.zh-CN.md) (B9, Owner option A): SportsHub and
+SportsRiskEngine were removed, GameHub is the only hub and every pool is a Casino pool. The Router,
+registry and hub boundaries are unchanged; the SportsHub parts below record the removed design. Sports
+would return only as a new implementation with its own ADR, audit and release ([roadmap](../roadmap.md) §4).
 
 ## Decision
 
@@ -55,8 +59,8 @@ review and is not enabled by casino acceptance.
 - Bank accounting, casino randomness and sports adjudication have separate owners.
 
 The source interfaces are authoritative for signatures and storage structures.
-Tests in `test/unit/PoolRegistry.t.sol`, `test/unit/SettlementRouter.t.sol`,
-`test/unit/GameHubE2E.t.sol` and the `test/unit/SportsHub*.t.sol` suites exercise these boundaries.
+Tests in `test/unit/PoolRegistry.t.sol`, `test/unit/SettlementRouter.t.sol`
+and `test/unit/GameHubE2E.t.sol` exercise these boundaries; the SportsHub suites were removed with SportsHub.
 See [SSOT v1.6](../constitution/SSOT.v1.6.md) and
 [Executable SSOT v1.6](../constitution/ExecutableSSOT.v1.6.md) for the current contract
 rules and acceptance gates.

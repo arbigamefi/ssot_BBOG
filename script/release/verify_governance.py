@@ -24,7 +24,6 @@ import urllib.error
 import urllib.request
 
 ZERO = '0x' + '0' * 40
-ROLES = ('OddsSigner', 'ResultReporter', 'ResultChallenger', 'ResultArbitrator')
 # The certified casino games and their snapshot module keys (first-callback certificate domain, ADR-0034).
 GAMES = (('DICE', 'moduleDice'), ('COIN_TOSS', 'moduleCoinToss'), ('ROULETTE', 'moduleRoulette'),
          ('KENO', 'moduleKeno'), ('PLINKO', 'modulePlinko'), ('SIC_BO', 'moduleSicBo'), ('SLOTS', 'moduleSlots'),
@@ -235,16 +234,13 @@ def verify_permissions(rpc, snap, block, checkpoint=None):
     start = snap['blockNumber']
     require(type(start) is int and 0 < start <= block, 'invalid authorization history start')
     registry, game = address(snap['poolRegistry']), address(snap['gameHub'])
-    sports = address(snap['sportsHub'])
-    require(snap['sportsEnabled'] in (0, 1), 'invalid sports flag')
-    enabled = snap['sportsEnabled'] == 1
     require(registry != ZERO and game != ZERO, 'missing registry or game hub')
     require(type(snap['numPools']) is int and 1 <= snap['numPools'] <= 32, 'invalid pool count')
     pools, vaults = {}, set()
     for i in range(snap['numPools']):
         pool, domain = snap[f'poolId_{i}'], snap[f'poolDomain_{i}']
         require(type(pool) is int and 0 <= pool < 2**64 and pool not in pools, 'invalid or duplicate pool')
-        require(domain in (1, 2) and (enabled or domain == 1), 'sports-disabled pool route')
+        require(domain == 1, 'not a casino pool')
         pools[pool] = (address(snap[f'poolAsset_{i}']), address(snap[f'poolBank_{i}']), domain)
         asset, bank, _ = pools[pool]
         vault = address(snap[f'poolVault_{i}'])
@@ -255,19 +251,13 @@ def verify_permissions(rpc, snap, block, checkpoint=None):
         require(call(rpc, bank, 'asset()', [], block) == int(asset, 16), 'Bank asset differs from release')
         require(call(rpc, vault, 'bank()', [], block) == int(bank, 16), 'Vault Bank binding differs from release')
         require(call(rpc, vault, 'asset()', [], block) == int(asset, 16), 'Vault asset differs from release')
-    if enabled:
-        require(sports != ZERO and sports != game and any(p[2] == 2 for p in pools.values()), 'invalid sports route')
-    else:
-        require(sports == ZERO and address(snap['sportsRiskEngine']) == ZERO
-                and all(address(snap['sports' + role]) == ZERO for role in ROLES), 'sports-disabled role route')
-    targets = [registry, game] + ([sports] if enabled else [])
+    targets = [registry, game]
     if checkpoint is None:
         state, first = empty_state(), start
         for target in targets:
             require(rpc('eth_getCode', [target, hex(start - 1)]) == '0x', 'authorization history starts after contract creation')
     else:
         # The signed checkpoint carries the history up to its block; the chain must still contain that block.
-        require(not enabled, 'checkpoint replay covers casino-only releases')
         require(checkpoint.get('schema') == CHECKPOINT_SCHEMA and checkpoint.get('chainId') == snap['chainId']
                 and checkpoint.get('historyStart') == start and checkpoint.get('poolRegistry') == registry
                 and checkpoint.get('gameHub') == game, 'checkpoint belongs to another release')
@@ -298,8 +288,8 @@ def verify_permissions(rpc, snap, block, checkpoint=None):
             require(pool < 2**64, 'invalid authorization pool')
             allowed[(pool, topic_address(row['topics'][2]))] = value
     require(observed_pools == pools, 'pool history differs from release')
-    expected_hubs = {game} | ({sports} if enabled else set())
-    expected_routes = {(pool, game if cfg[2] == 1 else sports) for pool, cfg in pools.items()}
+    expected_hubs = {game}
+    expected_routes = {(pool, game) for pool in pools}
     require({hub for hub, value in registered.items() if value} == expected_hubs, 'registered hub set differs from release')
     # Check raw grants too: a revoked hub must not retain an undeclared latent route.
     require({route for route, value in allowed.items() if value} == expected_routes, 'hub/pool authorization set differs from release')
@@ -325,21 +315,6 @@ def verify_permissions(rpc, snap, block, checkpoint=None):
         observed_games[game_id] = (topic_address(row['topics'][2]), int(row['data'][2:66], 16),
                                    int(row['data'][66:], 16))
     require(observed_games == expected_games, 'registered game set differs from release')
-
-    if enabled:
-        role_names = {role + 'Set(address,bool)': role for role in ROLES}
-        states = {role: {} for role in ROLES}
-        for name, row in events(rpc, sports, role_names, start, block):
-            value = boolean_event(row, 2)
-            states[role_names[name]][topic_address(row['topics'][1])] = value
-        for role, members in states.items():
-            expected = address(snap['sports' + role])
-            expected_members = set() if expected == ZERO else {expected}
-            require({member for member, value in members.items() if value} == expected_members,
-                    f'sports {role} set differs from release')
-            for member, value in members.items():
-                require(call(rpc, sports, role[0].lower() + role[1:] + '(address)', [member], block) == int(value),
-                        f'sports {role} mapping differs from history')
     return state
 
 

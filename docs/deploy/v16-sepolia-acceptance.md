@@ -8,7 +8,7 @@ without the corresponding candidate's source identity, receipt and accounting ev
 
 ## Deployment inputs
 
-- Base Sepolia, chain ID `84532`, exactly one USDC casino pool; Sports disabled.
+- Base Sepolia, chain ID `84532`, exactly one USDC casino pool.
 - USDC: `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, six asset decimals, verified again before deployment.
 - Intended governance: 2-of-3 Safe `0x7F0c244e1701B069727670745FD047179Ef8691d`; re-read owners,
   threshold, modules, guard and code hashes before signing.

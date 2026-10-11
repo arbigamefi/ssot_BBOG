@@ -23,22 +23,13 @@ const baseConfig: KeeperConfig = {
   rpcMinIntervalMs: 0,
   scanChunkBlocks: 10n,
   scanMaxChunksPerPass: 50,
-  sportsTicketScanMaxBlocks: 50_000n,
   scanIndexEventsEnabled: true,
   startBlock: 100n,
   startupScanEnabled: true,
   betIndexSsl: false,
   betIndexWriteEnabled: false,
   vaultProviderLedgerPools: [],
-  vaultProviderLedgerScanIntervalMs: 60_000,
-  sportsTicketIndexEnabled: false,
-  sportsTerminalizerEnabled: false,
-  sportsTerminalizerScanChunkBlocks: 2_000n,
-  sportsTerminalizerMarketIds: [],
-  sportsTerminalizerMaxTicketsPerMarket: 200,
-
-  sportsTicketScanChunkBlocks: 2_000n,
-  sportsTicketScanStartBlock: 100n
+  vaultProviderLedgerScanIntervalMs: 60_000
 };
 
 const keeper = "0x3333333333333333333333333333333333333333";

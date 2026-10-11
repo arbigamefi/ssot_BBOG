@@ -6,7 +6,7 @@ import {VmSafe} from "forge-std/Vm.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 
-/// @dev Explicit local consumer for tests of Bank and Sports settlement that do not request randomness.
+/// @dev Explicit local consumer for tests of Bank settlement that do not request randomness.
 contract TestRandomnessConsumer {
     address public immutable settlementRouter;
     mapping(address => uint256) public unbookedResultCount;

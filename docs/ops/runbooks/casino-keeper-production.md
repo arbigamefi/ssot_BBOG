@@ -6,7 +6,7 @@ Deploy one authenticated current release with its PostgreSQL schema,
 using the [Docker stack](../../../frontend/deploy/docker/README.md) and dedicated signer.
 
 Normal VRF callbacks settle themselves. The keeper handles failed original-result delivery/finalization,
-eligible missing-randomness refunds, player payables, event indexing and separately admitted sports paths.
+eligible missing-randomness refunds, player payables and event indexing.
 It holds no LP NFT approval/operator permission and performs no automatic mature-NFT withdrawal.
 No LP batch activation or historical-right worker remains. Maturity is derived from each ID's chain
 deadline; it needs no keeper state transition. Index Vault NFT ownership separately from actual

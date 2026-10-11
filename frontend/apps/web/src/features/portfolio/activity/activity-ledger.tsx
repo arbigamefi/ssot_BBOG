@@ -3,13 +3,13 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { formatTokenAmount } from "./format";
-import type { EnrichedActivityRow } from "./types";
+import type { EnrichedBetRow } from "./types";
 
 export function ActivityLedger({
   rows,
   loading
 }: {
-  rows: readonly EnrichedActivityRow[];
+  rows: readonly EnrichedBetRow[];
   loading: boolean;
 }) {
   const t = useTranslations();
@@ -54,7 +54,7 @@ export function ActivityLedger({
   );
 }
 
-function Rows({ rows, loading }: { rows: readonly EnrichedActivityRow[]; loading: boolean }) {
+function Rows({ rows, loading }: { rows: readonly EnrichedBetRow[]; loading: boolean }) {
   const t = useTranslations();
   const pendingLabel = t("portfolio.activity.common.pending");
 
@@ -101,7 +101,7 @@ function Rows({ rows, loading }: { rows: readonly EnrichedActivityRow[]; loading
   );
 }
 
-function MobileRow({ item }: { item: EnrichedActivityRow }) {
+function MobileRow({ item }: { item: EnrichedBetRow }) {
   const t = useTranslations();
   const pendingLabel = t("portfolio.activity.common.pending");
 
@@ -137,7 +137,7 @@ function MobileRow({ item }: { item: EnrichedActivityRow }) {
   );
 }
 
-function StatusBadge({ status }: { status: EnrichedActivityRow["status"] }) {
+function StatusBadge({ status }: { status: EnrichedBetRow["status"] }) {
   const t = useTranslations();
   const label =
     status === "won"
@@ -162,7 +162,7 @@ function StatusBadge({ status }: { status: EnrichedActivityRow["status"] }) {
   );
 }
 
-function getOutcomeClass(status: EnrichedActivityRow["status"]) {
+function getOutcomeClass(status: EnrichedBetRow["status"]) {
   if (status === "won") return "font-mono font-bold text-success";
   if (status === "lost" || status === "refunded" || status === "failed") {
     return "font-mono font-bold text-danger";
@@ -170,6 +170,6 @@ function getOutcomeClass(status: EnrichedActivityRow["status"]) {
   return "font-mono font-bold text-brand";
 }
 
-function formatActivityId(item: EnrichedActivityRow) {
-  return item.kind === "sports" ? `S#${item.row.ticketId}` : `#${item.row.betId}`;
+function formatActivityId(item: EnrichedBetRow) {
+  return `#${item.row.betId}`;
 }

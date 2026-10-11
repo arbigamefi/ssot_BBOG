@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pin the certified core runtimes into the first-callback domain file (audit finding F-01).
+"""Pin the certified core and module runtimes into the first-callback domain file (audit finding F-01).
 
 For each core contract on the callback path this reads the compiled artifact in out/, hashes the deployed
 bytecode as compiled (immutable slots are zero placeholders there) and records the immutable slot offsets together
@@ -8,8 +8,9 @@ verification time: it checks every immutable slot against the snapshot, zeroes t
 
 Immutable slots are listed per contract in source declaration order, which is the ascending AST-id order of
 `immutableReferences`; CertifiedRuntime.t.sol proves the mapping against a real deployment. Run after a certified
-build; the artifacts must come from the pinned compiler settings. Writes `coreRuntimes` into the domain file given
-as argv[1] and prints the block. Deterministic; no timestamps."""
+build; the artifacts must come from the pinned compiler settings. Modules have no immutables, so each module's pin is
+the keccak256 of its runtime as compiled. Writes `moduleCodeHashes` and `coreRuntimes` into the domain file given as
+argv[1] and prints the core block. Deterministic; no timestamps."""
 import json
 import subprocess
 import sys
@@ -33,6 +34,21 @@ def keccak(hex_code):
     return subprocess.check_output(['cast', 'keccak', hex_code], text=True).strip().lower()
 
 
+MODULES = {'moduleDice': 'DiceModule', 'moduleCoinToss': 'CoinTossModule', 'moduleRoulette': 'RouletteModule',
+           'moduleKeno': 'KenoModule', 'modulePlinko': 'PlinkoModule', 'moduleSicBo': 'SicBoModule',
+           'moduleSlots': 'SlotsModule', 'moduleBaccarat': 'BaccaratModule'}
+
+
+def module_code_hashes():
+    hashes = {}
+    for key, name in MODULES.items():
+        deployed = json.loads((ROOT / f'out/{name}.sol/{name}.json').read_text())['deployedBytecode']
+        if deployed.get('immutableReferences'):
+            sys.exit(f'{name}: a module with immutables needs a slot-aware pin')
+        hashes[key] = keccak(deployed['object'])
+    return hashes
+
+
 def main(domain_path):
     block = {}
     for name, values in CORE.items():
@@ -52,6 +68,7 @@ def main(domain_path):
                        'keccakWithImmutablesZeroed': keccak(deployed['object']), 'immutables': immutables}
     path = Path(domain_path)
     domain = json.loads(path.read_text())
+    domain['moduleCodeHashes'] = module_code_hashes()
     rebuilt = {}
     for key, value in domain.items():
         if key == 'coreRuntimes':

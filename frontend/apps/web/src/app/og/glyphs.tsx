@@ -22,7 +22,6 @@ export type OgGlyphKind =
   | "sic-bo"
   | "earn"
   | "affiliate"
-  | "sportsbook"
   | "status"
   | "support"
   | "receipt";
@@ -43,7 +42,6 @@ export function OgGlyph({
   if (kind === "sic-bo") return <SicBoGlyph size={size} />;
   if (kind === "earn") return <EarnGlyph size={size} />;
   if (kind === "affiliate") return <AffiliateGlyph size={size} />;
-  if (kind === "sportsbook") return <SportsbookGlyph size={size} />;
   if (kind === "status") return <StatusGlyph size={size} />;
   if (kind === "support") return <SupportGlyph size={size} />;
   return <ReceiptGlyph size={size} tone={tone} />;
@@ -760,45 +758,6 @@ function AffiliateGlyph({ size }: OgGlyphProps) {
         strokeWidth="7"
         fill="none"
       />
-    </svg>
-  );
-}
-
-function SportsbookGlyph({ size }: OgGlyphProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
-      <rect
-        x="58"
-        y="76"
-        width="244"
-        height="208"
-        rx="30"
-        fill={OG_COLORS.surface}
-        stroke={OG_COLORS.border}
-        strokeWidth="4"
-      />
-      <circle cx="130" cy="150" r="42" fill={OG_COLORS.fg} />
-      <path d="M130 108 166 134 152 178 108 178 94 134Z" fill={OG_COLORS.bg} />
-      <path
-        d="M200 124 H270 M200 166 H270 M200 208 H270"
-        stroke={OG_COLORS.cyan}
-        strokeWidth="8"
-        strokeLinecap="round"
-      />
-      {[90, 142, 194].map((x, i) => (
-        <rect
-          key={x}
-          x={x}
-          y="234"
-          width="40"
-          height="24"
-          rx="9"
-          fill={i === 1 ? OG_COLORS.green : OG_COLORS.surface2}
-          stroke={OG_COLORS.green}
-          strokeOpacity="0.7"
-          strokeWidth="3"
-        />
-      ))}
     </svg>
   );
 }

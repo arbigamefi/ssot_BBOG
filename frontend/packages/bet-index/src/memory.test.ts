@@ -10,7 +10,6 @@ const AFFILIATE = "0x5555555555555555555555555555555555555555" as const;
 const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
 const ASSET = "0x4444444444444444444444444444444444444444" as const;
 const ASSET_TWO = "0x9999999999999999999999999999999999999999" as const;
-const SPORTS_HUB = "0x6666666666666666666666666666666666666666" as const;
 const BANK = "0x7777777777777777777777777777777777777777" as const;
 
 describe("memory bet index store", () => {
@@ -247,120 +246,6 @@ describe("memory bet index store", () => {
     });
 
     await expect(store.getCursor(84532, "gamehub-events", GAME_HUB)).resolves.toBe(42390787n);
-  });
-
-  it("folds sport ticket events and queries player rows", async () => {
-    const store = createMemoryBetIndexStore();
-
-    await store.writeSportsHubEvents([
-      {
-        args: {
-          eventId: 1001n,
-          marketId: 6n,
-          oddsSnapshotHash: `0x${"77".repeat(32)}`,
-          outcomeId: 2,
-          payout: 55_000000n,
-          player: PLAYER,
-          poolId: 1n,
-          positionId: 22n,
-          reserved: 45_000000n,
-          rulebookHash: `0x${"88".repeat(32)}`,
-          stake: 10_000000n,
-          ticketId: 12n
-        },
-        blockNumber: 30n,
-        chainId: 84532,
-        eventName: "TicketPlaced",
-        logIndex: 1,
-        sportsHub: SPORTS_HUB,
-        txHash: "0xeee"
-      },
-      {
-        args: {
-          payout: 55_000000n,
-          positionId: 22n,
-          ticketId: 12n
-        },
-        blockNumber: 40n,
-        chainId: 84532,
-        eventName: "TicketSettled",
-        logIndex: 2,
-        sportsHub: SPORTS_HUB,
-        txHash: "0xfff"
-      }
-    ]);
-
-    const tickets = await store.getPlayerSportsTickets({
-      chainId: 84532,
-      limit: 10,
-      player: PLAYER
-    });
-    const heldTicketIds = await store.getHeldSportsTicketIdsByMarket({
-      chainId: 84532,
-      limit: 10,
-      marketId: "6"
-    });
-
-    expect(tickets).toHaveLength(1);
-    expect(heldTicketIds).toEqual([]);
-    expect(tickets[0]).toMatchObject({
-      eventId: "1001",
-      marketId: "6",
-      outcomeId: 2,
-      payout: "55000000",
-      player: PLAYER,
-      positionId: "22",
-      stake: "10000000",
-      state: "settled",
-      ticketId: "12",
-      terminalTxHash: "0xfff",
-      updatedBlock: 40
-    });
-  });
-
-  it("queries held sports ticket ids by market", async () => {
-    const store = createMemoryBetIndexStore();
-
-    await store.writeSportsHubEvents([
-      {
-        args: {
-          eventId: 1001n,
-          marketId: 6n,
-          outcomeId: 0,
-          player: PLAYER,
-          positionId: 22n,
-          stake: 1_000000n,
-          ticketId: 12n
-        },
-        blockNumber: 30n,
-        chainId: 84532,
-        eventName: "TicketPlaced",
-        logIndex: 1,
-        sportsHub: SPORTS_HUB,
-        txHash: "0xeee"
-      },
-      {
-        args: {
-          eventId: 1002n,
-          marketId: 7n,
-          outcomeId: 1,
-          player: PLAYER,
-          positionId: 23n,
-          stake: 1_000000n,
-          ticketId: 13n
-        },
-        blockNumber: 31n,
-        chainId: 84532,
-        eventName: "TicketPlaced",
-        logIndex: 2,
-        sportsHub: SPORTS_HUB,
-        txHash: "0xeef"
-      }
-    ]);
-
-    await expect(
-      store.getHeldSportsTicketIdsByMarket({ chainId: 84532, limit: 10, marketId: "6" })
-    ).resolves.toEqual([12n]);
   });
 
   it("stores and queries vault provider ledger rows by owner and pool", async () => {

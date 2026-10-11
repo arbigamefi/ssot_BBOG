@@ -13,7 +13,7 @@ metadata is configuration truth, indexes are acceleration.
 
 | Source               | Role                                                                           |
 | -------------------- | ------------------------------------------------------------------------------ |
-| Contracts            | Authoritative balances, bets, tickets, settlements, and payouts.               |
+| Contracts            | Authoritative balances, bets, settlements, and payouts.                        |
 | Release manifest     | Authoritative addresses, game ids, asset metadata, decimals, and chain config. |
 | `@ssot/ssot`         | Typed contract/read/write helpers and event reducers.                          |
 | Durable bet index    | Postgres read model for recent/player bet feeds.                               |
@@ -63,7 +63,6 @@ TanStack keys are tuples:
 ["ssot", "bets", "recent", { chainId, gameId, limit }]
 ["ssot", "bets", "player", { chainId, player, limit }]
 ["ssot", "casino", "round", betId]
-["ssot", "sportsbook", "market", marketId]
 ```
 
 Rules:
@@ -121,12 +120,11 @@ Use local component state for:
 
 Use URL state only when users should be able to share or return to it:
 
-- sportsbook market id;
 - list filter;
 - pagination cursor.
 
 Use persisted local storage only for preferences and safe drafts. Never store
-secrets, signatures, private keys, approval payloads, or stale odds.
+secrets, signatures, private keys, or approval payloads.
 
 ## 9. Indexing Strategy
 

@@ -1,6 +1,6 @@
 # ArbiGameFi Product Roadmap
 
-> Revision: 2026.10-r1 · Updated: 2026-10-04 · External review copy
+> Revision: 2026.10-r2 · Updated: 2026-10-11 · External review copy
 >
 > Audience: users, capital and ecosystem partners, and people following the project
 >
@@ -11,7 +11,7 @@ and same-transaction VRF settlement attempts follow the
 [implementation plan](design/lp-accounting-and-callback-implementation.md). Earlier candidate
 results do not establish that these replacements are implemented.
 
-ArbiGameFi is building a single-brand wallet-native casino and sportsbook. The
+ArbiGameFi is building a single-brand wallet-native casino. The
 roadmap concentrates first on a complete entertainment experience and a
 sustainable relationship between players, underwriting capital and operating
 partners. It describes intended capability, not a claim that every stage is
@@ -64,24 +64,17 @@ evidence that the experience works, capital is adequately understood and compens
 handle failures. Product
 information and partner materials describe what people can actually use.
 
-## 4. A dedicated fixed-odds sportsbook
+## 4. Sports betting as a future capability
 
-The initial sportsbook is pre-match football 1X2 singles with one approved asset
-and a separate Sports Bank. Users can inspect a valid fixed-odds quote, receive
-a ticket and track it through event confirmation to settlement or the applicable
-void/refund outcome.
-
-Odds, event evidence, disputes and correlated exposure have their own model.
-Research and product preparation proceed alongside casino work; public sports
-operation depends on independent data, capital and service readiness. Public sporting results can
-precede on-chain accounting; LP pricing protection in that interval requires separate validation
-and is not established by the casino VRF gate. Live
-betting and complex combinations are later decisions rather than first-release
-requirements.
+The sportsbook is not part of this release, which covers the casino only. Sports
+betting remains a possible future capability. It would return only as a new
+implementation with its own design, audit and release, including its own odds,
+result-evidence, dispute and capital rules. Casino readiness does not establish
+sports readiness.
 
 ## 5. Expansion supported by demand
 
-Additional pre-match markets, casino games, assets, networks or integrations
+Additional casino games, assets, networks or integrations
 are considered when a demonstrated user need and a sustainable operating case
 justify them. Existing obligations and risk boundaries remain protected during
 expansion. Architectural extensibility alone is not a reason to launch a new

@@ -6,19 +6,19 @@
 | Depends on | `../strategy/fullstack-product-architecture.md`, `../architecture/overview.md` |
 | Supersedes | Draft v1 IA matrix |
 
-The IA supports a B2C casino/sportsbook product on a protocol-grade settlement
+The IA supports a B2C casino product on a protocol-grade settlement
 kernel. It should make the primary betting loop obvious while keeping proof,
 portfolio, LP, and ops surfaces accessible.
 
 ## 1. Primary Users
 
-| User     | Goal                                                  | Primary routes                                  |
-| -------- | ----------------------------------------------------- | ----------------------------------------------- |
-| Player   | Place bets/tickets, see results, verify history       | `/`, `/casino/*`, `/sportsbook/*`, `/portfolio` |
-| LP       | Understand bankroll, deposit/withdraw, monitor risk   | `/earn`, `/portfolio`, `/ops`                   |
-| Referrer | Understand attribution and claimable value            | `/portfolio`, future referral surfaces          |
-| Operator | Monitor release, keeper, index, sports provider, risk | `/ops`                                          |
-| Auditor  | Verify release, addresses, proofs, history            | `/`, `/ops`, `/portfolio/activity`, docs        |
+| User     | Goal                                                | Primary routes                           |
+| -------- | --------------------------------------------------- | ---------------------------------------- |
+| Player   | Place bets, see results, verify history             | `/`, `/casino/*`, `/portfolio`           |
+| LP       | Understand bankroll, deposit/withdraw, monitor risk | `/earn`, `/portfolio`, `/ops`            |
+| Referrer | Understand attribution and claimable value          | `/portfolio`, future referral surfaces   |
+| Operator | Monitor release, keeper, index, risk                | `/ops`                                   |
+| Auditor  | Verify release, addresses, proofs, history          | `/`, `/ops`, `/portfolio/activity`, docs |
 
 ## 2. Canonical Routes
 
@@ -29,8 +29,6 @@ portfolio, LP, and ops surfaces accessible.
 /casino/coin-toss
 /casino/roulette
 /casino/keno
-/sportsbook
-/sportsbook/[marketId]
 /portfolio
 /portfolio/activity
 /portfolio/activity/[betId]
@@ -57,17 +55,6 @@ portfolio, LP, and ops surfaces accessible.
   -> portfolio/activity detail
 ```
 
-### Sportsbook Ticket
-
-```text
-/sportsbook -> /sportsbook/[marketId]
-  -> receive signed odds snapshot
-  -> place ticket
-  -> market locks
-  -> result proposed/finalized or voided
-  -> ticket settlement/refund
-```
-
 ### LP
 
 ```text
@@ -79,7 +66,7 @@ portfolio, LP, and ops surfaces accessible.
 Primary navigation:
 
 ```text
-Casino | Sportsbook | Portfolio | Earn
+Casino | Portfolio | Earn
 ```
 
 Right side:

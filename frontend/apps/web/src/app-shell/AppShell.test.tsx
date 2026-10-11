@@ -102,8 +102,7 @@ vi.mock("next-intl", () => ({
       "nav.sicBo": "Sic Bo",
       "nav.slots": "Slots",
       "nav.status": "Status",
-      "nav.support": "Support",
-      "nav.sportsbook": "Sportsbook"
+      "nav.support": "Support"
     })[key] ?? key
 }));
 
@@ -155,15 +154,7 @@ describe("AppShell", () => {
         <div>content</div>
       </AppShell>
     );
-    const primaryLinks = [
-      "Games",
-      "Sportsbook",
-      "Liquidity",
-      "Bets",
-      "Claims",
-      "Affiliates",
-      "Account"
-    ];
+    const primaryLinks = ["Games", "Liquidity", "Bets", "Claims", "Affiliates", "Account"];
     for (const label of primaryLinks) {
       const links = screen.getAllByText(label);
       expect(links.length).toBeGreaterThanOrEqual(1);
@@ -293,9 +284,6 @@ describe("AppShell", () => {
     );
     const gamesLink = screen.getAllByText("Games")[0]!;
     expect(gamesLink.closest("a")?.getAttribute("href")).toBe("/casino");
-
-    const sportsbookLink = screen.getAllByText("Sportsbook")[0]!;
-    expect(sportsbookLink.closest("a")?.getAttribute("href")).toBe("/sportsbook");
 
     const investLink = screen.getAllByText("Liquidity")[0]!;
     expect(investLink.closest("a")?.getAttribute("href")).toBe("/earn");

@@ -26,7 +26,7 @@ available when durable reads are disabled or unavailable.
 ## 2. Decision
 
 Use the existing API, durable Postgres index, and RPC read paths for shared
-casino/sportsbook indexing, without a The Graph subgraph.
+casino indexing, without a The Graph subgraph.
 
 ## 3. Rationale
 

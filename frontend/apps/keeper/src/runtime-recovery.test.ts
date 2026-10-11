@@ -43,7 +43,6 @@ const hash = `0x${"aa".repeat(32)}` as const;
 const base: KeeperConfig = {
   chainId: 8453,
   gameHub: hub,
-  sportsHub: hub,
   vrfHub: hub,
   httpRpcUrl: "http://unused.invalid",
   privateKey: `0x${"11".repeat(32)}`,
@@ -60,16 +59,7 @@ const base: KeeperConfig = {
   betIndexDatabaseUrl: "postgres://unused.invalid",
   betIndexSsl: false,
   vaultProviderLedgerPools: [],
-  vaultProviderLedgerScanIntervalMs: 0,
-  sportsTicketIndexEnabled: false,
-  sportsTerminalizerEnabled: false,
-  sportsTerminalizerMarketIds: [],
-  sportsTerminalizerScanChunkBlocks: 10n,
-  sportsTerminalizerMaxTicketsPerMarket: 2,
-
-  sportsTicketScanChunkBlocks: 10n,
-  sportsTicketScanMaxBlocks: 50_000n,
-  sportsTicketScanStartBlock: 100n
+  vaultProviderLedgerScanIntervalMs: 0
 };
 
 describe("runtime recovery composition", () => {
@@ -421,23 +411,6 @@ describe("runtime recovery composition", () => {
     }
   );
 
-  it("rejects sports without durable storage before any transaction or timer starts", () => {
-    expect(() =>
-      make({ ...base, sportsTerminalizerEnabled: true, betIndexWriteEnabled: false })
-    ).toThrow(/BET_INDEX_WRITE_ENABLED=true/);
-    expect(mock.client.writeContract).not.toHaveBeenCalled();
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("rejects an undeployed zero SportsHub only when sports is enabled", () => {
-    const zero = "0x0000000000000000000000000000000000000000" as const;
-    expect(() => make({ ...base, sportsHub: zero, sportsTerminalizerEnabled: true })).toThrow(
-      /sportsHub/
-    );
-    expect(() => make({ ...base, sportsHub: zero })).not.toThrow();
-    expect(mock.client.writeContract).not.toHaveBeenCalled();
-  });
-
   it("rehydrates a casino bet after a checkpoint-before-drain restart", async () => {
     runtime = make();
     await runtime.start();
@@ -481,35 +454,7 @@ describe("runtime recovery composition", () => {
     }
   );
 
-  it("rejects a sports database initialization failure before starting workers", async () => {
-    vi.spyOn(mock.store!, "initializeSchema").mockRejectedValueOnce(
-      new Error("database unavailable")
-    );
-    runtime = make({ ...base, sportsTerminalizerEnabled: true });
-    await expect(runtime.start()).rejects.toThrow("database unavailable");
-    expect(mock.client.writeContract).not.toHaveBeenCalled();
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("rejects an open manual recovery market before any watcher, timer or transaction", async () => {
-    vi.mocked(mock.client.readContract as ReturnType<typeof vi.fn>).mockResolvedValue({
-      marketId: 7n,
-      state: 2
-    });
-    mock.client.watchContractEvent = vi.fn();
-    runtime = make({
-      ...base,
-      sportsTerminalizerEnabled: true,
-      sportsTerminalizerMarketIds: [7n],
-      wsRpcUrl: "ws://unused.invalid"
-    });
-    await expect(runtime.start()).rejects.toThrow(/still accepts tickets/);
-    expect(mock.client.writeContract).not.toHaveBeenCalled();
-    expect(mock.client.watchContractEvent).not.toHaveBeenCalled();
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("preserves casino recovery with sports disabled and no database", async () => {
+  it("preserves casino recovery without a database", async () => {
     runtime = make({ ...base, betIndexWriteEnabled: false, betIndexDatabaseUrl: undefined });
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
