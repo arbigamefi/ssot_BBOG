@@ -7,6 +7,7 @@ import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
+import {IReferralRegistry} from "../../src/engines/referral/IReferralRegistry.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
@@ -283,15 +284,16 @@ contract SecurityFixes is BankTestBase {
 
     function test_duplicateBindReferrerReverts() external {
         (,, GameHub hub,) = _deploy(200);
+        IReferralRegistry referrals = IReferralRegistry(hub.referralRegistry());
 
         vm.prank(player);
-        hub.bindReferrer(affiliate);
-        assertEq(hub.referrerOf(player), affiliate, "first touch should bind");
+        referrals.bind(player, affiliate);
+        assertEq(referrals.referrerOf(player), affiliate, "first touch should bind");
 
         vm.prank(player);
         vm.expectRevert(Errors.InvalidConfig.selector);
-        hub.bindReferrer(address(0xB0B));
-        assertEq(hub.referrerOf(player), affiliate, "duplicate bind must not mutate first touch");
+        referrals.bind(player, address(0xB0B));
+        assertEq(referrals.referrerOf(player), affiliate, "duplicate bind must not mutate first touch");
     }
 
     function test_refundBetEmitsReleasedReserve() external {

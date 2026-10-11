@@ -8,6 +8,7 @@ import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
+import {IReferralRegistry} from "../../src/engines/referral/IReferralRegistry.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
@@ -54,6 +55,13 @@ interface INftGasUsdc is IERC20Metadata {
 ///      coordinator billing or oracle delivery SLA is claimed. Warps in setUp create matured LP/XP state.
 ///      Sampled full callback successes are lower-bound evidence of required gas, NEVER a worst-case proof.
 contract NftCallbackGasQualificationForkTest is Test {
+    /// Binds through ReferralRegistry, which requires the player as caller (GameHub keeps no forwarder).
+    function _bindReferrer(GameHub target, address player, address referrer) internal {
+        IReferralRegistry referrals = IReferralRegistry(target.referralRegistry());
+        vm.prank(player);
+        referrals.bind(player, referrer);
+    }
+
     uint256 private constant PINNED_BLOCK = 47_657_524;
     bytes32 private constant PINNED_HASH = 0x5a75e3c5fbaaa54dd1e67075af773668d43757b4e5de71f788ee69837650b872;
     address private constant WRAPPER = 0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed;
@@ -311,8 +319,7 @@ contract NftCallbackGasQualificationForkTest is Test {
     }
 
     function _fundAndRefer() private {
-        vm.prank(address(0xAA00));
-        hub.bindReferrer(address(0xAA01));
+        _bindReferrer(hub, address(0xAA00), address(0xAA01));
         deal(USDC, GOV, (amountProfile == 1 ? 12_000_000 + lateLargeUsdc : 10_000_000) * UNIT);
         deal(USDC, PLAYER, 100 * UNIT);
         vm.deal(PLAYER, 100 ether);

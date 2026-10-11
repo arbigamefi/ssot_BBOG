@@ -6,6 +6,7 @@ import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
+import {IReferralRegistry} from "../../src/engines/referral/IReferralRegistry.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
@@ -60,6 +61,13 @@ contract RouterTerminalOutcomeModule is IGameModule {
 }
 
 contract GameHubRouterTest is Test {
+    /// Binds through ReferralRegistry, which requires the player as caller (GameHub keeps no forwarder).
+    function _bindReferrer(GameHub target, address player, address referrer) internal {
+        IReferralRegistry referrals = IReferralRegistry(target.referralRegistry());
+        vm.prank(player);
+        referrals.bind(player, referrer);
+    }
+
     bytes32 internal constant GAME_STAKE = keccak256("ROUTER_STAKE");
 
     address internal gov = address(0xA11CE);
@@ -184,8 +192,7 @@ contract GameHubRouterTest is Test {
         vm.startPrank(gov);
         gameHub.setActiveReferralConfig(gameHub.createReferralConfig(1000, 2000, 500, 3000));
         vm.stopPrank();
-        vm.prank(player);
-        gameHub.bindReferrer(address(0xCAFE));
+        _bindReferrer(gameHub, player, address(0xCAFE));
         uint256 id = _placeOutcomeBet(10e6, 20e6, 0);
         // Simulate a token refusing just this winner transfer without changing either balance.
         vm.mockCall(

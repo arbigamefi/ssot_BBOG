@@ -264,19 +264,6 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "referrer",
-          "type": "address"
-        }
-      ],
-      "name": "bindReferrer",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [],
       "name": "cancelEdgeChange",
       "outputs": [],
@@ -762,19 +749,6 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "nextPositionIdHint",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -965,25 +939,6 @@
     {
       "inputs": [],
       "name": "referralRegistry",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "player",
-          "type": "address"
-        }
-      ],
-      "name": "referrerOf",
       "outputs": [
         {
           "internalType": "address",
@@ -1750,25 +1705,6 @@
         }
       ],
       "name": "ReferralConfigCreated",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "player",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "referrer",
-          "type": "address"
-        }
-      ],
-      "name": "ReferrerBound",
       "type": "event"
     },
     {

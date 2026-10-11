@@ -66,54 +66,51 @@
     },
     "GameHub": {
       "artifact": "GameHub.sol:GameHub",
-      "runtimeBytes": 22299,
-      "keccakWithImmutablesZeroed": "0x76d72535f8e2620e9c9a5583f51e79f59890c5cdb8c6a6abf19d0fd409da6aee",
+      "runtimeBytes": 21562,
+      "keccakWithImmutablesZeroed": "0x5524636291f7e01ad5e2e525d78a8161b0d18c0cfdf8113898f5a12d67a0fb60",
       "immutables": [
         {
           "value": "settlementRouter",
           "offsets": [
-            753,
-            2932,
-            6771,
-            9849,
-            13378,
-            17487,
-            19568,
-            21060
+            720,
+            2688,
+            6541,
+            9604,
+            16750,
+            18831,
+            20323
           ]
         },
         {
           "value": "vrfHub",
           "offsets": [
-            4022,
-            5211,
-            6145,
-            6432,
-            10693,
-            13799,
-            17578,
-            19733,
-            21753
+            3792,
+            4981,
+            5915,
+            6202,
+            10448,
+            13397,
+            16841,
+            18996,
+            21016
           ]
         },
         {
           "value": "refRegistry",
           "offsets": [
-            1521,
-            4124,
-            9073,
-            12283,
-            12465,
-            12565,
-            12632,
-            15274
+            3894,
+            8828,
+            12038,
+            12220,
+            12320,
+            12387
           ]
         },
         {
           "value": "refEngine",
           "offsets": [
-            3952,
-            19267
+            3722,
+            18530
           ]
         }
       ]

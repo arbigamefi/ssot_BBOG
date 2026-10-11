@@ -6,6 +6,7 @@ import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
+import {IReferralRegistry} from "../../src/engines/referral/IReferralRegistry.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
@@ -24,6 +25,13 @@ import {Errors} from "../../src/libs/Errors.sol";
 ///      from O and the rest of O accrues as protocol fees. Worked-example numbers follow SSOT v1.6 section 9:
 ///      a 100-unit bet at a 2% edge under the schedule (L0, L1, L2) = (10%, 20%, 5%) of the base edge.
 contract HouseEdgeAllocationV16Test is Test {
+    /// Binds through ReferralRegistry, which requires the player as caller (GameHub keeps no forwarder).
+    function _bindReferrer(GameHub target, address player, address referrer) internal {
+        IReferralRegistry referrals = IReferralRegistry(target.referralRegistry());
+        vm.prank(player);
+        referrals.bind(player, referrer);
+    }
+
     uint64 internal constant POOL = 1;
     bytes32 internal constant DICE = keccak256("DICE");
     bytes32 internal constant COIN = keccak256("COIN_TOSS");
@@ -118,8 +126,7 @@ contract HouseEdgeAllocationV16Test is Test {
     }
 
     function test_workedExample_l1Only() external {
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
 
         Outcome memory o = _play(STAKE, false);
 
@@ -133,8 +140,7 @@ contract HouseEdgeAllocationV16Test is Test {
     function test_workedExample_l1AndL2() external {
         vm.prank(bob);
         refRegistry.bind(bob, carol);
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
 
         Outcome memory o = _play(STAKE, false);
 
@@ -145,7 +151,7 @@ contract HouseEdgeAllocationV16Test is Test {
     function test_affiliateHintBindsFirstTouchAndPaysFromThatBet() external {
         Outcome memory o = _playWithHint(STAKE, false, bob);
 
-        assertEq(hub.referrerOf(alice), bob);
+        assertEq(IReferralRegistry(hub.referralRegistry()).referrerOf(alice), bob);
         _assertAllocation(o, 2 ether, 1 ether, 0.2 ether, 0.4 ether, 0, 0.4 ether);
     }
 
@@ -154,8 +160,7 @@ contract HouseEdgeAllocationV16Test is Test {
         refRegistry.bind(carol, dave);
         vm.prank(bob);
         refRegistry.bind(bob, carol);
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
 
         Outcome memory o = _play(STAKE, false);
 
@@ -183,8 +188,7 @@ contract HouseEdgeAllocationV16Test is Test {
     // ---------------------------------------------------------------------
 
     function test_timeoutRefundAllocatesNothing() external {
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
         uint256 id = _place(DICE, abi.encode(true, uint8(50)), STAKE, 1, 0, address(0));
         SSOTTypes.SSOT memory before = bank.getSSOT();
 
@@ -198,8 +202,7 @@ contract HouseEdgeAllocationV16Test is Test {
     }
 
     function test_partialRefundAllocatesOnUsedTurnoverOnly() external {
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
 
         // Five 20-unit coin tosses with a 10-unit stop gain: the first win stops the run, 80 is refunded.
         uint256 id = _place(COIN, abi.encode(true), 20 ether, 5, 10 ether, address(0));
@@ -221,8 +224,7 @@ contract HouseEdgeAllocationV16Test is Test {
         assertEq(l1, address(0));
         assertEq(l2, address(0));
 
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
 
         Outcome memory o = _finalize(id, _seedDice(id, false));
         _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 1 ether);
@@ -230,8 +232,7 @@ contract HouseEdgeAllocationV16Test is Test {
     }
 
     function test_uplineBindingAfterAcceptanceDoesNotAddL2() external {
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
         uint256 id = _place(DICE, abi.encode(true, uint8(50)), STAKE, 1, 0, address(0));
 
         vm.prank(bob);
@@ -243,8 +244,7 @@ contract HouseEdgeAllocationV16Test is Test {
     }
 
     function test_scheduleChangeAfterAcceptanceDoesNotApply() external {
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
         uint256 id = _place(DICE, abi.encode(true, uint8(50)), STAKE, 1, 0, address(0));
 
         vm.startPrank(gov);
@@ -326,7 +326,7 @@ contract HouseEdgeAllocationV16Test is Test {
 
     function test_invalidSelfHintPaysNoRakebackAndDoesNotChangePrice() external {
         Outcome memory o = _playWithHint(STAKE, false, alice);
-        assertEq(hub.referrerOf(alice), address(0));
+        assertEq(IReferralRegistry(hub.referralRegistry()).referrerOf(alice), address(0));
         _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 1 ether);
         assertEq(o.a.edgeBps, 200);
     }
@@ -357,13 +357,12 @@ contract HouseEdgeAllocationV16Test is Test {
         vm.prank(bob);
         refRegistry.bind(bob, alice);
         Outcome memory o = _playWithHint(STAKE, false, bob);
-        assertEq(hub.referrerOf(alice), address(0));
+        assertEq(IReferralRegistry(hub.referralRegistry()).referrerOf(alice), address(0));
         _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 1 ether);
     }
 
     function test_boundReferrerCannotBeReplacedByAnotherHint() external {
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
         Outcome memory o = _playWithHint(STAKE, false, carol);
         (address l1, address l2) = hub.getBetReferralPayees(o.id);
         assertEq(l1, bob);
@@ -374,8 +373,7 @@ contract HouseEdgeAllocationV16Test is Test {
     function test_roundingRemaindersAccrueToProtocol() external {
         vm.prank(bob);
         refRegistry.bind(bob, carol);
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
         Outcome memory o = _play(1_234_567, false);
         // E=24691, O=12345, floor rewards=2469+4938+1234, remainder belongs to PF.
         _assertAllocation(o, 24_691, 12_345, 2_469, 4_938, 1_234, 3_704);
@@ -449,8 +447,7 @@ contract HouseEdgeAllocationV16Test is Test {
         (uint16 l0, uint16 l1, uint16 l2, uint16 holdback) = hub.getReferralConfig(1);
         assertEq(abi.encode(l0, l1, l2, holdback), abi.encode(1000, 2000, 500, 3000), "schedule 1 is immutable");
 
-        vm.prank(alice);
-        hub.bindReferrer(bob);
+        _bindReferrer(hub, alice, bob);
         Outcome memory o = _play(STAKE, false);
         _assertAllocation(o, 2 ether, 1 ether, 0, 0, 0, 1 ether);
     }
@@ -508,8 +505,7 @@ contract HouseEdgeAllocationV16Test is Test {
             refRegistry.bind(bob, carol);
         }
         if (depth >= 1) {
-            vm.prank(alice);
-            hub.bindReferrer(bob);
+            _bindReferrer(hub, alice, bob);
         }
 
         Outcome memory o = _play(stake, win);

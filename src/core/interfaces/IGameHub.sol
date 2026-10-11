@@ -58,10 +58,6 @@ interface IGameHub {
     /// @notice Stop new bets on one game for good; its accepted bets settle, refund or void unchanged.
     function disableGame(bytes32 gameId) external;
 
-    function bindReferrer(address referrer) external;
-    function referrerOf(address player) external view returns (address);
-
-    function nextPositionIdHint() external view returns (uint256);
     function getBet(uint256 positionId) external view returns (SSOTTypes.Bet memory);
     function getBetTerminal(uint256 positionId) external view returns (SSOTTypes.BetTerminal memory);
     function getBetParams(uint256 positionId) external view returns (bytes memory);
@@ -107,7 +103,6 @@ interface IGameHub {
     event BetVoided(
         uint256 indexed positionId, address indexed caller, uint256 stake, bytes32 settlementErrorPrefix
     );
-    event ReferrerBound(address indexed player, address indexed referrer);
     event RefundTimeoutSet(uint256 seconds_);
 
     event EdgeChangeQueued(uint16 oldBps, uint16 newBps, uint64 activatesAt);

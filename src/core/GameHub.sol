@@ -232,17 +232,6 @@ contract GameHub is IGameHub, Sentinel, ReentrancyGuard {
         return (c.l0Bps, c.l1Bps, c.l2Bps, c.holdbackBps);
     }
 
-    // --- referral registry ---
-
-    function bindReferrer(address referrer) external override {
-        IReferralRegistry(referralRegistry).bindFor(msg.sender, referrer);
-        emit ReferrerBound(msg.sender, referrer);
-    }
-
-    function referrerOf(address player) external view override returns (address) {
-        return IReferralRegistry(referralRegistry).referrerOf(player);
-    }
-
     // --- games ---
 
     function registerGame(bytes32 gameId, address module, uint32 maxBetCount, uint32 callbackGasLimit)
@@ -317,10 +306,6 @@ contract GameHub is IGameHub, Sentinel, ReentrancyGuard {
         if (bets[betId].state == SSOTTypes.BetState.None) revert BetNotFound(betId);
         ReferralPayees memory payees = betReferralPayees[betId];
         return (payees.l1, payees.l2);
-    }
-
-    function nextPositionIdHint() external view override returns (uint256) {
-        return ISettlementRouter(settlementRouter).nextPositionId();
     }
 
     // ---------------------------------------------------------------------

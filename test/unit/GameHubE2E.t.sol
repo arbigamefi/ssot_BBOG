@@ -11,6 +11,7 @@ import {BaccaratModule} from "../../src/modules/baccarat/BaccaratModule.sol";
 import {BaccaratParams} from "../../src/modules/baccarat/BaccaratParams.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
+import {IReferralRegistry} from "../../src/engines/referral/IReferralRegistry.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
@@ -42,6 +43,13 @@ import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
 import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
 
 contract GameHubE2E is Test {
+    /// Binds through ReferralRegistry, which requires the player as caller (GameHub keeps no forwarder).
+    function _bindReferrer(GameHub target, address player, address referrer) internal {
+        IReferralRegistry referrals = IReferralRegistry(target.referralRegistry());
+        vm.prank(player);
+        referrals.bind(player, referrer);
+    }
+
     uint256 internal constant ADMISSION_FINALIZE_GAS = 3_000_000;
     uint256 internal constant ADMISSION_AMOUNT = 0.01 ether;
     uint64 internal constant POOL_A = 1;
@@ -488,8 +496,7 @@ contract GameHubE2E is Test {
     }
 
     function test_twoTierReferralAccruesXpOnlyInSettledPool() external {
-        vm.prank(alice);
-        gameHub.bindReferrer(bob);
+        _bindReferrer(gameHub, alice, bob);
 
         uint8 cap = 50;
         SSOTTypes.StakeSpec memory spec =
@@ -812,8 +819,7 @@ contract GameHubE2E is Test {
     }
 
     function _configureMaxReferral() internal {
-        vm.prank(address(0xAA00));
-        gameHub.bindReferrer(address(0xAA01));
+        _bindReferrer(gameHub, address(0xAA00), address(0xAA01));
     }
 
     function _admissionSpec() internal pure returns (SSOTTypes.StakeSpec memory) {

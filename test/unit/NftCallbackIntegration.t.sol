@@ -3,6 +3,7 @@ pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
+import {IReferralRegistry} from "../../src/engines/referral/IReferralRegistry.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
@@ -34,6 +35,13 @@ import {ExactGasWrapperFixture} from "../helpers/nft-callback/ExactGasWrapperFix
 /// @notice Real Bank/Vault/VRFHub/Hub integration and callback gas measurements.
 /// @dev Wrapper transport and USDC-like token are local models; actual deployed-wrapper/token fork remains required.
 contract NftCallbackIntegrationTest is Test {
+    /// Binds through ReferralRegistry, which requires the player as caller (GameHub keeps no forwarder).
+    function _bindReferrer(GameHub target, address player, address referrer) internal {
+        IReferralRegistry referrals = IReferralRegistry(target.referralRegistry());
+        vm.prank(player);
+        referrals.bind(player, referrer);
+    }
+
     address private constant GOV = address(0xA11CE);
     address private constant PLAYER = address(0xBEEF);
     uint256 private constant USDC = 1e6;
@@ -104,8 +112,7 @@ contract NftCallbackIntegrationTest is Test {
         hub.registerGame(keccak256("PLINKO"), address(new PlinkoModule()), 25, 2_447_746);
         hub.registerGame(keccak256("SIC_BO"), address(new SicBoModule()), 25, 2_447_746);
         vm.stopPrank();
-        vm.prank(address(0xAA00));
-        hub.bindReferrer(address(0xAA01));
+        _bindReferrer(hub, address(0xAA00), address(0xAA01));
         token.mint(GOV, 100_000 * USDC);
         token.mint(PLAYER, 100 * USDC);
         vm.prank(GOV);
