@@ -51,6 +51,7 @@ scratch=$(mktemp -d "${TMPDIR:-/tmp}/arbigamefi-preflight.XXXXXX") || fail "cann
 scratch=$(cd "$scratch" && pwd) # macOS TMPDIR ends with a slash; the paths Python reports have none
 work=$scratch/copy
 cleanup() {
+  [[ ! -f "$scratch/anvil.pid" ]] || kill "$(cat "$scratch/anvil.pid")" 2> /dev/null
   rm -rf "$scratch"
 }
 trap cleanup EXIT
@@ -113,7 +114,7 @@ send() { # rpc, from, to, calldata: one transaction from an impersonated account
 }
 
 rehearsal() {
-  local port local_rpc snapshot timelock operation anvil_pid
+  local port local_rpc anvil_pid status
   mkdir -p "$out/rehearsal" || return 1
   port=$(python3 -I -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
   local_rpc=http://127.0.0.1:$port
@@ -121,8 +122,19 @@ rehearsal() {
   anvil "${anvil_args[@]}" --fork-url "$RPC_URL" --fork-block-number "$block" --host 127.0.0.1 --port "$port" \
     --chain-id "$chain" --auto-impersonate --silent > /dev/null 2>&1 &
   anvil_pid=$!
-  # stage() runs this in a subshell: the fork stops when it ends.
-  trap "kill $anvil_pid 2> /dev/null" EXIT
+  # The fork holds the RPC URL in its arguments, so it must stop. stage() runs this function as a pipeline element,
+  # where an EXIT trap never runs: stop it on every return, and leave its pid for cleanup() in case this subshell dies.
+  echo "$anvil_pid" > "$scratch/anvil.pid"
+  rehearse "$local_rpc"
+  status=$?
+  kill "$anvil_pid" 2> /dev/null
+  wait "$anvil_pid" 2> /dev/null
+  rm -f "$scratch/anvil.pid"
+  return "$status"
+}
+
+rehearse() { # local fork RPC
+  local local_rpc=$1 snapshot timelock operation
   for _ in $(seq 120); do
     cast chain-id --rpc-url "$local_rpc" > /dev/null 2>&1 && break
     sleep 0.5
