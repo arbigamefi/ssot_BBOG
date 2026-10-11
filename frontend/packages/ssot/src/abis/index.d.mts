@@ -16,6 +16,7 @@ export declare const BaccaratModuleAbi: Abi;
 export declare const BankAbi: Abi;
 export declare const LiquidityVaultAbi: Abi;
 export declare const IGameModuleAbi: Abi;
+export declare const GovernanceTimelockAbi: Abi;
 export declare function getContractAbis(): {
   readonly GameHubAbi: Abi;
   readonly VRFHubAbi: Abi;
@@ -34,4 +35,5 @@ export declare function getContractAbis(): {
   readonly BankAbi: Abi;
   readonly LiquidityVaultAbi: Abi;
   readonly IGameModuleAbi: Abi;
+  readonly GovernanceTimelockAbi: Abi;
 };

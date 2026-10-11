@@ -37,6 +37,8 @@ REQUIRED_CONTRACTS = [
     ("Bank", "src/core/Bank.sol:Bank", "__bank_type__"),
     ("LiquidityVault", "src/core/LiquidityVault.sol:LiquidityVault", "__vault_type__"),
     ("IGameModule", "src/core/interfaces/IGameModule.sol:IGameModule", "__interface__"),
+    # governance of every core contract (ADR-0037 §2); its address is the governance() of each of them
+    ("GovernanceTimelock", "src/access/GovernanceTimelock.sol:GovernanceTimelock", "__timelock_type__"),
 ]
 
 def _sha256_hex(b: bytes) -> str:

@@ -33,6 +33,8 @@ import LiquidityVault from "./contracts/LiquidityVault.abi.json" with { type: "j
 export const LiquidityVaultAbi = LiquidityVault.abi;
 import IGameModule from "./contracts/IGameModule.abi.json" with { type: "json" };
 export const IGameModuleAbi = IGameModule.abi;
+import GovernanceTimelock from "./contracts/GovernanceTimelock.abi.json" with { type: "json" };
+export const GovernanceTimelockAbi = GovernanceTimelock.abi;
 const abis = Object.freeze({
   GameHubAbi,
   VRFHubAbi,
@@ -50,7 +52,8 @@ const abis = Object.freeze({
   BaccaratModuleAbi,
   BankAbi,
   LiquidityVaultAbi,
-  IGameModuleAbi
+  IGameModuleAbi,
+  GovernanceTimelockAbi
 });
 export function getContractAbis() {
   return abis;
