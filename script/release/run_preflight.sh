@@ -50,8 +50,20 @@ out=$(cd "$3" && pwd)
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/arbigamefi-preflight.XXXXXX") || fail "cannot create a work directory"
 scratch=$(cd "$scratch" && pwd) # macOS TMPDIR ends with a slash; the paths Python reports have none
 work=$scratch/copy
+# Stop a process and make sure it is gone: TERM, TERM again, then KILL, each followed by up to 5 seconds of checking. A
+# TERM sent right after the fork can reach the child before it has run the program and be lost.
+stop_process() { # pid
+  local signal
+  for signal in TERM TERM KILL; do
+    kill -s "$signal" "$1" 2> /dev/null || return 0
+    for _ in $(seq 20); do
+      kill -0 "$1" 2> /dev/null || return 0
+      sleep 0.25
+    done
+  done
+}
 cleanup() {
-  [[ ! -f "$scratch/anvil.pid" ]] || kill "$(cat "$scratch/anvil.pid")" 2> /dev/null
+  [[ ! -f "$scratch/anvil.pid" ]] || stop_process "$(cat "$scratch/anvil.pid")"
   rm -rf "$scratch"
 }
 trap cleanup EXIT
@@ -127,7 +139,7 @@ rehearsal() {
   echo "$anvil_pid" > "$scratch/anvil.pid"
   rehearse "$local_rpc"
   status=$?
-  kill "$anvil_pid" 2> /dev/null
+  stop_process "$anvil_pid"
   wait "$anvil_pid" 2> /dev/null
   rm -f "$scratch/anvil.pid"
   return "$status"
