@@ -220,10 +220,10 @@ contract LiquidityVault is LiquidityTree, ERC721Enumerable, ReentrancyGuard {
     /// @dev One allocation domain per position, selected without using the realized result: the position's
     ///      prefix when it can absorb the position's maximum LP loss, otherwise every used leaf. Profit and loss
     ///      therefore share one domain, so shrinking a prefix cannot keep a position's upside while moving its
-    ///      downside onto later deposits.
+    ///      downside onto later deposits. `_allocate` is the only caller and handles maxLoss == 0 itself.
     function _allocationLeaf(uint48 cutoff, uint128 maxLoss) private view returns (uint48) {
         uint48 last = nextNode - 1;
-        if (maxLoss == 0 || cutoff == last) return cutoff;
+        if (cutoff == last) return cutoff;
         return _prefixCovers(cutoff, maxLoss) ? cutoff : last;
     }
 

@@ -182,7 +182,7 @@ guardian 是独立多签，签名人与 Safe 不重叠，不使用 EOA。它能�
 | B1 | 准入时间锁（§7.1）与 `sentinel` | 审计 F-03 | `src/access/Governable.sol`、`src/core/PoolRegistry.sol:22-56`、`src/core/GameHub.sol:150-249`、`src/core/Bank.sol:119-235` | 时间锁窗口内（包括暂停时）成熟 NFT 可以提取；恶意 guardian 不能冻结 LP 资金；交接时没有预排队操作（P6）；角色集合经事件回放核对；审计 PoC 的 F-03 用例被拒 |
 | B2 | 每玩家 2 个持仓（§7.5） | 审计 F-05 | `src/core/Bank.sol:34, 486`、`src/core/GameHub.sol:323-413` | 审计 PoC 的 F-05 用例被拒；第 3 个持仓被拒，结算、退款或作废后释放 |
 | B3 | 暂停不阻止 LP 提款（§7.2），guardian 注释同步 | 审计 F-04；复核 B-1 | `src/core/Bank.sol:130-141, 276-295`、`src/core/LiquidityVault.sol:107-128` | 复核 P1、P2 型用例：暂停与恶意排队同时存在时 LP 仍能退出 |
-| B4 | 删除 `_allocationLeaf` 在 `maxLoss == 0` 时的死分支；按 ADR-0034 失效条款重新论证 R1 | 冻结签核 FC5；复核 M-9 | `src/core/LiquidityVault.sol:224` | `test_lossWithZeroReleasedCapitalIsRejected` 与树等价门槛不变 |
+| B4 | 删除 `_allocationLeaf` 在 `maxLoss == 0` 时的死分支；按 ADR-0034 失效条款重新论证 R1 | 冻结签核 FC5；复核 M-9 | `src/core/LiquidityVault.sol:224` | `test_lossWithZeroReleasedCapitalIsRejected` 与树等价门槛不变。**已完成**（2026-10-11，本地）：`_allocationLeaf` 只剩 `if (cutoff == last) return cutoff;`，Vault 运行时 15,708 → 15,693 字节，八个游戏的最大冷回调 gas 各降 58；Bank 只因 import 了 Vault 而元数据变化。重新论证写入 ADR-0034 失效条款之后：B4 不改任何树写入，P1–P4、不变量 I、定理与 UNUSED_SUFFIX 不受影响。本地 unit 420、部署 25、准入 13、差分 18、不变量 5、ops 161 通过；域文件钉定已重生成 |
 | B5 | 作废（§7.4） | Owner；复核 B-2、M-5 | GameHub、SettlementRouter、Bank、VRFHub、接口与 `SSOTTypes` | 可入账的下注在作废交易里被正常结算；24 小时前与非授权调用被拒，7 天后任何人可执行；计数恰好减 1；暂停下可执行；发行方冻结 Vault 或 Bank 时可作废（P5a、P5b）；会计类故障不在范围（P5c） |
 | B6 | 单个游戏即时停用（无重新启用） | §7.1 | `src/core/GameHub.sol` | 停用后该游戏下注被拒，已有下注照常结算、退款或作废 |
 | B7 | 宪法与规范对应修订的合约侧注释 | 复核 M-6 | 见 C5 | — |
@@ -198,7 +198,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 
 | 残余 | 处理 | 披露位置 |
 | --- | --- | --- |
-| R1 预检跳过依赖树不变量 I | 维持；B4、B5 后按 ADR-0034 失效条款重新论证 | 证书 v5、ADR-0034 |
+| R1 预检跳过依赖树不变量 I | 维持；B4、B5 后按 ADR-0034 失效条款重新论证（B4 已论证，见 ADR-0034） | 证书 v5、ADR-0034 |
 | R6 外部变化（USDC 升级、VRF 参数、硬分叉）使证书失效 | 维持；K0-4 告警与手册兜底 | 证书、运维手册 |
 | 证书只覆盖 k>0 | 维持；k=0 由参数下限与治理规则排除 | 证书 |
 | 应急顺序 | 维持 | ADR-0006 |

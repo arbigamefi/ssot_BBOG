@@ -149,7 +149,7 @@
     "Bank": {
       "artifact": "Bank.sol:Bank",
       "runtimeBytes": 15808,
-      "keccakWithImmutablesZeroed": "0x873fd511db049447c8356df16a93fd91005d6f062d58fb067a2cac1c098443a8",
+      "keccakWithImmutablesZeroed": "0x39f2a87d0a740de0bed0f49d396fbeb1446bc7774436c287b60ced6f8a6d1b87",
       "immutables": [
         {
           "value": "poolAsset",
@@ -201,8 +201,8 @@
     },
     "LiquidityVault": {
       "artifact": "LiquidityVault.sol:LiquidityVault",
-      "runtimeBytes": 15708,
-      "keccakWithImmutablesZeroed": "0xf27194c9b9714951c449b224d6cffe7292ff4840c553eabbe51c78158066d7b3",
+      "runtimeBytes": 15693,
+      "keccakWithImmutablesZeroed": "0x28ef0c481d2233195bdc28bbd7231d0d3027de1076b7ed7469fc3af31c24b98f",
       "immutables": [
         {
           "value": "poolAsset",
