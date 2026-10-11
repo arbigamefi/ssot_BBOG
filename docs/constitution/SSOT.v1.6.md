@@ -307,4 +307,4 @@ The Router cap is `floor(2.00 × 5000 / 10000) = 1.00`. Each row accrues exactly
 
 | Date | Change | Approval |
 | --- | --- | --- |
-| 2026-10-12 | Launch candidate (ADR-0037, Owner decisions D1–D7; work packages B1–B6 and B9): governance through the `GovernanceTimelock` from construction, the sentinel's and guardian's immediate risk-reducing actions, a pause that blocks only new positions and new deposits, two open positions per player, the void of unbookable results, one hub and one pool domain | pending the Owner's explicit approval |
+| 2026-10-12 | Launch candidate (ADR-0037, Owner decisions D1–D7; work packages B1–B6 and B9): governance through the `GovernanceTimelock` from construction, the sentinel's and guardian's immediate risk-reducing actions, a pause that blocks only new positions and new deposits, two open positions per player, the void of unbookable results, one hub and one pool domain | approved by the Owner, 2026-10-12, after reviewing the draft (`33eaa4c08`) |
