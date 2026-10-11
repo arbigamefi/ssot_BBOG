@@ -2,13 +2,9 @@
 
 The project is in development and has not launched. The [NFT-deposit/callback target](../design/lp-accounting-and-callback-implementation.md)
 is implemented in the core contracts and application interfaces; release qualification is pending.
-See the [current implementation evidence](../audit/nft-core-integration-review.md). v1.6 is the only supported contract and release
+Current status is in the [release notes](../release/README.md). v1.6 is the only supported contract and release
 format. Start with a fresh deployment, a fresh database schema, and the current application build.
 Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualify the fresh NFT candidate.
-
-The [2026-10-05 fresh-deployment preflight](fresh-base-sepolia-preflight-2026-10-05.md) records the current
-paused testnet candidate, completed local checks and remaining signing/deployment steps. The owner stopped
-the universal callback gas proof; its incomplete status is preserved separately from this deployment preparation.
 
 ## Before deployment
 

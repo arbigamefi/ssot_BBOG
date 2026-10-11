@@ -150,8 +150,8 @@ Use their separate default ports when running in parallel. The wallet runner tem
 own embedded fixture and restores the original bytes; do not edit that file during the run.
 The SDK path is `liquidityVault.anvil.test.ts`; keeper integration also uses disposable PostgreSQL.
 A package command without these environment variables skips external-process tests and is not
-database/Anvil acceptance. [Current application evidence](audit/nft-consumer-integration-review.md)
-separates actual runs, skipped tests and remaining release gates. Normal callback settlement sends
+database/Anvil acceptance. Release evidence lists actual runs and skipped tests separately.
+Normal callback settlement sends
 no keeper finalize transaction; exceptional retry and eligible timeout refunds are covered separately.
 Pre-fulfillment ordering and complete gas admission remain external-LP gates.
 

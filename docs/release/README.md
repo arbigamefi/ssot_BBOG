@@ -7,8 +7,8 @@ Follow the [detailed plan](../design/lp-accounting-and-callback-implementation.m
 [contract rules](../constitution/SSOT.v1.6.md).
 
 Use the [Base Sepolia acceptance checklist](../deploy/v16-sepolia-acceptance.md) for one fresh
-deployment, the current database schema and matching application build. Current local results and
-remaining qualification are in the [core review](../audit/nft-core-integration-review.md).
+deployment, the current database schema and matching application build. Remaining work is tracked
+in the [launch candidate](launch-candidate.zh-CN.md).
 
 - One generated ABI set: `frontend/packages/ssot/src/abis/contracts/`, including LiquidityVault.
 - Authenticated manifests: `frontend/packages/ssot/src/release/embedded/`; every pool requires its
@@ -21,7 +21,7 @@ With no imported manifest the application exposes no contract writes. The [deplo
 and [checklist](checklist.md) require exact source, signer, wrapper, governance and chain evidence.
 Complete tree-inclusive callback gas qualification and the remaining external-LP release gates.
 The user accepted the current ordering tradeoff; verify its public disclosure against the
-[recorded decision](../audit/callback-and-lp-admission-review-2026-10-04.md).
+[recorded decision](../adr/0034-nft-liquidity-deposits.md#pre-inclusion-ordering-owner-decision-2026-10-04).
 A timer does not prove safe ordering, and the old 100-round limit is not automatically valid.
 
 All known issues are resolved in one launch candidate before any real-money deployment; the plan is tracked in

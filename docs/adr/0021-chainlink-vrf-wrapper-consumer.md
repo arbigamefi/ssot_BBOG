@@ -1,6 +1,6 @@
 # ADR-0021: Direct Chainlink wrapper consumer with native payment
 
-- **Status:** Accepted. Direct consumer implemented and locally verified; release qualification pending. See the [current evidence](../audit/nft-core-integration-review.md).
+- **Status:** Accepted. Direct consumer implemented and locally verified; release qualification pending. Current status: [release notes](../release/README.md).
 - **Date:** 2026-10-04
 
 ## Context
@@ -76,8 +76,8 @@ work around the limits.
 - Actual charge, overpayment refund and retained credit reconcile through all request outcomes.
 
 The direct consumer, real core callback and single-round deployed-wrapper fork are implemented and
-locally verified in the [core review](../audit/nft-core-integration-review.md). Maximum-complexity
-callback gas remains open. Product consumers have [local integration evidence](../audit/nft-consumer-integration-review.md).
+locally verified. The [first-callback gas certificate](../audit/first-callback-gas-certificate-2026-10-07.md)
+bounds maximum-complexity callback gas; release status is in the [release notes](../release/README.md).
 See the [implementation plan](../design/lp-accounting-and-callback-implementation.md).
 
 ## Sources

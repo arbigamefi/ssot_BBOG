@@ -32,7 +32,7 @@ segment-tree query. It also removes the query's three redundant internal paramet
   storage, including inconsistent lazy parent/child amounts and arithmetic overflow.
 - Checked uint128 sums, storage layout, allocation and rounding, the prefix fallback, withdrawal behavior and
   external interfaces are unchanged.
-- Qualification: `docs/audit/tree-range-optimization-2026-10-04.md`.
+- Qualification: the differential test `test/unit/AzuroRangeSumEquivalence.t.sol`.
 
 **UNUSED_SUFFIX** changes one statement in `_pushLazy`. At a fork, the right child's amount excludes the
 leaves after the range end `r`. When `r >= nextNode - 1`, that suffix lies wholly after the last used leaf, so
@@ -60,7 +60,8 @@ the query is skipped and replaced by 0.
   - every extra vendor line adds review and provenance cost.
 
   If the Vault's k > 0 preview skip is ever reverted, reassess this choice.
-- Qualification: `docs/audit/preview-skip-first-callback-2026-10-07.md`.
+- Qualification: the step-by-step equivalence test `test/unit/AzuroUnusedSuffixEquivalence.t.sol`; the Vault-side
+  argument is the 2026-10-07 amendment of `docs/adr/0034-nft-liquidity-deposits.md`.
 
 ## Vault dependencies on tree internals
 

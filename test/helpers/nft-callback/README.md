@@ -10,8 +10,8 @@ Run from the repository root:
 forge test --match-path test/unit/NftCallbackIntegration.t.sol --ignored-error-codes 6335 -vv
 ```
 
-Compiler: Solidity 0.8.37, optimizer 500, via-IR, Cancun. Current results and scope:
-[core integration review](../../../docs/audit/nft-core-integration-review.md).
+Compiler: Solidity 0.8.37, optimizer 500, via-IR, Cancun. Release status:
+[release notes](../../../docs/release/README.md).
 
 ## External models and measurement limits
 

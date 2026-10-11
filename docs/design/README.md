@@ -9,7 +9,7 @@ The current product uses one wallet-native casino/sportsbook interface.
 - [Data and state](14-data-and-state.md), [forms](15-forms.md), [mobile](16-mobile.md)
 - [Earn console](earn-provider-console-spec.md)
 - [NFT deposits and callback implementation plan](lp-accounting-and-callback-implementation.md)
-- [Callback bounds and accepted LP ordering tradeoff](../audit/callback-and-lp-admission-review-2026-10-04.md)
+- [Accepted LP ordering tradeoff](../adr/0034-nft-liquidity-deposits.md#pre-inclusion-ordering-owner-decision-2026-10-04)
 
 Numbered visual references document current design choices. Contract behavior is defined by the
 current constitution and ADR-0034. The NFT-deposit/callback implementation and consumers are locally integrated; full callback gas and

@@ -1,7 +1,7 @@
 # Invariant enforcement map
 
-Status: core implemented and locally verified; current execution is recorded in the
-[core review](nft-core-integration-review.md). Full product qualification remains pending. The
+Status: core implemented and locally verified; current status is in the
+[release notes](../release/README.md). Full product qualification remains pending. The
 [executable specification](../constitution/ExecutableSSOT.v1.6.md) defines the obligations and the
 [implementation plan](../design/lp-accounting-and-callback-implementation.md) defines acceptance scenarios.
 

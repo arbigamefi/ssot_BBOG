@@ -17,7 +17,6 @@ launch work; read each document's status before treating it as verified behavior
   [native refund credit](adr/0022-vrf-native-fee-credit-invariants.md),
   [LP edge allocation](adr/0032-fixed-lp-share-operator-funded-referrals.md).
 - [Testing](testing.md), [threat model](audit/threat-model.md), [audit scope](audit/v1.6-audit-scope.md).
-- [Current contract and simplification review](audit/contract-simplification-review-2026-10-04.md).
 - [Release](release/README.md), [deployment](deploy/v16-release.md), [operations](ops/README.md).
 - [Frontend design](design/README.md), [frontend engineering](frontend/INDEX.md).
 - [Product roadmap](roadmap.md), [economic design](strategy/economic-design.md),

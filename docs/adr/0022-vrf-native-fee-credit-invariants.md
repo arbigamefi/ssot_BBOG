@@ -1,6 +1,6 @@
 # ADR-0022: VRF native fee and refund-credit invariants
 
-- **Status:** Accepted. Core fee accounting and application interfaces implemented and locally verified; release qualification pending. See the [current evidence](../audit/nft-core-integration-review.md).
+- **Status:** Accepted. Core fee accounting and application interfaces implemented and locally verified; release qualification pending. Current status: [release notes](../release/README.md).
 - **Date:** 2026-10-04
 
 ## Context

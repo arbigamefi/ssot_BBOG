@@ -218,7 +218,7 @@ A 24-hour deposit clock does not stop an already-mature LP from acting on a resu
 is included. Tree prefix rules and same-transaction finalization do not prove all information-based
 ordering gains absent. The user accepted the existing synchronous-exit/whole-pool ordering risk;
 public disclosure is required and does not remove the advantage. See the
-[current admission review](../audit/callback-and-lp-admission-review-2026-10-04.md).
+[recorded decision](../adr/0034-nft-liquidity-deposits.md#pre-inclusion-ordering-owner-decision-2026-10-04).
 Strict gas qualification, external audit and network acceptance remain open. A permanent
 known-result failure may block that Vault's capital operations; no unconditional liveness is claimed.
 

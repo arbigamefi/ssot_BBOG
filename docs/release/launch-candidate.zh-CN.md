@@ -92,7 +92,7 @@
 | A6 | 发布线合入 `master` | 复核 3 R-3 | — | **已完成**（§4 第 2 项）；另用 GitHub environment（required reviewers）包住 `release-gate`（S-1） |
 | A7 | Foundry 升级到 1.8.x：全部工作流钉到同一确切补丁版本；anvil 显式钉到目标网络当时的硬分叉；预装 solc 后默认离线；工具链写入 v5 输入 | 冻结 v3；复核 §3.6 | 全部工作流、`test/ops`、`Makefile` | 在新版下复跑 ops 夹具、`DeployHarnessV16`、`run_gas_matrix.py`（1.8 有 30M 脚本帧上限） |
 | A8 | 冻结规程与证据索引：运行后改冻结文件必须附 diff 或冻结时副本；仓库内维护带摘要的证据索引（含 §4 的删除记录与标签映射）；`dist/` 证据归档到持久存储；只改工作流的冻结 delta 写明由哪次运行验证 | 冻结签核 FZ-9；复核 S-11、W-1(3) | 证据索引（路径与格式在本项确定） | 写明 `shasum -c` 用法，做一次恢复演练 |
-| A9 | 测试整理：`_prepareLargeHistoricalProfit` 的 seed 写入病例文件；统一测试侧两份谓词参照；审计 PoC 并入 `test/` | 实施报告；审计 | `test/`；归档中的 `independent-audit-2026-10-10/tests/audit/` | 回归通过 |
+| A9 | 测试整理：`_prepareLargeHistoricalProfit` 的 seed 写入病例文件；统一测试侧两份谓词参照；审计 PoC 并入 `test/` | 实施报告（C2 已删的 `preview-skip-first-callback-2026-10-07.md`，见 `b8a48425f` 中第 311–312 行）；审计 | `test/`；归档中的 `independent-audit-2026-10-10/tests/audit/` | 回归通过 |
 | A10 | 发布导入绑定加固：完整规范清单比对、池 ID 安全整数范围、ABI 清单逐项绑定与对应测试 | 2026-09-28 未合入的工作（归档 `worktrees/security-remediation.*`） | `script/release/validate_frontend_artifacts.py`、`script/release/GenerateFrontendManifestV16.s.sol`、`frontend/scripts/ssot-sync.mjs` | 归档中的 `test_release_artifact_binding.py` 思路落成仓库测试并通过 |
 | A11 | 时间锁模型的工具：DeployV16、`PrepareSafeAcceptanceV16`（改为生成 `scheduleBatch` 排队批次）、`V16Snapshot`、`verify_governance.py`、`ReleaseDigestV16`、K0-4 全部改到时间锁模型，核验项见 §10 | 复核 M-1、§3.3.3 | `script/DeployV16.s.sol`、`script/release/` | P6（预排队操作）、P2（guardian 否决）型负向用例 |
 | A12 | 恢复证书 v5 所需的复现工具（v4 依赖的 `h1-callback-cost-certificate-2026-10-04/`、`callback-cost-certificate-2026-10-04/`、`takeover-2026-10-07/`）纳入仓库或证据索引 | 复核 M-8 | 归档 `dist.tar.gz`、外审交付 r2 | 在新检出上能复现 v4 的关键数值 |
@@ -233,8 +233,8 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | 编号 | 内容 | 来源 |
 | --- | --- | --- |
 | C1 | 更正 `README.md:176`：tag 上 CI 跑的是非严格 `make release-check`；严格检查只在手动 dispatch 的 Release Gate 中执行 | 复核 3 I-6 |
-| C2 | 文档清理（第一项工作）。一档直接删除：`docs/audit/` 的 `contract-simplification-review-2026-10-04.md`、`h1-first-callback-review-2026-10-04.md`、`max-bet-and-compiler-review-2026-10-04.md`、`nft-tree-gas-reachability.md`、`prefix-threshold-validation-2026-10-05.md`、`tree-range-optimization-2026-10-04.md`，`docs/design/first-callback-settlement-qualification.md`，`docs/deploy/fresh-base-sepolia-preflight-2026-10-05.md`。二档先迁移再删除：`callback-and-lp-admission-review-2026-10-04.md`（排序取舍的接受记录迁入 ADR-0034）、`nft-core-integration-review.md`、`nft-consumer-integration-review.md`、`nft-callback-gas-qualification.md`、`preview-skip-first-callback-2026-10-07.md`（状态改为指向发布文档） | Owner；验收：`git grep` 不再命中已归档目录（复核 S-4，18 个文件） |
-| C3 | 发布手册：隔离副本部署、EIP-7702 检查、从标签 dispatch 并核对 `head_sha` 与作业列表、RPC 选择；时间锁接管与解除暂停的时间表；更正 `v16-release.md:131` 的 “one person … cannot pass the gate alone”，写明 `V16_AUDITED_TREE` 是复核接受的树而非外审树；`docs/release/README.md` 与 `checklist.md` 更新到当前状态 | 复核 S-1 |
+| C2 | 文档清理（第一项工作）。一档直接删除：`docs/audit/` 的 `contract-simplification-review-2026-10-04.md`、`h1-first-callback-review-2026-10-04.md`、`max-bet-and-compiler-review-2026-10-04.md`、`nft-tree-gas-reachability.md`、`prefix-threshold-validation-2026-10-05.md`、`tree-range-optimization-2026-10-04.md`，`docs/design/first-callback-settlement-qualification.md`，`docs/deploy/fresh-base-sepolia-preflight-2026-10-05.md`。二档先迁移再删除：`callback-and-lp-admission-review-2026-10-04.md`（排序取舍的接受记录迁入 ADR-0034）、`nft-core-integration-review.md`、`nft-consumer-integration-review.md`、`nft-callback-gas-qualification.md`、`preview-skip-first-callback-2026-10-07.md`（状态改为指向发布文档）。**已完成**（2026-10-11）：13 篇删除，排序取舍的接受记录迁入 ADR-0034 的 “Pre-inclusion ordering” 一节，状态引用改指发布说明，资格引用改指证书与测试 | Owner；验收：`git grep` 不再命中已归档目录（复核 S-4，18 个文件） |
+| C3 | 发布手册：隔离副本部署、EIP-7702 检查、从标签 dispatch 并核对 `head_sha` 与作业列表、RPC 选择；时间锁接管与解除暂停的时间表；更正 `v16-release.md:127` 的 “one person … cannot pass the gate alone”，写明 `V16_AUDITED_TREE` 是复核接受的树而非外审树；`docs/release/README.md` 与 `checklist.md` 更新到当前状态 | 复核 S-1 |
 | C4 | 条款与 LP 材料：作废规则（VRF 原生费不退）；准入时间锁与 LP 退出窗口；暂停不阻止提款；每玩家 2 个持仓；guardian 否决权；§9 全部残余 | §7、§9 |
 | C5 | 规范修订（宪法的修订需 Owner 明确批准并留记录）：`docs/constitution/SSOT.v1.6.md:125, 128-130, 137`；`ExecutableSSOT.v1.6.md:48-52, 243-249, 302`；`docs/adr/0006-vrf-callback-settlement.md:87-90, 197-204, 229`；`docs/adr/0034-nft-liquidity-deposits.md:30, 145`；`docs/architecture/overview.md:95, 116`；`docs/audit/v1.6-audit-scope.md:49, 172`；`docs/audit/threat-model.md:140`；`WHITEPAPER.zh-CN.md:18, 197, 201, 212, 215-216, 223, 229, 232-233`；`WHITEPAPER.product.zh-CN.md:109`；`docs/strategy/economic-design.md:104`；`docs/ops/runbooks/pause-config-drift.md:11, 18, 36-39`；`docs/ops/alerts.md:26`；`docs/ops/runbooks/governance-safe-setup.md:22-61` | 复核 M-6 |
 | C6 | ADR-0006 的两处改进（M4 范围限定、确认记录的位置）；本版外审交付按 FZ-6 清单打包 | 复核 S-8 |
@@ -258,7 +258,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 
 ## 14. 来源
 
-清理后，原 `dist/` 下的记录在归档 `~/arbigamefi-archive/2026-10-11-clean-slate/dist.tar.gz`（逐文件清单 `dist.MANIFEST.sha256`）。
+清理后，原 `dist/` 下的记录在两份归档里，成员路径保留 `dist/` 前缀：当日第一轮清理移走的旧目录在 `~/arbigamefi-archive/2026-10-11-superseded/superseded-2026-10-11.tar.gz`（`PATHS.txt`、`MANIFEST.sha256`），其余在 `~/arbigamefi-archive/2026-10-11-clean-slate/dist.tar.gz`（`dist.PATHS.txt`、逐文件清单 `dist.MANIFEST.sha256`）。仓库文档引用这些证据目录时只写目录名，相对于归档中的 `dist/`。
 
 - 审计与复核：`independent-audit-2026-10-10/`（`README.md`、`fix-review/`、`fix-review-2/`、`fix-review-3/`）；`docs/audit/v1.6-audit-scope.md`
 - 本规划的独立复核：`dist/independent-review-launch-candidate-2026-10-11/`

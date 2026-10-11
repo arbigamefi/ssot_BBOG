@@ -1,6 +1,6 @@
 # ADR-0006: Durable VRF receipt and callback settlement
 
-- **Status:** Accepted; the qualification section was amended on 2026-10-08 with the first-callback certificate policy and the Owner's risk acceptance. Core and application interfaces implemented; local integration verified, release qualification pending. See the [current evidence](../audit/nft-core-integration-review.md).
+- **Status:** Accepted; the qualification section was amended on 2026-10-08 with the first-callback certificate policy and the Owner's risk acceptance. Core and application interfaces implemented; local integration verified, release qualification pending. Current status: [release notes](../release/README.md).
 - **Date:** 2026-10-04, amended 2026-10-08
 
 ## Context

@@ -25,7 +25,7 @@ By default, runner exit status reports whether all semantic assertions ran and p
 
 The runner writes one complete Forge log per case, `results.json`, `summary.json` and `SOURCE_BEFORE.sha256` / `SOURCE_AFTER.sha256`. The runner compares the same manifest before every case and after the full run, and fails on any observed drift. These manifests include production Solidity, the fixture, case list, runner, dependency lock, compiler configuration and all Solidity files in the three vendored dependency packages (a superset of compiled imports). Dependency authentication against upstream and the explicitly recorded Azuro range-query patch remain separate provenance checks. Do not edit these inputs while a run is executing; the before/after check is a drift detector, not a filesystem lock.
 
-The initial 36-case run at `dist/nft-callback-gas-2026-10-04/` used the preceding runner revision, saved there as `runner-used.py`, with an end-of-run `SOURCE.sha256`. The subsequent `final/` run repeats all 36 cases with dependency-inclusive start/per-case/end manifests, fixed compiler configuration and stronger event-identity assertions. Its `summary.json` and manifests are the authoritative rerun evidence. Do not retrofit a start-of-run hash claim onto the earlier evidence.
+The initial 36-case run at `nft-callback-gas-2026-10-04/` (evidence directories cited here are archived; see the [launch candidate](../../../docs/release/launch-candidate.zh-CN.md) §14) used the preceding runner revision, saved there as `runner-used.py`, with an end-of-run `SOURCE.sha256`. The subsequent `final/` run repeats all 36 cases with dependency-inclusive start/per-case/end manifests, fixed compiler configuration and stronger event-identity assertions. Its `summary.json` and manifests are the authoritative rerun evidence. Do not retrofit a start-of-run hash claim onto the earlier evidence.
 
 The runner clears inherited `FOUNDRY_*` and legacy `DAPP_*` overrides, fixes `FOUNDRY_PROFILE=default`, and checks the effective configuration is Solidity `0.8.37`, Cancun, via IR, optimizer enabled with 500 runs. It records only those whitelisted settings and `forge --version`, never the full configuration's RPC/key fields.
 
@@ -33,8 +33,8 @@ The runner clears inherited `FOUNDRY_*` and legacy `DAPP_*` overrides, fixes `FO
 Tests run with one thread. The structural-extrema case list is `gas-structural-extrema-cases.json`;
 it targets maximum cover reads, maximum query-loop shape and the two-boundary cold-slot tradeoff.
 Eight such real-wrapper callbacks passed with `--require-fit --isolate-build` at
-`dist/admission-decision-2026-10-04/structural-extrema/`. These are still sampled full-path observations.
-See [the structural argument and remaining joint-cost certificate](../../../docs/audit/callback-and-lp-admission-review-2026-10-04.md).
+`admission-decision-2026-10-04/structural-extrema/`. These are still sampled full-path observations.
+The all-state bound is the [first-callback gas certificate](../../../docs/audit/first-callback-gas-certificate-2026-10-07.md).
 
 The joint-state list `gas-joint-state-cases.json` repeats two old baselines and adds six combinations
 of matured older-source holdback, a new ineligible player, fresh source locks and tree boundary shapes.
@@ -49,11 +49,11 @@ python test/helpers/nft-callback/run_gas_matrix.py \
 ```
 
 All eight invocations passed their first bounded callback at
-`dist/callback-cost-certificate-2026-10-04/joint-state/`, with a highest observed gross wrapper-call
+`callback-cost-certificate-2026-10-04/joint-state/`, with a highest observed gross wrapper-call
 delta of 2,206,365 gas. Six new inputs bring the accumulated distinct-input count to 55; repeated
 baselines and diagnostic traces do not add to this count. The module instruction bounds, warm query
-cost formula and nested-call arithmetic in the linked review are component evidence. The combined
-all-state callback certificate remains **OPEN**.
+cost formula and nested-call arithmetic are component evidence; the combined all-state bound is the
+first-callback gas certificate linked above.
 
 ## Fixed provider identity
 

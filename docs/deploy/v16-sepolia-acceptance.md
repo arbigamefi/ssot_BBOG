@@ -1,7 +1,7 @@
 # Base Sepolia NFT release acceptance
 
 This checklist applies to the current NFT liquidity and direct-callback implementation. The project
-has not launched. Local core evidence is recorded in the [integration review](../audit/nft-core-integration-review.md);
+has not launched. Current status is in the [release notes](../release/README.md);
 SDK, Earn and keeper have corresponding local verification. Final candidate binding and fresh network
 acceptance remain incomplete. Do not mark a step complete
 without the corresponding candidate's source identity, receipt and accounting evidence.
@@ -64,8 +64,8 @@ Verify alert delivery and Safe pause/unpause/guardian replacement with current r
 
 Record each scenario as passed, failed or not executed, linked to its receipt/log and exact source.
 Require completed SDK/Earn/keeper integration, independent review, callback gas qualification and the
-accepted external-LP ordering-risk disclosures. The user's economic decision is recorded in the
-[current review](../audit/callback-and-lp-admission-review-2026-10-04.md); it does not qualify gas or
+accepted external-LP ordering-risk disclosures. The user's economic decision is recorded in
+[ADR-0034](../adr/0034-nft-liquidity-deposits.md#pre-inclusion-ordering-owner-decision-2026-10-04); it does not qualify gas or
 deployment. Capacity acceptance awaits the user-defined business peak.
 Follow the [release procedure](v16-release.md) for user-controlled signing and deployment. Testnet
 transactions, local tests and this checklist do not constitute external audit or production acceptance.

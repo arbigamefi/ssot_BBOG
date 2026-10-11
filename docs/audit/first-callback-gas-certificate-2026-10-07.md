@@ -4,19 +4,22 @@
 
 **状态：v4，已独立复核（ACCEPT，2026-10-08，复核清单 `d6c1619c…`）；域文件已于 2026-10-08 切换 `CERTIFIED`；发布状态 FROZEN_FOR_AUDIT，不可部署。**
 
+**2026-10-11：** 上线候选版会改动受证的核心合约，本证书只作为证书 v5 的来源（[上线候选版](../release/launch-candidate.zh-CN.md) §10）。
+文中的证据目录原在 `dist/` 下，现已归档（同文 §14），路径相对于归档中的 `dist/`。
+
 - v3 经独立复核：树 DP（994,571）、帧分析器、字节码绑定和 P5 都已确认；复核发现的漏项（Bank 调用的三个 Vault getter 帧，2,274 gas）在 v3 中补上，主口径余量 +7,980。
 - 2026-10-08 Owner 决定（D1–D4）：M4 用逐模块普查证明；余量标准统一为 ≥50,000，用模块包达到；证书政策写入 ADR-0006；签一份只含设计固有残余的风险接受书。
 - v4 据此把主口径的模块项换成精确字节码解释器的界（M1、M3、M5、M6 已关闭，见第 6 节），主口径余量 +127,744（第 5 节）。
-- 2026-10-08 证书复核方确认了 v4 与 M4 普查：**ACCEPT，无阻断条件**（`dist/independent-review-certificate-v4-2026-10-08/`，MANIFEST 摘要 `d6c1619c…`）。只涉及措辞的发现记入 `dist/landing-2026-10-08/certificate-v4-ERRATA.md`，封存件不动。
+- 2026-10-08 证书复核方确认了 v4 与 M4 普查：**ACCEPT，无阻断条件**（`independent-review-certificate-v4-2026-10-08/`，MANIFEST 摘要 `d6c1619c…`）。只涉及措辞的发现记入 `landing-2026-10-08/certificate-v4-ERRATA.md`，封存件不动。
 - 2026-10-08 Owner 确认接受书文本与勘误处理方式；`script/release/first-callback-domain-84532.json` 同日切换为 `CERTIFIED`，
   其 `certificateSeal` 块引用 v4 封存清单 `d67a7083…`、勘误和复核清单 `d6c1619c…`。发布状态仍为 REWORK，直到冻结运行完成。
 - 发布状态仍为 **REWORK**。
 
-- 证据目录：`dist/landing-2026-10-08/certificate-v4/`，封存清单为 `CERTIFICATE-v4.sha256`。
-- 旧封存都保持原样，不被覆盖：v3 在 `dist/landing-2026-10-07-r2/certificate-v3/`（`4a1b245e…`）；v2 在
-  `dist/landing-2026-10-07/certificate-v2/`（`b4a2222b…`）；更早一版在 `dist/takeover-2026-10-07/certificate/`（`f8fdd041…`）。
+- 证据目录：`landing-2026-10-08/certificate-v4/`，封存清单为 `CERTIFICATE-v4.sha256`。
+- 旧封存都保持原样，不被覆盖：v3 在 `landing-2026-10-07-r2/certificate-v3/`（`4a1b245e…`）；v2 在
+  `landing-2026-10-07/certificate-v2/`（`b4a2222b…`）；更早一版在 `takeover-2026-10-07/certificate/`（`f8fdd041…`）。
 - 候选：工作区 `codex/v16-acceptance-closeout`（HEAD `d130b4de` 加未提交改动）；源清单
-  `dist/landing-2026-10-07-r2/R2_SOURCE.sha256`；Vault runtime `844ba36c…`，与 v2 相同。
+  `landing-2026-10-07-r2/R2_SOURCE.sha256`；Vault runtime `844ba36c…`，与 v2 相同。
 
 ## 1. 断言
 
@@ -194,7 +197,7 @@ v3 与 v4 的四个口径都经复核方用自己的组合实现复算，逐值�
   - M2（重定位不变）：帧分析器写明的假设，不变。
   - M3（参数长度类）：一字模块按 32、33、64 三类分别求界，二字模块只有 64；八个模块在各长度类下的界相同。
   - M4（已准入投注的 `resolve` 不会因 gas 以外的原因 revert）：由 [`m4-resolve-census-2026-10-08.md`](m4-resolve-census-2026-10-08.md) 证明，
-    `CallbackDomainM4.t.sol` 机械对照（完整参数域 31,259 个参数值加 6,912 个格点，日志 `dist/landing-2026-10-08/m4/`）。
+    `CallbackDomainM4.t.sol` 机械对照（完整参数域 31,259 个参数值加 6,912 个格点，日志 `landing-2026-10-08/m4/`）。
     2026-10-04 的静态界复核曾把它列为范围外；证书复核的抽样（69,984 个准入组合加 20,000 次 fuzz）现在只是旁证。
   - M5（Baccarat 完全展开）：25 轮 131,917，独立运行与驱动脚本的结果一致；v4 不再使用轮摘要法的任何结果。
   - M6（价格表与 calldata 模型）：192 个全具体输入在 Foundry 中与 `vm.lastCallGas().gasTotalUsed` 逐 gas 相等，赔付与退款相等。
@@ -213,10 +216,10 @@ v3 与 v4 的四个口径都经复核方用自己的组合实现复算，逐值�
 
 两份独立复核都已完成：
 
-- `dist/independent-review-certificate-2026-10-07/`：证书，ACCEPT_WITH_CONDITIONS。
-- `dist/independent-review-landing-2026-10-07/`：补丁与落地，ACCEPT_WITH_CONDITIONS。
+- `independent-review-certificate-2026-10-07/`：证书，ACCEPT_WITH_CONDITIONS。
+- `independent-review-landing-2026-10-07/`：补丁与落地，ACCEPT_WITH_CONDITIONS。
 
-两份复核提出的代码、测试和文档条件，都已在 `dist/landing-2026-10-07-r2/` 中处理，包括：
+两份复核提出的代码、测试和文档条件，都已在 `landing-2026-10-07-r2/` 中处理，包括：
 
 - 组合漏项；
 - 游戏集合、USDC 与 provider 的在线核验；
@@ -225,45 +228,27 @@ v3 与 v4 的四个口径都经复核方用自己的组合实现复算，逐值�
 - 负对照；
 - 最坏形状病例入矩阵。
 
-架构复审（`dist/architecture-decision-preview-skip-2026-10-07/DECISION-2.md`）已判定：
+架构复审（`architecture-decision-preview-skip-2026-10-07/DECISION-2.md`）已判定：
 
 - 工程侧条件已全部关闭；
 - 本文档的 A-2 至 A-4 修正后，v3 可以直接作为证书主文本；
 - 以后若出现 v4，仍须证书复核方确认。
 
-Owner 于 2026-10-08 作出四项决定（D1–D4，见实施报告），v4 据此产出。切换 `first-callback-domain-84532.json` 为 `CERTIFIED` 的两项前提及其完成情况：
+Owner 于 2026-10-08 作出四项决定（D1–D4，见本文开头），v4 据此产出。切换 `first-callback-domain-84532.json` 为 `CERTIFIED` 的两项前提及其完成情况：
 
-1. ~~证书复核方确认 v4~~ 已完成：2026-10-08 **ACCEPT，无阻断条件**（`dist/independent-review-certificate-v4-2026-10-08/`，MANIFEST 摘要 `d6c1619c…`）。复核方在隔离副本复现了八个模块界（含 Keno 与 Baccarat 25 轮），用自己的组合实现复算四个口径，在真实 EVM 上补做了 32/33/64 字节的 M3 对拍和 1,440 个自生成具体用例，并对 Keno 全部抽象状态插桩验证 M1 的数组基址都在已扩张内存内。非阻断发现见勘误。
+1. ~~证书复核方确认 v4~~ 已完成：2026-10-08 **ACCEPT，无阻断条件**（`independent-review-certificate-v4-2026-10-08/`，MANIFEST 摘要 `d6c1619c…`）。复核方在隔离副本复现了八个模块界（含 Keno 与 Baccarat 25 轮），用自己的组合实现复算四个口径，在真实 EVM 上补做了 32/33/64 字节的 M3 对拍和 1,440 个自生成具体用例，并对 Keno 全部抽象状态插桩验证 M1 的数组基址都在已扩张内存内。非阻断发现见勘误。
 2. ~~Owner 确认接受书文本及勘误处理方式~~ 已完成：2026-10-08 Owner 逐字确认 ADR-0006 "Owner risk acceptance" 小节（按同日修订后的余量措辞），并选择以勘误而非重新封存处理复核的措辞发现。
 
 2026-10-08 的切换在域文件的 `certificateSeal` 块中引用了 v4 封存清单 `CERTIFICATE-v4.sha256`（SHA-256 `d67a7083…`）、勘误 `certificate-v4-ERRATA.md` 和复核清单（`d6c1619c…`）。如果出现反例，按架构裁决的应急顺序处理。
 
 ## 8. 复现
 
-在仓库根目录执行。所有分析都在临时副本里重跑，再与封存件比较，绝不写入封存目录（架构复审 A-2）。
-v4 的树、帧与绑定文件与 v3 逐字节相同，它们的重跑步骤见 v3 文档的第 8 节；下面只列 v4 新增的模块包与组合。
-模块界的完全展开很重：Keno 约 46 分钟、峰值内存 10 GB；Baccarat 约 2 小时、峰值 31 GB。
-`module-bounds-v4.json` 与 `baccarat-unrolled-*.json` 带有耗时和峰值内存字段，所以不用 `diff -r`，用 `compare_v4.py` 比较其余全部内容。
-封存清单 `CERTIFICATE-v4.sha256`（51 个文件）的 SHA-256 为
+v4 的树、帧与绑定文件与 v3 逐字节相同，v4 新增的是模块包与组合。模块界的完全展开很重：Keno 约 46 分钟、峰值内存 10 GB；
+Baccarat 约 2 小时、峰值 31 GB。比较时不用 `diff -r`：`module-bounds-v4.json` 与 `baccarat-unrolled-*.json` 带有耗时和峰值内存字段，
+用 `compare_v4.py` 比较其余全部内容。封存清单 `CERTIFICATE-v4.sha256`（51 个文件）的 SHA-256 为
 `d67a7083a9f3676514339432cc5f690d3cc4de0253935d431c8d9631f8873491`。
 
-```sh
-export PYTHONDONTWRITEBYTECODE=1
-V=dist/landing-2026-10-08/certificate-v4
-(cd $V && shasum -a 256 -c CERTIFICATE-v4.sha256)
-W=$(mktemp -d) && mkdir -p $W/dist/landing-2026-10-08 && cp -R $V $W/dist/landing-2026-10-08/
-for f in out src lib script test foundry.toml deps.lock; do ln -s "$PWD/$f" $W/$f; done
-for d in callback-cost-certificate-2026-10-04 h1-callback-cost-certificate-2026-10-04 takeover-2026-10-07; do
-  ln -s "$PWD/dist/$d" $W/dist/$d; done
-C=$W/dist/landing-2026-10-08/certificate-v4
-(cd $C/modules && python3 module_bounds_v4.py && python3 baccarat_unroll.py 1,2,3,4,5,6,7 \
-   && python3 baccarat_unroll.py 25 400000000 && python3 concrete_oracle.py run m6-cases.json \
-   && python3 keno_index_access.py)
-(cd $C/bindings && python3 component_bindings.py)
-(cd $C && python3 pin_inputs.py && python3 composition_v4.py)
-python3 $V/compare_v4.py $V $C
-# M6 in Foundry: copy src test script foundry.toml deps.lock into a scratch copy, symlink lib, add
-# modules/ModuleGasOracle.t.sol as test/review/ModuleGasOracle.t.sol and m6-cases.json at the copy root, then
-# FOUNDRY_PROFILE=pr forge test --match-path test/review/ModuleGasOracle.t.sol -vv
-# M4 mechanical companion (21 tests): FOUNDRY_PROFILE=pr forge test --match-path 'test/unit/CallbackDomain*.t.sol' -vv
-```
+复现依赖的证据目录 `landing-2026-10-08/`、`callback-cost-certificate-2026-10-04/`、`h1-callback-cost-certificate-2026-10-04/`
+与 `takeover-2026-10-07/` 已归档（[上线候选版](../release/launch-candidate.zh-CN.md) §14）。按原目录布局写的复现命令保留在提交
+`b8a48425f` 中本文的第 8 节。所有分析都在临时副本里重跑，再与封存件比较，绝不写入封存目录（架构复审 A-2）。
+把复现工具收进仓库、在新检出上复现 v4 的关键数值，是上线候选版的 A12。

@@ -377,7 +377,7 @@ contract NftTreeGasEmptyRootTest is NftReachableTreeGasBase {
 
 /// @dev Compressed counter, actual Bank/Vault and production-engine awards to three fresh recipients.
 ///      Three awards cover player rakeback and L1/L2, including source locks and holdback. This is the
-///      structural long-history witness from nft-tree-gas-reachability.md, not a current-state attack.
+///      structural long-history witness, not a current-state attack.
 contract NftTreeGasSyntheticBankThreeAwardsTest is NftReachableTreeGasBase {
     function test_boundedThreeAwardAccountingSettlesProfitAndConservesFunds() public {
         _measure(0, true);

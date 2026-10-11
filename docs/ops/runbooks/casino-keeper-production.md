@@ -1,7 +1,7 @@
 # Keeper operations
 
-This runbook describes the accepted target; the [implementation plan](../../design/lp-accounting-and-callback-implementation.md)
-tracks release gates, with [local integration evidence](../../audit/nft-consumer-integration-review.md).
+This runbook describes the accepted target; release gates are tracked in the [release notes](../../release/README.md)
+and the [implementation plan](../../design/lp-accounting-and-callback-implementation.md).
 Deploy one authenticated current release with its PostgreSQL schema,
 using the [Docker stack](../../../frontend/deploy/docker/README.md) and dedicated signer.
 

@@ -1,8 +1,8 @@
 # Durable bet index
 
 **2026-10-04: NFT index implemented; local PostgreSQL and replay tests passed.**
-[Current application evidence](../audit/nft-consumer-integration-review.md) records the tested paths
-and remaining release gates. Contracts remain the authority for executable capital.
+Remaining release gates are in the [release notes](../release/README.md). Contracts remain the
+authority for executable capital.
 
 `@ssot/bet-index` maintains a replayable PostgreSQL read model for the keeper and web application.
 Contracts remain the settlement authority. The index stores chain events, casino bets, sports tickets,

@@ -292,8 +292,8 @@ Timeouts must lie within `MIN_REFUND_TIMEOUT_SECONDS` and `MAX_REFUND_TIMEOUT_SE
 
 ## Test mapping and execution evidence
 
-Every row below is an obligation; actual core execution and remaining product qualification are
-recorded in the [core review](../audit/nft-core-integration-review.md). The old share/queue tests have
+Every row below is an obligation; remaining product qualification is tracked in the
+[release notes](../release/README.md). The old share/queue tests have
 been removed. Bind each run to exact source, pinned tree, ABI, commands and complete logs.
 
 | Obligation | Work to implement or rerun                                                                                                                                                                           |

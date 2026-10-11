@@ -11,17 +11,13 @@
 [回调状态机](../adr/0006-vrf-callback-settlement.md)。
 本文固定复用边界、接口、工作顺序和待交付证据。
 
-当前实施证据见 [NFT 核心集成复盘](../audit/nft-core-integration-review.md)：
+当前状态与上线前的全部工作见[发布说明](../release/README.md)。
 真实 Bank/Vault/VRFHub/GameHub 已接通，原型 Bank/VRF 替身已删除。
-真实合约回调仍证明部分 100 轮配置超预算，不能沿用原轮数和 gas 参数。
-后续 [gas 复核](../audit/nft-callback-gas-qualification.md) 通过时间戳合并和请求读取去重，将同组
-36 个完整回调样例从 25 个预算内完成改善到 32 个，仍有 4 个 100 轮配置超预算；极深树历史的
-固定记账段也仍超预算。纯玩法测试通过不能替代完整回调准入。轮数已由用户确定为最多 25，每轮最低 0.01 USDC；callback gas 配置仍需完整验证，
-不能由降低轮数直接宣称任意树历史预算合格。
+真实合约回调证明部分 100 轮配置超预算，不能沿用原轮数和 gas 参数；轮数已由用户确定为最多 25，每轮最低 0.01 USDC。
+首次回调 gas 由[首次回调 gas 证书](../audit/first-callback-gas-certificate-2026-10-07.md)界定，上线候选版须重做（v5）；
+纯玩法测试通过不能替代完整回调准入，也不能由降低轮数直接宣称任意树历史预算合格。
 
-SDK、Earn、赌场预检、keeper、Vault 流水与双托管健康检查已实现；
-[应用接入复核](../audit/nft-consumer-integration-review.md) 记录实际 Anvil、PostgreSQL、钱包浏览器
-验证和过程中修复的索引/交易状态问题。这不解除上述 gas 发布阻断。
+SDK、Earn、赌场预检、keeper、Vault 流水与双托管健康检查已实现。
 
 ## 1. 采用什么
 
@@ -43,7 +39,7 @@ NFT 的 ERC721 `balanceOf` 代表凭证数量，绝不能在页面或 SDK 中当
 
 - LP 实现：`0x47cF51A24aFe4B79e613DA8aF8485BF0dBB8411D`。
 - Vault 实现：`0xD1025891129F02f0E66D5126fC73e52Aecb918C3`。
-- 主体材料：`dist/azuro-code-review-2026-10-03/sources/v3base/contracts/`。
+- 主体材料：`azuro-code-review-2026-10-03/sources/v3base/contracts/`（已归档，见[上线候选版](../release/launch-candidate.zh-CN.md) §14）。
 - 本地证据包括原 LP/Vault/Tree 加 mock Core 的测试，不是当前 Azuro Core 或本项目的新实现验收。
 
 | 来源文件                     | SHA-256                                                            |
@@ -59,9 +55,9 @@ NFT 的 ERC721 `balanceOf` 代表凭证数量，绝不能在页面或 SDK 中当
 当前 Tree 有两项已明确记录的实现优化，各自是可逆的独立补丁：
 
 - RANGE_SUM：`_getLeavesAmount` 改用标准迭代区间求和，两个调用点删除不再需要的内部参数。读取的 canonical 节点集合、懒更新原值和 checked uint128 累加均不变。
-  详见 [差分及完整回调证据](../audit/tree-range-optimization-2026-10-04.md)。
+  差分测试：`test/unit/AzuroRangeSumEquivalence.t.sol`。
 - UNUSED_SUFFIX（2026-10-07）：当范围终点不早于最后已用叶时，`_pushLazy` 跳过恒为 0 的后缀查询。
-  详见 [反例、修复与裁决](../audit/preview-skip-first-callback-2026-10-07.md)。
+  等价测试：`test/unit/AzuroUnusedSuffixEquivalence.t.sol`；Vault 一侧的论证见 [ADR-0034 修订](../adr/0034-nft-liquidity-deposits.md#amendment-2026-10-07-k0-allocation-without-the-vendor-preview)。
 
 在 vendor 文件内部，分摊、取整、限额操作自带的预检回退、存储与外部接口都不变。上表是上游身份；
 当前应用版本以 `src/vendor/azuro-v3/MANIFEST.sha256` 为准，两个补丁可依次反向还原上游哈希。
@@ -307,7 +303,7 @@ Base Sepolia 此前读取的 coordinator 上限为 2,500,000 gas，wrapper 还�
 不接受明知正常 callback 必失败的投注后，把 keeper 当正常结算方式。
 用户进一步明确：**所有允许状态（含原树生命周期历史）都必须首次回调完成**。
 随后用户提出先比较降低至 25/50 轮的简单路线；provider 研究暂停。新增同历史对比中 25 轮
-8/8 首次完成，50 轮 6/8，建议选 25 轮；详见 [gas 复核](../audit/nft-callback-gas-qualification.md)。
+8/8 首次完成，50 轮 6/8，建议选 25 轮。
 这组测量尚未覆盖任意历史，不能当作此前严格要求已满足。原 seed 保留和故障恢复机制仍用于
 异常隔离，不代替正常路径的 gas 与终结性证明。
 如果树与规定网络上限根本不相容，先形成具体测量结论和取舍，不把后续大改当作已获技术验证。

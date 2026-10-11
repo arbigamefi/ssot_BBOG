@@ -10,8 +10,7 @@
 
 The receipt contract and its adaptation to
 [NFT custody and callback settlement](../lp-accounting-and-callback-implementation.md)
-are implemented and locally tested. See the [core review](../../audit/nft-core-integration-review.md)
-and [application review](../../audit/nft-consumer-integration-review.md) for versioned evidence.
+are implemented and locally tested. Current status is in the [release notes](../../release/README.md).
 The criteria below remain release checks against the final source; local results are not network acceptance.
 
 ## 1. Context

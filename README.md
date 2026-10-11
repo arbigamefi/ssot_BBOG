@@ -3,9 +3,9 @@
 **2026-10-04: Core and application interfaces implemented; local integration verified, release qualification pending.** NFT LiquidityVault deposits, fixed 24-hour withdrawal locks
 and atomic VRF settlement attempts follow the [implementation plan](docs/design/lp-accounting-and-callback-implementation.md). Earlier candidate
 deployments, tests and operations do not establish that this replacement is implemented.
-The [core integration review](docs/audit/nft-core-integration-review.md) covers the actual Bank/Vault/VRFHub/GameHub path;
-[application integration review](docs/audit/nft-consumer-integration-review.md) covers the SDK, UI,
-keeper and index. Final per-game gas admission remains open.
+Current status is in the [release notes](docs/release/README.md): one launch candidate resolves, or
+explicitly accepts and discloses, every known issue before real money. Per-game gas admission is redone
+for it as v5 of the [first-callback gas certificate](docs/audit/first-callback-gas-certificate-2026-10-07.md).
 
 ArbiGameFi is designed as a single-brand B2C casino/sportsbook product built on
 a protocol-grade settlement kernel. It serves players, LPs, referrers and the
@@ -48,7 +48,7 @@ wrapper quote; failed excess-payment refunds remain claimable credit. The indepe
 synthetic production fee mode are removed in the target. Full callback gas remains acceptance work.
 The user accepted the existing pre-fulfillment LP ordering risk, with explicit disclosure;
 atomic settlement and the 24-hour lock do not eliminate it. See the
-[current admission review](docs/audit/callback-and-lp-admission-review-2026-10-04.md).
+[recorded decision](docs/adr/0034-nft-liquidity-deposits.md#pre-inclusion-ordering-owner-decision-2026-10-04).
 
 ## Repository layout
 
@@ -217,9 +217,9 @@ the official withdrawal flow asks for no NFT approval. LP asset approval targets
 
 Deposits and new bets also bound `G <= 2^108-1` for the original tree arithmetic.
 The adopted 40-level tree has been measured through the real core callback; some 100-round paths
-exceed the provider budget. Every admitted configuration still needs worst-input qualification;
-see the [current measurements](docs/audit/nft-core-integration-review.md). Earlier 100-round support
-is not a promise for this path.
+exceed the provider budget, so games admit at most 25 rounds. The
+[first-callback gas certificate](docs/audit/first-callback-gas-certificate-2026-10-07.md) bounds every admitted
+configuration of the code it certifies. Earlier 100-round support is not a promise for this path.
 
 ### Charged VRF fee (native)
 

@@ -4,7 +4,7 @@
 >
 > **首要读者**：协议研究者、技术尽调与审计人员、集成方、专业 LP 的技术顾问
 >
-> **适用范围与状态**：本文描述已接受的 NFT 流动性与回调结算设计。核心合约及 SDK、Earn、keeper 接入已实现并完成对应版本的本地验证，详见[核心复盘](audit/nft-core-integration-review.md)和[应用复核](audit/nft-consumer-integration-review.md)。完整回调 gas 资格、新部署网络验收和外部审计尚未完成；此前端到端结果不代表后续源码已重新全跑。项目尚未正式上线。具体账本、接口与实施步骤见[实施设计](design/lp-accounting-and-callback-implementation.md)，新部署验收见[测试网清单](deploy/v16-sepolia-acceptance.md)。规范以 [SSOT v1.6](constitution/SSOT.v1.6.md) 与[可执行规范](constitution/ExecutableSSOT.v1.6.md)为准。
+> **适用范围与状态**：本文描述已接受的 NFT 流动性与回调结算设计。核心合约及 SDK、Earn、keeper 接入已实现并完成对应版本的本地验证，当前状态见[发布说明](release/README.md)。完整回调 gas 资格、新部署网络验收和外部审计尚未完成；此前端到端结果不代表后续源码已重新全跑。项目尚未正式上线。具体账本、接口与实施步骤见[实施设计](design/lp-accounting-and-callback-implementation.md)，新部署验收见[测试网清单](deploy/v16-sepolia-acceptance.md)。规范以 [SSOT v1.6](constitution/SSOT.v1.6.md) 与[可执行规范](constitution/ExecutableSSOT.v1.6.md)为准。
 
 ## 摘要
 
@@ -243,7 +243,7 @@ Bank 开仓时保存 `lastDepositId`，作为该笔未来结果优先分配的�
 
 **本次状态：核心和消费者已实现并完成对应版本的本地验证，发布资格待完成。** Bank/Vault 双托管、NFT 树账本与提款、VRF 回调结算及 SDK、页面、keeper 已接通。后续改动须重新绑定源件验证，不能复用旧版端到端结果冒充最终验收。详细顺序和完整验收矩阵见[实施设计](design/lp-accounting-and-callback-implementation.md)。
 
-当前合约的实现和验证范围见[核心复盘](audit/nft-core-integration-review.md)，消费者见[应用复核](audit/nft-consumer-integration-review.md)，发布义务见[审计范围](audit/v1.6-audit-scope.md)。全新部署须固定源码、编译与部署身份，并按[测试网清单](deploy/v16-sepolia-acceptance.md)完成网络验收与外部审计。
+当前状态见[发布说明](release/README.md)，发布义务见[审计范围](audit/v1.6-audit-scope.md)。全新部署须固定源码、编译与部署身份，并按[测试网清单](deploy/v16-sepolia-acceptance.md)完成网络验收与外部审计。
 
 **独立核对**：
 

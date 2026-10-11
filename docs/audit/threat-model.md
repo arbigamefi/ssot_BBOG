@@ -195,7 +195,7 @@ confirmed-chain receipt-to-bookkeeping gap. It does not conceal a pending fulfil
 actor. A 24-hour deposit clock does not prevent an already-mature LP from exiting before a known loss;
 prefix restrictions fall back to the whole-pool domain. This is value-allocation risk, not only UX.
 The user explicitly retained this model with public disclosure after the local exit and profit-entry
-witnesses. See the [recorded decision](callback-and-lp-admission-review-2026-10-04.md).
+witnesses. See the [recorded decision](../adr/0034-nft-liquidity-deposits.md#pre-inclusion-ordering-owner-decision-2026-10-04).
 Acceptance does not eliminate the advantage or close gas, external-audit and network release gates.
 
 A permanent known-result defect may fence that Vault's capital operations. Pinning the original module

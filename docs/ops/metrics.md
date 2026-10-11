@@ -72,7 +72,7 @@ Current `pools[]` health rows include Bank/Vault identity, cash, L/P/R/K/G/PF/XP
 `accountingValid`, `openHolds`, `maxOpenHolds`, `capacityHeadroom`, `lpStatus`, `paused` and
 `observedBlock`. An unbooked result is reported as a pool degradation; it must not look like
 a healthy pool whose LP entry is inexplicably unavailable. Age/latency qualification is separate
-from this state snapshot. See [local application evidence](../audit/nft-consumer-integration-review.md).
+from this state snapshot.
 
 ## Sports
 

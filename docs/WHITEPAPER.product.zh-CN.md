@@ -6,7 +6,7 @@
 >
 > **读后决策**：是否值得进一步尽调、讨论合作或投入资源
 >
-> **项目尚未正式上线。** 已采用每次入金生成存款 NFT、固定 24 小时锁定、LiquidityTree 分配与 VRF 回调同笔尝试结算。核心合约及 SDK、Earn、keeper 接入已实现并完成对应版本的本地验证，详见[核心复盘](audit/nft-core-integration-review.md)和[应用复核](audit/nft-consumer-integration-review.md)。完整回调 gas 资格、新部署网络验收和外部审计尚未完成；此前端到端结果不代表后续源码已重新全跑。本地测试不代表真实用户、营收、资本承诺、机构背书或牌照。机制见[技术白皮书](WHITEPAPER.zh-CN.md)，新部署验收见[测试网清单](deploy/v16-sepolia-acceptance.md)，发布条件见[发布说明](release/README.md)。
+> **项目尚未正式上线。** 已采用每次入金生成存款 NFT、固定 24 小时锁定、LiquidityTree 分配与 VRF 回调同笔尝试结算。核心合约及 SDK、Earn、keeper 接入已实现并完成对应版本的本地验证。完整回调 gas 资格、新部署网络验收和外部审计尚未完成；此前端到端结果不代表后续源码已重新全跑。本地测试不代表真实用户、营收、资本承诺、机构背书或牌照。机制见[技术白皮书](WHITEPAPER.zh-CN.md)，新部署验收见[测试网清单](deploy/v16-sepolia-acceptance.md)，当前状态与发布条件见[发布说明](release/README.md)。
 
 ## 摘要
 
@@ -157,7 +157,7 @@ LP 存款 NFT 不是公司股权，不附带代币权利，也不是固定收益
 4. 落实已接受排序风险的公开披露，完成外部审计、合规方案与限定环境的验收；
 5. 在有限范围内开展真实使用与渠道验证，再决定扩大范围。
 
-当前进展以[核心复盘](audit/nft-core-integration-review.md)和[应用复核](audit/nft-consumer-integration-review.md)所列源码和实际测试为准；网络与审计的待验事项见[审计范围](audit/v1.6-audit-scope.md)。全新 Base Sepolia 部署将按[测试网清单](deploy/v16-sepolia-acceptance.md)核对多签接管、实际回调与付款、NFT 存取及服务运行。
+当前进展见[发布说明](release/README.md)；网络与审计的待验事项见[审计范围](audit/v1.6-audit-scope.md)。全新 Base Sepolia 部署将按[测试网清单](deploy/v16-sepolia-acceptance.md)核对多签接管、实际回调与付款、NFT 存取及服务运行。
 
 **本次账本、回调与消费者已实现并完成对应版本的本地验证，尚未取得发布资格。** 不设置迁移或双版本兼容范围。项目已明确接受并保留上述排序风险；最终源码仍须重新固定编译与部署身份，回调 gas、容量、完整网络验收与外部审计仍待完成。风险接受不替代这些条件，未完成前不放行外部 LP。
 

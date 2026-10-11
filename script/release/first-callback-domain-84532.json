@@ -4,10 +4,10 @@
   "status": "CERTIFIED",
   "certificateSeal": {
     "version": "v4",
-    "manifest": "dist/landing-2026-10-08/certificate-v4/CERTIFICATE-v4.sha256",
+    "manifest": "landing-2026-10-08/certificate-v4/CERTIFICATE-v4.sha256",
     "sha256": "d67a7083a9f3676514339432cc5f690d3cc4de0253935d431c8d9631f8873491",
-    "errata": "dist/landing-2026-10-08/certificate-v4-ERRATA.md",
-    "review": "dist/independent-review-certificate-v4-2026-10-08/MANIFEST.sha256",
+    "errata": "landing-2026-10-08/certificate-v4-ERRATA.md",
+    "review": "independent-review-certificate-v4-2026-10-08/MANIFEST.sha256",
     "reviewSha256": "d6c1619c1ea0d3414c5609ee34cc5520d8c89740b52b1c54115b73372784eb85",
     "ownerAcceptance": "docs/adr/0006-vrf-callback-settlement.md#owner-risk-acceptance-f6-submitted-2026-10-08",
     "certifiedOn": "2026-10-08"
