@@ -46,6 +46,7 @@ import { GameRoomShell } from "../../../../features/casino/room/game-room-shell"
 import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
 import { derivePlaceBetButtonPhase } from "../../../../features/casino/room/place-bet-button";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
+import { useStageReveal } from "../../../../features/casino/room/use-stage-reveal";
 import { useReferralAffiliate } from "../../../../features/referral/useReferralAffiliate";
 import {
   GameRoomAuditLedger,
@@ -82,13 +83,9 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [terminalBet, setTerminalBet] = React.useState<DomainBet | null>(null);
   const [resultProof, setResultProof] = React.useState<CasinoRoundResult | null>(null);
   const [casinoOutcome, setCasinoOutcome] = React.useState<CasinoOutcome | null>(null);
-  const [stageReveal, setStageReveal] = React.useState<{
-    betId: bigint;
-    phase: "revealing" | "revealed";
-  } | null>(null);
+  const { stageReveal, startStageReveal, completeStageReveal, clearStageReveal } = useStageReveal();
   const revealedBetIdRef = React.useRef<bigint | null>(null);
   const outcomeReadKeyRef = React.useRef<string | null>(null);
-  const revealTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>();
 
   React.useEffect(
     () => () => {
@@ -155,87 +152,33 @@ export function GamePageClient({ slug }: { slug: string }) {
     },
     [refetchRecentBets, refreshWalletBalance, poolRead.refresh, refreshOpenHolds]
   );
-  const clearStageRevealTimer = React.useCallback(() => {
-    if (revealTimerRef.current) {
-      clearTimeout(revealTimerRef.current);
-      revealTimerRef.current = undefined;
-    }
-  }, []);
-  const startStageReveal = React.useCallback(
-    (betId: bigint, gameSlug: string) => {
-      clearStageRevealTimer();
-      const durationMs =
-        gameSlug === "dice"
-          ? 2_000
-          : gameSlug === "coin-toss"
-            ? 1_600
-            : gameSlug === "roulette"
-              ? 3_000
-              : gameSlug === "plinko"
-                ? 6_000
-                : gameSlug === "slots"
-                  ? 3_400
-                  : gameSlug === "keno"
-                    ? 4_000
-                    : gameSlug === "baccarat"
-                      ? 4_200
-                      : gameSlug === "sic-bo"
-                        ? 2_100
-                        : 0;
-
-      if (durationMs === 0) {
-        setStageReveal({ betId, phase: "revealed" });
-        return;
-      }
-
-      setStageReveal({ betId, phase: "revealing" });
-      revealTimerRef.current = setTimeout(() => {
-        setStageReveal((current) =>
-          current?.betId === betId ? { betId, phase: "revealed" } : current
-        );
-        revealTimerRef.current = undefined;
-      }, durationMs);
-    },
-    [clearStageRevealTimer]
-  );
-  const handleStageRevealComplete = React.useCallback(() => {
-    clearStageRevealTimer();
-    setStageReveal((current) =>
-      current?.phase === "revealing" ? { betId: current.betId, phase: "revealed" } : current
-    );
-  }, [clearStageRevealTimer]);
   const handleRoundStart = React.useCallback(() => {
-    clearStageRevealTimer();
+    clearStageReveal();
     revealedBetIdRef.current = null;
     outcomeReadKeyRef.current = null;
     setTerminalBet(null);
     setResultProof(null);
     setCasinoOutcome(null);
-    setStageReveal(null);
     setPlinkoBuckets([]);
     setSlotsSymbols([]);
-  }, [clearStageRevealTimer]);
+  }, [clearStageReveal]);
   const handleRoundReset = React.useCallback(() => {
-    clearStageRevealTimer();
+    clearStageReveal();
     revealedBetIdRef.current = null;
     outcomeReadKeyRef.current = null;
     setShowResult(false);
     setTerminalBet(null);
     setResultProof(null);
     setCasinoOutcome(null);
-    setStageReveal(null);
     setPlinkoBuckets([]);
     setSlotsSymbols([]);
-  }, [clearStageRevealTimer]);
+  }, [clearStageReveal]);
   const handleResultClose = React.useCallback(() => {
-    clearStageRevealTimer();
+    clearStageReveal();
     setShowResult(false);
     setResultProof(null);
     setCasinoOutcome(null);
-    setStageReveal(null);
-  }, [clearStageRevealTimer]);
-
-  React.useEffect(() => () => clearStageRevealTimer(), [clearStageRevealTimer]);
+  }, [clearStageReveal]);
 
   // B2: Accurate win-chance using proper math per game module
   const winChance = game
@@ -575,21 +518,21 @@ export function GamePageClient({ slug }: { slug: string }) {
         assetDecimals={assetDecimals}
         onResultClose={handleResultClose}
         onResultPlayAgain={handleResultPlayAgain}
-        onDiceRevealComplete={handleStageRevealComplete}
-        onCoinRevealComplete={handleStageRevealComplete}
-        onRouletteRevealComplete={handleStageRevealComplete}
+        onDiceRevealComplete={completeStageReveal}
+        onCoinRevealComplete={completeStageReveal}
+        onRouletteRevealComplete={completeStageReveal}
         onDiceDirectionChange={setDiceDirection}
         onDiceTargetChange={setDiceTarget}
         onCoinSideChange={setCoinSide}
         onRouletteChange={setRouletteSpots}
         onKenoChange={setKenoSpots}
         onKenoResetResult={() => setKenoResultDrawn([])}
-        onKenoRevealComplete={handleStageRevealComplete}
+        onKenoRevealComplete={completeStageReveal}
         onPlinkoRiskChange={setPlinkoRisk}
-        onPlinkoRevealComplete={handleStageRevealComplete}
-        onSlotsRevealComplete={handleStageRevealComplete}
-        onSicBoRevealComplete={handleStageRevealComplete}
-        onBaccaratRevealComplete={handleStageRevealComplete}
+        onPlinkoRevealComplete={completeStageReveal}
+        onSlotsRevealComplete={completeStageReveal}
+        onSicBoRevealComplete={completeStageReveal}
+        onBaccaratRevealComplete={completeStageReveal}
         onBaccaratSideChange={setBaccaratSide}
         onSicBoChange={handleSicBoChange}
       />

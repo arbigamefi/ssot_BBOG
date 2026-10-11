@@ -267,7 +267,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | legacy Bank 退役（14 个未暂停）与 RPC key 轮换 | Owner | C7；key 已于 2026-10-11 按用途改名 |
 | 主网备用 keeper 只配 `KEEPER_RPC_HTTP`（`ALCHEMY_API_KEY_OPS`），不配 WS；`frontend/deploy/casino-keeper/backup.base-mainnet.env.example` 随 D 更新 | 实施方，Owner 部署 | 主网上线后 |
 | 原生安全扫描：排期，或写明由外审取代 | Owner | 复核 S-10 |
-| 旧生产服务器：只保留旧数据，不再维护、不换 key；本候选版上线切换时彻底删除，新服务器的 keeper 直接用 `*_PROD_KEEPER` | Owner | — |
+| 生产服务器（root@45.77.243.138）：在此之前只保留旧数据，不维护、不换 key；随新合约的全新部署一起重建，不做迁移（Owner 2026-10-12）：保留系统，删除旧应用、容器与数据（命令清单由实施方准备，Owner 在服务器上执行），再按 key 分配重新部署整套服务（web、keeper、索引、健康检查与 Telegram 告警，索引库全新建库）；`*_PROD_KEEPER` 由 Owner 运行实施方准备的脚本写入服务器环境，脚本不打印任何值 | 实施方准备与部署，Owner 删除与写入 key | 随 A5 部署工具；新合约部署时 |
 
 ## 13. 价值网络与主网前置（冻结签核 FZ-8）
 
