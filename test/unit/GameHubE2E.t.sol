@@ -17,6 +17,7 @@ import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {IVRFHub} from "../../src/core/interfaces/IVRFHub.sol";
 import {IBank} from "../../src/core/interfaces/IBank.sol";
+import {ILiquidityVaultBank} from "../../src/core/interfaces/ILiquidityVaultBank.sol";
 import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
 import {ISettlementRouter} from "../../src/core/interfaces/ISettlementRouter.sol";
@@ -168,14 +169,21 @@ contract GameHubE2E is Test {
         assertEq(bankA.totalReserved(), 0);
         assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
         assertTrue(bankA.riskInPaused());
-        assertEq(
-            LiquidityVault(bankA.vault()).depositState(LiquidityVault(bankA.vault()).getLastDepositId()).maxAssets, 0
-        );
+
+        // The pause does not close LP exits either (ADR-0037 §4): only the NFT's own cooldown holds it.
         LiquidityVault pausedVault = LiquidityVault(bankA.vault());
         uint48 pausedId = pausedVault.getLastDepositId();
         vm.prank(gov);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(LiquidityVault.LPUnavailable.selector, ILiquidityVaultBank.LPStatus.CoolingDown)
+        );
         pausedVault.withdrawDeposit(pausedId, 1e12);
+        vm.warp(pausedVault.withdrawAfter(pausedId));
+        LiquidityVault.DepositState memory state = pausedVault.depositState(pausedId);
+        assertEq(uint256(state.status), uint256(ILiquidityVaultBank.LPStatus.Ready));
+        vm.prank(gov);
+        assertEq(pausedVault.withdrawDeposit(pausedId, state.maxPercent), state.maxAssets);
+        assertTrue(bankA.riskInPaused());
     }
 
     function test_guardianPauseDoesNotBlockTimedOutRefund() external {
