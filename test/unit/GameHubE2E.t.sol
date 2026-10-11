@@ -208,6 +208,76 @@ contract GameHubE2E is Test {
         assertTrue(bankA.riskInPaused());
     }
 
+    /// B6: governance disables one game for good; unknown and repeated calls revert and the gameId cannot return.
+    function test_disableGameIsGovernedAndIrreversible() external {
+        vm.prank(alice);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        gameHub.disableGame(GAME_DICE);
+
+        vm.prank(gov);
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.UnknownGame.selector, keccak256("NONE")));
+        gameHub.disableGame(keccak256("NONE"));
+
+        vm.expectEmit(true, true, false, true, address(gameHub));
+        emit IGameHub.GameDisabled(GAME_DICE, gov);
+        vm.prank(gov);
+        gameHub.disableGame(GAME_DICE);
+        assertTrue(gameHub.gameDisabled(GAME_DICE));
+        assertFalse(gameHub.gameDisabled(GAME_COIN));
+
+        vm.prank(gov);
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.GameIsDisabled.selector, GAME_DICE));
+        gameHub.disableGame(GAME_DICE);
+
+        address module = gameHub.gameModule(GAME_DICE);
+        vm.prank(gov);
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        gameHub.registerGame(GAME_DICE, module, 25, 2_447_746);
+    }
+
+    /// B6: a disabled game refuses quotes and bets; the other games keep taking bets.
+    function test_disabledGameRejectsBetsAndQuotes() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        (uint256 fee,) = gameHub.quoteVRFFee(GAME_DICE, 1, tx.gasprice);
+        vm.prank(gov);
+        gameHub.disableGame(GAME_DICE);
+
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.GameIsDisabled.selector, GAME_DICE));
+        gameHub.quoteVRFFee(GAME_DICE, 1, tx.gasprice);
+        uint256 nextId = router.nextPositionId();
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.GameIsDisabled.selector, GAME_DICE));
+        gameHub.placeBet{value: fee}(GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0), 10_000);
+        assertEq(router.nextPositionId(), nextId);
+
+        uint256 positionId = _place(alice, GAME_COIN, POOL_A, abi.encode(true), spec, address(0));
+        assertEq(uint256(gameHub.getBet(positionId).state), uint256(SSOTTypes.BetState.PendingVRF));
+    }
+
+    /// B6: bets accepted before the disable keep their module and settle or refund unchanged.
+    function test_acceptedBetsOfADisabledGameStillSettleAndRefund() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        uint256 settled = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, bob);
+        uint256 refunded = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, bob);
+        vm.prank(gov);
+        gameHub.disableGame(GAME_DICE);
+
+        uint256 balanceBefore = assetA.balanceOf(alice);
+        _fulfill(settled, _findSeedDiceWin(settled, 50));
+        assertEq(assetA.balanceOf(alice) - balanceBefore, 19.6 ether);
+        assertEq(uint256(router.getPosition(settled).state), uint256(SSOTTypes.PositionState.Settled));
+
+        SSOTTypes.Bet memory bet = gameHub.getBet(refunded);
+        vm.warp(uint256(bet.placedAt) + gameHub.refundTimeoutSeconds());
+        balanceBefore = assetA.balanceOf(alice);
+        gameHub.refund(refunded);
+        assertEq(assetA.balanceOf(alice) - balanceBefore, bet.stake);
+        assertEq(uint256(router.getPosition(refunded).state), uint256(SSOTTypes.PositionState.Refunded));
+        assertEq(bankA.openHolds(), 0);
+    }
+
     function test_losingBetAccruesTurnoverLiabilitiesWithAnotherBetStillHeld() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});

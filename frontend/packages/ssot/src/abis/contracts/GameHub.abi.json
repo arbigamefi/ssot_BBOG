@@ -268,6 +268,19 @@
     {
       "inputs": [
         {
+          "internalType": "bytes32",
+          "name": "gameId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "disableGame",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "betId",
           "type": "uint256"
@@ -310,6 +323,25 @@
           "internalType": "uint32",
           "name": "",
           "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "gameDisabled",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -1367,6 +1399,25 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        }
+      ],
+      "name": "GameDisabled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "gameId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
           "name": "module",
           "type": "address"
         },
@@ -1617,6 +1668,17 @@
         }
       ],
       "name": "EdgeChangeNotReady",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "gameId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "GameIsDisabled",
       "type": "error"
     },
     {

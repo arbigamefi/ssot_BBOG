@@ -100,6 +100,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     mapping(uint256 => StoredBetTerminal) internal betTerminals;
     mapping(uint256 => bytes) internal betParams;
     mapping(uint256 => ReferralPayees) internal betReferralPayees;
+    mapping(bytes32 => bool) public override gameDisabled;
 
     constructor(
         address settlementRouter_,
@@ -248,6 +249,14 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         emit GameRegistered(gameId, module, maxBetCount, callbackGasLimit);
     }
 
+    /// @dev Irreversible: registerGame refuses a used gameId, so a restored game needs a new gameId.
+    function disableGame(bytes32 gameId) external override onlyGov {
+        if (gameModule[gameId] == address(0)) revert UnknownGame(gameId);
+        if (gameDisabled[gameId]) revert GameIsDisabled(gameId);
+        gameDisabled[gameId] = true;
+        emit GameDisabled(gameId, msg.sender);
+    }
+
     function getBet(uint256 betId) external view override returns (SSOTTypes.Bet memory) {
         SSOTTypes.Bet memory b = bets[betId];
         if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
@@ -315,6 +324,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         returns (uint256 fee, uint32 callbackGasLimit)
     {
         if (gameModule[gameId] == address(0)) revert UnknownGame(gameId);
+        if (gameDisabled[gameId]) revert GameIsDisabled(gameId);
         if (betCount == 0 || betCount > gameMaxBetCount[gameId]) revert Errors.InvalidConfig();
         callbackGasLimit = gameCallbackGasLimit[gameId];
         fee = IVRFHub(vrfHub).quote(callbackGasLimit, gasPriceBudget);
@@ -348,6 +358,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
         address module = gameModule[gameId];
         if (module == address(0)) revert UnknownGame(gameId);
+        if (gameDisabled[gameId]) revert GameIsDisabled(gameId);
 
         IGameModule(module).validate(params, stakeSpec);
         uint256 reserved = IGameModule(module).maxPayout(params, stakeSpec);

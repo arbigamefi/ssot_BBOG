@@ -53,6 +53,10 @@ interface IGameHub {
     function betModule(uint256 positionId) external view returns (address);
     /// @notice Register one explicitly qualified workload envelope. No implicit default gas or round count.
     function registerGame(bytes32 gameId, address module, uint32 maxBetCount, uint32 callbackGasLimit) external;
+    /// @notice True once the game is disabled: it takes no new bets or quotes. There is no re-enable.
+    function gameDisabled(bytes32 gameId) external view returns (bool);
+    /// @notice Stop new bets on one game for good; its accepted bets settle, refund or void unchanged.
+    function disableGame(bytes32 gameId) external;
 
     function bindReferrer(address referrer) external;
     function referrerOf(address player) external view returns (address);
@@ -85,6 +89,7 @@ interface IGameHub {
     function refund(uint256 positionId) external;
 
     event GameRegistered(bytes32 indexed gameId, address indexed module, uint32 maxBetCount, uint32 callbackGasLimit);
+    event GameDisabled(bytes32 indexed gameId, address indexed caller);
     event ReferrerBound(address indexed player, address indexed referrer);
     event RefundTimeoutSet(uint256 seconds_);
 
@@ -150,6 +155,7 @@ interface IGameHub {
     error RiskInPaused(uint64 poolId);
     error UnknownPool(uint64 poolId);
     error UnknownGame(bytes32 gameId);
+    error GameIsDisabled(bytes32 gameId);
     error BetNotFound(uint256 positionId);
     error BadState(uint256 positionId, SSOTTypes.BetState got, SSOTTypes.BetState want);
     error RefundNotReady(uint256 positionId, uint256 nowTs, uint256 readyAt);
