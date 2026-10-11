@@ -40,7 +40,8 @@
 | F-03 准入时间锁 | 非对称：增加风险的操作经 OpenZeppelin `TimelockController`（72 小时），降低风险的操作立即生效（§7.1） |
 | 暂停语义（复核 B-1） | 暂停**不再阻止 LP 提款**，只阻止新下注与新存款（§7.2） |
 | guardian（复核 B-1） | 独立多签，签名人与 Safe 不重叠，不使用 EOA（§7.3） |
-| 无法入账结果的作废（复核 B-2） | 先尝试结算，失败才作废；资格期 24 小时，自 `vrfRequestedAt` 起算；Safe 或 guardian 触发，7 天后任何人可触发；对该 Bank 全部合格下注一并执行（§7.4） |
+| 无法入账结果的作废（复核 B-2） | 先尝试结算，失败才作废；资格期 24 小时，自 `vrfRequestedAt` 起算；Safe 或 guardian 触发，7 天后任何人可触发；对该 Bank 全部合格下注一并执行，落实为按 Bank 开窗、逐笔执行（§7.4） |
+| B0 设计冻结 | [ADR-0037](../adr/0037-launch-candidate-authority-pause-capacity-void.md) 第 3 版：D1 合约构造时治理方即时间锁；D2 按 Bank 开作废窗口、任何人逐笔执行，另有运营规则与告警；D3 试结算下限 1,000 万 gas；D4 准入审查对照认证产物；D5 时间锁操作就绪即执行或在等待期撤销；D6 暂停不挡 XP 与协议费领取；D7 合约锁定延迟不低于 72 小时 |
 | 其余已接受的设计取舍 | 维持接受，残余清单补全并逐项披露（§9） |
 | Foundry 1.8.x | 放入本版，A7 在工作包 B 与证书 v5 之前完成 |
 | CI 的 fork RPC | A1 完成后改为公共 RPC；不另建 CI 专用 key |
@@ -71,7 +72,7 @@
 
 ## 5. 顺序
 
-1. **设计冻结 B0**：§7 的全部设计（B1–B6）写成 [ADR-0037](../adr/0037-launch-candidate-authority-pause-capacity-void.md)，由独立方评审，并送外审方预审（S-2）。
+1. **设计冻结 B0**：§7 的全部设计（B1–B6）写成 [ADR-0037](../adr/0037-launch-candidate-authority-pause-capacity-void.md)，由独立方评审，并送外审方预审（S-2）。已完成两轮复核与 Owner 决定（D1–D7），预审包由 Owner 发送。
 2. **工具链与工具**：A7（Foundry）先行，然后工作包 A 的其余各项；同时做 C2 文档清理。
 3. **合约**：工作包 B（含体育移出）；**应用**：工作包 D；**文档**：工作包 C。
 4. **冻结**，全部门槛全量重跑；**证书 v5**（§10）；**独立复核**；**专业外审**，外审后修复按 v5.x → 增量复核 → 外审复核的回路处理。
@@ -94,22 +95,24 @@
 | A8 | 冻结规程与证据索引：运行后改冻结文件必须附 diff 或冻结时副本；仓库内维护带摘要的证据索引（含 §4 的删除记录与标签映射）；`dist/` 证据归档到持久存储；只改工作流的冻结 delta 写明由哪次运行验证 | 冻结签核 FZ-9；复核 S-11、W-1(3) | 证据索引（路径与格式在本项确定） | 写明 `shasum -c` 用法，做一次恢复演练 |
 | A9 | 测试整理：`_prepareLargeHistoricalProfit` 的 seed 写入病例文件；统一测试侧两份谓词参照；审计 PoC 并入 `test/` | 实施报告（C2 已删的 `preview-skip-first-callback-2026-10-07.md`，见 `b8a48425f` 中第 311–312 行）；审计 | `test/`；归档中的 `independent-audit-2026-10-10/tests/audit/` | 回归通过 |
 | A10 | 发布导入绑定加固：完整规范清单比对、池 ID 安全整数范围、ABI 清单逐项绑定与对应测试 | 2026-09-28 未合入的工作（归档 `worktrees/security-remediation.*`） | `script/release/validate_frontend_artifacts.py`、`script/release/GenerateFrontendManifestV16.s.sol`、`frontend/scripts/ssot-sync.mjs` | 归档中的 `test_release_artifact_binding.py` 思路落成仓库测试并通过 |
-| A11 | 时间锁模型的工具：DeployV16、`PrepareSafeAcceptanceV16`（改为生成 `scheduleBatch` 排队批次）、`V16Snapshot`、`verify_governance.py`、`ReleaseDigestV16`、K0-4 全部改到时间锁模型，核验项见 §10 | 复核 M-1、§3.3.3 | `script/DeployV16.s.sol`、`script/release/` | P6（预排队操作）、P2（guardian 否决）型负向用例 |
+| A11 | 时间锁模型的工具：DeployV16、`PrepareSafeAcceptanceV16`（改为生成接线与激活的 `scheduleBatch`，D1）、`V16Snapshot`、`verify_governance.py`、`ReleaseDigestV16`、K0-4 全部改到时间锁模型，核验项见 §10 | 复核 M-1、§3.3.3 | `script/DeployV16.s.sol`、`script/release/` | P6（预排队操作）、P2（guardian 否决）型负向用例 |
 | A12 | 恢复证书 v5 所需的复现工具（v4 依赖的 `h1-callback-cost-certificate-2026-10-04/`、`callback-cost-certificate-2026-10-04/`、`takeover-2026-10-07/`）纳入仓库或证据索引 | 复核 M-8 | 归档 `dist.tar.gz`、外审交付 r2 | 在新检出上能复现 v4 的关键数值 |
 
 ## 7. 工作包 B：合约（改字节码）
+
+本节记录 Owner 的决定与方向；接口、状态、事件与参数以 [ADR-0037](../adr/0037-launch-candidate-authority-pause-capacity-void.md) 为准。
 
 ### 7.1 准入时间锁（F-03）
 
 - 实现：OpenZeppelin `TimelockController`（依赖已有 v5.5）作为 PoolRegistry、GameHub、每个 Bank、ReferralRegistry 的治理方。
   `minDelay = 259,200`；`proposers = [Safe]`；`cancellers = [Safe, guardian]`；`executors = [address(0)]`；管理员设为 0。
-  若需要临时管理员授予 guardian 取消权，必须在同一批部署交易里授予并放弃；不用 `minDelay = 0` 的引导方式（P6）。
-- 合约增加第二个角色（降低风险角色），承担立即生效的操作；它的持有人经时间锁设置。
-- 新池的 Bank 与新 hub 必须由同一时间锁治理；`registerGame` 与 hub 准入要求代码不可变（无代理、`selfdestruct`、`delegatecall`）（S-6）。
+  用 `GovernanceTimelock`（只扩展构造函数与 `updateDelay`）在构造时授予 guardian 取消权，没有临时管理员，也不用 `minDelay = 0` 的引导方式（P6）；延迟在合约里不能低于 72 小时（D7）。
+- 合约增加降低风险角色 `sentinel`（由 Safe 持有），承担立即生效的操作；它的持有人经时间锁设置。
+- 新池的 Bank 与新 hub 必须由同一时间锁治理；链上的同治理检查只防误配，准入的安全边界是 72 小时队列加对照认证产物的准入审查（D4，含 Bank、Vault、资产、hub 与模块的代码不可变，S-6）。
 
 | 函数 | 归类 |
 | --- | --- |
-| `transferGovernance`、`acceptGovernance` | 经时间锁；发布核验要求四类合约 `pendingGovernance == 0` |
+| `transferGovernance` | 经时间锁；新治理方之后可以随时 `acceptGovernance`，所以转移本身是关键操作，K0-4 对 `GovernanceTransferStarted` 告警；发布核验要求四类合约 `pendingGovernance == 0` |
 | `registerPool` | 经时间锁 |
 | `setPoolActive`、`setHubRegistered`、`setHubAllowedForPool` | `false` 立即生效；`true` 经时间锁。停用只拦新仓位，已准入的恶意 hub 只能在执行前取消 |
 | `setRefundTimeout` | 经时间锁 |
@@ -137,7 +140,7 @@ n = 1，只要 d < 48 小时，72 小时就够；池保持开放且有对手方�
 
 暂停只阻止新下注与新存款，**不阻止 LP 提款**；入账门禁（`UnbookedResult`）、会计有效性、重入保护、24 小时冷却与 `L − K` 照旧。
 这与主流做法一致（Compound 的 pause guardian 不能暂停赎回；Morpho 金库没有提款暂停），并落实审计 F-03 建议的后半句。
-审计 F-04 因此从“注释”变为“行为改动”。应急规程：出现可疑排队操作时，用停用池或撤销，不用 Bank 暂停。
+XP 与协议费领取也不受暂停限制，只保留出金安全域检查（D6）。审计 F-04 因此从“注释”变为“行为改动”。应急规程：出现可疑排队操作时，用停用池或撤销，不用 Bank 暂停。
 
 ### 7.3 guardian（复核 B-1）
 
@@ -152,11 +155,11 @@ guardian 是独立多签，签名人与 Safe 不重叠，不使用 EOA。它能�
 设计：
 
 1. **先尝试结算**：作废交易先在 only-self 的 `finalizeFromCallback` 子帧里尝试结算，调用前要求 `gasleft() · 63/64` 不低于固定下限
-   （远高于 v5 主口径上界，取 5M–10M，B0 定值）；成功就正常入账，失败才进入作废分支，并记录失败前缀。作废分支不依赖模块、引擎、树写入与 token 转账。
+   （远高于 v5 主口径上界，定为 1,000 万，公式含 EIP-150 一项，子帧固定拿下限，D3）；成功就正常入账，失败才进入作废分支，并记录失败前缀。作废分支不依赖模块、引擎、树写入与 token 转账。
 2. **资格期 24 小时，自 `vrfRequestedAt` 起算**（下注记录已有该字段，回调不增加 gas）。72 小时退出窗口里至少还剩 48 小时。
-3. **触发人**：Safe 或 guardian；`vrfRequestedAt` 起 7 天后任何人都可触发（同样先尝试结算）。冻结因此有上限，不依赖 Safe 是否可用。
-4. **与结果无关**：一次对该 Bank 的全部合格下注执行，不能挑选；事件进 K0-4。
-5. **状态覆盖**：包括 VRFHub 为 Received 而 GameHub 仍为 PendingVRF 的情形（先 `VRFHub.retry` 推进，或纳入作废入口），B0 定。
+3. **触发人**：时间锁、Safe（sentinel）或该 Bank 的 guardian 开作废窗口；窗口内与 `vrfRequestedAt` 起 7 天后的执行都无需授权（同样先尝试结算）。冻结因此有上限，不依赖 Safe 是否可用。
+4. **与结果无关**：Base 单笔交易上限 16,777,216 gas，一笔只能尝试一次结算，所以按 Bank 开窗、逐笔执行（D2）。开窗人不能逐笔挑选；开窗时机与执行顺序的裁量由运营规则与 K0-4 告警约束（ADR-0037 §7.3）。
+5. **状态覆盖**：包括 VRFHub 为 Received 而 GameHub 仍为 PendingVRF 的情形：作废入口先记录随机数，与 `finalize` 相同。
 6. **会计**：P −= stake，PP += stake；R −= reserved，K −= released，树与 Vault 现金不动；`unbookedResultCount` 恰好减 1，与 `acknowledge` 互斥；
    `openHolds` 计入作废；F-05 名额同时释放；暂停期间也能执行；玩家用现有 `claimPlayerPayable` 领取。
 7. **改动面**：GameHub（入口与终态）、SettlementRouter（`voidPosition`）、Bank（`voidBet`，onlySettlementRouter，记 `playerPayable` 不转账）、
@@ -166,7 +169,7 @@ guardian 是独立多签，签名人与 Safe 不重叠，不使用 EOA。它能�
 
 ### 7.5 每玩家持仓上限（F-05）
 
-在 Bank 层实现（`holdBet` 与 `_applyHold`），审计 PoC 绕过 GameHub 直接开仓也被拒；Bank 级 128 保留。
+在 Bank 层实现（`holdBet` 与 `_applyHold`），计数与 turnover 放在同一个存储槽（ADR-0037 §5），审计 PoC 绕过 GameHub 直接开仓也被拒；Bank 级 128 保留。
 残余：64 个地址即可占满 128 个名额（Sybil）；评估 VRF 单价下的攻击成本，为 `OpenHoldLimit` 设告警。
 容量（Owner 确认）：每个 Bank 的吞吐约为 128 除以回调时延。
 
@@ -174,8 +177,8 @@ guardian 是独立多签，签名人与 Safe 不重叠，不使用 EOA。它能�
 
 | 编号 | 内容 | 来源 | 位置 | 验收 |
 | --- | --- | --- | --- | --- |
-| B0 | 设计冻结：B1–B6 的接口、状态、事件与参数定稿，独立评审并送外审方预审 | 复核 S-2 | `docs/adr/0037-launch-candidate-authority-pause-capacity-void.md` | 评审无阻断；Owner 定 ADR-0037 §11 的 D1–D5 |
-| B1 | 准入时间锁（§7.1）与第二角色 | 审计 F-03 | `src/access/Governable.sol`、`src/core/PoolRegistry.sol:22-56`、`src/core/GameHub.sol:150-249`、`src/core/Bank.sol:119-235` | 时间锁窗口内（包括暂停时）成熟 NFT 可以提取；恶意 guardian 不能冻结 LP 资金；交接时没有预排队操作（P6）；角色集合经事件回放核对；审计 PoC 的 F-03 用例被拒 |
+| B0 | 设计冻结：B1–B6 的接口、状态、事件与参数定稿，独立评审并送外审方预审 | 复核 S-2 | `docs/adr/0037-launch-candidate-authority-pause-capacity-void.md` | **已完成**（2026-10-11）：两轮独立复核无阻断，Owner 定 D1–D7；外审预审由 Owner 发送 |
+| B1 | 准入时间锁（§7.1）与 `sentinel` | 审计 F-03 | `src/access/Governable.sol`、`src/core/PoolRegistry.sol:22-56`、`src/core/GameHub.sol:150-249`、`src/core/Bank.sol:119-235` | 时间锁窗口内（包括暂停时）成熟 NFT 可以提取；恶意 guardian 不能冻结 LP 资金；交接时没有预排队操作（P6）；角色集合经事件回放核对；审计 PoC 的 F-03 用例被拒 |
 | B2 | 每玩家 2 个持仓（§7.5） | 审计 F-05 | `src/core/Bank.sol:34, 486`、`src/core/GameHub.sol:323-413` | 审计 PoC 的 F-05 用例被拒；第 3 个持仓被拒，结算、退款或作废后释放 |
 | B3 | 暂停不阻止 LP 提款（§7.2），guardian 注释同步 | 审计 F-04；复核 B-1 | `src/core/Bank.sol:130-141, 276-295`、`src/core/LiquidityVault.sol:107-128` | 复核 P1、P2 型用例：暂停与恶意排队同时存在时 LP 仍能退出 |
 | B4 | 删除 `_allocationLeaf` 在 `maxLoss == 0` 时的死分支；按 ADR-0034 失效条款重新论证 R1 | 冻结签核 FC5；复核 M-9 | `src/core/LiquidityVault.sol:224` | `test_lossWithZeroReleasedCapitalIsRejected` 与树等价门槛不变 |
@@ -204,9 +207,13 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | UNUSED_SUFFIX 已知例外 | 维持；Vault 不可达，有测试钉住 | ADR-0034 |
 | 成交前的知情排序 | 维持 | 条款与 LP 材料 |
 | F-05 Sybil（64 个地址占满 128） | 新增；告警与成本评估 | 条款与 LP 材料 |
-| 作废的运营方裁量 | 新增；先尝试结算与按 Bank 一并执行把裁量压到最小 | 条款 |
+| 作废的运营方裁量 | 新增；先尝试结算、按 Bank 开窗与逐笔执行把裁量压到最小；开窗时机与执行顺序由运营规则与告警约束（ADR-0037 R-5） | 条款 |
 | guardian 否决权 | 新增；独立多签 | LP 材料、运维手册 |
-| `TimelockController` 无过期 | 新增；K0-4 对 Ready 超过 N 天的操作告警并设撤销时限（S-9） | 运维手册 |
+| `TimelockController` 无过期 | 新增；就绪后任何人可执行，撤销只在等待期可靠：操作要么就绪即执行，要么在等待期撤销；K0-4 在排队、临近就绪与就绪未执行时公开告警（S-9、D5） | 运维手册 |
+| 提款与 XP 领取没有暂停制动 | 新增（B3、D6；ADR-0037 R-6） | 条款与 LP 材料 |
+| 事故期间先到先得 | 新增（ADR-0037 R-7） | LP 材料 |
+| Safe 丢失则治理永久冻结 | 新增；只能清退（ADR-0037 R-8） | 条款与 LP 材料 |
+| 智能合约钱包可能无法自行作废 | 新增（ADR-0037 R-9） | 条款 |
 | 发行方没收类故障时作废无效 | 新增（P5c） | 条款与 LP 材料 |
 
 ## 10. 认证、部署与核验
@@ -215,18 +222,19 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
   固定账本（v4 为 811,982）、Bank 存储包络、token 交叉检查、组合四口径、绑定（O3）、M4 中 GameHub 后置算术；矩阵加入新状态病例（每玩家上限、停用游戏）；
   模块界驱动加入逐轮单调性检查（M7，v4 复核 R-1 / 勘误 E4）；证书复核方确认 A-1 的 (a) 读法（FZ-7）；主口径余量不低于 50,000。
   `coreRuntimes` 与 `moduleCodeHashes` 重新生成并加入 `TimelockController`；域文件在新证书被接受前为 `PENDING_INDEPENDENT_REVIEW`。
-- **部署与接管**：部署者完成接线后对四类合约 `transferGovernance(timelock)`；Safe 以 `scheduleBatch` 排队 `acceptGovernance()`，72 小时后任何人执行；
-  这 72 小时内部署者不发其他交易，演练模拟时间推进；上线解除暂停同样排一笔 72 小时的操作，计入测试网与主网时间表。
+- **部署与接管**（D1，ADR-0037 §9）：时间锁最先部署，其余合约构造时治理方就是时间锁，部署者从头到尾没有权限；接线批次先在 fork 上用实际地址回放，
+  再由 Safe 排队并公开 calldata，72 小时后任何人执行，执行后池未激活、LP 可以入金；激活另排一笔 72 小时的操作，计入测试网与主网时间表。
 - **发布核验新增检查**（`verify_governance.py`、`V16Snapshot`，复核 §3.3.3）：
-  1. TimelockController 的 runtime 钉进 `coreRuntimes`，`getMinDelay() == 259200`，`MinDelayChange` 只有构造那一条；
+  1. `GovernanceTimelock` 的 runtime 钉进 `coreRuntimes`，`getMinDelay() == 259200`（合约下限同值），`MinDelayChange` 只有构造那一条；
   2. 回放 `RoleGranted` / `RoleRevoked`：PROPOSER = {Safe}，CANCELLER = {Safe, guardian}，EXECUTOR = {0}，DEFAULT_ADMIN = {timelock 自身}，部署者无任何角色；
   3. 回放 `CallScheduled` / `CallExecuted` / `Cancelled`：没有未结排队操作，或只剩发布声明列出的操作；
   4. 每个 Governable 目标 `governance == timelock`、`pendingGovernance == 0`；
   5. guardian ≠ 0、≠ Safe，是独立多签（核对代码哈希与所有者摘要），等于时间锁的取消者；
-  6. 第二角色的地址等于发布值；
-  7. 回放 `GameDisabled` 等新事件，等于发布值；
+  6. `sentinel == Safe`（PoolRegistry、GameHub、每个 Bank）；
+  7. 回放 `GovernanceTransferStarted`/`GovernanceTransferred`、`SentinelSet`、`GuardianSet`、`GameDisabled`、`VoidWindowOpened` 等事件，等于发布值；每个模块只登记在一个 `gameId` 下；
   8. 发布摘要覆盖以上全部值；
-  9. K0-4 监听上述全部事件。
+  9. K0-4 监听上述全部事件；
+  10. 上线前状态为“池未激活、Bank 未暂停”（`V16Snapshot.sol:109, 127` 随 A11 修改）。
 
 ## 11. 工作包 C：文档
 

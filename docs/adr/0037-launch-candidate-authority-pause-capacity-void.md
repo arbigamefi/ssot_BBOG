@@ -1,11 +1,12 @@
 # ADR-0037: Launch-candidate authority, pause, capacity and void design
 
-- **Status:** Proposed, 2026-10-11, revision 2. B0 design freeze for the [launch candidate](../release/launch-candidate.zh-CN.md) (§5 step 1, §7).
-  The independent review of revision 1 (`ee9216d7f`; `dist/independent-review-b0-2026-10-11/`, MANIFEST `71de1eb5…`)
-  returned ACCEPT_WITH_CONDITIONS with no blocking finding. Revision 2 answers its seven required changes (B0-M1–M7) and
-  adopts six of its seven suggestions; the seventh (S5) is decision D7. Work package B starts after the Owner answers §11
-  and the external auditor's pre-review. Until then the current code and the [constitution](../constitution/SSOT.v1.6.md)
-  stay authoritative.
+- **Status:** Accepted by the Owner, 2026-10-11 (decisions D1–D7 in §11); revision 3. B0 design freeze for the
+  [launch candidate](../release/launch-candidate.zh-CN.md) (§5 step 1, §7). Independent review: revision 1 (`ee9216d7f`)
+  ACCEPT_WITH_CONDITIONS with no blocking finding (`dist/independent-review-b0-2026-10-11/`, MANIFEST `71de1eb5…`);
+  revision 2 (`73bf6747d`) closed all seven required changes and drew one more, R2-M1, answered here (`r2/`, MANIFEST
+  `6c9ffcee…`). The external auditor's pre-review follows, and work package B takes its comments into account before
+  its first commit. Until B lands, the current code and the [constitution](../constitution/SSOT.v1.6.md) stay
+  authoritative.
 - **Scope:** B1 (admission timelock and the risk-reducing role), B2 (per-player capacity), B3 (pause semantics),
   B4 (dead tree-adapter branch), B5 (void of unbookable results) and B6 (per-game disable). B7–B9 change no interface
   this document defines.
@@ -40,10 +41,12 @@
 | guardian | independent multisig, signers disjoint from the Safe, never an EOA | T canceller; `Bank.guardian` (pause); opening a void window for its Bank's pool (§7.3) | T role at construction; `Bank.setGuardian` through T |
 | anyone | — | executing ready T operations; settlement, refund and in-window void; `activateEdgeChange`; player-payable claims | — |
 
-`GovernanceTimelock` (`src/access/GovernanceTimelock.sol`) extends OpenZeppelin `TimelockController` 5.5 only in its
-constructor: `constructor(uint256 minDelay, address[] memory proposers, address[] memory cancellers, address[] memory executors)`
-reverts `InvalidTimelockConfig()` when a proposer or canceller is zero or a canceller is also a proposer, calls the parent
-with `admin = address(0)` and grants `CANCELLER_ROLE` to each canceller. The parent already grants proposers both roles
+`GovernanceTimelock` (`src/access/GovernanceTimelock.sol`) extends OpenZeppelin `TimelockController` 5.5 in two places.
+Its constructor `constructor(uint256 minDelay, address[] memory proposers, address[] memory cancellers, address[] memory executors)`
+reverts `InvalidTimelockConfig()` when `minDelay < MIN_DELAY` (259,200), a proposer or canceller is zero, or a canceller
+is also a proposer; it calls the parent with `admin = address(0)` and grants `CANCELLER_ROLE` to each canceller.
+`updateDelay` reverts `DelayBelowMinimum(newDelay)` below `MIN_DELAY` and otherwise calls the parent, so the delay can be
+raised but never set below 72 hours (D7). The parent already grants proposers both roles
 and grants `DEFAULT_ADMIN_ROLE` only to T itself, so role changes and `updateDelay` are T operations. Release values:
 `minDelay = 259,200`, proposers `[Safe]`, cancellers `[guardian]`, executors `[address(0)]`. No temporary admin and no
 zero-delay bootstrap exist (review P6, R1).
@@ -82,7 +85,7 @@ cannot admit, loosen a parameter or transfer funds. Opening a void window does c
 | T | `schedule`, `scheduleBatch` | Safe | |
 | T | `cancel` | Safe or guardian | reliable only while an operation is waiting: once it is ready, anyone can execute it first (D5) |
 | T | `execute`, `executeBatch` | anyone after the delay | |
-| T | `updateDelay`, `grantRole`, `revokeRole` | T | a new delay applies only to operations scheduled afterwards (P6, D7) |
+| T | `updateDelay`, `grantRole`, `revokeRole` | T | `updateDelay` never below 259,200 (D7); a new delay applies only to operations scheduled afterwards (P6) |
 | T | `renounceRole` | the holder, immediately and irreversibly | the Safe renouncing `PROPOSER_ROLE` freezes governance (R-8) |
 
 Structural entry points keep a fixed caller and no administrator: Router `openPosition` (registered and allowed hub),
@@ -103,8 +106,8 @@ on-chain bytecode scan.
 ## 4. Pause (B3)
 
 A pause blocks only new positions (`holdBet`, `placeBet`) and new LP deposits. It does not block settlement, timeout
-refunds, voids, `claimPlayerPayable`, the permissionless XP unlocks, XP and protocol-fee claims (decision D6), or LP
-withdrawals.
+refunds, voids, `claimPlayerPayable`, the permissionless XP unlocks, XP and protocol-fee claims (Owner decision D6 (a)),
+or LP withdrawals.
 
 - `Bank.lpAccounting` no longer looks at the pause. It returns `Busy`, then `InvalidAccounting` or `Unavailable`, then
   `UnbookedResult`, otherwise `Ready`. `LPStatus` becomes `Ready, Busy, UnbookedResult, InvalidAccounting, Unavailable,
@@ -114,8 +117,9 @@ withdrawals.
   reverts `DepositsPaused()` while it is true, before the existing status check. `withdrawDeposit` and `depositState`
   are otherwise unchanged; the unbooked-result fence, accounting validity, reentrancy guard, 24-hour cooldown and `L - K`
   still apply.
-- With D6 (a), `claimXPAccrued` and `claimProtocolFees` drop the pause check and keep `_checkOptionalOutflowDomain`;
-  protocol-fee claims also stay behind T.
+- Under D6 (a), `claimXPAccrued` (`Bank.sol:362`) and `claimProtocolFees` (`Bank.sol:220`) drop the pause check and keep
+  `_checkOptionalOutflowDomain`; protocol-fee claims also stay behind T. The comments at `IBank.sol:136` and
+  `Bank.sol:210` change with them.
 - `RiskInPausedSet` gains the caller: `RiskInPausedSet(bool paused, address indexed caller)`. Its topic changes, so K0-4
   and the indexer follow.
 - Bank NatSpec states the rule above, closing F-04 as a behavior change.
@@ -136,6 +140,8 @@ withdrawals.
   is non-zero while the player holds a position, so a first settlement rewrites it instead of creating it. The review
   measured gross callback gas of −15,937 for a first-time player and +1,163 for a repeat player against the current code;
   a separate counter would have cost +5,701 (review B0-S1).
+- A new player's first `holdBet` creates the slot (about 20,000 gas), which the player pays in `placeBet`; certificate
+  v5 does not count it on the callback path.
 - K0-4 polls `openHolds()`, because a reverted bet emits no log, and alerts at 96 of 128.
 - Residual R-4: 64 addresses fill a Bank.
 
@@ -201,17 +207,21 @@ positions, and a transaction is capped at 16,777,216 gas. The decision is theref
   can complete the set.
 - What it does not guarantee (review B0-M2, V10, V11): the opener decides whether and when to open after the seeds are
   public, so a window over a single affected bet is a per-bet decision; during a transient failure the executor's order
-  decides which bets are voided before the failure ends; and a Bank whose Vault is frozen keeps accepting bets that then
+  decides which bets are voided before the failure ends, whether they became eligible through a window or after 7 days
+  (review N1); and a Bank whose Vault is frozen keeps accepting bets that then
   cannot be booked.
 - Operating rules (runbook and K0-4):
-  1. An issuer freeze or pause of the asset is transient. While asset transfers fail, the sentinel deactivates the pool
-     and no window is opened; bets settle normally once the asset recovers.
+  1. An issuer freeze or pause of the asset is treated as transient for at most `PUBLIC_VOID_DELAY`. While asset
+     transfers fail, the sentinel deactivates the pool or the guardian pauses the Bank, and no window is opened; bets
+     settle normally if the asset recovers in time. If it is still unavailable when the first affected bets reach 7 days,
+     anyone can void them, and rule 3 applies.
   2. A window is opened only for a failure that persists while the asset is operational, after the pool is deactivated
      or the affected game disabled.
-  3. Once a window is open, the operator's keeper attempts every eligible bet of the cohort in `vrfRequestedAt` order in
-     consecutive blocks and publishes the results.
-  4. K0-4 alerts on every `VoidWindowOpened`; when an eligible cohort bet stays unattempted N blocks after opening; when a
-     cohort bet settles after another bet of the same cohort was voided; and on any unbooked result older than one hour.
+  3. Whenever bets become eligible, through a window or the 7-day limit, the operator's keeper attempts every eligible
+     bet in `vrfRequestedAt` order in consecutive blocks and publishes the results.
+  4. K0-4 alerts on every `VoidWindowOpened`; on any unbooked result older than one hour; some hours before an unbooked
+     result reaches 7 days; when an eligible bet stays unattempted N blocks after it became eligible; and when an eligible
+     bet settles after another bet that became eligible on the same path was voided.
 - On-chain hardening considered and not adopted (D2): a window that stays open until the Bank's count returns to zero
   needs a write on the callback path to track zero crossings; requiring a paused Bank before opening is cheap but forces
   a 72-hour unpause even for one broken game; both also compete for GameHub's size budget (§10).
@@ -250,7 +260,7 @@ differential gates and `test_lossWithZeroReleasedCapitalIsRejected` unchanged.
 
 ## 9. Deployment model (decision D1)
 
-Recommended, and supported by the review (R2): every governed contract is constructed with `governance = T`, so the
+Decided (D1) and supported by the review (R2): every governed contract is constructed with `governance = T`, so the
 deployer holds no power at any time.
 
 1. Deploy T first, then the contracts with `governance = T`.
@@ -265,7 +275,7 @@ deployer holds no power at any time.
 
 A batch that executes but is wrong consumes the one-shot setters and means a redeploy.
 
-Alternative (plan §10 as written): the deployer wires the system, transfers governance and the Safe queues the four
+Not used (plan §10 before this decision): the deployer wires the system, transfers governance and the Safe queues the four
 `acceptGovernance` calls. The deployer key then remains governance for at least 72 hours and the release must prove from
 events that it sent nothing in that window.
 
@@ -273,7 +283,7 @@ events that it sent nothing in that window.
 
 | Name | Value | Where |
 | --- | --- | --- |
-| `minDelay` | 259,200 s | T constructor; release check `getMinDelay()` and a single `MinDelayChange` |
+| `minDelay` | 259,200 s, also the contract floor `MIN_DELAY` (D7) | T constructor; release check `getMinDelay()` and a single `MinDelayChange` |
 | `VOID_DELAY` | 24 hours from `vrfRequestedAt` | GameHub constant |
 | `PUBLIC_VOID_DELAY` | 7 days from `vrfRequestedAt` | GameHub constant |
 | `VOID_SETTLEMENT_GAS` (S) | 10,000,000 (D3; plan range 5M–10M) | GameHub constant; above 4× the v4 consumer callback limit of 2,447,746 |
@@ -284,9 +294,11 @@ events that it sent nothing in that window.
 
 **Size budget.** GameHub with all B1, B5 and B6 code stays within 23,552 bytes (`ContractSizesTest`: EIP-170 minus
 1,024), measured on the first work-package-B commit and every later one. Today it is 20,046; the review's lean prototype
-reached 22,470. If it does not fit, cut in this order: remove `nextPositionIdHint`, `referrerOf` and `bindReferrer`
-(clients call the Router and `ReferralRegistry.bind` directly); move `quoteVRFFee` to a stateless lens over public
-getters; consolidate custom errors. A `DELEGATECALL` library is not an option (S-6).
+reached 22,470. Work package B removes three forwarders that duplicate other calls: `nextPositionIdHint` (Router
+`nextPositionId`), `referrerOf` and `bindReferrer` (`ReferralRegistry.referrerOf` and `bind`, which also requires the
+player as caller and emits the same event). That saves 737 bytes (prototype 21,733); work package D moves the SDK and web
+callers. If GameHub still does not fit, move `quoteVRFFee` to a stateless lens over public getters, together with B6's
+"rejects quotes" acceptance, then consolidate custom errors. A `DELEGATECALL` library is not an option (S-6).
 
 **Release verification** (plan §10, A11) additionally checks: `sentinel == Safe` on PoolRegistry, GameHub and every Bank;
 the guardian is an independent multisig (code hash and owner-set digest) and equals both `Bank.guardian` and the only
@@ -307,7 +319,8 @@ from 1 to 0 with the first turnover write, one going from 2 to 1, and a game dis
 - B1: F-03 PoC rejected; every `true`-direction admission waits 72 h; the sentinel's `false` directions are immediate;
   a mature NFT exits inside the window even while paused (P1); a rogue guardian cannot freeze LP or player funds (P2,
   P3); no operation is queued at handover (P6); `registerPool` and `setHubRegistered` refuse a target under another or a
-  pending governance; ready operations are executable by anyone (R7, documenting D5).
+  pending governance; ready operations are executable by anyone (R7, documenting D5); `updateDelay` below 259,200 and a
+  constructor with a shorter delay revert (D7).
 - B2: the third open hold of one player is rejected at Bank level, also through a second hub; settle, refund and void
   each release one.
 - B3: deposits revert while paused; a withdrawal succeeds while paused and still respects the fence, cooldown and
@@ -323,29 +336,25 @@ from 1 to 0 with the first turnover write, one going from 2 to 1, and a game dis
 - B6: a disabled game rejects bets and quotes; its accepted bets still settle, refund and void.
 - Size: `ContractSizesTest` covers `GovernanceTimelock` and the new limits.
 
-## 11. Decisions for the Owner
+## 11. Owner decisions (2026-10-11)
 
-- **D1 deployment model** (§9): construct with `governance = T` (recommended; the review agrees), or deployer handover as
-  in plan §10.
-- **D2 "all eligible bets, no selection"** (§7.3): a per-Bank window opened by the Safe or guardian, permissionless
-  per-bet execution, the operating rules and K0-4 alerts of §7.3, no further on-chain hardening (recommended; the
-  review agrees under these conditions).
-- **D3 settlement-attempt floor:** 10,000,000 gas with the §7.2 formula (recommended; the review agrees).
-- **D4 admission review** (§3): hub, module, Bank, Vault and asset checked against the certified artifacts at admission
-  review and release verification, without an on-chain bytecode scan (recommended; the review agrees with this scope).
-- **D5 stale timelock operations:** a ready operation can be executed by anyone, so a cancellation deadline after it is
-  ready protects nothing (review B0-M7). Recommended: every operation is either executed promptly once ready or cancelled
-  while still waiting, a deferred change is scheduled with a longer delay, and K0-4 alerts publicly when an operation is
-  scheduled, some hours before it becomes ready and while it is ready but unexecuted. Alternative: a 14-day grace period
-  in `GovernanceTimelock`, where an expired operation must read as `Unset`, never `Done` (which would satisfy a
-  successor's predecessor check).
-- **D6 pause and XP or protocol-fee claims** (review B0-M1): (a) recommended, matching "pause blocks only new bets and
-  deposits": both claims keep their outflow-domain check but drop the pause check, so a pause freezes no player or
-  referrer funds; (b) keep the pause check on XP and disclose that a rogue guardian or a compromised Safe can freeze XP
-  indefinitely, which only a redeploy resolves.
-- **D7 timelock delay floor** (review B0-S5): (a) recommended: no override; disclose that the delay itself can be
-  changed by a 72-hour operation, which LPs still see 72 hours ahead; (b) override `updateDelay` to require at least
-  259,200 (more custom code in the audit scope).
+The Owner took every recommendation; D7 was put to the Owner again after the second review (R2-S1) and changed to (b).
+
+- **D1 deployment model:** every governed contract is constructed with `governance = T` (§9). The deployer handover of
+  plan §10 is not used.
+- **D2 "all eligible bets, no selection":** a per-Bank window opened by T, the Safe as sentinel or the guardian;
+  permissionless per-bet execution; the operating rules and K0-4 alerts of §7.3; no further on-chain hardening.
+- **D3 settlement-attempt floor:** 10,000,000 gas with the §7.2 formula.
+- **D4 admission review:** hub, module, Bank, Vault and asset checked against the certified artifacts at admission
+  review and release verification (§3); no on-chain bytecode scan.
+- **D5 stale timelock operations:** every operation is either executed promptly once ready or cancelled while still
+  waiting; a deferred change is scheduled with a longer delay; K0-4 alerts publicly when an operation is scheduled, some
+  hours before it becomes ready and while it is ready but unexecuted. `GovernanceTimelock` has no grace period.
+- **D6 pause and claims:** (a). XP and protocol-fee claims keep their outflow-domain check but not the pause check, so a
+  pause freezes no player or referrer funds.
+- **D7 delay floor:** (b). `GovernanceTimelock` refuses a delay below 259,200 at construction and in `updateDelay`.
+  Without the floor, one executed delay reduction would let the Safe schedule and execute any later operation in a single
+  transaction, before the guardian could cancel it.
 
 ## 12. Residuals and disclosures
 
@@ -357,9 +366,11 @@ from 1 to 0 with the first turnover write, one going from 2 to 1, and a game dis
 - R-4: per-player capacity is Sybil-able (§5).
 - R-5: a void refunds only the stake; the VRF native fee is not refunded. Openers (T, the Safe as sentinel, the guardian)
   choose when to open after the seeds are public, and during a transient failure the execution order decides which bets
-  are voided first; §7.3 sets the operating rules.
-- R-6: no emergency brake on LP withdrawals: after B3 a defect in the withdrawal path or the tree arithmetic cannot be
-  stopped by a pause. The LP fence still closes on unbooked results and invalid accounting.
+  are voided first, whether they became eligible through a window or after 7 days; §7.3 sets the operating rules.
+- R-6: no emergency brake on LP withdrawals or XP claims: after B3 and D6 a defect in the withdrawal path, the tree
+  arithmetic or the XP accounting cannot be stopped by a pause. The LP fence still closes on unbooked results and invalid
+  accounting, and the outflow domain can hold an XP claim back while free capital is short, which is not a freeze
+  (review D2).
 - R-7: in an incident exits are first come, first served. An early LP withdraws its full value while free capital lasts
   and the remaining LPs carry every open position; when a prefix shrinks, the H1 rule spreads a loss over the whole pool,
   including later deposits. This is an existing ADR-0034 property that a pause no longer stops.
@@ -372,4 +383,4 @@ from 1 to 0 with the first turnover write, one going from 2 to 1, and a game dis
   settlement attempt fails in the void transaction, at least 24 hours after the request, the stake is refunded as a
   player payable"; anyone may push that payable to the player, also while paused. Terms and LP materials also state the
   timelock and the exit formula, that pause never blocks withdrawals, the per-player cap, the sentinel and guardian
-  powers, who can open a void window, the D1 launch order (LP deposits before activation) and R-1 to R-9.
+  powers, who can open a void window, that the 72-hour delay can be raised but never lowered below 72 hours, the D1 launch order (LP deposits before activation) and R-1 to R-9.
