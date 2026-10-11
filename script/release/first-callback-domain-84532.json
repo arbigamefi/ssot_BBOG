@@ -22,20 +22,20 @@
     "withdrawalBufferBps": 1000
   },
   "moduleCodeHashes": {
-    "moduleDice": "0x7e19d5b0eba1d2e85983db7bf1b15e75c8a1f3baf36ab5635d5294ddf427faaf",
-    "moduleCoinToss": "0x9f6989f2d429e0c2f86662ffbd06ec8ace44939a4142300a8a9f9db5139709e9",
-    "moduleRoulette": "0x74e06be19232986446857d14b9e5eeaafe49d07d388657ceb725919237e31ba8",
-    "moduleKeno": "0x281a94c9192f74cb16e2ed951e9cbf82bd14bf1291917844ab0500ea89a14537",
-    "modulePlinko": "0x8ec00972b5504a316aec25126462f253c563b7b3d1dc9d022834b2f818d03389",
-    "moduleSicBo": "0x6ff6b9907255fb3192bc6c4c65c5ad4225e10f77eca020322d39881cbce34aae",
-    "moduleSlots": "0x4176bf0a1a06e77cc3831c31c7424191006d65e93ed7926b99aa38f198528c6b",
-    "moduleBaccarat": "0xb2dcbb9fb024560ade4ae90cf3350f4db0751e8fe10999c6f14c83393aecf3f9"
+    "moduleDice": "0x14cae2f211a4393d47a1ef6217ba8fc99e20f482b9ba36daa98eb3d3838e85d1",
+    "moduleCoinToss": "0x22d9f0a3c00d20e20b4902f86bac605fcd117876378da3bde038ae86d85d6b53",
+    "moduleRoulette": "0xb57616ebcb68fd8b2ed7b9be5f8e0bec92027a72deb716695d8b2a6cd07a428b",
+    "moduleKeno": "0x1a6d11cc755a0e9efb506ce5eca14fdafef709321759642001f8d860362c46d8",
+    "modulePlinko": "0x755fca370c11c07609f62d3b261f7c7c1b5317e27f9e763025bc142ee476a114",
+    "moduleSicBo": "0x7358cbad9adcaf4962f47ea0d481953dabb71036e14072cc9d3418387aff55c2",
+    "moduleSlots": "0xaeac1a6329397120d99629d659ad8f44910e8055f871d7f71c760c32145a2319",
+    "moduleBaccarat": "0x06b8941f39ce25b6fdc92114fd6278ffc6461e1a32a53a5a932762d943f88253"
   },
   "coreRuntimes": {
     "VRFHub": {
       "artifact": "VRFHub.sol:VRFHub",
       "runtimeBytes": 6439,
-      "keccakWithImmutablesZeroed": "0x90c74dd5d28ae7c6ee7e30401594e6e95c53eab4585c15049101fb1365cf7dc4",
+      "keccakWithImmutablesZeroed": "0x7d0d3bd2627b300ee730b0fd9847c7a30cd2abd9a5bf25d9e37a3fd7bac28fec",
       "immutables": [
         {
           "value": "wrapperLink",
@@ -67,7 +67,7 @@
     "GameHub": {
       "artifact": "GameHub.sol:GameHub",
       "runtimeBytes": 22299,
-      "keccakWithImmutablesZeroed": "0x7f60e4efc13515167d1784a203241df5e2de2fc831813779f982c5bf4c9d6cde",
+      "keccakWithImmutablesZeroed": "0x76d72535f8e2620e9c9a5583f51e79f59890c5cdb8c6a6abf19d0fd409da6aee",
       "immutables": [
         {
           "value": "settlementRouter",
@@ -121,7 +121,7 @@
     "SettlementRouter": {
       "artifact": "SettlementRouter.sol:SettlementRouter",
       "runtimeBytes": 4816,
-      "keccakWithImmutablesZeroed": "0xa1bc96866126d3a9beea71b81ed8d923366e7bb761f86be9b22abce5919e76e8",
+      "keccakWithImmutablesZeroed": "0xb207dd71dcdc5913c781b4ae67b149ca512b9bc994a2c77ad7e3e76b8ca39357",
       "immutables": [
         {
           "value": "poolRegistry",
@@ -135,7 +135,7 @@
     "PoolRegistry": {
       "artifact": "PoolRegistry.sol:PoolRegistry",
       "runtimeBytes": 3834,
-      "keccakWithImmutablesZeroed": "0xa31b21499c89b9d31a51788db2538a17e046e4664888eb7f80e65bb0a0cbf7bf",
+      "keccakWithImmutablesZeroed": "0x87742480c1cf51262327e3bb76dac407307b55776671662901f4bb50d95af33c",
       "immutables": []
     },
     "ReferralRegistry": {
@@ -147,13 +147,13 @@
     "DefaultReferralEngine": {
       "artifact": "DefaultReferralEngine.sol:DefaultReferralEngine",
       "runtimeBytes": 2148,
-      "keccakWithImmutablesZeroed": "0xeab61b4bbbb39cebd474d18e2d2c629a0145ba8440319295ef3f86c603535fb4",
+      "keccakWithImmutablesZeroed": "0xf0505760f8e870c7f22d8928d17d20b338671e5be7a7620b3b755b4ef0ce6eb7",
       "immutables": []
     },
     "Bank": {
       "artifact": "Bank.sol:Bank",
       "runtimeBytes": 16693,
-      "keccakWithImmutablesZeroed": "0xf2c548fa2254d4ff5bb4af1a4911b9da7153e808a39539c389d5be7c2ff357d4",
+      "keccakWithImmutablesZeroed": "0x340d0df1c4e7db6861feec0ebb4e9f54e61852d9b6e3eeafc3edf1baf761e93d",
       "immutables": [
         {
           "value": "poolAsset",

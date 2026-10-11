@@ -134,11 +134,11 @@ library SSOTTypes {
         BetState state;
     }
 
-    /// @notice Casino terminal settlement/refund receipt.
+    /// @notice Casino terminal settlement, refund or void receipt.
     /// @dev Bet stores lifecycle inputs; this stores final financial outputs so
     ///      frontends and keepers can read terminal results without scanning logs.
     struct BetTerminal {
-        BetState state; // None until terminal; Settled or Refunded once written.
+        BetState state; // None until terminal; Settled, Refunded or Voided once written.
         uint256 payoutGross;
         uint256 payoutNet;
         uint256 feeOnPayout;

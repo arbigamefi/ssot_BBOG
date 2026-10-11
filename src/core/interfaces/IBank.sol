@@ -60,9 +60,9 @@ interface IBank is ILiquidityVaultBank {
     function totalPayoutGross() external view returns (uint256);
     /// @notice Lifetime player payout owed at settlement after fee-on-payout, including unpaid player payables.
     function totalPayoutNet() external view returns (uint256);
-    /// @notice Lifetime refunded stake across both terminal paths.
-    /// @dev Includes settle-path partial refunds and refundBet full refunds. Do not reconcile directly against
-    ///      totalBetsRefunded, which counts only refundBet calls.
+    /// @notice Lifetime refunded stake of settlements and timeout refunds.
+    /// @dev Includes settle-path partial refunds and refundBet full refunds; voided stakes count in totalVoided.
+    ///      Do not reconcile directly against totalBetsRefunded, which counts only refundBet calls.
     function totalRefunded() external view returns (uint256);
     /// @notice Lifetime fee retained from gross winning payouts before net player payout.
     function totalFeeOnPayout() external view returns (uint256);
@@ -76,6 +76,7 @@ interface IBank is ILiquidityVaultBank {
     /// @dev This is a count of refundBet calls only; settle-path partial refunds are reflected in totalRefunded
     ///      and netted out of totalTurnover.
     function totalBetsRefunded() external view returns (uint256);
+    /// @notice Lifetime voids through voidBet; openHolds() subtracts them with settlements and refunds.
     function totalBetsVoided() external view returns (uint256);
     /// @notice Stakes refunded as player payables by voids (ADR-0037 §7.4).
     function totalVoided() external view returns (uint256);
