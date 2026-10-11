@@ -101,6 +101,7 @@ class ReleaseScriptTests(unittest.TestCase):
         self.repo = self.base / 'repo'
         (self.repo / 'script/release').mkdir(parents=True)
         shutil.copy(SCRIPT, self.repo / 'script/release/release_v16.sh')
+        shutil.copy(ROOT / 'script/release/operator-functions.sh', self.repo / 'script/release/operator-functions.sh')
         (self.repo / '.gitignore').write_text('/deployments/\n/dist/\n')
         (self.repo / 'deployments').mkdir()
         (self.repo / 'deployments/latest-v16.json').write_text('{"chainId": 84532}')

@@ -100,13 +100,8 @@ fork:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --match-path "test/fork/*" -vvv
 
-deploy: deploy-v16
-
-deploy-v16:
-	@$(MAKE) check-deps
-	# Retain broadcast traces; a failed broadcast must be inspected and resumed, not erased.
-	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV16.s.sol:DeployV16 --rpc-url "$$RPC_URL" --account "$${DEPLOY_ACCOUNT:?Set the approved Foundry keystore account}" --broadcast --slow -vvv
-	$(PYTHON) script/tools/gen_verify_helpers.py deployments/latest-v16.json
+# A deployment is broadcast only through the gated path (docs/deploy/v16-release.md): script/release/run_preflight.sh,
+# prepare_deploy_copy.sh, then the Owner's broadcast_v16.sh, each through script/tools/with-ops-rpc.sh.
 
 verify: verify-v16
 verify-helpers: verify-helpers-v16
@@ -130,7 +125,7 @@ verify-helpers-v16:
 
 
 # The only supported deployment/release line.
-.PHONY: deploy-v16 deploy-dryrun verify-v16 verify-helpers-v16 release-v16 release-governance-check release-domain-check timelock-batches-v16
+.PHONY: deploy-dryrun verify-v16 verify-helpers-v16 release-v16 release-governance-check release-domain-check timelock-batches-v16
 
 deploy-dryrun:
 	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV16.s.sol:DeployV16 --rpc-url "$$RPC_URL" -vvv

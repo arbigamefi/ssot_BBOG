@@ -40,7 +40,7 @@ GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest-
 CHECKPOINT_LATEST_NAME="${CHECKPOINT_LATEST_NAME:-governance-checkpoint-latest-v16.json}"
 
 [[ -f "$RELEASE_PATH" ]] || { echo "missing $RELEASE_PATH (run: make release-v16)"; exit 1; }
-[[ -f "$SNAPSHOT_PATH" ]] || { echo "missing $SNAPSHOT_PATH (run: make deploy)"; exit 1; }
+[[ -f "$SNAPSHOT_PATH" ]] || { echo "missing $SNAPSHOT_PATH (the deployment snapshot)"; exit 1; }
 [[ -f "$NOTES_PATH" ]] || { echo "missing $NOTES_PATH (run: make release-notes)"; exit 1; }
 [[ -f "$GOVERNANCE_CHECKPOINT_PATH" ]] || { echo "missing $GOVERNANCE_CHECKPOINT_PATH (run: make release-v16)"; exit 1; }
 

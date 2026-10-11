@@ -43,6 +43,7 @@ lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 
 root=$(git rev-parse --show-toplevel 2>/dev/null) || fail "run inside the repository"
 cd "$root" || fail "cannot enter $root"
+. script/release/operator-functions.sh || fail "cannot load script/release/operator-functions.sh"
 clean() { [[ -z "$(git status --porcelain --untracked-files=normal)" ]]; }
 clean || fail "the working tree is not clean; release only committed source"
 head_sha=$(git rev-parse HEAD)
@@ -89,23 +90,8 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 # Step logs are files, which the wrapper cannot redact: replace the URL and every long piece of it (the key).
-redact='
-import os, sys, urllib.parse
-url = os.environ["RELEASE_REDACT_URL"]
-parts = urllib.parse.urlsplit(url)
-pieces = parts.path.split("/") + [value for _, value in urllib.parse.parse_qsl(parts.query)]
-pieces += [parts.username or "", parts.password or ""]
-secrets = sorted({url, *(piece for piece in pieces if len(piece) >= 12)}, key=len, reverse=True)
-data = sys.stdin.buffer.read()
-for secret in secrets:
-    data = data.replace(secret.encode(), b"<rpc-url>" if secret == url else b"<rpc-key>")
-sys.stdout.buffer.write(data)'
-
 logged() { # log, command...: run the command with its redacted output in the log; return its status
-  local log=$1
-  shift
-  "$@" < /dev/null 2>&1 | RELEASE_REDACT_URL="$RPC_URL" python3 -I -c "$redact" > "$log"
-  return "${PIPESTATUS[0]}"
+  redacted "$1" "$RPC_URL" "${@:2}"
 }
 
 # Transport failures only: verify_governance.py's own retries exhausted on a transient class, or a dropped connection
@@ -155,7 +141,7 @@ sys.exit(1)' "$1"
 }
 
 sign_once() {
-  local log="$log_dir/signing.log" check="$log_dir/signing-existing-record.log" k got status password reason sha
+  local log="$log_dir/signing.log" check="$log_dir/signing-existing-record.log" status reason sha
   if [[ -e "$RELEASE_PATH" ]]; then
     if logged "$check" env FOUNDRY_PROFILE="$profile" \
       forge script script/release/VerifyReleaseV16.s.sol:VerifyReleaseV16; then
@@ -170,30 +156,9 @@ sign_once() {
   # The record signs the checkpoint this run verified; a checkpoint left by an earlier unsigned attempt is replaced.
   sha=$(checkpoint_sha "$governance_log") || { echo "signing: the governance check reported no checkpoint"; return 1; }
   cp "$log_dir/governance-checkpoint.json" "$GOVERNANCE_CHECKPOINT_PATH" || return 1
-  if ! { : < /dev/tty; } 2>/dev/null; then
-    echo "signing: no terminal to read the keystore password from; nothing was signed"
-    return 1
-  fi
   password_dir=$(mktemp -d "${TMPDIR:-/tmp}/release-v16.XXXXXX") || return 1 # created 0700
-  for k in 1 2 3; do
-    printf 'Keystore password for %s (attempt %d of 3): ' "$wallet_name" "$k" > /dev/tty
-    IFS= read -rs password < /dev/tty || password=
-    printf '\n' > /dev/tty
-    (umask 077 && printf '%s' "$password" > "$password_dir/password")
-    password=
-    if got=$(cast wallet address "${wallet[@]}" --password-file "$password_dir/password" 2> "$password_dir/error"); then
-      [[ "$(lower "$got")" == "$(lower "$RELEASE_SIGNER")" ]] && break
-      echo "signing: the keystore holds $got, not RELEASE_SIGNER $RELEASE_SIGNER; nothing was signed"
-      return 1
-    fi
-    if ! grep -q 'Failed to decrypt keystore' "$password_dir/error"; then
-      echo "signing: cast cannot open the keystore; nothing was signed"
-      sed 's/^/  | /' "$password_dir/error"
-      return 1
-    fi
-    echo "signing: wrong password for $wallet_name (attempt $k of 3)"
-    ((k < 3)) || { echo "signing: nothing was signed"; return 1; }
-  done
+  unlock_keystore signing RELEASE_SIGNER "$RELEASE_SIGNER" "nothing was signed" "$password_dir" "$wallet_name" \
+    "${wallet[@]}" || return 1
   echo "signing: the keystore unlocks $RELEASE_SIGNER; signing once"
   logged "$log" env FOUNDRY_PROFILE="$profile" GOVERNANCE_CHECKPOINT_SHA256="0x$sha" \
     forge script script/release/ReleaseDigestV16.s.sol:ReleaseDigestV16 \
