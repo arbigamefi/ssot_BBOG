@@ -37,23 +37,46 @@ make_copy() { # repository root, commit, new directory
   no_env_above "$dir"
 }
 
-# Run a command with its output, stdout and stderr together, in a log with the RPC URL and every long piece of it
-# (the key) replaced. Logs are files, which script/tools/with-ops-rpc.sh cannot redact. Returns the command's status.
-redacted() { # log, url, command...
-  local log=$1 url=$2
-  shift 2
-  "$@" < /dev/null 2>&1 | OPERATOR_REDACT_URL="$url" python3 -I -c '
-import os, sys, urllib.parse
+# Python defining replace(data): the RPC URL in OPERATOR_REDACT_URL becomes <rpc-url>, and every piece of it at least
+# 12 characters long (the key, wherever a provider puts it) <rpc-key>.
+redaction_python() {
+  cat << 'PY'
+import os, urllib.parse
 url = os.environ["OPERATOR_REDACT_URL"]
 parts = urllib.parse.urlsplit(url)
 pieces = parts.path.split("/") + [value for _, value in urllib.parse.parse_qsl(parts.query)]
 pieces += [parts.username or "", parts.password or ""]
 secrets = sorted({url, *(piece for piece in pieces if len(piece) >= 12)} - {""}, key=len, reverse=True)
-data = sys.stdin.buffer.read()
-for secret in secrets:
-    data = data.replace(secret.encode(), b"<rpc-url>" if secret == url else b"<rpc-key>")
-sys.stdout.buffer.write(data)' > "$log"
+def replace(data):
+    for secret in secrets:
+        data = data.replace(secret.encode(), b"<rpc-url>" if secret == url else b"<rpc-key>")
+    return data
+PY
+}
+
+# Run a command with its output, stdout and stderr together, in a log with the RPC URL and its key replaced. Logs are
+# files, which script/tools/with-ops-rpc.sh cannot redact. Returns the command's status.
+redacted() { # log, url, command...
+  local log=$1 url=$2
+  shift 2
+  "$@" < /dev/null 2>&1 | OPERATOR_REDACT_URL="$url" python3 -I -c "$(redaction_python)
+import sys
+sys.stdout.buffer.write(replace(sys.stdin.buffer.read()))" > "$log"
   return "${PIPESTATUS[0]}"
+}
+
+# Replace the RPC URL and its key, as in a log, in every file under a directory. forge keeps a script's "sensitive
+# values", the RPC of each transaction, in cache/<script>/<chain>/ of the project for `forge script --resume`; a gated
+# broadcast is never resumed, so the key need not stay on disk.
+scrub_rpc() { # directory, url
+  [[ -d "$1" ]] || return 0
+  OPERATOR_REDACT_URL="$2" python3 -I -c "$(redaction_python)
+import pathlib, sys
+for path in pathlib.Path(sys.argv[1]).rglob('*'):
+    if path.is_file() and not path.is_symlink():
+        data = path.read_bytes()
+        if replace(data) != data:
+            path.write_bytes(replace(data))" "$1"
 }
 
 # Ask on the terminal for the password of a keystore until `cast wallet address` unlocks it to the expected address,

@@ -6,7 +6,7 @@ VERIFY_PROFILE ?= default
 FRONTEND_DIR ?= frontend
 PYTHON ?= python
 
-.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers release release-verify release-check release-notes release-frontend-manifest release-golden-vectors release-abis release-package audit-package frontend-check
+.PHONY: deps check-deps check test pr nightly fork verify verify-helpers release release-verify release-check release-notes release-frontend-manifest release-golden-vectors release-abis release-package audit-package frontend-check
 
 deps:
 	bash script/ci/install_deps.sh
@@ -100,8 +100,9 @@ fork:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --match-path "test/fork/*" -vvv
 
-# A deployment is broadcast only through the gated path (docs/deploy/v16-release.md): script/release/run_preflight.sh,
-# prepare_deploy_copy.sh, then the Owner's broadcast_v16.sh, each through script/tools/with-ops-rpc.sh.
+# A deployment is simulated and broadcast only through the gated path (docs/deploy/v16-release.md):
+# script/release/run_preflight.sh, prepare_deploy_copy.sh, then the Owner's broadcast_v16.sh, each through
+# script/tools/with-ops-rpc.sh where it reads the chain.
 
 verify: verify-v16
 verify-helpers: verify-helpers-v16
@@ -125,16 +126,14 @@ verify-helpers-v16:
 
 
 # The only supported deployment/release line.
-.PHONY: deploy-dryrun verify-v16 verify-helpers-v16 release-v16 release-governance-check release-domain-check timelock-batches-v16
+.PHONY: verify-v16 verify-helpers-v16 release-v16 release-governance-check release-domain-check timelock-batches-v16
 
-deploy-dryrun:
-	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV16.s.sol:DeployV16 --rpc-url "$$RPC_URL" -vvv
-
-# The Safe's two timelock operations (ADR-0037 §9): rehearsed on a fork of RPC_URL with the deployed addresses, then
-# written as Safe Transaction Builder files and one operations file to publish for the 72-hour review.
+# The Safe's two timelock operations (ADR-0037 §9): rehearsed on a fork with the deployed addresses, then written as
+# Safe Transaction Builder files and one operations file to publish for the 72-hour review. Run it in the deploy copy
+# (make -C <copy>) through script/tools/with-ops-rpc.sh, whose OPS_RPC_URL wins over RPC_URL.
 timelock-batches-v16:
-	@test -n "$$SNAPSHOT_PATH" -a -n "$$RPC_URL" || { echo "Set chain-specific SNAPSHOT_PATH and RPC_URL"; exit 1; }
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/PrepareTimelockBatchesV16.s.sol:PrepareTimelockBatchesV16 --rpc-url "$$RPC_URL" -vvv
+	@test -n "$$SNAPSHOT_PATH" -a -n "$${OPS_RPC_URL:-$$RPC_URL}" || { echo "Set chain-specific SNAPSHOT_PATH and RPC_URL, or run through script/tools/with-ops-rpc.sh"; exit 1; }
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/PrepareTimelockBatchesV16.s.sol:PrepareTimelockBatchesV16 --rpc-url "$${OPS_RPC_URL:-$$RPC_URL}" -vvv
 
 release-governance-check:
 	@test -n "$$SNAPSHOT_PATH" -a -n "$$RPC_URL" || { echo "Set chain-specific SNAPSHOT_PATH and RPC_URL"; exit 1; }

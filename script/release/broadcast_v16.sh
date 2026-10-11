@@ -19,8 +19,9 @@ set -uo pipefail
 #
 # Inputs: DEPLOY_ACCOUNT (keystore name in ~/.foundry/keystores) or DEPLOY_KEYSTORE (keystore file); the RPC as
 # OPS_RPC_URL (the wrapper) or RPC_URL. Writes into the preflight directory: simulation-<UTC>/ and its log for every
-# attempt, then broadcast/ (forge's broadcast files), broadcast.log and deployments/ (the snapshot DeployV16 wrote).
-# Logs have the RPC URL and its key replaced.
+# attempt, then broadcast/ (forge's broadcast files), broadcast.log and deployments/ (the snapshot DeployV16 wrote,
+# which also stays in the copy). Logs have the RPC URL and its key replaced, and so, on exit, does the RPC that forge
+# records for each transaction in the copy's cache/ (for --resume, never used: a broadcast is not resumed).
 
 fail() {
   printf 'broadcast: REFUSED: %s\n' "$*" >&2
@@ -72,6 +73,14 @@ plan=$pre/plan/DeployV16.s.sol/$chain/dry-run/run-latest.json
   fail "the deployer has a pending transaction"
 
 cd "$copy" || fail "cannot enter the deploy copy"
+password_dir=
+cleanup() {
+  [[ -z "$password_dir" ]] || rm -rf "$password_dir"
+  scrub_rpc "$copy/cache" "$RPC_URL" || echo "broadcast: the RPC key may remain in $copy/cache; remove it there" >&2
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 set -a
 . ./deploy-params.env || fail "cannot read deploy-params.env"
 set +a
@@ -103,9 +112,6 @@ IFS= read -r answer < /dev/tty || answer=
 [[ "$answer" == BROADCAST ]] || fail "not confirmed; nothing was broadcast"
 
 password_dir=$(mktemp -d "${TMPDIR:-/tmp}/broadcast-v16.XXXXXX") || fail "cannot create a private directory"
-trap 'rm -rf "$password_dir"' EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
 unlock_keystore broadcast DEPLOYER "$deployer" "nothing was broadcast" "$password_dir" "$wallet_name" "${wallet[@]}" ||
   exit 1
 echo "broadcast: the keystore unlocks $deployer; broadcasting"
@@ -117,7 +123,16 @@ rm -rf "$password_dir"
 [[ -d "$copy/deployments" ]] && cp -R "$copy/deployments" "$pre/deployments"
 tail -n 20 "$pre/broadcast.log"
 if ((status)); then
-  echo "broadcast: forge exited $status; inspect $pre/broadcast.log and the transactions it sent before anything else"
+  echo "broadcast: forge exited $status; inspect $pre/broadcast.log and the transactions it sent before anything else."
+  echo "A broadcast is not resumed: after a partial one, a new preflight starts from the deployer's current nonce."
   exit "$status"
 fi
-echo "broadcast: done. Next, with SNAPSHOT_PATH=$pre/deployments/latest-v16.json: make timelock-batches-v16"
+case "$chain" in
+  84532) network=base-sepolia ;;
+  8453) network=base ;;
+  *) network="<network>" ;;
+esac
+echo "broadcast: done. The snapshot is deployments/latest-v16.json in the copy, and in $pre/deployments."
+echo "Next (docs/deploy/v16-release.md, step 2), from the repository: verify the sources, then prepare the Safe's"
+echo "timelock operations in the copy:"
+echo "  SNAPSHOT_PATH=deployments/latest-v16.json script/tools/with-ops-rpc.sh alchemy $network make -C $copy timelock-batches-v16"

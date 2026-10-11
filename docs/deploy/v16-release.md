@@ -24,37 +24,87 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
 
 ## Deployment and application setup
 
-1. Run `make deploy-dryrun` with the intended configuration and network RPC. Review all addresses,
-   pool domains, Bank-created Vault bindings, risk and PF/XP outflow buffers, constant 24-hour NFT
-   cooldown, game limits, edge allocation and refund timeouts. LP free capital is L−K with no extra
-   percentage withdrawal buffer. The official deployment defaults are `riskReserveBps=6000` (60% retained
-   for new-risk admission) and independent `withdrawalBufferBps=1000` (10% PF/XP collection buffer).
-   Reject missing Vault metadata instead of falling back to Bank. The guardian (`GUARDIAN`, with its code, owners
-   and control hashes) must be a multisig with at least two signers, none of them a Safe signer.
+1. Run the preflight on the commit to deploy, with a roles file of public addresses (the deployer, the Safe with its
+   owners and threshold, the guardian multisig with its owners and threshold, the release signer and the keeper; the
+   format is in `script/release/read_chain.py`) and an output directory that does not exist yet:
+
+   ```bash
+   script/tools/with-ops-rpc.sh alchemy base-sepolia \
+     bash script/release/run_preflight.sh <commit> <roles.json> <preflight directory>
+   ```
+
+   It needs no signing key and sends nothing. It works in a `git archive` of the commit outside the repository and
+   stops at the first failure; `STAGES.tsv` lists the stages and `logs/` keeps their output with the RPC URL and key replaced.
+   - `read-chain` (`read_chain.py`) reads everything at one block. It fails unless the Safe is exactly the reviewed
+     2-of-3 of the listed owners with no module or guard; the guardian is a multisig of at least two signers, none of
+     them a Safe signer; the deployer, keeper and signer have no code (no EIP-7702 delegation); the deployer is funded
+     with nothing pending; the roles are distinct and none is the governance key exposed on the old production host;
+     and the token, the VRF provider and the domain file are the certified ones. It fills `chain/deploy-params.env`
+     from `v16/chain-<chainId>.env.example`.
+   - `dry-run` runs `DeployV16` at that block with the deployer as sender. `verify-plan` (`verify_dryrun_plan.py`)
+     accepts only the expected creations, in order: nonces, addresses, init code and constructor arguments, the Vault
+     each Bank creates, the certified runtimes and the Owner policy parameters (`plan-review.json`).
+   - `rehearsal` repeats the deployment on a local anvil fork of that block, then the Safe's wiring (scheduled, 72
+     hours, executed), release verification, the deployed runtimes against the certified build and the live provider,
+     then the activation and live verification. The rehearsed creations must equal the plan.
+
+   A passed run writes `PREFLIGHT.txt`: commit, tree, chain, block, deployer and first nonce, the timelock address and
+   the SHA-256 of the parameters, the plan and the domain file. Review the readback, the plan review and the
+   parameters: all addresses, pool domains, Bank-created Vault bindings, risk and PF/XP outflow buffers, constant
+   24-hour NFT cooldown, game limits, edge allocation and refund timeouts. LP free capital is L−K with no extra
+   percentage withdrawal buffer. The official deployment defaults are `riskReserveBps=6000` (60% retained for new-risk
+   admission) and independent `withdrawalBufferBps=1000` (10% PF/XP collection buffer). Reject missing Vault metadata
+   instead of falling back to Bank. Run the preflight again, unchanged, right before the broadcast.
    The deployment follows ADR-0037 decision D1: the `GovernanceTimelock` is deployed first (delay 259,200 s,
    proposer the Safe, cancellers the Safe and the guardian, anyone executes) and every governed contract is
    constructed with it as governance, so the deploying key holds no role at any time and the script wires nothing.
    Before anything is broadcast the script rehearses the two release operations on the simulated deployment (the
    Safe schedules, 72 hours pass, anyone executes), checks the results as release verification does and restores
    the simulated state; a batch that would revert or wire something else stops the deployment.
-2. Run `make deploy-v16` with the approved keystore account. Set `SNAPSHOT_PATH` to the generated
-   snapshot. The command generates the verification helper from that snapshot using
-   `script/tools/gen_verify_helpers.py`. Set `ETHERSCAN_V2_API_KEY` for verification;
-   the helper uses the Etherscan V2 endpoint for the snapshot's chain and the default
-   compilation profile. Include LiquidityVault source/constructor verification and authenticate
-   Bank↔Vault/asset addresses and both codehashes in the signed snapshot.
-   Then run `make timelock-batches-v16` (`script/release/PrepareTimelockBatchesV16.s.sol`): on a fork with the
-   deployed addresses it rehearses what is left of both operations and writes
-   `deployments/safe-schedule-wiring-v16.json` and `deployments/safe-schedule-activation-v16.json` (Safe Transaction
-   Builder files, one `scheduleBatch` call on the timelock each) and `deployments/timelock-operations-v16.json` (every
+2. Prepare the deploy copy; the Owner broadcasts from it:
+
+   ```bash
+   bash script/release/prepare_deploy_copy.sh <preflight directory> <copy directory>
+   DEPLOY_ACCOUNT=<keystore name> script/tools/with-ops-rpc.sh infura base-sepolia \
+     bash script/release/broadcast_v16.sh <preflight directory>
+   ```
+
+   The copy is the preflight's commit with its `deploy-params.env`, in a directory outside the repository: forge loads
+   a `.env` it finds in the project or above, and the repository's `.env` holds API keys, so neither the copy nor a
+   directory above it may hold one. `broadcast_v16.sh` asks for nothing until the preflight passed and was not
+   broadcast, the copy is of its commit and still holds its parameters, the RPC is on its chain, the deployer has no
+   code and its latest and pending nonces both equal the plan's first nonce, and a keyless simulation against the
+   current chain produces exactly the preflight's plan. The Owner then types `BROADCAST` and the keystore password,
+   which must unlock the deployer in `cast wallet address`; three wrong passwords end the run with nothing sent. The
+   broadcast files, `broadcast.log` and the snapshot are kept in the preflight directory; the snapshot also stays at
+   `deployments/latest-v16.json` in the copy, and the RPC that forge records there for each transaction has its key
+   replaced on exit. A broadcast is never resumed: if forge fails partway, inspect `broadcast.log` and the transactions
+   sent before anything else; a new preflight starts from the deployer's current nonce.
+   Verify the sources from the copy, which compiles the deployed commit:
+   `SNAPSHOT_PATH=deployments/latest-v16.json make -C <copy directory> verify-v16`, with `ETHERSCAN_V2_API_KEY` set.
+   It generates the verification helper from the snapshot using `script/tools/gen_verify_helpers.py`; the helper uses
+   the Etherscan V2 endpoint for the snapshot's chain and the default compilation profile. Include LiquidityVault
+   source/constructor verification and authenticate Bank↔Vault/asset addresses and both codehashes in the signed
+   snapshot.
+   Then prepare the Safe's timelock operations, also in the copy (`script/release/PrepareTimelockBatchesV16.s.sol`):
+
+   ```bash
+   SNAPSHOT_PATH=deployments/latest-v16.json script/tools/with-ops-rpc.sh alchemy base-sepolia \
+     make -C <copy directory> timelock-batches-v16
+   ```
+
+   On a fork with the deployed addresses it rehearses what is left of both operations and writes, under
+   `deployments/` in the copy, `safe-schedule-wiring-v16.json` and `safe-schedule-activation-v16.json` (Safe
+   Transaction Builder files, one `scheduleBatch` call on the timelock each) and `timelock-operations-v16.json` (every
    call with its contract and function, both operation ids and states, and the `executeBatch` calldata). The Safe
    owners review the calls and schedule the wiring; publish the operations file for the 72-hour review. The wiring
    binds the routers, randomness consumers, guardians and sentinels, sets the Bank parameters that differ from the
    constructor defaults, registers the pool, the hub, its route and the eight certified games, and leaves every pool
    inactive. Anyone executes it once ready; LPs can then deposit and nobody can bet.
-3. Once the wiring has executed, run `make release-v16` and then `make verify-v16` with the configured signer and
-   network. A release contains a signed digest, manifest, ABIs and encoding vectors. `make release-v16` runs `script/release/release_v16.sh` from a
-   clean checkout through `script/tools/with-ops-rpc.sh infura <network>` (inputs in its header): the governance and
+3. Once the wiring has executed, run `make release-v16` with the configured signer and network. A release contains a
+   signed digest, manifest, ABIs and encoding vectors. `make release-v16` runs `script/release/release_v16.sh` from a
+   clean checkout of the deployed commit, with the copy's snapshot at `deployments/latest-v16.json`, through
+   `script/tools/with-ops-rpc.sh infura <network>` (inputs in its header): the governance and
    callback-domain checks, then the only signing step, then notes, manifest, vectors, ABIs, verification and the
    package. The keystore password is read from the terminal and must unlock `RELEASE_SIGNER` in
    `cast wallet address` before anything is signed (Forge's own prompt reports a wrong password only as

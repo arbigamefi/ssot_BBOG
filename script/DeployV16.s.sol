@@ -63,8 +63,8 @@ interface IERC20MetadataLikeV16 {
 ///
 /// Every pool is a casino pool served by GameHub.
 ///
-/// Example:
-///   forge script script/DeployV16.s.sol:DeployV16 --rpc-url $RPC_URL --broadcast -vvv
+/// Broadcast only through the gated path (docs/deploy/v16-release.md): script/release/run_preflight.sh runs this script
+/// without a key at one block and reviews its plan, and script/release/broadcast_v16.sh sends exactly that plan.
 contract DeployV16 is Script {
     /// The release delay: GovernanceTimelock.MIN_DELAY, the floor its constructor and updateDelay enforce (D7).
     uint256 internal constant TIMELOCK_DELAY = 259_200;

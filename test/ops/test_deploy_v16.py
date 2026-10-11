@@ -42,7 +42,11 @@ esac
 
 FORGE = r'''#!/usr/bin/env bash
 echo "forge $* in $PWD" >> "$STUB_LOG"
-mkdir -p "$FOUNDRY_BROADCAST/DeployV16.s.sol/84532/dry-run"
+mkdir -p "$FOUNDRY_BROADCAST/DeployV16.s.sol/84532/dry-run" cache/DeployV16.s.sol/84532/dry-run
+# Like forge, keep each transaction's RPC in the project's cache for --resume.
+sensitive=cache/DeployV16.s.sol/84532/dry-run/run-latest.json
+[[ "$*" == *--broadcast* ]] && sensitive=cache/DeployV16.s.sol/84532/run-latest.json
+printf '{"transactions": [{"rpc": "%s"}]}' "$RPC_URL" > "$sensitive"
 if [[ "$*" == *--broadcast* ]]; then
   while [[ $# -gt 0 && $1 != --password-file ]]; do shift; done
   python3 -c 'import os, sys; print("password file", oct(os.stat(sys.argv[1]).st_mode & 0o777))' "$2" >> "$STUB_LOG"
@@ -234,13 +238,21 @@ class DeployGateTests(unittest.TestCase):
         self.assertTrue((self.pre / 'broadcast/DeployV16.s.sol/84532/run-latest.json').is_file())
         self.assertEqual(json.loads((self.pre / 'deployments/latest-v16.json').read_text()), {'deployed': True})
         self.assertEqual(list((self.base / 'tmp').iterdir()), [])
-        # The key never reaches the logs; the preflight is used up.
+        # The key never reaches the logs, nor stays in the RPC forge records in the copy; the preflight is used up.
         self.assertNotIn('0123456789abcdef0123', (self.pre / 'broadcast.log').read_text())
         self.assertIn('<rpc-url>', (self.pre / 'broadcast.log').read_text())
+        self.assert_no_key_in_the_copy(2)
+        self.assertIn('make -C ' + str(self.copy) + ' timelock-batches-v16', output)
         code, output, _ = self.broadcast('BROADCAST', PASSWORD)
         self.assertNotEqual(code, 0)
         self.assertIn('was broadcast already', output)
         self.assertEqual(self.broadcasts(), 1)
+
+    def assert_no_key_in_the_copy(self, files):
+        recorded = [path for path in (self.copy / 'cache').rglob('*.json')]
+        self.assertEqual(len(recorded), files)
+        for path in recorded:
+            self.assertEqual(json.loads(path.read_text()), {'transactions': [{'rpc': '<rpc-url>'}]})
 
     def assert_refused(self, reason, env=None, answers=('BROADCAST', PASSWORD)):
         code, output, terminal = self.broadcast(*answers, env=env)
@@ -277,6 +289,7 @@ class DeployGateTests(unittest.TestCase):
         terminal = self.assert_refused('the simulation differs from the preflight plan; nothing was broadcast',
                                        env={'STUB_SIMULATION_DIFFERS': '1'})
         self.assertNotIn(CONFIRM, terminal)
+        self.assert_no_key_in_the_copy(1)
 
     def test_refused_without_the_typed_confirmation_or_the_right_password(self):
         self.ready()
