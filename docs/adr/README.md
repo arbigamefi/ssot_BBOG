@@ -19,3 +19,4 @@ See the [detailed implementation plan](../design/lp-accounting-and-callback-impl
 - [ADR-0029: Settlement Router and domain hubs](0029-settlement-router-vertical-hubs.md)
 - [ADR-0032: Fixed LP share of the turnover house edge; operator-funded referrals](0032-fixed-lp-share-operator-funded-referrals.md)
 - [ADR-0034: NFT liquidity deposits and settlement allocation](0034-nft-liquidity-deposits.md) (amended 2026-10-07: k>0 allocation without the vendor preview, UNUSED_SUFFIX tree patch)
+- [ADR-0037: Launch-candidate authority, pause, capacity and void design](0037-launch-candidate-authority-pause-capacity-void.md) (Proposed: B0 design freeze, pending review and Owner decisions)
