@@ -45,7 +45,7 @@
 | 其余已接受的设计取舍 | 维持接受，残余清单补全并逐项披露（§9） |
 | Foundry 1.8.x | 放入本版，A7 在工作包 B 与证书 v5 之前完成 |
 | CI 的 fork RPC | A1 完成后改为公共 RPC；不另建 CI 专用 key |
-| RPC key 分配 | 仓库根 `.env` 的四个 key 按用途命名（只改名，值未变）：`INFURA_API_KEY_OPS` 用于本机部署广播、发布检查、`verify_governance` 回放、K0-4，以及主网上线后的备用 keeper（只走 HTTP）；`ALCHEMY_API_KEY_OPS` 用于 preflight、fork 演练与 gas 矩阵；`INFURA_API_KEY_PROD_KEEPER`、`ALCHEMY_API_KEY_PROD_KEEPER` 只在服务器上给生产 keeper 用（`KEEPER_RPC_HTTP`、`KEEPER_RPC_WS`）。实施方只经 `script/tools/with-ops-rpc.sh` 使用两个 OPS key，不得使用 `*_PROD_KEEPER`；浏览器与 web 服务端用 Base 公共 RPC |
+| RPC key 分配 | 仓库根 `.env` 的四个 key 按用途命名（只改名，值未变）：`INFURA_API_KEY_OPS` 用于本机部署广播、发布检查、`verify_governance` 回放与 K0-4（K0-4 在本机运行）；`ALCHEMY_API_KEY_OPS` 用于 preflight、fork 演练、gas 矩阵，以及主网上线后的备用 keeper（只走 HTTP，与主 keeper 的 HTTP 不同提供方）；`INFURA_API_KEY_PROD_KEEPER`、`ALCHEMY_API_KEY_PROD_KEEPER` 只在服务器上给生产 keeper 用（`KEEPER_RPC_HTTP`、`KEEPER_RPC_WS`）。OPS 与 PROD_KEEPER 分属不同账户，旧 Alchemy key 已重建（Owner 确认）。实施方只经 `script/tools/with-ops-rpc.sh` 使用两个 OPS key，不得使用 `*_PROD_KEEPER`；浏览器与 web 服务端用 Base 公共 RPC |
 | 文档 | 一档过程记录直接删除，二档先迁移决策与状态再删除，作为第一项工作（C2） |
 
 ## 4. 清理记录（2026-10-11）
@@ -192,7 +192,7 @@ guardian 是独立多签，签名人与 Safe 不重叠，不使用 EOA。它能�
 ## 8. 工作包 D：应用层（复核 M-7）
 
 ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 schema 与事件（作废、停用、时间锁排队）；SDK 错误类型；前端展示排队中的治理操作、持仓上限提示与作废收据；
-移除体育相关页面与 keeper 逻辑（随 B9）。验收沿用审计范围的 Consumers 一行：真实 Anvil、PostgreSQL、WS/HTTP 断线恢复。
+移除体育相关页面与 keeper 逻辑（随 B9）；查明并处理 keeper 遇到 RPC finalized 高度回退即降级的问题（2026-10-11 生产健康 `degraded`：47969422 → 47969244）。验收沿用审计范围的 Consumers 一行：真实 Anvil、PostgreSQL、WS/HTTP 断线恢复。
 
 ## 9. 残余（维持接受或新增，逐项披露）
 
@@ -247,7 +247,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | C4 | 条款与 LP 材料：作废规则（VRF 原生费不退）；准入时间锁与 LP 退出窗口；暂停不阻止提款；每玩家 2 个持仓；guardian 否决权；§9 全部残余 | §7、§9 |
 | C5 | 规范修订（宪法的修订需 Owner 明确批准并留记录）：`docs/constitution/SSOT.v1.6.md:125, 128-130, 137`；`ExecutableSSOT.v1.6.md:48-52, 243-249, 302`；`docs/adr/0006-vrf-callback-settlement.md:87-90, 197-204, 229`；`docs/adr/0034-nft-liquidity-deposits.md:30, 145`；`docs/architecture/overview.md:95, 116`；`docs/audit/v1.6-audit-scope.md:49, 172`；`docs/audit/threat-model.md:140`；`WHITEPAPER.zh-CN.md:18, 197, 201, 212, 215-216, 223, 229, 232-233`；`WHITEPAPER.product.zh-CN.md:109`；`docs/strategy/economic-design.md:104`；`docs/ops/runbooks/pause-config-drift.md:11, 18, 36-39`；`docs/ops/alerts.md:26`；`docs/ops/runbooks/governance-safe-setup.md:22-61` | 复核 M-6 |
 | C6 | ADR-0006 的两处改进（M4 范围限定、确认记录的位置）；本版外审交付按 FZ-6 清单打包 | 复核 S-8 |
-| C7 | legacy Bank 地址登记：18 个 Bank 的链、地址、是否暂停、余额、治理方、退役计划与 RPC key 轮换记录（2026-10-11 四个 key 按用途改名；旧 Alchemy key 是否已重建、OPS 与 PROD_KEEPER 是否分属不同账户、服务器换 key 的时间，待 Owner 确认后写入） | 复核 M-12 |
+| C7 | legacy Bank 地址登记：18 个 Bank 的链、地址、是否暂停、余额、治理方、退役计划与 RPC key 轮换记录（2026-10-11：四个 key 按用途改名；OPS 与 PROD_KEEPER 分属不同账户，旧 Alchemy key 已重建，均经 Owner 确认；服务器换 key 的时间与核验结果待记） | 复核 M-12 |
 | C8 | 体育文档移出本版（随 B9），路线图保留体育作为未来能力 | Owner 选项 A |
 
 ## 12. 运营事项
@@ -255,10 +255,10 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | 事项 | 负责 | 备注 |
 | --- | --- | --- |
 | 通知外审方：r2 已被本候选版取代，`1e95d7fe…` 不会有外审；送 B0 设计预审；约定外审后修复回路 | 实施方准备，Owner 发送 | 复核 S-2 |
-| K0-4 配置漂移告警：Owner 参数、时间锁排队与 Ready 超期、`OpenHoldLimit`、作废事件；排队告警推送到 LP 可见的公开渠道 | 实施方，Owner 部署 | 分支 `k0-4/config-drift-alerts`；复核 S-9；RPC 用 `INFURA_API_KEY_OPS`（HTTP） |
+| K0-4 配置漂移告警：Owner 参数、时间锁排队与 Ready 超期、`OpenHoldLimit`、作废事件；排队告警推送到 LP 可见的公开渠道 | 实施方，Owner 部署 | 分支 `k0-4/config-drift-alerts`；复核 S-9；在本机运行，RPC 用 `INFURA_API_KEY_OPS`（HTTP，经包装脚本） |
 | legacy Bank 退役（14 个未暂停）与 RPC key 轮换 | Owner | C7；key 已于 2026-10-11 按用途改名 |
-| 生产 keeper 改用 `INFURA_API_KEY_PROD_KEEPER`（`KEEPER_RPC_HTTP`）与 `ALCHEMY_API_KEY_PROD_KEEPER`（`KEEPER_RPC_WS`）并重启；完成后更新 §2 与本表“keeper 与 CI 共用 Infura 额度”的说法 | Owner 在服务器上操作 | 实施方事后经公开健康端点核验 |
-| 主网备用 keeper 只配 `KEEPER_RPC_HTTP`（`INFURA_API_KEY_OPS`），不配 WS；`frontend/deploy/casino-keeper/backup.base-mainnet.env.example` 随 D 更新 | 实施方，Owner 部署 | 主网上线后 |
+| 生产 keeper 改用 `INFURA_API_KEY_PROD_KEEPER`（`KEEPER_RPC_HTTP`）与 `ALCHEMY_API_KEY_PROD_KEEPER`（`KEEPER_RPC_WS`）并重建；完成后更新 §2 与本表“keeper 与 CI 共用 Infura 额度”的说法。2026-10-11 核对：服务器 WS 仍用 `ALCHEMY_API_KEY_OPS`，HTTP 已不是 OPS | Owner 在本机终端运行 `bash script/ops/set-keeper-rpc.sh base-sepolia` | 实施方随后核验健康状态、日志与 OPS 是否已离开服务器（只比较哈希） |
+| 主网备用 keeper 只配 `KEEPER_RPC_HTTP`（`ALCHEMY_API_KEY_OPS`），不配 WS；`frontend/deploy/casino-keeper/backup.base-mainnet.env.example` 随 D 更新 | 实施方，Owner 部署 | 主网上线后 |
 | 原生安全扫描：排期，或写明由外审取代 | Owner | 复核 S-10 |
 | 生产服务器：保留至本候选版上线切换；其 keeper 与 CI 共用 Infura 额度 | Owner | A1 后 CI 不再用 Infura |
 
