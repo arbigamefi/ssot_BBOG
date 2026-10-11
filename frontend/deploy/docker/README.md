@@ -38,11 +38,10 @@ manual `Frontend Docker Images` run on the exact reviewed source commit, with:
 - `chain_id`: `84532` for this deployment;
 - optional `image_tag` for discovery.
 
-Configure repository variable `V16_RELEASE_SIGNER` to the approved release signer
-and optionally secret `FORK_RPC_URL_BASE_SEPOLIA` to a dedicated RPC. A Base mainnet
-build instead uses `FORK_RPC_URL_BASE`. Without a secret, governance verification
-uses the selected chain's official public RPC and fails closed on any RPC error. These are independent trust inputs, never taken
-from the uploaded bundle. Do not put keystore passwords in GitHub or chat.
+Configure repository variable `V16_RELEASE_SIGNER` to the approved release signer.
+Governance verification uses the selected chain's official public RPC and fails closed
+on any RPC error; no RPC secret is read. The signer is an independent trust input, never
+taken from the uploaded bundle. Do not put keystore passwords in GitHub or chat.
 
 The build verifies archive hash, complete inventory, and exact source commit,
 then uses the existing strict artifact, signature and live governance checks.

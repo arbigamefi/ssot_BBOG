@@ -14,6 +14,7 @@ and operating procedures; they are not evidence of a running service. Start with
 - [Runbooks](runbooks/README.md)
 - [Casino frontend access](casino-frontend-access.md)
 - [Incident record](incident-templates.md)
+- [Legacy Banks](legacy-banks.md): the pre-v1.5 Banks the exposed key still governs, and their retirement
 
 Use the verified release digest, chain ID and contract addresses in every operational record.
 The release gates in [ADR-0034](../adr/0034-nft-liquidity-deposits.md) remain prerequisites

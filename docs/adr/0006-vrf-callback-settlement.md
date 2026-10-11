@@ -161,8 +161,11 @@ subtrees have the recorded content digests. After the fix review of 2026-10-10 t
 `audited_source_tree` input to equal the repository variable `V16_AUDITED_TREE`, and the fork gate runs the domain
 script with `CALLBACK_REQUIRE_FORK=1`, so a missing RPC fails instead of skipping the runtime comparison.
 
-The module premise M4 (an admitted bet's `resolve` never fails for a non-gas reason) is proved in
-[m4-resolve-census-2026-10-08.md](../audit/m4-resolve-census-2026-10-08.md) and guarded by `CallbackDomainM4Test`.
+The module premise M4 is proved in [m4-resolve-census-2026-10-08.md](../audit/m4-resolve-census-2026-10-08.md) and
+guarded by `CallbackDomainM4Test`: for an admitted bet, the module's `resolve` and GameHub's arithmetic checks after
+it never fail for a non-gas reason. M4 does not cover the Router, Bank and Vault; their revert sites are covered by the
+certificate's frame bounds, its explicit post-call supply requirements O1 and O2 and the Bank and Vault settlement
+tests (certificate v4 erratum E8).
 
 ### Validity and recertification
 
@@ -185,9 +188,10 @@ each network still has to install and test it before relying on it.
 A certificate used to switch a domain file to `CERTIFIED` must leave at least 50,000 gas of margin under the
 consumer gas on its main measure, on every network including Base Sepolia. The main measure is the one the
 certificate designates as such: every one of its component bounds has been independently confirmed, and every
-call boundary below the Router is charged explicitly rather than folded into the caller. Secondary measures,
-such as an older or looser bound kept for comparison, are recorded in the certificate but do not gate the
-switch. The margin covers model risk in the bounds, not gas repricing, which voids the certificate instead.
+call boundary below the Router is charged explicitly rather than folded into the caller. A bound counts as confirmed
+when the certificate's component table (§4) gives it a confirmed review status that cites the sealed review.
+Secondary measures, such as an older or looser bound kept for comparison, are recorded in the certificate but do not
+gate the switch. The margin covers model risk in the bounds, not gas repricing, which voids the certificate instead.
 
 ### Evidence
 
