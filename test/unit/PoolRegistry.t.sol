@@ -9,6 +9,7 @@ import {IPoolRegistry} from "../../src/core/interfaces/IPoolRegistry.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {Errors} from "../../src/libs/Errors.sol";
+import {GovernedStub} from "../utils/GovernedStub.sol";
 
 contract PoolRegistryTest is Test {
     address internal gov = address(0xA11CE);
@@ -31,6 +32,7 @@ contract PoolRegistryTest is Test {
         wethBank = new Bank(address(weth), gov, 1000, 18, 1);
 
         registry = new PoolRegistry(gov);
+        vm.etch(hub, address(new GovernedStub(gov)).code);
     }
 
     function test_registerPool_success_andGetters() external {
@@ -158,5 +160,79 @@ contract PoolRegistryTest is Test {
 
         assertFalse(registry.isRegisteredHub(hub));
         assertFalse(registry.isHubAllowedForPool(1, hub));
+    }
+
+    /// ADR-0037 §3 (B1): the sentinel declines risk at once but cannot admit it or change roles.
+    function test_sentinelDeclinesImmediatelyButCannotAdmit() external {
+        address sentinel = address(0x5E47);
+        vm.prank(stranger());
+        vm.expectRevert(Errors.Unauthorized.selector);
+        registry.setSentinel(sentinel);
+        vm.startPrank(gov);
+        registry.setSentinel(sentinel);
+        registry.registerPool(1, address(usdc), address(usdcBankA), SSOTTypes.PoolDomain.Casino);
+        registry.setHubRegistered(hub, true);
+        registry.setHubAllowedForPool(1, hub, true);
+        vm.stopPrank();
+        assertEq(registry.sentinel(), sentinel);
+
+        vm.startPrank(sentinel);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        registry.registerPool(2, address(usdc), address(usdcBankB), SSOTTypes.PoolDomain.Casino);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        registry.setSentinel(sentinel);
+        registry.setHubAllowedForPool(1, hub, false);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        registry.setHubAllowedForPool(1, hub, true);
+        registry.setPoolActive(1, false);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        registry.setPoolActive(1, true);
+        registry.setHubRegistered(hub, false);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        registry.setHubRegistered(hub, true);
+        vm.stopPrank();
+        assertFalse(registry.isPoolActive(1));
+        assertFalse(registry.isRegisteredHub(hub));
+
+        vm.prank(gov);
+        registry.setSentinel(address(0));
+        vm.prank(sentinel);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        registry.setPoolActive(1, false);
+    }
+
+    /// B1: a Bank must already be under the registry's governance with no transfer pending (review R4).
+    function test_registerPoolRefusesForeignOrPendingGovernance() external {
+        Bank foreign = new Bank(address(usdc), address(0xD0), 1000, 6, 1);
+        vm.prank(gov);
+        vm.expectRevert(abi.encodeWithSelector(IPoolRegistry.ForeignGovernance.selector, address(foreign)));
+        registry.registerPool(1, address(usdc), address(foreign), SSOTTypes.PoolDomain.Casino);
+
+        vm.prank(gov);
+        usdcBankA.transferGovernance(address(0xD0));
+        vm.prank(gov);
+        vm.expectRevert(abi.encodeWithSelector(IPoolRegistry.ForeignGovernance.selector, address(usdcBankA)));
+        registry.registerPool(1, address(usdc), address(usdcBankA), SSOTTypes.PoolDomain.Casino);
+    }
+
+    /// B1: a hub must claim the same governance with nothing pending; an address without that answer is refused.
+    function test_hubRegistrationRefusesForeignOrPendingGovernance() external {
+        vm.startPrank(gov);
+        vm.expectRevert(abi.encodeWithSelector(IPoolRegistry.ForeignGovernance.selector, otherHub));
+        registry.setHubRegistered(otherHub, true);
+        address claimsOther = address(new GovernedStub(address(0xD0)));
+        vm.expectRevert(abi.encodeWithSelector(IPoolRegistry.ForeignGovernance.selector, claimsOther));
+        registry.setHubRegistered(claimsOther, true);
+        PoolRegistry pending = new PoolRegistry(gov);
+        pending.transferGovernance(address(0xD0));
+        vm.expectRevert(abi.encodeWithSelector(IPoolRegistry.ForeignGovernance.selector, address(pending)));
+        registry.setHubRegistered(address(pending), true);
+        registry.setHubRegistered(otherHub, false);
+        vm.stopPrank();
+        assertFalse(registry.isRegisteredHub(otherHub));
+    }
+
+    function stranger() internal pure returns (address) {
+        return address(0xBAD);
     }
 }

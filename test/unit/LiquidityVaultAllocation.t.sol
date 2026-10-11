@@ -12,6 +12,7 @@ import {BankNFTRouterHarness} from "../unit/BankNFTAccounting.t.sol";
 import {BankTestBase} from "../utils/BankTestBase.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
+import {GovernedStub} from "../utils/GovernedStub.sol";
 
 /// Production Bank/Vault custody: with one result-independent allocation domain per position, a sliced prefix
 /// can no longer keep a position's profit while moving its loss onto later deposits.
@@ -435,6 +436,7 @@ contract LiquidityVaultAllocationRouterTest is BankTestBase {
         PoolRegistry registry = new PoolRegistry(address(this));
         router = new SettlementRouter(address(registry));
         registry.registerPool(1, address(token), address(bank), SSOTTypes.PoolDomain.Casino);
+        vm.etch(HUB, address(new GovernedStub(address(this))).code);
         registry.setHubRegistered(HUB, true);
         registry.setHubAllowedForPool(1, HUB, true);
         bank.setSettlementRouterOnce(address(router));

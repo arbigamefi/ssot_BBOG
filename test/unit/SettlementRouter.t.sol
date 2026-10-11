@@ -13,6 +13,7 @@ import {ISettlementRouter} from "../../src/core/interfaces/ISettlementRouter.sol
 import {IBank} from "../../src/core/interfaces/IBank.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
+import {GovernedStub} from "../utils/GovernedStub.sol";
 
 contract SettlementRouterTest is BankTestBase {
     address internal gov = address(0xA11CE);
@@ -34,6 +35,8 @@ contract SettlementRouterTest is BankTestBase {
         bank = new Bank(address(usdc), gov, 0, 6, 1);
         registry = new PoolRegistry(gov);
         router = new SettlementRouter(address(registry));
+        vm.etch(hub, address(new GovernedStub(gov)).code);
+        vm.etch(otherHub, address(new GovernedStub(gov)).code);
 
         vm.startPrank(gov);
         registry.registerPool(1, address(usdc), address(bank), SSOTTypes.PoolDomain.Casino);

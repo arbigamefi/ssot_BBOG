@@ -69,6 +69,15 @@ abstract contract NftReachableTreeGasBase is Test {
         return 0;
     }
 
+    /// This contract governs the registry and is its own hub, so it reports itself as governance with nothing pending.
+    function governance() external view returns (address) {
+        return address(this);
+    }
+
+    function pendingGovernance() external pure returns (address) {
+        return address(0);
+    }
+
     function setUp() public {
         (uint256 oldCount, uint256 lateCount, History history) = config();
         token = new BlacklistToken();

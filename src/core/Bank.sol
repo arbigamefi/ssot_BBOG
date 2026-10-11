@@ -13,13 +13,14 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Governable} from "../access/Governable.sol";
+import {Sentinel} from "../access/Sentinel.sol";
 import {Errors} from "../libs/Errors.sol";
 
 /// @notice Player principal and fixed debts stay here; one immutable Vault holds NFT capital.
 ///         Router alone creates/terminalizes holds. A pause blocks only new positions and new LP deposits; it
 ///         never blocks settlement, refunds, player-debt payment, XP unlocks or claims, protocol-fee claims or
 ///         LP withdrawals (ADR-0037 §4).
-contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
+contract Bank is IBank, Sentinel, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -132,15 +133,17 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
     /// @notice Stop new positions and new LP deposits. Every outflow stays live: settlement, refunds, player
     ///         payables, XP and protocol-fee claims and LP withdrawals.
-    /// @dev Asymmetric by design: governance or the guardian may pause, only
-    ///      governance may unpause. Pausing declines new risk and is safe to
-    ///      make fast; unpausing re-admits risk and must stay behind the full
-    ///      governance quorum.
+    /// @dev Asymmetric by design: governance, the sentinel or the guardian may
+    ///      pause, only governance may unpause. Pausing declines new risk and is
+    ///      safe to make fast; unpausing re-admits risk and waits for the
+    ///      timelock, where the guardian can cancel it.
     function setRiskInPaused(bool paused_) external {
         // One branch per direction, so the authority check and the state change
         // for that direction cannot drift apart.
         if (paused_) {
-            if (msg.sender != governance && msg.sender != guardian) revert Errors.Unauthorized();
+            if (msg.sender != governance && msg.sender != sentinel && msg.sender != guardian) {
+                revert Errors.Unauthorized();
+            }
             if (!paused()) _pause();
         } else {
             if (msg.sender != governance) revert Errors.Unauthorized();

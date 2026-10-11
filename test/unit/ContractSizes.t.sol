@@ -3,15 +3,17 @@ pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
 
-/// @notice Every contract `script/DeployV16.s.sol` deploys must fit the EIP-170 runtime limit. Forge's test EVM
-///         does not enforce it, so a contract that grows past the limit passes every other test and fails only
-///         when it is deployed. Each must also keep a 1 KB margin, so an audit fix cannot push it over the limit.
+/// @notice Every contract the release deploys, the governance timelock of ADR-0037 included, must fit the EIP-170
+///         runtime limit. Forge's test EVM does not enforce it, so a contract that grows past the limit passes every
+///         other test and fails only when it is deployed. Each must also keep a 1 KB margin, so an audit fix cannot
+///         push it over the limit.
 contract ContractSizesTest is Test {
     uint256 internal constant EIP170_RUNTIME_LIMIT = 24_576;
     uint256 internal constant SIZE_MARGIN = 1_024;
 
     function test_deployedContractsFitEip170() external view {
-        string[16] memory artifacts = [
+        string[17] memory artifacts = [
+            "GovernanceTimelock.sol:GovernanceTimelock",
             "GameHub.sol:GameHub",
             "Bank.sol:Bank",
             "SettlementRouter.sol:SettlementRouter",

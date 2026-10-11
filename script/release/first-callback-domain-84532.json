@@ -65,51 +65,51 @@
     },
     "GameHub": {
       "artifact": "GameHub.sol:GameHub",
-      "runtimeBytes": 20370,
-      "keccakWithImmutablesZeroed": "0x9a61b57eecba578f958989b43f2506cb1ab3e6f6df2cf3d2beba0f0717372c5f",
+      "runtimeBytes": 20610,
+      "keccakWithImmutablesZeroed": "0x819be3f232d739a6ee889ab487f8b4f8ce94e13380562ca12975490081810d00",
       "immutables": [
         {
           "value": "settlementRouter",
           "offsets": [
-            643,
-            6025,
-            9063,
-            12622,
-            17639,
-            19148
+            665,
+            6144,
+            9182,
+            12741,
+            17879,
+            19388
           ]
         },
         {
           "value": "vrfHub",
           "offsets": [
-            3324,
-            4446,
-            5399,
-            5686,
-            9914,
-            12922,
-            17804,
-            19856
+            3415,
+            4565,
+            5518,
+            5805,
+            10033,
+            13162,
+            18044,
+            20096
           ]
         },
         {
           "value": "refRegistry",
           "offsets": [
-            1332,
-            3394,
-            8287,
-            11527,
-            11709,
-            11809,
-            11876,
-            14429
+            1395,
+            3485,
+            8406,
+            11646,
+            11828,
+            11928,
+            11995,
+            14669
           ]
         },
         {
           "value": "refEngine",
           "offsets": [
-            3254,
-            17338
+            3345,
+            17578
           ]
         }
       ]
@@ -117,7 +117,7 @@
     "SettlementRouter": {
       "artifact": "SettlementRouter.sol:SettlementRouter",
       "runtimeBytes": 4598,
-      "keccakWithImmutablesZeroed": "0xf029d4818ca6c404146503e232e8a37d2c8b9e3caf35fa417619160578dcf86e",
+      "keccakWithImmutablesZeroed": "0xa2c3b2a6260dc1b7e9824c9ba061f5eca00bcea09d8fe03372d0e79f48b4d2a7",
       "immutables": [
         {
           "value": "poolRegistry",
@@ -130,8 +130,8 @@
     },
     "PoolRegistry": {
       "artifact": "PoolRegistry.sol:PoolRegistry",
-      "runtimeBytes": 3304,
-      "keccakWithImmutablesZeroed": "0xfbe8b76076f5ded434931ddde047170a9101a4d9d4205e30738d598e48bbce37",
+      "runtimeBytes": 3834,
+      "keccakWithImmutablesZeroed": "0x655a30e691ab00e968e17ef18e37ecd842b6de6269a2648a315d2a1fb486b6c1",
       "immutables": []
     },
     "ReferralRegistry": {
@@ -148,53 +148,53 @@
     },
     "Bank": {
       "artifact": "Bank.sol:Bank",
-      "runtimeBytes": 16052,
-      "keccakWithImmutablesZeroed": "0x928303496ad89687c596f54adc9e1cf9b37eafa513285721186aee4e69ea6102",
+      "runtimeBytes": 16243,
+      "keccakWithImmutablesZeroed": "0xb1376dca0dd14296c448a6ab540e3f5463c88e88a633a1b59e2b03cff132260c",
       "immutables": [
         {
           "value": "poolAsset",
           "offsets": [
-            3545,
-            10165
+            3606,
+            10252
           ]
         },
         {
           "value": "poolVault",
           "offsets": [
-            854,
-            6136,
-            7522,
-            14208
+            876,
+            6223,
+            7609,
+            14399
           ]
         },
         {
           "value": "poolAssetDecimals",
           "offsets": [
-            6387,
-            9370
+            6474,
+            9457
           ]
         },
         {
           "value": "poolAsset",
           "offsets": [
-            4935,
-            7430,
-            12111,
-            13017,
-            13872,
-            14481
+            5022,
+            7517,
+            12303,
+            13209,
+            14063,
+            14672
           ]
         },
         {
           "value": "poolVault",
           "offsets": [
-            4690,
-            7629,
-            7737,
-            8607,
-            11789,
-            12655,
-            13741
+            4777,
+            7716,
+            7824,
+            8694,
+            11981,
+            12847,
+            13932
           ]
         }
       ]

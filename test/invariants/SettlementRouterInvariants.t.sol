@@ -12,6 +12,7 @@ import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {HouseEdgeLib} from "../../src/libs/HouseEdgeLib.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
+import {GovernedStub} from "../utils/GovernedStub.sol";
 
 contract SettlementRouterHandler is BankTestBase {
     MockERC20 public asset;
@@ -402,6 +403,8 @@ contract SettlementRouterInvariants is StdInvariant, BankTestBase {
         secondBank = new Bank(address(usdc), gov, 0, 6, 1);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
+        vm.etch(casinoHub, address(new GovernedStub(gov)).code);
+        vm.etch(secondHub, address(new GovernedStub(gov)).code);
 
         vm.startPrank(gov);
         poolRegistry.registerPool(1, address(usdc), address(casinoBank), SSOTTypes.PoolDomain.Casino);

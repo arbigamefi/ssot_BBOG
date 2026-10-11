@@ -36,4 +36,5 @@ interface IPoolRegistry {
     error HubNotRegistered(address hub);
     error HubNotAllowedForPool(uint64 poolId, address hub);
     error PoolInactive(uint64 poolId);
+    error ForeignGovernance(address target);
 }

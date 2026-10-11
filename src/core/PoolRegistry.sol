@@ -2,6 +2,7 @@
 pragma solidity 0.8.37;
 
 import {Governable} from "../access/Governable.sol";
+import {Sentinel} from "../access/Sentinel.sol";
 import {Errors} from "../libs/Errors.sol";
 import {IBank} from "./interfaces/IBank.sol";
 import {IPoolRegistry} from "./interfaces/IPoolRegistry.sol";
@@ -9,7 +10,9 @@ import {SSOTTypes} from "./interfaces/SSOTTypes.sol";
 
 /// @notice Governance-controlled registry for bankroll pools.
 ///         poolId is the protocol risk/accounting domain; this contract does not custody funds.
-contract PoolRegistry is IPoolRegistry, Governable {
+///         Admitting risk (a pool, a hub, activation) is governance only, so it waits for the timelock; declining
+///         it is also open to the sentinel and takes effect at once (ADR-0037 §3).
+contract PoolRegistry is IPoolRegistry, Sentinel {
     mapping(uint64 => SSOTTypes.Pool) internal _pools;
     uint64[] internal _poolIds;
 
@@ -28,6 +31,7 @@ contract PoolRegistry is IPoolRegistry, Governable {
         uint64 existingPoolId = _poolIdForBank[bank];
         if (existingPoolId != 0) revert BankAlreadyRegistered(bank, existingPoolId);
         if (IBank(bank).asset() != asset) revert Errors.InvalidConfig();
+        _requireSameGovernance(bank);
 
         _pools[poolId] = SSOTTypes.Pool({asset: asset, bank: bank, domain: domain, active: true});
         _poolIds.push(poolId);
@@ -36,19 +40,23 @@ contract PoolRegistry is IPoolRegistry, Governable {
         emit PoolRegistered(poolId, asset, bank, domain);
     }
 
-    function setPoolActive(uint64 poolId, bool active) external onlyGov {
+    function setPoolActive(uint64 poolId, bool active) external {
+        _authorizeDirection(active);
         _requirePool(poolId);
         _pools[poolId].active = active;
         emit PoolActiveSet(poolId, active);
     }
 
-    function setHubRegistered(address hub, bool registered) external onlyGov {
+    function setHubRegistered(address hub, bool registered) external {
+        _authorizeDirection(registered);
         if (hub == address(0)) revert Errors.ZeroAddress();
+        if (registered) _requireSameGovernance(hub);
         _registeredHubs[hub] = registered;
         emit HubRegistered(hub, registered);
     }
 
-    function setHubAllowedForPool(uint64 poolId, address hub, bool allowed) external onlyGov {
+    function setHubAllowedForPool(uint64 poolId, address hub, bool allowed) external {
+        _authorizeDirection(allowed);
         _requirePool(poolId);
         if (!_registeredHubs[hub]) revert HubNotRegistered(hub);
         _hubAllowedForPool[poolId][hub] = allowed;
@@ -103,5 +111,28 @@ contract PoolRegistry is IPoolRegistry, Governable {
 
     function _requirePool(uint64 poolId) internal view {
         if (_pools[poolId].bank == address(0)) revert UnknownPool(poolId);
+    }
+
+    /// @dev Admitting (true) is governance only; declining (false) is governance or the sentinel.
+    function _authorizeDirection(bool admits) private view {
+        if (msg.sender == governance) return;
+        if (admits || msg.sender != sentinel) revert Errors.Unauthorized();
+    }
+
+    /// @dev The target must already be under this registry's governance with no transfer pending. This catches an
+    ///      honest misconfiguration, such as a Bank still governed by its deployer; any contract can claim it, so
+    ///      the admission review of each queued operation is the security boundary (ADR-0037 §3, review R4, R5).
+    function _requireSameGovernance(address target) private view {
+        if (
+            _readWord(target, this.governance.selector) != uint256(uint160(governance))
+                || _readWord(target, this.pendingGovernance.selector) != 0
+        ) revert ForeignGovernance(target);
+    }
+
+    /// @dev A failed or malformed answer reads as a value no governance can have.
+    function _readWord(address target, bytes4 selector) private view returns (uint256 value) {
+        (bool ok, bytes memory data) = target.staticcall(abi.encodeWithSelector(selector));
+        if (!ok || data.length != 32) return type(uint256).max;
+        value = abi.decode(data, (uint256));
     }
 }

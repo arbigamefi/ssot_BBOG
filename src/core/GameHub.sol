@@ -9,6 +9,7 @@ import {IVRFHub} from "./interfaces/IVRFHub.sol";
 import {IGameModule} from "./interfaces/IGameModule.sol";
 import {SSOTTypes} from "./interfaces/SSOTTypes.sol";
 import {Governable} from "../access/Governable.sol";
+import {Sentinel} from "../access/Sentinel.sol";
 import {Errors} from "../libs/Errors.sol";
 import {StakeFunding} from "../libs/StakeFunding.sol";
 import {HouseEdgeLib} from "../libs/HouseEdgeLib.sol";
@@ -29,7 +30,7 @@ import {IReferralEngine} from "../engines/referral/IReferralEngine.sol";
 /// O = floor(E * (10000 - LP_SHARE_BPS) / 10000). Referral rewards are paid from O, and whatever
 /// they do not use accrues as protocol fees. The referral engine computes the allocation from the bet's
 /// acceptance snapshot; the SettlementRouter enforces the same bound independently.
-contract GameHub is IGameHub, Governable, ReentrancyGuard {
+contract GameHub is IGameHub, Sentinel, ReentrancyGuard {
     using SafeCast for uint256;
 
     uint32 public constant override MAX_BET_COUNT = 25;
@@ -183,7 +184,8 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         emit EdgeChangeApplied(old, pending.bps);
     }
 
-    function cancelEdgeChange() external override onlyGov {
+    /// @notice Keeps the current edge, so the sentinel may also call it.
+    function cancelEdgeChange() external override onlyGovOrSentinel {
         PendingEdgeChange memory pending = _pendingEdgeChange;
         if (pending.activatesAt == 0) revert NoPendingEdgeChange();
         delete _pendingEdgeChange;
@@ -250,7 +252,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     }
 
     /// @dev Irreversible: registerGame refuses a used gameId, so a restored game needs a new gameId.
-    function disableGame(bytes32 gameId) external override onlyGov {
+    function disableGame(bytes32 gameId) external override onlyGovOrSentinel {
         if (gameModule[gameId] == address(0)) revert UnknownGame(gameId);
         if (gameDisabled[gameId]) revert GameIsDisabled(gameId);
         gameDisabled[gameId] = true;

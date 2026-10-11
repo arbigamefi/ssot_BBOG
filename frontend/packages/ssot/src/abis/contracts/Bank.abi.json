@@ -776,6 +776,19 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "sentinel",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
@@ -862,6 +875,19 @@
         }
       ],
       "name": "setRiskReserveBps",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sentinel_",
+          "type": "address"
+        }
+      ],
+      "name": "setSentinel",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1695,6 +1721,19 @@
         }
       ],
       "name": "RiskReserveBpsSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sentinel",
+          "type": "address"
+        }
+      ],
+      "name": "SentinelSet",
       "type": "event"
     },
     {
