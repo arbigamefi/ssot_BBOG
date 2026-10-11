@@ -9,6 +9,7 @@ import {V16Batches} from "../../script/release/V16Batches.sol";
 import {V16ReleaseDigest} from "../../script/release/V16ReleaseDigest.sol";
 import {V16Snapshot} from "../../script/release/V16Snapshot.sol";
 import {GenerateGoldenVectorsV16} from "../../script/release/GenerateGoldenVectorsV16.s.sol";
+import {PrepareTimelockBatchesV16} from "../../script/release/PrepareTimelockBatchesV16.s.sol";
 import {GovernanceTimelock} from "../../src/access/GovernanceTimelock.sol";
 import {Governable} from "../../src/access/Governable.sol";
 import {Bank} from "../../src/core/Bank.sol";
@@ -420,6 +421,67 @@ contract DeploymentV16Test is ReleaseV16Fixture {
             module.validate(params, stake);
             assertGt(module.maxPayout(params, stake), 0);
         }
+    }
+
+    function testTheSafeFilesScheduleTheReleaseOperations() public isolatedEnv {
+        string memory snap = _deploy();
+        GovernanceTimelock tl = _timelock(snap);
+        string[4] memory paths = [
+            string("deployments/test-batches-snapshot.json"),
+            "deployments/test-safe-wiring.json",
+            "deployments/test-safe-activation.json",
+            "deployments/test-timelock-operations.json"
+        ];
+        string[4] memory keys =
+            [string("SNAPSHOT_PATH"), "SAFE_WIRING_BATCH_PATH", "SAFE_ACTIVATION_BATCH_PATH", "TIMELOCK_OPERATIONS_PATH"];
+        string[4] memory previous;
+        vm.createDir("deployments", true);
+        vm.writeFile(paths[0], snap);
+        for (uint256 i; i < keys.length; ++i) {
+            previous[i] = vm.envOr(keys[i], string(""));
+            vm.setEnv(keys[i], paths[i]);
+        }
+        // The script rehearses both operations; only its files are kept.
+        uint256 state = vm.snapshotState();
+        new PrepareTimelockBatchesV16().run();
+        vm.revertToStateAndDelete(state);
+        string memory wiringFile = vm.readFile(paths[1]);
+        string memory activationFile = vm.readFile(paths[2]);
+        string memory operations = vm.readFile(paths[3]);
+        for (uint256 i; i < keys.length; ++i) {
+            vm.setEnv(keys[i], previous[i]);
+            vm.removeFile(paths[i]);
+        }
+
+        V16Batches.Batch memory w = V16Batches.wiring(snap);
+        V16Batches.Batch memory a = V16Batches.activation(snap);
+        assertEq(wiringFile.readAddress(".transactions[0].to"), address(tl));
+        assertEq(wiringFile.readAddress(".meta.createdFromSafeAddress"), address(safe));
+        assertEq(
+            wiringFile.readBytes(".transactions[0].data"),
+            abi.encodeCall(TimelockController.scheduleBatch, (w.targets, w.values, w.payloads, w.predecessor, w.salt, 259_200))
+        );
+        assertEq(operations.readBytes32(".operations[0].id"), V16Batches.id(w));
+        assertEq(operations.readString(".operations[0].state"), "unset");
+        assertEq(operations.readBytes32(".operations[1].predecessor"), V16Batches.id(w));
+        assertEq(operations.readString(".operations[0].calls[0].function"), "setBinderOnce(address)");
+
+        // Sent as written: the Safe schedules each file, anyone executes the operation once ready.
+        bytes[2] memory schedules =
+            [wiringFile.readBytes(".transactions[0].data"), activationFile.readBytes(".transactions[0].data")];
+        for (uint256 i; i < 2; ++i) {
+            vm.prank(address(safe));
+            (bool scheduled,) = address(tl).call(schedules[i]);
+            assertTrue(scheduled);
+            vm.warp(block.timestamp + tl.getMinDelay());
+            vm.prank(executor);
+            (bool executed,) =
+                address(tl).call(operations.readBytes(string.concat(".operations[", vm.toString(i), "].executeCalldata")));
+            assertTrue(executed);
+            if (i == 0) verifier.verify(snap, V16Snapshot.Mode.Release);
+        }
+        assertTrue(tl.isOperationDone(V16Batches.id(a)));
+        verifier.verify(snap, V16Snapshot.Mode.Live);
     }
 
     // ---- Runtime code and precision ----

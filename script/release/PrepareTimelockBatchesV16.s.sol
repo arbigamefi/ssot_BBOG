@@ -91,8 +91,9 @@ contract PrepareTimelockBatchesV16 is Script {
         TimelockController.OperationState state = timelock.getOperationState(operation);
         if (state == TimelockController.OperationState.Done) return;
         if (state == TimelockController.OperationState.Unset) {
+            uint256 delay = timelock.getMinDelay(); // read first: vm.prank applies to the next call
             vm.prank(safe);
-            timelock.scheduleBatch(b.targets, b.values, b.payloads, b.predecessor, b.salt, timelock.getMinDelay());
+            timelock.scheduleBatch(b.targets, b.values, b.payloads, b.predecessor, b.salt, delay);
         }
         if (timelock.getTimestamp(operation) > block.timestamp) vm.warp(timelock.getTimestamp(operation));
         timelock.executeBatch(b.targets, b.values, b.payloads, b.predecessor, b.salt);
