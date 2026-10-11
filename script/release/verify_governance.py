@@ -4,14 +4,22 @@
 The signed snapshot supplies the deployment scan start. Empty code at start - 1
 proves that the event replay covers the contracts' entire authorization history.
 No RPC failure or incomplete history is treated as an empty authorization set.
+
+Each verification also emits a checkpoint: the replayed authorization state at the
+verified block and its SHA-256. A later run may start from such a checkpoint instead
+of the deployment block, but only when its digest comes from a signed record
+(GOVERNANCE_CHECKPOINT_SHA256) and its block hash is still on the chain.
 """
 import functools
+import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -21,7 +29,13 @@ ROLES = ('OddsSigner', 'ResultReporter', 'ResultChallenger', 'ResultArbitrator')
 GAMES = (('DICE', 'moduleDice'), ('COIN_TOSS', 'moduleCoinToss'), ('ROULETTE', 'moduleRoulette'),
          ('KENO', 'moduleKeno'), ('PLINKO', 'modulePlinko'), ('SIC_BO', 'moduleSicBo'), ('SLOTS', 'moduleSlots'),
          ('BACCARAT', 'moduleBaccarat'))
-CHUNK_SIZE = 500
+# Base's public RPC refuses eth_getLogs ranges above 200 blocks (HTTP 413).
+DEFAULT_PAGE_BLOCKS = 200
+MAX_PAGE_BLOCKS = 10_000
+# Transient provider answers worth another attempt; every other failure is final at once.
+RETRY_HTTP = frozenset({408, 425, 429}) | frozenset(range(500, 600))
+RETRY_JSONRPC = frozenset({-32000, -32005, -32603})
+CHECKPOINT_SCHEMA = 'ARBIGAMEFI_GOVERNANCE_CHECKPOINT_V1'
 
 
 class VerificationError(ValueError):
@@ -59,23 +73,63 @@ def signature(value):
     return subprocess.check_output(['cast', 'keccak', value], text=True).strip().lower()
 
 
-class Rpc:
-    def __init__(self, url):
-        self.url = url
+def page_blocks():
+    value = os.environ.get('GOVERNANCE_LOG_PAGE_BLOCKS', str(DEFAULT_PAGE_BLOCKS))
+    require(re.fullmatch(r'[1-9][0-9]*', value) is not None and int(value) <= MAX_PAGE_BLOCKS,
+            f'GOVERNANCE_LOG_PAGE_BLOCKS must be 1 to {MAX_PAGE_BLOCKS}')
+    return int(value)
 
-    def __call__(self, method, params):
+
+class Rpc:
+    """JSON-RPC over HTTP with bounded exponential backoff on transient failures.
+
+    Errors name the method, the HTTP status or JSON-RPC error code and the attempt count only: never the URL,
+    request headers or provider error text, any of which can carry credentials.
+    """
+
+    def __init__(self, url, attempts=None, backoff=None, sleep=time.sleep):
+        self.url = url
+        self.attempts = int(os.environ.get('RPC_MAX_ATTEMPTS', '6')) if attempts is None else attempts
+        self.backoff = float(os.environ.get('RPC_BACKOFF_SECONDS', '1')) if backoff is None else backoff
+        require(1 <= self.attempts <= 20 and 0 <= self.backoff <= 30, 'invalid RPC retry settings')
+        self.sleep = sleep
+        self.calls = 0
+        self.retries = 0
+
+    def once(self, method, params):
+        """Return ('ok', result), ('retry', class) or ('final', class)."""
         request = urllib.request.Request(self.url, json.dumps({
             'jsonrpc': '2.0', 'id': 1, 'method': method, 'params': params,
         }).encode(), {'Content-Type': 'application/json', 'User-Agent': 'ArbiGameFi-release-verifier/1'})
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 data = json.load(response)
-        except (OSError, ValueError, urllib.error.HTTPError):
-            # Never include URLs, request headers or provider error bodies.
-            raise VerificationError(f'RPC {method} failed') from None
-        require(isinstance(data, dict) and data.get('id') == 1 and 'error' not in data
-                and data.get('result') is not None, f'RPC {method} failed')
-        return data['result']
+        except urllib.error.HTTPError as error:
+            return ('retry' if error.code in RETRY_HTTP else 'final'), f'HTTP {error.code}'
+        except (OSError, TimeoutError, http.client.HTTPException):
+            return 'retry', 'connection error'
+        except ValueError:
+            return 'final', 'invalid JSON response'
+        if not isinstance(data, dict) or data.get('id') != 1:
+            return 'final', 'invalid JSON-RPC response'
+        if 'error' in data:
+            code = data['error'].get('code') if isinstance(data['error'], dict) else None
+            code = code if type(code) is int else None
+            return ('retry' if code in RETRY_JSONRPC else 'final'), f'JSON-RPC error {code}'
+        if data.get('result') is None:
+            return 'final', 'empty JSON-RPC result'
+        return 'ok', data['result']
+
+    def __call__(self, method, params):
+        for attempt in range(1, self.attempts + 1):
+            self.calls += 1
+            outcome, value = self.once(method, params)
+            if outcome == 'ok':
+                return value
+            if outcome == 'final' or attempt == self.attempts:
+                raise VerificationError(f'RPC {method} failed: {value} after {attempt} attempt(s)')
+            self.retries += 1
+            self.sleep(min(30.0, self.backoff * 2 ** (attempt - 1)))
 
 
 def call(rpc, target, name, args, block):
@@ -87,8 +141,9 @@ def events(rpc, target, names, start, end):
     rows = []
     seen = set()
     topics = {signature(name): name for name in names}
-    for first in range(start, end + 1, CHUNK_SIZE):
-        last = min(first + CHUNK_SIZE - 1, end)
+    size = page_blocks()
+    for first in range(start, end + 1, size):
+        last = min(first + size - 1, end)
         page = rpc('eth_getLogs', [{'address': target, 'fromBlock': hex(first), 'toBlock': hex(last),
                                    'topics': [list(topics)]}])
         require(isinstance(page, list), 'invalid authorization log response')
@@ -112,7 +167,65 @@ def boolean_event(row, count):
     return bool(value)
 
 
-def verify_permissions(rpc, snap, block):
+def empty_state():
+    return {'pools': {}, 'registered': {}, 'allowed': {}, 'games': {}}
+
+
+def encode_state(state):
+    """Canonical JSON form of the replayed authorization state."""
+    return {
+        'pools': {str(pool): list(cfg) for pool, cfg in sorted(state['pools'].items())},
+        'registeredHubs': dict(sorted(state['registered'].items())),
+        'allowedRoutes': {f'{pool}:{hub}': value for (pool, hub), value in sorted(state['allowed'].items())},
+        'games': {format(game_id, '#066x'): list(cfg) for game_id, cfg in sorted(state['games'].items())},
+    }
+
+
+def decode_state(encoded):
+    require(isinstance(encoded, dict) and set(encoded) == {'pools', 'registeredHubs', 'allowedRoutes', 'games'},
+            'invalid checkpoint state')
+    state = empty_state()
+    for pool, cfg in encoded['pools'].items():
+        require(re.fullmatch(r'[0-9]+', pool) is not None and int(pool) < 2**64 and isinstance(cfg, list)
+                and len(cfg) == 3 and type(cfg[2]) is int, 'invalid checkpoint pool')
+        state['pools'][int(pool)] = (address(cfg[0]), address(cfg[1]), cfg[2])
+    for hub, value in encoded['registeredHubs'].items():
+        require(type(value) is bool, 'invalid checkpoint hub')
+        state['registered'][address(hub)] = value
+    for route, value in encoded['allowedRoutes'].items():
+        pool, _, hub = route.partition(':')
+        require(re.fullmatch(r'[0-9]+', pool) is not None and int(pool) < 2**64 and type(value) is bool,
+                'invalid checkpoint route')
+        state['allowed'][(int(pool), address(hub))] = value
+    for game_id, cfg in encoded['games'].items():
+        require(isinstance(cfg, list) and len(cfg) == 3 and type(cfg[1]) is int and type(cfg[2]) is int,
+                'invalid checkpoint game')
+        state['games'][word(game_id)] = (address(cfg[0]), cfg[1], cfg[2])
+    return state
+
+
+def checkpoint_document(snap, state, block, block_hash):
+    return {'schema': CHECKPOINT_SCHEMA, 'chainId': snap['chainId'], 'historyStart': snap['blockNumber'],
+            'poolRegistry': address(snap['poolRegistry']), 'gameHub': address(snap['gameHub']),
+            'blockNumber': block, 'blockHash': block_hash.lower(), 'state': encode_state(state)}
+
+
+def checkpoint_digest(document):
+    return hashlib.sha256(json.dumps(document, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+
+
+def load_checkpoint(path, expected_sha256):
+    """Read a checkpoint whose digest the caller took from a signed record."""
+    require(isinstance(expected_sha256, str) and re.fullmatch(r'[0-9a-f]{64}', expected_sha256) is not None,
+            'a checkpoint needs GOVERNANCE_CHECKPOINT_SHA256 from a signed record')
+    document = json.loads(Path(path).read_text())
+    require(isinstance(document, dict) and checkpoint_digest(document) == expected_sha256,
+            'checkpoint differs from its signed digest')
+    return document
+
+
+def verify_permissions(rpc, snap, block, checkpoint=None):
+    """Return the authorization state at `block`, replayed from the deployment or from `checkpoint`."""
     require(snap['architectureVersion'] == 'v1.6-nft-liquidity', 'unsupported release architecture')
     require(quantity(rpc('eth_chainId', [])) == snap['chainId'], 'chain mismatch')
     start = snap['blockNumber']
@@ -143,15 +256,31 @@ def verify_permissions(rpc, snap, block):
     else:
         require(sports == ZERO and address(snap['sportsRiskEngine']) == ZERO
                 and all(address(snap['sports' + role]) == ZERO for role in ROLES), 'sports-disabled role route')
-    for target in [registry, game] + ([sports] if enabled else []):
-        require(rpc('eth_getCode', [target, hex(start - 1)]) == '0x', 'authorization history starts after contract creation')
+    targets = [registry, game] + ([sports] if enabled else [])
+    if checkpoint is None:
+        state, first = empty_state(), start
+        for target in targets:
+            require(rpc('eth_getCode', [target, hex(start - 1)]) == '0x', 'authorization history starts after contract creation')
+    else:
+        # The signed checkpoint carries the history up to its block; the chain must still contain that block.
+        require(not enabled, 'checkpoint replay covers casino-only releases')
+        require(checkpoint.get('schema') == CHECKPOINT_SCHEMA and checkpoint.get('chainId') == snap['chainId']
+                and checkpoint.get('historyStart') == start and checkpoint.get('poolRegistry') == registry
+                and checkpoint.get('gameHub') == game, 'checkpoint belongs to another release')
+        last_checked = checkpoint.get('blockNumber')
+        require(type(last_checked) is int and start <= last_checked <= block, 'invalid checkpoint block')
+        head = rpc('eth_getBlockByNumber', [hex(last_checked), False])
+        require(isinstance(head, dict) and isinstance(head.get('hash'), str)
+                and head['hash'].lower() == checkpoint.get('blockHash'), 'checkpoint block is not on this chain')
+        state, first = decode_state(checkpoint.get('state')), last_checked + 1
+    for target in targets:
         code = rpc('eth_getCode', [target, hex(block)])
         require(isinstance(code, str) and re.fullmatch(r'0x(?:[0-9a-fA-F]{2})+', code), 'authorization target has no code')
 
-    registered, allowed, observed_pools = {}, {}, {}
+    registered, allowed, observed_pools = state['registered'], state['allowed'], state['pools']
     names = ['PoolRegistered(uint64,address,address,uint8)', 'HubRegistered(address,bool)',
              'HubAllowedForPoolSet(uint64,address,bool)']
-    for name, row in events(rpc, registry, names, start, block):
+    for name, row in events(rpc, registry, names, first, block):
         if name == names[0]:
             require(len(row['topics']) == 4, 'invalid pool event topics')
             pool = word(row['topics'][1])
@@ -183,8 +312,8 @@ def verify_permissions(rpc, snap, block):
     # registration so that an extra game (any id, any module) cannot sit outside the certified domain.
     expected_games = {word(signature(name)): (address(snap[key]), snap['gameMaxBetCount_' + name],
                                               snap['gameCallbackGasLimit_' + name]) for name, key in GAMES}
-    observed_games = {}
-    for _, row in events(rpc, game, ['GameRegistered(bytes32,address,uint32,uint32)'], start, block):
+    observed_games = state['games']
+    for _, row in events(rpc, game, ['GameRegistered(bytes32,address,uint32,uint32)'], first, block):
         require(len(row['topics']) == 3 and isinstance(row['data'], str)
                 and re.fullmatch(r'0x[0-9a-fA-F]{128}', row['data']), 'invalid game event')
         game_id = word(row['topics'][1])
@@ -199,31 +328,38 @@ def verify_permissions(rpc, snap, block):
         for name, row in events(rpc, sports, role_names, start, block):
             value = boolean_event(row, 2)
             states[role_names[name]][topic_address(row['topics'][1])] = value
-        for role, state in states.items():
+        for role, members in states.items():
             expected = address(snap['sports' + role])
             expected_members = set() if expected == ZERO else {expected}
-            require({member for member, value in state.items() if value} == expected_members,
+            require({member for member, value in members.items() if value} == expected_members,
                     f'sports {role} set differs from release')
-            for member, value in state.items():
+            for member, value in members.items():
                 require(call(rpc, sports, role[0].lower() + role[1:] + '(address)', [member], block) == int(value),
                         f'sports {role} mapping differs from history')
+    return state
 
 
-def verify(snap, rpc, forge):
+def verify(snap, rpc, forge, checkpoint=None):
     frozen = rpc('eth_getBlockByNumber', ['latest', False])
     block = quantity(frozen['number'])
     block_hash = frozen['hash']
     word(block_hash)
-    verify_permissions(rpc, snap, block)
+    state = verify_permissions(rpc, snap, block, checkpoint)
     forge(block)
     require(rpc('eth_getBlockByNumber', [hex(block), False])['hash'] == block_hash,
             'verification block changed; retry complete verification')
-    return {'status': 'verified', 'chainId': snap['chainId'], 'blockNumber': block, 'blockHash': block_hash}
+    document = checkpoint_document(snap, state, block, block_hash)
+    return {'status': 'verified', 'chainId': snap['chainId'], 'blockNumber': block, 'blockHash': block_hash,
+            'replayedFrom': snap['blockNumber'] if checkpoint is None else checkpoint['blockNumber'] + 1,
+            'checkpointSha256': checkpoint_digest(document), 'checkpoint': document}
 
 
 def main():
     snap = json.loads(Path(os.environ['SNAPSHOT_PATH']).read_text())
     rpc = Rpc(os.environ['RPC_URL'])
+    checkpoint = None
+    if os.environ.get('GOVERNANCE_CHECKPOINT'):
+        checkpoint = load_checkpoint(os.environ['GOVERNANCE_CHECKPOINT'], os.environ.get('GOVERNANCE_CHECKPOINT_SHA256'))
 
     def forge(block):
         result = subprocess.run(['forge', 'script', 'script/release/VerifyGovernanceV16.s.sol:VerifyGovernanceV16',
@@ -232,7 +368,11 @@ def main():
         # Raw Forge diagnostics can include RPC credentials. Importers only need the rejecting stage.
         require(result.returncode == 0, 'frozen-block governance verification failed')
 
-    print(json.dumps(verify(snap, rpc, forge)))
+    result = verify(snap, rpc, forge, checkpoint)
+    if os.environ.get('GOVERNANCE_CHECKPOINT_OUT'):
+        Path(os.environ['GOVERNANCE_CHECKPOINT_OUT']).write_text(json.dumps(result['checkpoint'], indent=2) + '\n')
+    print(f'RPC calls {rpc.calls}, retries {rpc.retries}, log page {page_blocks()} blocks', file=sys.stderr)
+    print(json.dumps({key: value for key, value in result.items() if key != 'checkpoint'}))
 
 
 if __name__ == '__main__':

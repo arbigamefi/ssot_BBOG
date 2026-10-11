@@ -1,6 +1,9 @@
 """Complete authorization history controls; no Forge compilation or network calls."""
 import copy
 import contextlib
+import http.client
+import math
+import os
 import hashlib
 import importlib.util
 import io
@@ -34,6 +37,7 @@ class Chain:
                      'sportsHub': addr(3) if sports else addr(0), 'sportsRiskEngine': addr(4) if sports else addr(0),
                      'sportsEnabled': int(sports), 'numPools': 2 if sports else 1}
         self.logs, self.values, self.requests = [], {}, []
+        self.calls = self.retries = 0
         self.old_code = '0x'
         self.hash = word(123)
         self.latest_reads = 0
@@ -97,6 +101,7 @@ class Chain:
         self.values[(target, data)] = word(value)
 
     def __call__(self, method, params):
+        self.calls += 1
         self.requests.append((method, copy.deepcopy(params)))
         if method == self.fail_method:
             raise CHECK.VerificationError('RPC ' + method + ' failed')
@@ -133,10 +138,11 @@ class PermissionHistoryTests(unittest.TestCase):
             self.assertEqual(result['blockHash'], chain.hash)
             pages = [params[0] for method, params in chain.requests if method == 'eth_getLogs']
             # Registry and GameHub always replay their history; SportsHub roles only when sports is enabled.
-            self.assertEqual(len(pages), 9 if sports else 6)
+            per_target = math.ceil((chain.end - chain.start + 1) / CHECK.DEFAULT_PAGE_BLOCKS)
+            self.assertEqual(len(pages), per_target * (3 if sports else 2))
             self.assertEqual({page['address'] for page in pages}, {addr(1), addr(2)} | ({addr(3)} if sports else set()))
             for page in pages:
-                self.assertLessEqual(int(page['toBlock'], 16) - int(page['fromBlock'], 16) + 1, 500)
+                self.assertLessEqual(int(page['toBlock'], 16) - int(page['fromBlock'], 16) + 1, 200)
             self.assertTrue(all(params[1] == hex(chain.end) for method, params in chain.requests if method == 'eth_call'))
 
     def test_game_registrations_must_equal_the_certified_set(self):
@@ -244,14 +250,14 @@ class PermissionHistoryTests(unittest.TestCase):
             CHECK.verify(chain.snap, chain, lambda _: setattr(chain, 'hash', word(999)))
 
     def test_rpc_errors_hide_credentials_and_use_an_explicit_user_agent(self):
-        for response in ({'jsonrpc': '2.0', 'id': 1, 'error': {'message': 'secret'}},
-                         {'jsonrpc': '2.0', 'id': 1, 'result': None}):
+        for response, detail in (({'jsonrpc': '2.0', 'id': 1, 'error': {'message': 'secret'}}, 'JSON-RPC error None'),
+                                 ({'jsonrpc': '2.0', 'id': 1, 'result': None}, 'empty JSON-RPC result')):
             with patch.object(CHECK.urllib.request, 'urlopen', return_value=io.BytesIO(json.dumps(response).encode())) as opened:
-                with self.assertRaisesRegex(CHECK.VerificationError, '^RPC eth_getLogs failed$'):
+                with self.assertRaisesRegex(CHECK.VerificationError, rf'^RPC eth_getLogs failed: {detail} after 1 attempt\(s\)$'):
                     CHECK.Rpc('https://secret.invalid')( 'eth_getLogs', [])
                 self.assertIn('ArbiGameFi', opened.call_args.args[0].get_header('User-agent'))
         with patch.object(CHECK.urllib.request, 'urlopen', side_effect=urllib.error.HTTPError('https://secret.invalid', 403, 'secret', {}, None)):
-            with self.assertRaisesRegex(CHECK.VerificationError, '^RPC eth_getCode failed$'):
+            with self.assertRaisesRegex(CHECK.VerificationError, r'^RPC eth_getCode failed: HTTP 403 after 1 attempt\(s\)$'):
                 CHECK.Rpc('https://secret.invalid')('eth_getCode', [])
 
     def test_entrypoint_pins_existing_forge_check_and_hides_its_rpc_diagnostics(self):
@@ -281,6 +287,140 @@ class PermissionHistoryTests(unittest.TestCase):
                     patch.object(CHECK.subprocess, 'run', return_value=subprocess.CompletedProcess([], 1, '', 'secret')):
                 with self.assertRaisesRegex(CHECK.VerificationError, '^frozen-block governance verification failed$'):
                     CHECK.main()
+
+
+def reply(result):
+    return io.BytesIO(json.dumps({'jsonrpc': '2.0', 'id': 1, 'result': result}).encode())
+
+
+def http_error(code):
+    return urllib.error.HTTPError('https://secret.invalid/v3/key', code, 'secret body', {}, None)
+
+
+class RpcRetryTests(unittest.TestCase):
+    """Bounded backoff on transient provider failures; final failures stop at once; nothing leaks the URL."""
+
+    def run_rpc(self, outcomes, attempts=6, backoff=1.0):
+        sleeps = []
+        rpc = CHECK.Rpc('https://secret.invalid/v3/key', attempts=attempts, backoff=backoff, sleep=sleeps.append)
+        with patch.object(CHECK.urllib.request, 'urlopen', side_effect=outcomes):
+            try:
+                return rpc('eth_getLogs', []), sleeps, rpc, None
+            except CHECK.VerificationError as error:
+                self.assertNotIn('secret', str(error))
+                return None, sleeps, rpc, str(error)
+
+    def test_transient_failures_are_retried_with_backoff(self):
+        transient = [http_error(429), http_error(503), urllib.error.URLError('reset'), TimeoutError(),
+                     http.client.IncompleteRead(b''), io.BytesIO(json.dumps({'jsonrpc': '2.0', 'id': 1,
+                                                                               'error': {'code': -32005}}).encode())]
+        for failure in transient:
+            with self.subTest(failure=type(failure).__name__):
+                result, sleeps, rpc, error = self.run_rpc([failure, reply(['ok'])])
+                self.assertIsNone(error)
+                self.assertEqual((result, sleeps, rpc.calls, rpc.retries), (['ok'], [1.0], 2, 1))
+
+    def test_persistent_transient_failure_stops_after_the_attempt_limit(self):
+        for code in (429, 503, 599, 502):
+            with self.subTest(code=code):
+                _, sleeps, rpc, error = self.run_rpc([http_error(code)] * 6)
+                self.assertEqual(error, f'RPC eth_getLogs failed: HTTP {code} after 6 attempt(s)')
+                self.assertEqual((sleeps, rpc.calls), ([1.0, 2.0, 4.0, 8.0, 16.0], 6))
+
+    def test_final_failures_are_not_retried(self):
+        final = {413: 'HTTP 413', 403: 'HTTP 403', 400: 'HTTP 400'}
+        for code, detail in final.items():
+            with self.subTest(code=code):
+                _, sleeps, _, error = self.run_rpc([http_error(code)])
+                self.assertEqual((error, sleeps), (f'RPC eth_getLogs failed: {detail} after 1 attempt(s)', []))
+        invalid_params = io.BytesIO(json.dumps({'jsonrpc': '2.0', 'id': 1, 'error': {'code': -32602, 'message': 'secret'}}).encode())
+        _, sleeps, _, error = self.run_rpc([invalid_params])
+        self.assertEqual((error, sleeps), ('RPC eth_getLogs failed: JSON-RPC error -32602 after 1 attempt(s)', []))
+
+    def test_backoff_is_capped(self):
+        _, sleeps, _, _ = self.run_rpc([http_error(429)] * 6, backoff=10)
+        self.assertEqual(sleeps, [10, 20, 30, 30, 30])
+
+    def test_page_size_comes_from_the_environment_within_bounds(self):
+        for value in ('0', '10001', 'abc', '-5'):
+            with self.subTest(value=value), patch.dict(os.environ, GOVERNANCE_LOG_PAGE_BLOCKS=value):
+                with self.assertRaisesRegex(CHECK.VerificationError, 'GOVERNANCE_LOG_PAGE_BLOCKS'):
+                    CHECK.page_blocks()
+        chain = Chain()
+        with patch.dict(os.environ, GOVERNANCE_LOG_PAGE_BLOCKS='50'):
+            CHECK.verify_permissions(chain, chain.snap, chain.end)
+        pages = [params[0] for method, params in chain.requests if method == 'eth_getLogs']
+        self.assertTrue(all(int(p['toBlock'], 16) - int(p['fromBlock'], 16) + 1 <= 50 for p in pages))
+
+
+class CheckpointTests(unittest.TestCase):
+    """A signed checkpoint lets a later run replay only the blocks after it, with the same result."""
+
+    def checkpoint(self):
+        chain = Chain()
+        result = CHECK.verify(chain.snap, chain, lambda _: None)
+        self.assertEqual(result['checkpointSha256'], CHECK.checkpoint_digest(result['checkpoint']))
+        return chain, result['checkpoint']
+
+    def test_incremental_replay_reads_only_later_blocks_and_matches_full_replay(self):
+        chain, document = self.checkpoint()
+        chain.end, chain.requests = 1900, []
+        incremental = CHECK.verify(chain.snap, chain, lambda _: None, document)
+        pages = [params[0] for method, params in chain.requests if method == 'eth_getLogs']
+        self.assertTrue(pages and min(int(p['fromBlock'], 16) for p in pages) == document['blockNumber'] + 1)
+        self.assertEqual(incremental['replayedFrom'], document['blockNumber'] + 1)
+        full = CHECK.verify(chain.snap, chain, lambda _: None)
+        self.assertEqual(incremental['checkpoint'], full['checkpoint'])
+
+    def test_later_changes_are_still_detected(self):
+        chain, document = self.checkpoint()
+        chain.end = 1900
+        chain.add('HubRegistered(address,bool)', addr(1), [99], 1, block=1600)
+        with self.assertRaisesRegex(CHECK.VerificationError, 'registered hub set'):
+            CHECK.verify(chain.snap, chain, lambda _: None, document)
+        chain, document = self.checkpoint()
+        chain.end = 1900
+        chain.register_game('KENO', 63, 25, 2447746, block=1700)
+        with self.assertRaisesRegex(CHECK.VerificationError, 'duplicate game registration'):
+            CHECK.verify(chain.snap, chain, lambda _: None, document)
+
+    def test_checkpoint_must_be_signed_on_chain_and_for_this_release(self):
+        chain, document = self.checkpoint()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'checkpoint.json'
+            path.write_text(json.dumps(document))
+            digest = CHECK.checkpoint_digest(document)
+            self.assertEqual(CHECK.load_checkpoint(path, digest), document)
+            for expected in (None, '', 'f' * 64):
+                with self.assertRaises(CHECK.VerificationError):
+                    CHECK.load_checkpoint(path, expected)
+        moved = Chain(); moved.hash = word(777)
+        with self.assertRaisesRegex(CHECK.VerificationError, 'not on this chain'):
+            CHECK.verify_permissions(moved, moved.snap, moved.end, document)
+        other = Chain(); other.snap['poolRegistry'] = addr(9)
+        with self.assertRaisesRegex(CHECK.VerificationError, 'another release'):
+            CHECK.verify_permissions(other, other.snap, other.end, document)
+        sports = Chain(True)
+        with self.assertRaisesRegex(CHECK.VerificationError, 'casino-only'):
+            CHECK.verify_permissions(sports, sports.snap, sports.end, document)
+        tampered = copy.deepcopy(document); tampered['state']['registeredHubs'][addr(99)] = True
+        with self.assertRaisesRegex(CHECK.VerificationError, 'registered hub set'):
+            CHECK.verify_permissions(Chain(), chain.snap, chain.end, tampered)
+
+    def test_entrypoint_writes_the_next_checkpoint_and_prints_only_its_digest(self):
+        chain = Chain()
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot, out = Path(directory) / 'snapshot.json', Path(directory) / 'checkpoint.json'
+            snapshot.write_text(json.dumps(chain.snap))
+            chain.url = 'https://secret.invalid'
+            env = {'SNAPSHOT_PATH': str(snapshot), 'RPC_URL': chain.url, 'GOVERNANCE_CHECKPOINT_OUT': str(out)}
+            with patch.dict(CHECK.os.environ, env), patch.object(CHECK, 'Rpc', return_value=chain), \
+                    patch.object(CHECK.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '', '')), \
+                    contextlib.redirect_stdout(io.StringIO()) as output, contextlib.redirect_stderr(io.StringIO()):
+                CHECK.main()
+            printed = json.loads(output.getvalue())
+            self.assertNotIn('checkpoint', printed)
+            self.assertEqual(printed['checkpointSha256'], CHECK.checkpoint_digest(json.loads(out.read_text())))
 
 
 if __name__ == '__main__':

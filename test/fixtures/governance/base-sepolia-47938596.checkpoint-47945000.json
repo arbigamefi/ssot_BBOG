@@ -1,0 +1,66 @@
+{
+  "schema": "ARBIGAMEFI_GOVERNANCE_CHECKPOINT_V1",
+  "chainId": 84532,
+  "historyStart": 47938596,
+  "poolRegistry": "0xff36e19fef79834c34ec54d82df9435a5792927f",
+  "gameHub": "0x6ee24a7659601090380cbcf7d832a33193355bb7",
+  "blockNumber": 47945000,
+  "blockHash": "0xbbd5f113f312b411ac0f9e7189b0d6ec334a27279f8cdc53c725d5ef0f1a540d",
+  "state": {
+    "pools": {
+      "1": [
+        "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+        "0x616d4f468fff9e1b8589556b315daecdac411047",
+        1
+      ]
+    },
+    "registeredHubs": {
+      "0x6ee24a7659601090380cbcf7d832a33193355bb7": true
+    },
+    "allowedRoutes": {
+      "1:0x6ee24a7659601090380cbcf7d832a33193355bb7": true
+    },
+    "games": {
+      "0x3b985d08128ef7b25e693a611fb5ae6f2d2b2974adbec7deb83c4f95c2562e6b": [
+        "0x04f0a6a8a9eaaf1870c0b8754e4c4d1e08619f9c",
+        25,
+        2447746
+      ],
+      "0x3f8a7d05df6b7136e6cb9eb13e763fb722015b2357a0378af58fea0efcabce1d": [
+        "0xc8d280c70c7865694ec5a3d5a51592c58053cd9b",
+        25,
+        2447746
+      ],
+      "0x41541f350c1da9780d719f9ebc2dd9d5883bf8c8df895243a1696bede4a708c0": [
+        "0x61240be5810838e7d7656346002fc16ec30f42e4",
+        25,
+        2447746
+      ],
+      "0x6e800792927dde77598bf8cf4e8d9832799fbff08d7fbb3989225097ac6fa4e7": [
+        "0x0847ed8114337f193ea1ef47ecc6c54a9c63d334",
+        25,
+        2447746
+      ],
+      "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914a8b": [
+        "0x39cb9cb6a10df1bac11a697b6632564be6645f48",
+        25,
+        2447746
+      ],
+      "0xb4aacd27778fcc813ac1737807c34d5d4193c514f0d91a0caeeada2d6752baf0": [
+        "0x8bf0b587ef6ca70470477b8d3722a55959a6c000",
+        25,
+        2447746
+      ],
+      "0xf03cfb57946606f01bd40b08522709153b0e3d73dd054769c5ecdfdbfe72f681": [
+        "0xd532ac6f88e40a470433bbef23b988eab61e6b44",
+        25,
+        2447746
+      ],
+      "0xf079b0c3d932c294ee3983751f8789be874f0ceef4ce93c84fc7e6be1e9f3bd2": [
+        "0x42505560836de088e7965e0c4691fcd28710fc75",
+        25,
+        2447746
+      ]
+    }
+  }
+}

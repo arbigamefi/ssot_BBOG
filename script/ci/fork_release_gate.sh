@@ -33,35 +33,15 @@ if [[ -z "$VRF_WRAPPER_FROM_SNAPSHOT" || "$VRF_WRAPPER_FROM_SNAPSHOT" == "null" 
   exit 1
 fi
 
-# Prefer explicit overrides, otherwise map chainId to a configured RPC secret.
-RPC_URL="${FORK_RPC_URL:-}"
-if [[ -z "$RPC_URL" ]]; then
-  case "$CHAIN_ID" in
-    8453)
-      RPC_URL="${FORK_RPC_URL_BASE:-}"; NETWORK="base";;
-    84532)
-      RPC_URL="${FORK_RPC_URL_BASE_SEPOLIA:-}"; NETWORK="base_sepolia";;
-    42161)
-      RPC_URL="${FORK_RPC_URL_ARBITRUM_ONE:-}"; NETWORK="arbitrum_one";;
-    421614)
-      RPC_URL="${FORK_RPC_URL_ARBITRUM_SEPOLIA:-}"; NETWORK="arbitrum_sepolia";;
-    *)
-      echo "unknown chainId=$CHAIN_ID. Set FORK_RPC_URL explicitly.";
-      exit 1;;
-  esac
-else
-  NETWORK="custom"
-fi
-
-if [[ -z "$RPC_URL" ]]; then
-  echo "missing fork RPC URL for chainId=$CHAIN_ID (network=$NETWORK)"
-  echo "set one of: FORK_RPC_URL (override) or secrets/env vars:"
-  echo "  - FORK_RPC_URL_BASE (8453)"
-  echo "  - FORK_RPC_URL_BASE_SEPOLIA (84532)"
-  echo "  - FORK_RPC_URL_ARBITRUM_ONE (42161)"
-  echo "  - FORK_RPC_URL_ARBITRUM_SEPOLIA (421614)"
-  exit 1
-fi
+# The Base public RPCs serve the gate: governance replay pages and retries within their limits. FORK_RPC_URL
+# overrides them, for example with an operator endpoint from script/tools/with-ops-rpc.sh.
+case "$CHAIN_ID" in
+  8453) NETWORK="base"; RPC_URL="${FORK_RPC_URL:-https://mainnet.base.org}" ;;
+  84532) NETWORK="base_sepolia"; RPC_URL="${FORK_RPC_URL:-https://sepolia.base.org}" ;;
+  *)
+    echo "unsupported chainId=$CHAIN_ID; the release gate covers Base and Base Sepolia"
+    exit 1 ;;
+esac
 
 # A release gate cannot silently substitute a reference wrapper or historical
 # block. Use the release address and the fresh block checked by governance.

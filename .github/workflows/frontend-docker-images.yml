@@ -142,8 +142,6 @@ jobs:
           RELEASE_BUNDLE_SHA256: ${{ inputs.bundle_sha256 }}
           DEPLOY_CHAIN_ID: ${{ inputs.chain_id }}
           RELEASE_SIGNER: ${{ vars.V16_RELEASE_SIGNER }}
-          RPC_URL_BASE_SEPOLIA: ${{ secrets.FORK_RPC_URL_BASE_SEPOLIA }}
-          RPC_URL_BASE: ${{ secrets.FORK_RPC_URL_BASE }}
         run: |
           python3 - <<'PYVALID'
           import os, re
@@ -152,8 +150,8 @@ jobs:
           PYVALID
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$BUNDLE_NAME" --dir "$RUNNER_TEMP/release-download"
           case "$DEPLOY_CHAIN_ID" in
-            84532) export RPC_URL="${RPC_URL_BASE_SEPOLIA:-https://sepolia.base.org}" ;;
-            8453) export RPC_URL="${RPC_URL_BASE:-https://mainnet.base.org}" ;;
+            84532) export RPC_URL=https://sepolia.base.org ;;
+            8453) export RPC_URL=https://mainnet.base.org ;;
             *) exit 1 ;;
           esac
           bash script/ci/install_deps.sh

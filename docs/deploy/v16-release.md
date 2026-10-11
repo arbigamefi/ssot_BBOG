@@ -42,6 +42,13 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    The signed start block must precede Registry/SportsHub creation. The verifier replays all Hub/pool
    and Sports role grants, rejects undeclared members and checks the same frozen block in Forge.
    A zero optional Sports role declares an empty set; provider or coverage failure rejects the release.
+   Logs are read in pages of `GOVERNANCE_LOG_PAGE_BLOCKS` blocks (default 200, the Base public RPC limit). Transient
+   provider failures (HTTP 408, 425, 429 and 5xx, dropped connections) are retried with backoff (`RPC_MAX_ATTEMPTS`,
+   default 6; `RPC_BACKOFF_SECONDS`, default 1); errors name the HTTP status or JSON-RPC code, never the URL. Each run
+   prints `checkpointSha256` and, with `GOVERNANCE_CHECKPOINT_OUT`, writes the replayed state. A later run starts from
+   it with `GOVERNANCE_CHECKPOINT` only when `GOVERNANCE_CHECKPOINT_SHA256` comes from a signed record. Run the check
+   locally through `script/tools/with-ops-rpc.sh infura <network>` with `RPC_URL="$OPS_RPC_URL"`; CI uses the Base
+   public RPCs.
    Release verification also checks the first-callback certificate domain for the snapshot's chain
    (`script/release/first-callback-domain-<chainId>.json`). `make release-v16` runs this check before anything is
    signed, as `release-domain-check`.
