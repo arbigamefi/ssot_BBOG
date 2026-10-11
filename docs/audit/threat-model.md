@@ -203,7 +203,7 @@ witnesses. See the [recorded decision](../adr/0034-nft-liquidity-deposits.md#pre
 Acceptance does not eliminate the advantage or close gas, external-audit and network release gates.
 
 A known result whose settlement keeps failing fences that Vault's capital operations until it is voided,
-at most 7 days after its request; an accounting-class defect, which the void does not cover, may fence
+which anyone can do 7 days after its request; an accounting-class defect, which the void does not cover, may fence
 them indefinitely. Pinning the original module
 means selecting a new module for future bets does not repair its existing positions. Permissionless
 entry does not prove bounded terminalization under arbitrary contract or oracle failures. Unknown

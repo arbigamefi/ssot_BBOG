@@ -210,7 +210,7 @@ not hide a pending fulfillment from a sequencer, builder or observer able to ord
 The user accepted the existing synchronous-exit/whole-pool ordering risk, with matching public disclosure; this
 is not a fix or proof of capital-ordering fairness. Strict gas, external audit and network gates remain
 independent. A result whose settlement keeps failing stops LP capital operations in the affected Vault until it
-is voided, at most 7 days after its request; an accounting-class failure, which the void does not cover
+is voided, which anyone can do 7 days after its request; an accounting-class failure, which the void does not cover
 (ADR-0037 §7.5), can stop them indefinitely. This decision makes no unconditional liveness or MEV claim.
 
 ### Owner risk acceptance (F6, submitted 2026-10-08)
