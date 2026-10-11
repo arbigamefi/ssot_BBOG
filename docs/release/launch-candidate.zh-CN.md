@@ -20,7 +20,7 @@
 - 2026-10-10 的 Base Sepolia 部署（源码 `1b7419bca`，GameHub `0x6EE2…5bb7`，Bank `0x616d…1047`）：**放弃**。Bank 暂停中，
   Bank 与 Vault 均为 0 USDC，治理为 Safe `0x7F0c…691d`；不再做 Release Gate、镜像与测试网验收。2026-10-02 的旧部署已退役。
 - Release Gate run `38103495700`（标签已删除的 `v1.6.0-base-sepolia-3e36a4bfc`）：树门槛与 proof-gates 通过；`release-gate` 四次
-  attempt 都失败在 fork 步骤（`RPC eth_getLogs failed` / `RPC eth_chainId failed`；Infura 免费额度与生产 keeper 共用，直接探测得到
+  attempt 都失败在 fork 步骤（`RPC eth_getLogs failed` / `RPC eth_chainId failed`；直接探测 Infura 得到
   HTTP 429，但运行日志不含状态码）。attempt 2、3 由 `arbigamefi` 账号发起，不是实施方，也不是复核方。退出条件：该门槛不再对旧树执行，
   Release Gate 只在本候选版上验收（A1 之后）。
 - 审计：独立 AI 审计与三轮复核针对 v1.6（`1b7419bca` / `3e36a4bfc`）；外审交付 r2 已被本候选版取代，`1e95d7fe…` 不会有外审。
@@ -247,7 +247,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | C4 | 条款与 LP 材料：作废规则（VRF 原生费不退）；准入时间锁与 LP 退出窗口；暂停不阻止提款；每玩家 2 个持仓；guardian 否决权；§9 全部残余 | §7、§9 |
 | C5 | 规范修订（宪法的修订需 Owner 明确批准并留记录）：`docs/constitution/SSOT.v1.6.md:125, 128-130, 137`；`ExecutableSSOT.v1.6.md:48-52, 243-249, 302`；`docs/adr/0006-vrf-callback-settlement.md:87-90, 197-204, 229`；`docs/adr/0034-nft-liquidity-deposits.md:30, 145`；`docs/architecture/overview.md:95, 116`；`docs/audit/v1.6-audit-scope.md:49, 172`；`docs/audit/threat-model.md:140`；`WHITEPAPER.zh-CN.md:18, 197, 201, 212, 215-216, 223, 229, 232-233`；`WHITEPAPER.product.zh-CN.md:109`；`docs/strategy/economic-design.md:104`；`docs/ops/runbooks/pause-config-drift.md:11, 18, 36-39`；`docs/ops/alerts.md:26`；`docs/ops/runbooks/governance-safe-setup.md:22-61` | 复核 M-6 |
 | C6 | ADR-0006 的两处改进（M4 范围限定、确认记录的位置）；本版外审交付按 FZ-6 清单打包 | 复核 S-8 |
-| C7 | legacy Bank 地址登记：18 个 Bank 的链、地址、是否暂停、余额、治理方、退役计划与 RPC key 轮换记录（2026-10-11：四个 key 按用途改名；OPS 与 PROD_KEEPER 分属不同账户，旧 Alchemy key 已重建，均经 Owner 确认；服务器换 key 的时间与核验结果待记） | 复核 M-12 |
+| C7 | legacy Bank 地址登记：18 个 Bank 的链、地址、是否暂停、余额、治理方、退役计划与 RPC key 轮换记录（2026-10-11：四个 key 按用途改名；OPS 与 PROD_KEEPER 分属不同账户，旧 Alchemy key 已重建，均经 Owner 确认） | 复核 M-12 |
 | C8 | 体育文档移出本版（随 B9），路线图保留体育作为未来能力 | Owner 选项 A |
 
 ## 12. 运营事项
@@ -257,10 +257,9 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | 通知外审方：r2 已被本候选版取代，`1e95d7fe…` 不会有外审；送 B0 设计预审；约定外审后修复回路 | 实施方准备，Owner 发送 | 复核 S-2 |
 | K0-4 配置漂移告警：Owner 参数、时间锁排队与 Ready 超期、`OpenHoldLimit`、作废事件；排队告警推送到 LP 可见的公开渠道 | 实施方，Owner 部署 | 分支 `k0-4/config-drift-alerts`；复核 S-9；在本机运行，RPC 用 `INFURA_API_KEY_OPS`（HTTP，经包装脚本） |
 | legacy Bank 退役（14 个未暂停）与 RPC key 轮换 | Owner | C7；key 已于 2026-10-11 按用途改名 |
-| 生产 keeper 改用 `INFURA_API_KEY_PROD_KEEPER`（`KEEPER_RPC_HTTP`）与 `ALCHEMY_API_KEY_PROD_KEEPER`（`KEEPER_RPC_WS`）并重建；完成后更新 §2 与本表“keeper 与 CI 共用 Infura 额度”的说法。2026-10-11 核对：服务器 WS 仍用 `ALCHEMY_API_KEY_OPS`，HTTP 已不是 OPS | Owner 在本机终端运行 `bash script/ops/set-keeper-rpc.sh base-sepolia` | 实施方随后核验健康状态、日志与 OPS 是否已离开服务器（只比较哈希） |
 | 主网备用 keeper 只配 `KEEPER_RPC_HTTP`（`ALCHEMY_API_KEY_OPS`），不配 WS；`frontend/deploy/casino-keeper/backup.base-mainnet.env.example` 随 D 更新 | 实施方，Owner 部署 | 主网上线后 |
 | 原生安全扫描：排期，或写明由外审取代 | Owner | 复核 S-10 |
-| 生产服务器：保留至本候选版上线切换；其 keeper 与 CI 共用 Infura 额度 | Owner | A1 后 CI 不再用 Infura |
+| 旧生产服务器：只保留旧数据，不再维护、不换 key；本候选版上线切换时彻底删除，新服务器的 keeper 直接用 `*_PROD_KEEPER` | Owner | — |
 
 ## 13. 价值网络与主网前置（冻结签核 FZ-8）
 
