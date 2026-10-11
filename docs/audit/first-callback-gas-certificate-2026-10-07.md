@@ -249,6 +249,16 @@ Baccarat 约 2 小时、峰值 31 GB。比较时不用 `diff -r`：`module-bound
 `d67a7083a9f3676514339432cc5f690d3cc4de0253935d431c8d9631f8873491`。
 
 复现依赖的证据目录 `landing-2026-10-08/`、`callback-cost-certificate-2026-10-04/`、`h1-callback-cost-certificate-2026-10-04/`
-与 `takeover-2026-10-07/` 已归档（[上线候选版](../release/launch-candidate.zh-CN.md) §14）。按原目录布局写的复现命令保留在提交
-`b8a48425f` 中本文的第 8 节。所有分析都在临时副本里重跑，再与封存件比较，绝不写入封存目录（架构复审 A-2）。
-把复现工具收进仓库、在新检出上复现 v4 的关键数值，是上线候选版的 A12。
+与 `takeover-2026-10-07/` 已归档，摘要见[证据索引](../release/evidence.md)。在任一检出上运行：
+
+```sh
+python3 script/certificate/reproduce_first_callback_v4.py --modules rerun
+```
+
+脚本先按 `docs/release/evidence-index.sha256` 校验两个归档，把四个证据目录解到新的工作目录（封存副本只读），
+再按 `script/release/certificates/first-callback-v4/CERTIFICATE-v4.sha256`（域文件引用的那份）校验封存包；
+然后构建本检出，在副本中以本检出为仓库根，原样重跑封存的脚本：由本检出重建 Vault 的 solc 输入并用 `deps.lock`
+钉住的 solc 编译、三项 CFG 分析与树 DP、协议帧、模块（`--modules rerun` 时含完全展开）、对本检出 `out/` 的 O3 绑定、
+输入钉定与组合，最后用封存包自带的 `compare_v4.py` 比较并打印关键数值。只有两处在内存中适配：`run_frames.py`
+里原工作站的绝对路径指向解出的副本，`keno_index_access.py` 经 `SOLC` 变量取钉住的 solc。`--modules sealed`
+保留封存的模块界与 Baccarat 展开，其余照常重跑，用时约 10 秒。所有分析都在临时副本里重跑，绝不写入封存目录（架构复审 A-2）。
