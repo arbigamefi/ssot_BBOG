@@ -92,7 +92,8 @@ invalid no-deposit cutoff; already-open positions retain their valid cutoff and 
 
 Failed player transfers remain fixed player payables PP in Bank. Their cost is included once in C;
 later payment reduces Bank cash and PP together and does not charge the tree again. Unknown errors
-are not refunds. Failure to complete required accounting reverts the entire terminal operation.
+are not refunds; only a void (ADR-0037 §7) returns the stake of a received result whose settlement keeps
+failing. Failure to complete required accounting reverts the entire terminal operation.
 
 ### PoolRegistry and SettlementRouter
 
@@ -113,7 +114,8 @@ one guarded finalization implementation with the original module.
 Modules are deterministic validate/maxPayout/resolve code with no custody. A registry change does
 not replace the module for an already accepted bet. Resolver errors, out-of-gas, invalid results,
 referral errors or accounting failures preserve the original result for investigation/retry;
-they do not authorize a blanket refund.
+they do not authorize a blanket refund. A result that never settles can only be voided under ADR-0037
+§7, which returns its stake as a player payable and draws no new outcome.
 
 ### VRFHub: single wrapper consumer and result store
 
@@ -154,8 +156,8 @@ VRFHub must be correctly bound before pool activation, without an unauthenticate
 ### Public deposit or withdrawal
 
 The LP approves Vault for asset deposits. Vault first checks its own reentrancy guard and Bank's
-capital-operation status. Bank combines pause, its in-progress mutation state and Router's received
-but unbooked count. A failure or malformed query rejects the action; executable quotes cannot advertise
+capital-operation status. Bank combines its in-progress mutation state and Router's received but
+unbooked count; a deposit also checks the pause. A failure or malformed query rejects the action; executable quotes cannot advertise
 capacity through an unavailable authority.
 
 Deposit verifies actual arrival and completes leaf/deadline state before safe mint. Withdrawal
@@ -195,8 +197,8 @@ The one-hour default is the earliest timeout-refund eligibility, not an expirati
 Canonical receipt of a word prevents timeout refund even if GameHub never received the callback.
 A committed refund prevents a later response from reopening the position.
 
-Pause does not block callback/retry, valid terminal settlement/refund, player PP claims or native
-credit claims. A receiver can still prevent immediate transfer; the entitlement remains recorded.
+A pause blocks only new positions and new LP deposits; callback/retry, valid terminal settlement/refund,
+voids, player PP claims, native credit claims and LP withdrawals continue. A receiver can still prevent immediate transfer; the entitlement remains recorded.
 
 ## Qualification boundaries
 

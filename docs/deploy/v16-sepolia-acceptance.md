@@ -58,7 +58,9 @@ block hashes, rollback on reorg and replay after restart. A transfer is not an L
 Prove Alchemy WS ingestion, disconnect/reconnect, Infura HTTP catch-up and terminal indexing. A normal
 callback completion must not cause an unnecessary keeper finalize transaction. Retry actual failures,
 submit eligible missing-seed refunds and distinguish harmless terminal races from operational failures.
-Verify alert delivery and Safe pause/unpause/guardian replacement with current receipts and readbacks.
+Verify alert delivery and, with current receipts and readbacks, cancelling a queued timelock operation,
+pause and the 72-hour unpause, guardian replacement through the timelock, a game disable and a void
+window (ADR-0037).
 
 ## Release decision
 

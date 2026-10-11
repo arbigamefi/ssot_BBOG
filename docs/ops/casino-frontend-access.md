@@ -22,8 +22,8 @@ build must explicitly enable the action it needs; selecting a test chain does no
 Feature flags are build configuration, not on-chain authorization. Confirm the built application
 rejects disabled actions and reports the actual Bank pause and active-capital state. Closing frontend deposits
 must leave users able to inspect owned NFTs, node values, withdrawal deadlines, free-capital limits and player debts.
-Bank pause blocks LP deposits and withdrawals; recorded randomness awaiting accounting separately
-blocks LP operations in that pool. Neither is a queued withdrawal, and ordinary exits add no planned
+A Bank pause blocks new bets and LP deposits, not withdrawals; recorded randomness awaiting accounting
+separately blocks LP operations in that pool until it is booked or voided. Neither is a queued withdrawal, and ordinary exits add no planned
 betting pause. Reverted withdrawals do not change NFT value or its deadline. Successful partial withdrawal restarts its 24-hour lock, transfers preserve it, and full withdrawal burns the NFT. Asset approval goes to Vault, not Bank.
 
 Before enabling risk-in, verify the intended release, keeper recovery coverage, database reads and

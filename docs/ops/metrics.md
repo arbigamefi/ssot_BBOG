@@ -25,7 +25,7 @@ Read related values at one numbered block; preserve baselines and account for re
 | Canonical unbooked results | Per-Bank count and original receipt age; Vault funding gate remains until terminal accounting                                                 |
 | Pause and busy state       | Independent from maturity, liquidity or result gate; LP withdrawal does not schedule a betting pause                                          |
 | Protocol capital           | Empty-root positive P&L separately recorded from gameplay fee revenue; accidental surplus is not included                                     |
-| Open-position capacity     | All open positions count against 128; no active/historical split remains                                                                      |
+| Open-position capacity     | All open positions count against 128 per Bank and 2 per player; no active/historical split remains                                            |
 
 After successful LP payment refresh root L, G and maximum bet at or after the receipt block.
 A 24-hour timer is an eligibility condition, not a guarantee of cash availability. Partial-success

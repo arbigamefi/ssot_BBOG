@@ -45,7 +45,7 @@ to the bet's opening deposit-ID prefix and whole-tree fallbacks; newer deposits 
 older results. Zero-root profit belongs to protocol capital. No extra LP buffer or last-NFT restriction
 applies. Normal withdrawal introduces no betting pause, but zero LP capital rejects new bets.
 
-A recorded random result awaiting accounting blocks LP cash operations until booking completes.
+A recorded random result awaiting accounting blocks LP cash operations until it is booked or voided.
 Stage 0 measures the adopted 40-level tree and full callback before selecting supported round limits.
 The user accepted the existing pre-fulfillment LP ordering tradeoff with public disclosure.
 External audit, strict gas qualification and fresh-network acceptance remain launch gates; the

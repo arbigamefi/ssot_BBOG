@@ -45,8 +45,10 @@ daily exit batch or personal post-exit recovery right is part of this target.
   the module cannot fail.
 - Router authenticates hubs and position ownership. Bank reserve checks and fee caps do not establish
   an admitted hub's honesty about its game's result.
-- Governance controls future admission and policy. Multisig configuration does not remove malicious
-  admission risk; guardian custody and admission controls require explicit external-LP review.
+- Governance controls future admission and policy through the `GovernanceTimelock` (ADR-0037): every
+  admission and loosening waits 72 hours, the Safe or the independent guardian can cancel it, and LPs can
+  exit in that window. Multisig configuration and the delay do not remove malicious admission risk; they
+  make it visible before it takes effect.
 - Keeper, UI, RPC and indexes are untrusted for settlement correctness and may lag or fail. Chain state
   and confirmed receipts remain authoritative.
 - ERC721 recipients and asset/native recipients may reject transfers. A failed LP operation may revert
@@ -137,7 +139,8 @@ acknowledgment all commit in one reverting child call. Only the bound owner hub 
 complete Router/Bank/Vault accounting. Failure of acknowledgment rolls all settlement effects back
 while keeping the outer receipt; duplicates cannot pay, release or decrement twice.
 
-Unknown module revert, out-of-gas, invalid results and accounting errors are not refunds. Timeout
+Unknown module revert, out-of-gas, invalid results and accounting errors are not refunds; only a void
+(ADR-0037 §7) returns the stake of a received result whose settlement keeps failing. Timeout
 refund requires the recorded deadline and no received canonical seed. A still-PendingVRF GameHub
 after delivery failure does not make a received result cancellable. Valid unused-round refunds remain
 part of the resolved outcome.
@@ -163,8 +166,9 @@ its own withdrawal can fail that operation without preventing unrelated tree set
 
 A refused player transfer creates PP for its full amount in Bank, including its cost once in C.
 Anyone may later trigger payment to that same player; no redirect or repeated tree charge is allowed.
-If debt recording cannot finish, terminal settlement rolls back. Pause does not block valid callback,
-retry, settlement, eligible refund or fixed player debt claims.
+If debt recording cannot finish, terminal settlement rolls back. A pause blocks only new positions and
+new LP deposits; valid callback, retry, settlement, eligible refund, void, fixed player debt claims and LP
+withdrawals continue.
 
 Use the wrapper's actual native-price function for VRF charges. Excess budget is refunded or credited
 to the original payer; failed claims preserve credit, and reentrancy cannot claim twice. Forced
@@ -198,7 +202,9 @@ The user explicitly retained this model with public disclosure after the local e
 witnesses. See the [recorded decision](../adr/0034-nft-liquidity-deposits.md#pre-inclusion-ordering-owner-decision-2026-10-04).
 Acceptance does not eliminate the advantage or close gas, external-audit and network release gates.
 
-A permanent known-result defect may fence that Vault's capital operations. Pinning the original module
+A known result whose settlement keeps failing fences that Vault's capital operations until it is voided,
+at most 7 days after its request; an accounting-class defect, which the void does not cover, may fence
+them indefinitely. Pinning the original module
 means selecting a new module for future bets does not repair its existing positions. Permissionless
 entry does not prove bounded terminalization under arbitrary contract or oracle failures. Unknown
 stuck positions consume reserve/capacity and may restrict withdrawals.

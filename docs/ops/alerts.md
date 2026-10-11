@@ -22,9 +22,9 @@ Tree-inclusive callback gas saturation, failure overhead and unsupported game/ro
 alerts. Monitor surplus changes separately from deficits; surplus is not spendable LP headroom.
 
 Failed-result age is an incident signal, not a promised withdrawal deadline. Thresholds require measured
-network behavior; no old LP epoch monitor remains. Emergency pause blocks LP payments, but must leave
-valid callback/retry/settlement/refund/player-debt paths available. Complete result receipt and bookkeeping
-are distinct from successful cash delivery.
+network behavior; no old LP epoch monitor remains. An emergency pause blocks only new positions and new LP
+deposits; callback/retry, settlement, refunds, voids, player-debt payments and LP withdrawals continue.
+Complete result receipt and bookkeeping are distinct from successful cash delivery.
 
 ## Implemented configuration drift monitor (K0-4)
 

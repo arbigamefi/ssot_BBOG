@@ -1,8 +1,9 @@
 # Protocol Constitution — Accepted NFT liquidity target
 
 **Development status:** the project is not launched. NFT liquidity, fixed 24-hour withdrawal timing,
-dual custody and callback settlement are implemented and locally verified in the current candidate;
-**release qualification remains pending**. See [ADR-0034](../adr/0034-nft-liquidity-deposits.md) and the
+dual custody, callback settlement and the launch candidate's authority, pause, capacity and void rules
+([ADR-0037](../adr/0037-launch-candidate-authority-pause-capacity-void.md)) are implemented and locally
+verified in the current candidate; **release qualification remains pending**. See [ADR-0034](../adr/0034-nft-liquidity-deposits.md) and the
 [implementation plan](../design/lp-accounting-and-callback-implementation.md), including pinned Azuro
 source identity. The rules below are not a claim about current deployed behavior. MUST, MUST NOT,
 SHOULD and MAY have their RFC 2119 meanings.
@@ -13,17 +14,27 @@ SHOULD and MAY have their RFC 2119 meanings.
   LiquidityVault in its constructor. The Vault owns LP cash, the pinned LiquidityTree and ERC721
   deposit NFTs; Bank owns player stakes and PF/XP/player debts. Assets and liabilities stay isolated
   by pool. Neither contract has a proxy upgrade path or a mutable Vault administrator.
-- Only SettlementRouter may open, settle or refund Bank positions. It records owner Hub, pool, Bank,
+- Only SettlementRouter may open, settle, refund or void Bank positions. It records owner Hub, pool, Bank,
   player, stake, gross reserve and snapshot hash; only the owner Hub may terminate a position.
-  GameHub owns casino lifecycles and SportsHub owns sports lifecycles. Modules are pure functions;
+  GameHub owns the casino lifecycle and is the only hub of this release. Modules are pure functions;
   registry and Router MUST NOT custody assets.
 - Only Bank may change Vault risk locks or apply terminal PnL. Public NFT deposit/withdrawal cash
-  operations belong to Vault and MUST read Bank's pause, canonical-result, accounting and busy status.
+  operations belong to Vault and MUST read Bank's canonical-result, accounting and busy status; deposits
+  also read its pause.
   Bank settlement uses its onlyBank Vault entry without applying that LP gate, so accounting can clear
   the condition that blocked LP cash operations. Asset-mutating calls require reentrancy protection.
-- Governance or guardian may pause; only governance may unpause. Pause blocks LP cash changes, new
-  risk and PF/XP optional claims. Valid settlement, authorized missing-seed refunds and player-payable
-  claims MUST remain possible subject to their own payment/atomicity checks.
+- From construction, governance of PoolRegistry, GameHub, every Bank and ReferralRegistry is the
+  `GovernanceTimelock` (ADR-0037): every governance call waits at least 72 hours, a delay that can be
+  raised but never set below 259,200 seconds. The Safe proposes and cancels, the guardian cancels,
+  anyone executes a ready operation, and role or delay changes are themselves timelock operations; the
+  deployer holds no role. The sentinel (the Safe) may at once deactivate a pool, deregister or disallow
+  a hub, disable a game, cancel an edge change, pause a Bank and open a void window. A Bank's guardian,
+  an independent multisig whose signers are not Safe signers, may at once pause that Bank and open a
+  void window for its pool. Neither may admit, loosen a parameter or move funds.
+- Governance, the sentinel or the guardian may pause; only governance may unpause, so unpausing waits for
+  the timelock. A pause blocks new positions and new LP deposits only. Settlement, authorized missing-seed
+  refunds, voids, player-payable claims, XP unlocks, XP and protocol-fee claims and LP withdrawals MUST
+  remain possible subject to their own payment/atomicity checks.
 
 ## Accounting and capital admission
 
@@ -53,7 +64,9 @@ SHOULD and MAY have their RFC 2119 meanings.
   stakes becoming profit. Keep checked uint128 casts and separately verify uint48 leaf and uint64
   update limits. The original tree's extra 1e12 intermediate multiplication and lazy-node bounds
   require the numerical proof/property tests specified by ADR-0034.
-- Preserve the 128-open-position capacity limit; every open position keeps its slot until terminal.
+- Preserve the capacity of 128 open positions per Bank and allow each player at most 2 open positions
+  per Bank, counted across every hub and caller; every open position keeps its slots until it is
+  settled, refunded or voided.
   Tree traversal is bounded by its 40-level depth; no operation may scan holders or all past positions.
 
 ## NFT deposits and withdrawals
@@ -90,7 +103,8 @@ SHOULD and MAY have their RFC 2119 meanings.
   remove C-s using the recorded range and transfer it from Vault to Bank. For C<s with a positive
   pre-settlement root, transfer s-C from Bank to Vault and add it to that range. If C=s, no PnL transfer
   is necessary. Full refunds leave L unchanged. Token movement and all terminal bookkeeping either
-  complete together or revert; arbitrary failures MUST NOT become a selective refund.
+  complete together or revert; arbitrary failures MUST NOT become a refund inside settlement. The only
+  way a received result ends without settlement is the void below.
 - In the normal tree branch, `P_after=P-s`, `R_after=R-r`, `K_after=K-k`,
   `L_after=L+s-C`, `G_after=G-C`. Since `C-s<=r-s`, any loss remains covered after releasing this lock.
   Removing a terminal position's full original stake includes partial unused-round refunds.
@@ -122,19 +136,26 @@ SHOULD and MAY have their RFC 2119 meanings.
 - Bank's LP permission reads its immutable Router and canonical VRFHub's per-Bank durably-received,
   unbooked count. Protection starts with the first saved seed, including failure before GameHub receives
   it. Only the matching terminal acknowledgment clears its count; unrelated results remain fenced.
-- A nonzero count, failed authoritative read, pause, accounting fault or busy Bank rejects LP deposits
-  and withdrawals. Ordinary NFT transfer does not alter total capital. New betting remains subject
-  to capital/capacity/pause; valid settlement and player debt-out do not apply the LP gate.
-- If a received result cannot ever terminalize, the LP gate persists. Permissionless same-seed retry
-  is not a liveness guarantee. There is no forced refund, debt erasure or LP bypass for that case;
-  a valid received outcome must not be replaced to reopen the pool.
+- A nonzero count, failed authoritative read, accounting fault or busy Bank rejects LP deposits and
+  withdrawals; a pause rejects deposits only. Ordinary NFT transfer does not alter total capital. New
+  betting remains subject to capital/capacity/pause; valid settlement and player debt-out do not apply
+  the LP gate.
+- If a received result cannot terminalize, the LP gate persists until it is booked or voided.
+  Permissionless same-seed retry is not a liveness guarantee. The void (ADR-0037 §7) is the only exit:
+  anyone may void a received result 24 hours after its request if a void window that governance, the
+  sentinel or the Bank's guardian opened for that Bank covers it, and 7 days after its request without
+  one. Each void first attempts the normal settlement with a fixed gas allowance, and a bet that settles
+  is settled. Otherwise the stake becomes a player payable; no module, tree write or token transfer runs,
+  the VRF fee is not refunded and the Bank's unbooked count falls by one. A void erases no debt and
+  replaces no booked outcome. Player and LP materials MUST disclose it.
 - Callback gas admission MUST measure the full direct wrapper -> VRFHub -> GameHub -> Router -> Bank
   -> Vault/tree path, both custody transfers, token failure, XP and acknowledgment. Include tree depth
   and the H-1 whole-pool domain (all used leaves), and do not treat a standalone finalize budget as full
   callback evidence.
 - The one-hour default missing-randomness refund deadline is snapshotted and at most one day. A timeout
   refund requires that canonical VRFHub received no seed, even if GameHub still displays PendingVRF.
-  Unknown resolve revert, OOG or invalid tuple MUST NOT refund a stored result or reroll it.
+  Unknown resolve revert, OOG or invalid tuple MUST NOT refund a stored result or reroll it; only a void
+  returns its stake, and nothing ever draws a new outcome.
 - The project Owner retained cash exit and accepted pre-receipt ordering risk on 2026-10-04, then
   authorized the result-independent range-selection correction for H-1. Before canonical result receipt,
   mature free capital MAY exit subject to
@@ -144,7 +165,6 @@ SHOULD and MAY have their RFC 2119 meanings.
   advantage. This is risk acceptance, not a fix or proof that real VRF can be predicted. External LP
   materials MUST disclose this boundary and MUST NOT promise capital-ordering fairness. Full gas
   qualification, independent/external audit and fresh network acceptance remain separate conditions.
-  Sports outcomes and admission retain their own independent review; this casino decision does not qualify them.
 - `amountPerRoll*betCount` is total stake. Stops refund unused stake, and edge applies only to used
   turnover. Canonical RNG expansion exists once in `src/libs/RNG.sol`. Modules use current typed
   encodings; roulette uses `(uint8 kind,uint40 payload)`, with casino payloads at most 64 bytes.
@@ -227,7 +247,7 @@ price-chain traversal or extra referral budget is part of the protocol.
 ## 5. Settlement-boundary enforcement
 
 `openPosition(poolId, player, stake, reserved, snapshotHash, edgeBps)` records the position's `edgeBps`.
-Casino passes `h`; Sports passes zero. Router MUST reject an edge above `MAX_HOUSE_EDGE_BPS`, and on
+GameHub passes `h`. Router MUST reject an edge above `MAX_HOUSE_EDGE_BPS`, and on
 settlement independently require:
 
 ```text
@@ -244,14 +264,17 @@ the game outcome; fixed module admission, randomness and Hub authorization remai
 | Parameter                                     | Authority | Rule                                                                  |
 | --------------------------------------------- | --------- | --------------------------------------------------------------------- |
 | LP share, referral cap, edge cap, delay       | None      | Release constants                                                     |
-| `defaultHouseEdgeBps`                         | Safe      | Queue every change; activate only after seven days; new bets only     |
-| Referral rates and holdbackBps                | Safe      | New immutable configuration version; accepted bets keep their version |
-| Bank XP unlock threshold and vesting duration | Safe      | Live eligibility; a new vesting schedule uses current duration        |
-| Refund timeout                                | Safe      | One minute to one day; each accepted bet fixes its deadline           |
+| `defaultHouseEdgeBps`                         | Timelock  | Queue every change; activate only after seven days; new bets only     |
+| Referral rates and holdbackBps                | Timelock  | New immutable configuration version; accepted bets keep their version |
+| Bank XP unlock threshold and vesting duration | Timelock  | Live eligibility; a new vesting schedule uses current duration        |
+| Refund timeout                                | Timelock  | One minute to one day; each accepted bet fixes its deadline           |
 
-The single-price governance methods are `pendingEdgeChange()`, `queueEdgeChange(uint16)`,
-`activateEdgeChange()` and `cancelEdgeChange()`. Only governance queues/cancels; anyone may activate
-when due. Governance emits old/new values and activation time. Guardian cannot change allocation parameters.
+"Timelock" means a `GovernanceTimelock` operation the Safe schedules: it waits at least 72 hours, and the
+Safe or the guardian may cancel it while it waits. An edge change therefore takes at least 72 hours plus
+seven days. The single-price governance methods are `pendingEdgeChange()`, `queueEdgeChange(uint16)`,
+`activateEdgeChange()` and `cancelEdgeChange()`. Only governance queues; governance or the sentinel
+cancels; anyone may activate when due. Governance emits old/new values and activation time. Guardian
+cannot change allocation parameters.
 
 ## 7. Events and auditability
 
@@ -262,8 +285,8 @@ These event payees are acceptance snapshots, not a query of today's referral reg
 
 ## 8. Out of scope
 
-- Sports-domain allocation. Sports positions MUST settle with `PF_new = XP_new = 0` until a separate ADR
-  defines it.
+- Any pool domain other than Casino. This release has one domain; another needs its own ADR, contracts,
+  audit and release.
 - Values of the adjustable parameters. Initial proposals are in ADR-0032 and require calibration before
   deployment.
 
@@ -279,3 +302,9 @@ These event payees are acceptance snapshots, not a query of today's referral reg
 | L1 and L2   | 0.20 | 0.40 | 0.10 |   0.30 |       1.00 |
 
 The Router cap is `floor(2.00 × 5000 / 10000) = 1.00`. Each row accrues exactly `1.00` in total and passes.
+
+## 10. Amendment record
+
+| Date | Change | Approval |
+| --- | --- | --- |
+| 2026-10-12 | Launch candidate (ADR-0037, Owner decisions D1–D7; work packages B1–B6 and B9): governance through the `GovernanceTimelock` from construction, the sentinel's and guardian's immediate risk-reducing actions, a pause that blocks only new positions and new deposits, two open positions per player, the void of unbookable results, one hub and one pool domain | pending the Owner's explicit approval |

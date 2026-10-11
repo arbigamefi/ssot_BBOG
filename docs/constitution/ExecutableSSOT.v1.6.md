@@ -49,7 +49,9 @@ payee or `lpRetained[i]`.
 
 For every authorized pure refund, including an eligible timeout with no canonical seed received:
 `PF_new = XP_new = 0`. An invalid result tuple, arbitrary revert or resource failure is not an
-independent refund authorization; its saved result must remain retryable.
+independent refund authorization; its saved result must remain retryable. A void (ADR-0037 §7) of a
+received result whose settlement still fails also allocates nothing: `PF_new = XP_new = 0`, and the whole
+stake becomes a player payable.
 
 ### A7. Non-retroactivity
 
@@ -60,10 +62,6 @@ Bank eligibility and the duration of newly started holdback schedules remain liv
 
 For every opened position: `edge[i] ≤ MAX_HOUSE_EDGE_BPS`. Each casino position has one accepted
 `houseEdgeBps`; referral bindings cannot alter that price. At most three nonempty awards are emitted.
-
-### A9. Sports positions
-
-For every settled sports position: `PF_new = XP_new = 0` and `edge[i] = 0`.
 
 ## B — Dual custody accounting
 
@@ -215,7 +213,7 @@ uint64 update limit, percent boundaries, 40-level traversal and extreme accepted
 
 ### L6. Gate and cross-contract reentrancy
 
-Vault's public LP cash entries read Bank's pause, authoritative received/unbooked count, accounting
+Vault's public LP cash entries read Bank's authoritative received/unbooked count, accounting
 condition and busy state. Failed reads reject. Bank-only lock/terminal entries bypass the LP gate so
 settlement can clear it. Both custody contracts protect asset-mutating calls. Test ERC721 receiver
 callbacks, deposit/withdraw reentrancy and Bank settlement attempting to reenter the LP path; no partial
@@ -247,6 +245,10 @@ Router/Hub terminal state and matching VRF acknowledgment must share a rollback 
 attempt preserves seed/count. A received seed forbids timeout refund even if GameHub is still PendingVRF.
 A genuine missing-seed timeout keeps the one-hour default/snapshotted deadline. Unknown module revert,
 OOG or invalid tuple does not authorize refund or reroll; used/unused rounds settle from valid results.
+The only exit for a received result that never settles is a void: after 24 hours inside a void window
+opened for the Bank, or after 7 days, anyone may void it if its settlement, attempted again with a fixed
+gas allowance, still fails; the stake becomes a player payable, the VRF fee is not refunded, the count
+falls by one, and no outcome is ever drawn again.
 
 ### C3. Full callback gas
 
@@ -263,7 +265,6 @@ A 24h entry/partial-withdrawal cooldown is not a proof against this behavior. Pr
 counterexample and the same-result profit-entry witness. The user explicitly accepted the existing
 synchronous-exit/whole-pool ordering risk; public disclosures MUST preserve that boundary and MUST NOT
 promise capital-ordering fairness. Gas, external audit and network admission remain independent gates.
-Sports results need their own boundary; no unconditional bounded-exit or nonstop-betting guarantee follows.
 
 ## G — Governance
 
@@ -284,11 +285,28 @@ No referral schedule with `l0 + l1 + l2 > MAX_REFERRAL_BPS` can be created or ac
 
 ### G4. Guardian scope
 
-The guardian can pause and cannot change any allocation parameter.
+The guardian of a Bank is an independent multisig whose signers are not Safe signers. It can pause that
+Bank, cancel a waiting timelock operation and open a void window for the Bank's pool. It cannot unpause,
+admit, change any allocation parameter or move funds.
 
 ### G5. Refund timeout bound
 
 Timeouts must lie within `MIN_REFUND_TIMEOUT_SECONDS` and `MAX_REFUND_TIMEOUT_SECONDS`, at deployment and in governance updates; the default remains 3600 seconds. Each accepted bet snapshots `refundDeadline = placedAt + refundTimeoutSeconds`. Later parameter changes cannot shorten or extend that deadline. A bet still PendingVRF becomes refund-eligible no later than one day after placement only if canonical VRFHub has received no seed; a seed received before failed GameHub delivery forbids this timeout refund; transaction inclusion and payment are separate availability constraints.
+
+### G6. Timelock and sentinel
+
+From construction, governance of PoolRegistry, GameHub, every Bank and ReferralRegistry is the
+`GovernanceTimelock`: its delay is at least 259,200 seconds and can never be set lower, the Safe is its only
+proposer, the Safe and the guardian cancel, anyone executes a ready operation, and role or delay changes
+are themselves timelock operations; the deployer holds no role. Every risk-increasing action, including admitting a pool, hub or game,
+activating a pool and unpausing, waits for that delay. The sentinel (the Safe) acts at once only to reduce
+risk: deactivating a pool, deregistering or disallowing a hub, disabling a game (never re-enabled),
+cancelling an edge change, pausing a Bank and opening a void window.
+
+### G7. Capacity
+
+A Bank holds at most 128 open positions, and each player at most 2 of them across every hub and caller.
+A position frees its slots only when it is settled, refunded or voided.
 
 ## Test mapping and execution evidence
 
@@ -299,7 +317,7 @@ been removed. Bind each run to exact source, pinned tree, ABI, commands and comp
 | Obligation | Work to implement or rerun                                                                                                                                                                           |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A1–A5      | Rerun `HouseEdgeAllocationV16`, Router caps/invariants and independent allocation recomputation through NFT custody settlement.                                                                      |
-| A6–A9      | Check authorized pure/partial refunds, immutable snapshots, edge bounds and zero-edge sports; callback failures must not become refunds.                                                             |
+| A6–A8      | Check authorized pure/partial refunds, voids, immutable snapshots and edge bounds; callback failures must not become refunds, and a void only after its eligibility and a failed settlement attempt. |
 | B1/B2      | Stateful dual-custody model: stakes, NFT deposits/transfers/withdrawals, locks, donations, coverage faults, exact receipts, wager cap and G bound.                                                   |
 | B3/B5      | Wins/losses/full and partial refunds with PF/XP/PP; custody transfer refusal rolls everything back; player refusal creates debt once.                                                                |
 | B4         | Last NFT full exit at K0 with old positions open; zero-root profit goes to separate PF capital; later first deposit cannot acquire orphan root; positive-root old-range allocation (whole-pool domain, or the vendor preview fallback at k=0) remains unchanged.  |
@@ -309,7 +327,7 @@ been removed. Bind each run to exact source, pinned tree, ABI, commands and comp
 | L7         | Real Anvil NFT SDK and connected-wallet UI; ownership/gift/cash/reorg indexing; no ERC20-share assumptions or keeper approval.                                                                       |
 | C3         | Actual wrapper envelope with 40-level tree, all admitted module maxima, both PnL signs, transfer failure, saved-seed retry and measured fees.                                                        |
 | C4         | Preserve mature exit/transfer and old-profit entry witnesses; verify public disclosure of the user's accepted ordering risk. Risk acceptance is not removal or release qualification.                |
-| G1–G5      | Rerun unchanged constants, delayed edge changes, referral versions/cap, guardian and one-hour/default one-day/maximum snapshotted timeout.                                                           |
+| G1–G7      | Rerun unchanged constants, delayed edge changes, referral versions/cap, guardian scope, one-hour/default one-day/maximum snapshotted timeout, the timelock's delay floor and roles, the sentinel's one-way actions, and the per-Bank and per-player capacity. |
 
 Original-source reuse does not waive new integration review. Final runtime and constructor initcode size,
 asset/provider compatibility, keeper/PostgreSQL/browser runs, mutation tests, independent review, external

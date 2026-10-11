@@ -27,7 +27,7 @@ Bank deploys its immutable LiquidityVault in its constructor. LiquidityVault has
 
 - LiquidityVault holds LP capital, maintains the original tree, issues deposit NFTs and records their withdrawal deadlines.
 - Bank holds open player stakes, protocol and referral payables, and unpaid player debt. Router remains the only authority for Bank position creation/terminalization.
-- The LP's asset approval and deposit/withdraw entry points belong to LiquidityVault. Its LP cash operations read Bank's pause, accounting, canonical-result and busy status before proceeding. The direct deposit path transfers user assets to Vault once.
+- The LP's asset approval and deposit/withdraw entry points belong to LiquidityVault. Its LP cash operations read Bank's accounting, canonical-result and busy status before proceeding, and a deposit also reads its pause (ADR-0037 §4). The direct deposit path transfers user assets to Vault once.
 - Only Bank may call the Vault's lock and atomic settlement entry points. Those entries do not apply the LP gate: otherwise a received result or Bank's active settlement lock would prevent the very settlement required to clear it.
 - Both contracts guard cash-mutating entry points against reentrancy. Bank's busy status prevents a callback during Bank bookkeeping from initiating an LP capital change. NFT receiver hooks must not expose partially booked deposits or settlement.
 
@@ -142,7 +142,7 @@ Tree traversal can be 40 levels. Full callback gas admission must include the se
 
 ## Result fence, consumers and pending evidence
 
-Vault obtains LP permission through Bank's canonical Router/VRFHub result count, emergency pause, accounting condition and busy status. A seed stored before failed consumer delivery still fences both deposit and withdrawal. Only matching terminal accounting clears the fence. Normal callback settlement and exact-seed retry use the same implementation; a known result must not become a timeout refund, invalid-result fallback or reroll.
+Vault obtains LP permission through Bank's canonical Router/VRFHub result count, accounting condition and busy status; a deposit also checks the emergency pause. A seed stored before failed consumer delivery still fences both deposit and withdrawal. Only matching terminal accounting clears the fence. Normal callback settlement and exact-seed retry use the same implementation; a known result must not become a timeout refund, invalid-result fallback or reroll.
 
 Earn lists each NFT's balance, deadline and currently withdrawable percentage/amount, explains partial-withdrawal relocking, and follows ownership through transfers. Index actual cash once, separate gifted NFTs, and preserve reorg correctness. Wager limits continue to use G and R. Keeper cannot withdraw LP NFTs and has no batch job; its callback retry, real missing-seed refunds, player-debt delivery, WS events and polling recovery remain.
 

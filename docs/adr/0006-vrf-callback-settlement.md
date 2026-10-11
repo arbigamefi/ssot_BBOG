@@ -85,12 +85,16 @@ While a result is unbooked or Bank accounting is in progress, public Vault capit
 execution and executable withdrawal quotes report no available capacity. Ordinary ERC721 transfers
 preserve the deposit identity and its cooldown. The fixed 24-hour cooldown and NFT rules are defined
 in [ADR-0034](0034-nft-liquidity-deposits.md); there is no daily exit batch or scheduled betting pause.
-If a received result can never terminalize, the pool's LP gate remains closed. Public retry does not
-guarantee liveness; this implementation has no forced refund, debt-erasure or LP bypass for that
-case. Replacing a valid received outcome to unlock capital would violate the result-binding rule.
+If a received result can never terminalize, the pool's LP gate stays closed until the result is voided
+([ADR-0037](0037-launch-candidate-authority-pause-capacity-void.md) §7): after 24 hours inside a void
+window opened for the Bank, or after 7 days, anyone may void it if its settlement, attempted again with a
+fixed gas allowance, still fails. The stake becomes a player payable and the count falls by one. Public
+retry does not guarantee liveness. A void books no outcome and erases no debt; replacing a valid received
+outcome to unlock capital would violate the result-binding rule.
 Internal only-Bank Vault lock/settlement operations do not apply this LP guard: they must be able to
-complete the very result that activated it. Pause does not block callback/retry, settlement, eligible
-refunds or fixed player debt claims.
+complete the very result that activated it. A pause blocks only new positions and new LP deposits
+(ADR-0037 §4): callback/retry, settlement, eligible refunds, voids, fixed player debt claims and LP
+withdrawals continue.
 
 After Router has returned from complete Bank and Vault terminal accounting, the owning GameHub
 acknowledges the result to VRFHub. Acknowledgment checks stored ownership and Router terminal state. It is part
@@ -205,8 +209,9 @@ Callback settlement closes the ordinary confirmed-chain gap between result avail
 not hide a pending fulfillment from a sequencer, builder or observer able to order an LP transaction before it.
 The user accepted the existing synchronous-exit/whole-pool ordering risk, with matching public disclosure; this
 is not a fix or proof of capital-ordering fairness. Strict gas, external audit and network gates remain
-independent. A permanent known-result accounting defect can still stop capital operations in the affected Vault;
-this decision makes no unconditional liveness or MEV claim.
+independent. A result whose settlement keeps failing stops LP capital operations in the affected Vault until it
+is voided, at most 7 days after its request; an accounting-class failure, which the void does not cover
+(ADR-0037 §7.5), can stop them indefinitely. This decision makes no unconditional liveness or MEV claim.
 
 ### Owner risk acceptance (F6, submitted 2026-10-08)
 

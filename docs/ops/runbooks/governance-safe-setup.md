@@ -22,9 +22,12 @@ never substitute a fixture address for a live authority.
    application release. A scheduled operation proves nothing until it has executed and the verifier has replayed
    it.
 
-For a configuration change, review the target, selector, arguments and affected outstanding
-positions before signing. After execution, check the receipt and read the resulting state at a
-confirmed block. A GameHub game ID can be registered only once; it cannot be replaced or unregistered.
+Every configuration change is a timelock operation: the Safe schedules it, its calls are published for the
+72-hour review, the Safe or the guardian can cancel it while it waits, and anyone executes it once ready.
+Review the target, selector, arguments and affected outstanding positions before signing the schedule.
+After execution, check the receipt and read the resulting state at a confirmed block. As sentinel, the Safe
+can also act at once, only to reduce risk: deactivate a pool, deregister or disallow a hub, disable a game,
+cancel an edge change, pause a Bank or open a void window (ADR-0037 §2, §3). A GameHub game ID can be registered only once; it cannot be replaced or unregistered.
 Registering a new game ID controls future acceptance. Existing bets finalize with their accepted module snapshot.
 
 ## Changes that void the first-callback certificate
@@ -59,6 +62,7 @@ but they have the same effect. If recertification finds that k = 0 has become re
 must either bound the k = 0 branch or adopt the `_prefixCovers(cutoff, 1)` variant from the ADR-0034
 amendment, by a separate decision.
 
-Bank guardians may pause, but only governance may unpause. Keep the guardian and permissionless
-keeper keys outside Safe signer custody. See [pause rules](pause-config-drift.md) and
+A Bank's guardian, an independent multisig whose signers are not Safe signers, may pause the Bank, open a
+void window for its pool and cancel a waiting timelock operation; only governance may unpause, through the
+timelock. Keep the guardian and permissionless keeper keys outside Safe signer custody. See [pause rules](pause-config-drift.md) and
 [keeper signer custody](keeper-key-separation.md).

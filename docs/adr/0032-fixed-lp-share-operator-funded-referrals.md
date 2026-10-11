@@ -65,13 +65,15 @@ because the reference engine currently returns three awards.
 
 ### 4. Governance
 
-- Safe queues the single `defaultHouseEdgeBps`; anyone may activate it after `EDGE_CHANGE_DELAY = 7 days`.
-  Safe may cancel a pending change. Both increases and decreases use this delay.
+- The Safe queues the single `defaultHouseEdgeBps` through the governance timelock (72 hours, ADR-0037);
+  anyone may activate it `EDGE_CHANGE_DELAY = 7 days` after it is queued. Governance or the sentinel (the
+  Safe) may cancel a pending change. Both increases and decreases use this delay.
 - The interfaces are `pendingEdgeChange()`, `queueEdgeChange(uint16)`, `activateEdgeChange()` and
   `cancelEdgeChange()`. There is one pending record and no parameter selector.
 - Referral schedules are immutable versions. Activating a new version affects new bets only.
-- LP share, maximum referral rate and maximum house edge are constants. Guardian remains pause-only.
-- Sports positions accrue no PF or XP until a separate sports allocation decision is accepted.
+- LP share, maximum referral rate and maximum house edge are constants. The guardian cannot change any
+  allocation parameter.
+- This release has one hub, GameHub; another domain needs its own allocation decision.
 
 ## Consequences
 
