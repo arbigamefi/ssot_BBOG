@@ -103,6 +103,11 @@ The seed of the historical Coin profit is part of the case: `NFT_GAS_PROFIT_SEED
 must settle that setup bet as a pool profit. If it is missing or no longer does, setup stops and names the first seed
 in 0..1023 that does, to be recorded. Every concentrated case pinned on 2026-10-11 records seed 4.
 
+`gas-audit-adversarial-cases.json` holds the independent audit's 102 adversarial concentrated cases
+(`independent-audit-2026-10-10/tests/audit-adversarial-gas-cases.json`, archived) under the audit's own names, each with
+its `EXPECT_PREDICATE` (96 accept the prefix, 6 reject it). They join the certificate v5 matrix. Each records seed 4
+like the cases above; the first matrix run checks that seed case by case and stops on any case that needs another.
+
 `NFT_GAS_EXPECT_PREDICATE` walks the tree through `test/utils/PrefixPath.sol`, which reads the deployed vault's public
 `treeNode` view. The unit fuzz test of the prefix replay requires it to agree with the original internal helper kept
 verbatim in `test/utils/VaultPrefixReference.sol`.
