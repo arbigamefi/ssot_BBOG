@@ -132,5 +132,135 @@ class SwapKeeperKeyTests(unittest.TestCase):
         self.assertNotIn(OLD.encode(), self.path.read_bytes())
 
 
+HTTP_OLD = "https://base-sepolia.infura.io/v3/" + "a" * 32
+WS_OLD = "wss://base-sepolia.g.alchemy.com/v2/" + "b" * 32
+INFURA_KEY = "c" * 32
+ALCHEMY_KEY = "Dd_" + "d" * 29
+HTTP_NEW = "https://base-sepolia.infura.io/v3/" + INFURA_KEY
+WS_NEW = "wss://base-sepolia.g.alchemy.com/v2/" + ALCHEMY_KEY
+SECRETS = (HTTP_OLD, WS_OLD, INFURA_KEY, ALCHEMY_KEY, "a" * 32, "b" * 32, OLD)
+
+
+class SwapKeeperRpcTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.directory = Path(self.tmp.name)
+        self.path = self.directory / "keeper.env"
+        self.original = (f"KEEPER_CHAIN_ID=84532\nKEEPER_RPC_HTTP={HTTP_OLD}\nKEEPER_RPC_WS={WS_OLD}\n"
+                         f"KEEPER_PRIVATE_KEY={OLD}\n").encode()
+        self.path.write_bytes(self.original)
+
+    def run_rpc(self, text, args=("--rpc", "keeper.env")):
+        return subprocess.run(["bash", str(SCRIPT), *args], input=text.encode(), capture_output=True,
+                              env={**os.environ, "KEEPER_ENV_DIR": str(self.directory)}, timeout=5)
+
+    def assert_silent(self, result):
+        for secret in SECRETS:
+            self.assertNotIn(secret.encode(), result.stdout + result.stderr)
+
+    def assert_rejected(self, text, args=("--rpc", "keeper.env")):
+        before = self.path.read_bytes()
+        result = self.run_rpc(text, args)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.path.read_bytes(), before)
+        self.assert_silent(result)
+        self.assertFalse(list(self.directory.glob(".*.swap-*")))
+
+    def test_both_endpoints_are_replaced_in_one_write_and_nothing_else(self):
+        result = self.run_rpc(f"KEEPER_RPC_WS={WS_NEW}\r\nKEEPER_RPC_HTTP={HTTP_NEW}\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(b"ok: 2 lines replaced atomically", result.stdout)
+        self.assertEqual(self.path.read_bytes(), self.original.replace(HTTP_OLD.encode(), HTTP_NEW.encode())
+                         .replace(WS_OLD.encode(), WS_NEW.encode()))
+        self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
+        self.assert_silent(result)
+
+    def test_partial_duplicate_foreign_or_unsafe_input_changes_nothing(self):
+        for text in [f"KEEPER_RPC_HTTP={HTTP_NEW}\n",
+                     f"KEEPER_RPC_HTTP={HTTP_NEW}\nKEEPER_RPC_HTTP={HTTP_NEW}\nKEEPER_RPC_WS={WS_NEW}\n",
+                     f"KEEPER_RPC_HTTP={HTTP_NEW}\nKEEPER_RPC_WS={WS_NEW}\nKEEPER_PRIVATE_KEY={NEW}\n",
+                     f"KEEPER_RPC_HTTP={HTTP_NEW.replace('https', 'http')}\nKEEPER_RPC_WS={WS_NEW}\n",
+                     f"KEEPER_RPC_HTTP={HTTP_NEW}\nKEEPER_RPC_WS={WS_NEW.replace('wss', 'ws')}\n",
+                     f"KEEPER_RPC_HTTP={HTTP_NEW} #x\nKEEPER_RPC_WS={WS_NEW}\n",
+                     f"KEEPER_RPC_HTTP={HTTP_NEW}$HOME\nKEEPER_RPC_WS={WS_NEW}\n",
+                     f"KEEPER_RPC_HTTP='{HTTP_NEW}'\nKEEPER_RPC_WS={WS_NEW}\n",
+                     f"KEEPER_RPC_HTTP={HTTP_NEW}\nKEEPER_RPC_WS={WS_NEW}${{X}}\n",
+                     f"KEEPER_RPC_HTTP={HTTP_NEW}\nKEEPER_RPC_WS={WS_NEW}\"\n",
+                     f"KEEPER_RPC_HTTP=https://base-sepolia.infura.io/\nKEEPER_RPC_WS={WS_NEW}\n", ""]:
+            with self.subTest(text=text[:40]):
+                self.assert_rejected(text)
+
+    def test_the_file_must_declare_each_endpoint_exactly_once(self):
+        both = f"KEEPER_RPC_HTTP={HTTP_NEW}\nKEEPER_RPC_WS={WS_NEW}\n"
+        self.path.write_bytes(self.original.replace(f"KEEPER_RPC_WS={WS_OLD}\n".encode(), b""))
+        self.assert_rejected(both)
+        self.path.write_bytes(self.original + f"export KEEPER_RPC_WS={WS_OLD}\n".encode())
+        self.assert_rejected(both)
+        self.path.write_bytes(self.original)
+        self.assert_rejected(both, args=("--rpc",))
+        self.assert_rejected(both, args=("--rpc", "keeper.env", "extra"))
+
+
+SSH = r'''#!/usr/bin/env bash
+printf '%s\n' "$@" > "$STUB_SSH_ARGS"
+set -- $2
+KEEPER_ENV_DIR="$STUB_ENV_DIR" exec bash "$STUB_SWAP" "$3" "$4"
+'''
+
+
+class SendKeeperRpcTests(unittest.TestCase):
+    DRIVER = Path(__file__).resolve().parents[2] / "script/ops/send-keeper-rpc.sh"
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        base = Path(self.tmp.name)
+        self.env_dir, stubs = base / "env", base / "stubs"
+        self.env_dir.mkdir()
+        stubs.mkdir()
+        self.keeper = self.env_dir / "keeper.primary.env"
+        self.keeper.write_text(f"KEEPER_RPC_HTTP={HTTP_OLD}\nKEEPER_RPC_WS={WS_OLD}\nKEEPER_PRIVATE_KEY={OLD}\n")
+        self.dotenv = base / ".env"
+        self.dotenv.write_text(f"INFURA_API_KEY_OPS={'e' * 32}\nINFURA_API_KEY_PROD_KEEPER={INFURA_KEY}\n"
+                               f"ALCHEMY_API_KEY_OPS={'f' * 32}\nALCHEMY_API_KEY_PROD_KEEPER='{ALCHEMY_KEY}'\n")
+        (stubs / "ssh").write_text(SSH)
+        (stubs / "ssh").chmod(0o755)
+        self.ssh_args = base / "ssh-args"
+        self.env = {**os.environ, "PATH": f"{stubs}{os.pathsep}{os.environ['PATH']}", "OPS_ENV_FILE": str(self.dotenv),
+                    "STUB_SSH_ARGS": str(self.ssh_args), "STUB_ENV_DIR": str(self.env_dir), "STUB_SWAP": str(SCRIPT)}
+
+    def send(self, *args):
+        return subprocess.run(["bash", str(self.DRIVER), *args], capture_output=True, env=self.env, timeout=10)
+
+    def test_the_prod_keeper_keys_reach_the_env_file_and_nowhere_else(self):
+        result = self.send("root@prod.invalid", "base-sepolia")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.keeper.read_text(),
+                         f"KEEPER_RPC_HTTP={HTTP_NEW}\nKEEPER_RPC_WS={WS_NEW}\nKEEPER_PRIVATE_KEY={OLD}\n")
+        self.assertEqual(self.ssh_args.read_text(),
+                         "root@prod.invalid\nbash /opt/arbigamefi/ops/swap-keeper-key.sh --rpc keeper.primary.env\n")
+        for secret in (INFURA_KEY, ALCHEMY_KEY, "e" * 32, "f" * 32):
+            self.assertNotIn(secret.encode(), result.stdout + result.stderr)
+        self.assertIn(b"now use the PROD_KEEPER keys (base-sepolia)", result.stdout)
+
+    def test_mainnet_uses_the_mainnet_hosts(self):
+        self.keeper.write_text(self.keeper.read_text().replace("base-sepolia", "base-mainnet"))
+        self.assertEqual(self.send("prod", "base", "keeper.primary.env").returncode, 0)
+        self.assertIn(f"KEEPER_RPC_HTTP=https://base-mainnet.infura.io/v3/{INFURA_KEY}\n", self.keeper.read_text())
+        self.assertIn(f"KEEPER_RPC_WS=wss://base-mainnet.g.alchemy.com/v2/{ALCHEMY_KEY}\n", self.keeper.read_text())
+
+    def test_refused_before_ssh_without_both_keys_or_with_bad_arguments(self):
+        original = self.keeper.read_text()
+        self.dotenv.write_text(f"INFURA_API_KEY_PROD_KEEPER={INFURA_KEY}\nALCHEMY_API_KEY_OPS={'f' * 32}\n")
+        result = self.send("prod", "base-sepolia")
+        self.assertEqual(result.returncode, 65)
+        self.assertNotIn(INFURA_KEY.encode(), result.stdout + result.stderr)
+        for args in [("prod", "mainnet"), ("prod", "base-sepolia", "../keeper.env"), ("prod",)]:
+            self.assertEqual(self.send(*args).returncode, 64)
+        self.assertFalse(self.ssh_args.exists())
+        self.assertEqual(self.keeper.read_text(), original)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -45,8 +45,9 @@ and bets settled after a void on the same path also go to a public channel. See 
 [healthz-alert.sh](../../script/ops/healthz-alert.sh) invokes the local
 [probe helper](../../script/ops/healthz-probe.py), writes a redacted latest observation next to its
 state file and logs to the journal. Configure `HEALTHZ_URL` for the intended chain's endpoint and
-`HEALTHZ_LOCAL_URL` for origin diagnostics. Configure scheduling on the target host; repository
-presence does not install a timer.
+`HEALTHZ_LOCAL_URL` for origin diagnostics. Once installed and enabled on the host,
+`script/ops/systemd/arbigamefi-healthz.{service,timer}` run it every two minutes; repository presence does not
+install a timer.
 
 Secrets and options belong in `ALERT_CONFIG_FILE` (default `/opt/arbigamefi/ops/alert.env`):
 

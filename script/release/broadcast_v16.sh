@@ -132,7 +132,8 @@ case "$chain" in
   8453) network=base ;;
   *) network="<network>" ;;
 esac
-echo "broadcast: done. The snapshot is deployments/latest-v16.json in the copy, and in $pre/deployments."
+echo "broadcast: done. The snapshot is deployments/latest-v16.json in the copy, and in $pre/deployments. The RPC that"
+echo "forge saved among its sensitive values in the copy's cache/ loses its key when this script exits."
 echo "Next (docs/deploy/v16-release.md, step 2), from the repository: verify the sources, then prepare the Safe's"
 echo "timelock operations in the copy:"
 echo "  SNAPSHOT_PATH=deployments/latest-v16.json script/tools/with-ops-rpc.sh alchemy $network make -C $copy timelock-batches-v16"

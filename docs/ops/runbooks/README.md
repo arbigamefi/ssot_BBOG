@@ -7,6 +7,7 @@ deployments, tests and operations do not establish that this replacement is impl
 - [Governance Safe setup](governance-safe-setup.md)
 - [Keeper signer custody](keeper-key-separation.md)
 - [Keeper operations](casino-keeper-production.md)
+- [Production host rebuild](production-rebuild.md)
 - [Bet-index startup and replay](bet-index-production.md)
 - [Database backup and recovery](bet-index-backup.zh-CN.md)
 - [Bank solvency and NFT Vault accounting](bank-solvency.md)

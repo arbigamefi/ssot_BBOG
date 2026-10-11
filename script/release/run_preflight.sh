@@ -48,6 +48,7 @@ export RPC_URL
 mkdir -p "$3/logs" || fail "cannot create $3"
 out=$(cd "$3" && pwd)
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/arbigamefi-preflight.XXXXXX") || fail "cannot create a work directory"
+scratch=$(cd "$scratch" && pwd) # macOS TMPDIR ends with a slash; the paths Python reports have none
 work=$scratch/copy
 cleanup() {
   rm -rf "$scratch"
@@ -177,9 +178,11 @@ PY
 }
 
 echo "preflight: commit $commit, roles $roles, output $out"
+domain_override=
 if [[ -n "${CALLBACK_DOMAIN_PATH:-}" ]]; then
   [[ -f "$CALLBACK_DOMAIN_PATH" ]] || fail "no domain file $CALLBACK_DOMAIN_PATH"
-  CALLBACK_DOMAIN_PATH=$(cd "$(dirname "$CALLBACK_DOMAIN_PATH")" && pwd)/$(basename "$CALLBACK_DOMAIN_PATH")
+  domain_override=$(cd "$(dirname "$CALLBACK_DOMAIN_PATH")" && pwd)/$(basename "$CALLBACK_DOMAIN_PATH")
+  CALLBACK_DOMAIN_PATH=$domain_override
 fi
 stage work-copy work_copy
 [[ -z "${CALLBACK_DOMAIN_PATH:-}" ]] || export CALLBACK_DOMAIN_PATH=$work/deployments/callback-domain-override.json
@@ -204,7 +207,11 @@ domain=$(json "$out/chain/chain-readback.json" 'd["domainFile"]')
   echo "governanceTimelock=$(json "$out/plan-review.json" 'd["governanceTimelock"]')"
   echo "params_sha256=$(sha "$out/chain/deploy-params.env")"
   echo "plan_sha256=$(sha "$out/plan/DeployV16.s.sol/$chain/dry-run/run-latest.json")"
-  echo "domain=${domain#"$work"/}"
+  if [[ -n "$domain_override" ]]; then
+    echo "domain=$domain_override (CALLBACK_DOMAIN_PATH override, for tests only)"
+  else
+    echo "domain=${domain#"$work"/}"
+  fi
   echo "domain_sha256=$(sha "$domain")"
   echo "finishedAt=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } > "$out/PREFLIGHT.txt"

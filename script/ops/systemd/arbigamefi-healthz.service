@@ -1,0 +1,8 @@
+[Unit]
+Description=ArbiGameFi public health probe and alert
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/arbigamefi/ops/healthz-alert.sh

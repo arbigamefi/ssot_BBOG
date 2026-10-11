@@ -27,5 +27,8 @@ For an authorized signer change:
 5. Reconcile outstanding transactions from the previous signer. Event replay and current-state reads
    handle already-terminal work; changing keys must not advance recovery cursors.
 
+With `--rpc` the same script replaces the keeper's `KEEPER_RPC_HTTP` and `KEEPER_RPC_WS` instead; the Owner sends
+them from the repository with `script/ops/send-keeper-rpc.sh` ([production rebuild](production-rebuild.md)).
+
 The script only changes the local secret file. It does not fund accounts, restart containers or
 change contract roles. See [keeper operations](casino-keeper-production.md) for runtime recovery.

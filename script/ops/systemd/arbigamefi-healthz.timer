@@ -1,0 +1,10 @@
+[Unit]
+Description=Probe the ArbiGameFi health endpoint every 2 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+Unit=arbigamefi-healthz.service
+
+[Install]
+WantedBy=timers.target
