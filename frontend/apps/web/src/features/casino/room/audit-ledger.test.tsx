@@ -45,9 +45,10 @@ vi.mock("@heroicons/react/24/outline", () => ({
   )
 }));
 
+const playerBets = vi.hoisted(() => ({ rows: [] as any[] }));
 vi.mock("../../betting/usePlayerBets", () => ({
   usePlayerBets: () => ({
-    data: [],
+    data: playerBets.rows,
     isLoading: false,
     isFetching: false,
     localRows: [],
@@ -241,11 +242,13 @@ const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.filters.won": "Won",
   "casino.room.audit.filters.lost": "Lost",
   "casino.room.audit.filters.refunded": "Refunded",
+  "casino.room.audit.filters.voided": "Voided",
   "casino.room.audit.stateLabel.won": "Won",
   "casino.room.audit.stateLabel.lost": "Lost",
   "casino.room.audit.stateLabel.pending": "Pending",
   "casino.room.audit.stateLabel.settled": "Settled",
   "casino.room.audit.stateLabel.cancelled": "Refunded",
+  "casino.room.audit.stateLabel.voided": "Voided",
   "casino.room.audit.openOnExplorer": "Open transaction on block explorer",
   "casino.room.audit.openOnExplorerWithChain": "Open on {chain} block explorer",
   "casino.room.audit.newActivityBadge": "{n} new",
@@ -305,6 +308,7 @@ describe("GameRoomAuditLedger", () => {
   beforeEach(() => {
     currentTab = null;
     replaceMock.mockClear();
+    playerBets.rows = [];
   });
   afterEach(() => cleanup());
 
@@ -541,6 +545,40 @@ describe("GameRoomAuditLedger", () => {
     expect(screen.getByRole("tab", { name: "All", selected: true })).toBeDefined();
     fireEvent.click(screen.getByRole("tab", { name: "Won" }));
     expect(screen.getByRole("tab", { name: "Won", selected: true })).toBeDefined();
+  });
+
+  it("keeps timeout refunds and voids apart in My bets", () => {
+    setTab("mine");
+    const row = (betId: string, state: string) => ({
+      id: `84532:${betId}`,
+      betId,
+      gameId: game.gameId,
+      player: "0x1234567890abcdef1234567890abcdef12345678",
+      state,
+      stake: "1000000",
+      payout: "0",
+      refundAmount: "1000000",
+      updatedAt: Date.now()
+    });
+    playerBets.rows = [row("7", "refunded"), row("8", "voided")];
+    render(
+      <GameRoomAuditLedger
+        game={game}
+        assetSymbol="USDC"
+        chainId={84532}
+        recentBets={[]}
+        playerAddress="0x1234567890abcdef1234567890abcdef12345678"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Refunded" }));
+    expect(screen.getByRole("link", { name: "View bet 7" })).toBeDefined();
+    expect(screen.queryByRole("link", { name: "View bet 8" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Voided" }));
+    expect(screen.getByRole("link", { name: "View bet 8" })).toBeDefined();
+    expect(screen.queryByRole("link", { name: "View bet 7" })).toBeNull();
+    expect(screen.getAllByText("Voided").length).toBeGreaterThan(1);
   });
 
   it("shows the per-game turnover leaderboard on the Leaderboard tab", () => {

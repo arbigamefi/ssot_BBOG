@@ -6,7 +6,8 @@ import { getExplorerTxUrl } from "../../../app-shell/chain-registry";
 import type { CasinoTerminalRoundResult } from "../room/resolution";
 import { formatUnits } from "../../betting/model/units";
 
-export type CasinoReceiptState = "finalized" | "refunded";
+/** A voided bet returned its stake as a claimable balance (ADR-0037 §7); nothing was paid out. */
+export type CasinoReceiptState = "finalized" | "refunded" | "voided";
 export type CasinoReceiptTone = "win" | "loss" | "neutral";
 
 /** Where a settled bet's house edge went (v1.6), formatted in the bet's asset. */
@@ -73,13 +74,13 @@ export function buildCasinoReceiptFromTerminalResult({
   gameSlug?: string;
   result: CasinoTerminalRoundResult;
 }): CasinoReceiptViewModel {
-  const state: CasinoReceiptState = result.kind === "refunded" ? "refunded" : "finalized";
+  const state: CasinoReceiptState = result.kind === "settled" ? "finalized" : result.kind;
   const payout =
-    result.kind === "refunded"
-      ? result.refund.refundAmount
-      : result.settlement.payoutNet + result.settlement.refundAmount;
+    result.kind === "settled"
+      ? result.settlement.payoutNet + result.settlement.refundAmount
+      : result.refund.refundAmount;
   const terminalTxHash =
-    result.kind === "refunded" ? result.refund.txHash : result.settlement.txHash;
+    result.kind === "settled" ? result.settlement.txHash : result.refund.txHash;
   return buildCasinoReceiptViewModel({
     assetDecimals,
     assetSymbol,
@@ -95,7 +96,7 @@ export function buildCasinoReceiptFromTerminalResult({
     state,
     terminalTxHash,
     payout,
-    payment: result.kind === "refunded" ? result.refund.payment : result.settlement.payment
+    payment: result.kind === "settled" ? result.settlement.payment : result.refund.payment
   });
 }
 
@@ -116,7 +117,8 @@ export function buildCasinoReceiptFromBetRow({
   row: BetRow;
   payment?: PlayerPaymentProof;
 }): CasinoReceiptViewModel {
-  const state: CasinoReceiptState = row.state === "refunded" ? "refunded" : "finalized";
+  const state: CasinoReceiptState =
+    row.state === "refunded" || row.state === "voided" ? row.state : "finalized";
   const model = buildCasinoReceiptViewModel({
     assetAddress: row.asset,
     assetDecimals,
@@ -137,7 +139,11 @@ export function buildCasinoReceiptFromBetRow({
     stake: bigintFromString(row.stake) ?? 0n,
     state,
     terminalTxHash:
-      row.terminalTxHash ?? row.finalizedTxHash ?? row.refundedTxHash ?? row.lastTxHash,
+      row.terminalTxHash ??
+      row.finalizedTxHash ??
+      row.refundedTxHash ??
+      row.voidedTxHash ??
+      row.lastTxHash,
     payout: getRowPayout(row),
     payment,
     updatedAt: row.updatedAt
@@ -199,7 +205,7 @@ export function buildCasinoReceiptProofText({
     `Asset: ${assetLabel ?? model.assetSymbol}`,
     `Stake: ${model.stakeValue}`,
     `Settlement amount: ${model.payoutValue}`,
-    `Transfer evidence: ${paymentProofDescription(model.payment.status)}`,
+    `Transfer evidence: ${paymentProofDescription(model.payment.status, model.state)}`,
     `Net: ${model.netValue}`,
     `Chain ID: ${model.chainId ?? "—"}`,
     `Player: ${model.player ?? "—"}`,
@@ -347,7 +353,12 @@ function buildCasinoReceiptViewModel({
   };
 }
 
-function paymentProofDescription(status: PlayerPaymentProof["status"]) {
+function paymentProofDescription(status: PlayerPaymentProof["status"], state: CasinoReceiptState) {
+  // A void never transfers; the stake is booked as a player payable (ADR-0037 §7.4).
+  if (state === "voided")
+    return status === "payable"
+      ? "Stake returned as a player payable; the VRF fee is not refunded; later claims are not attributed to this bet"
+      : "Stake returned as a player payable; the payable record in this transaction has not been verified";
   switch (status) {
     case "transferred":
       return "Transferred to the player in the settlement transaction";

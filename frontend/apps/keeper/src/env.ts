@@ -2,12 +2,14 @@ import { readFileSync } from "node:fs";
 import type { Address, Hex } from "viem";
 import { getAddress } from "viem";
 import type { KeeperConfig, KeeperRole } from "./types.js";
+import { DEFAULT_VOID_GAS_LIMIT, MAX_VOID_GAS_LIMIT } from "./void.js";
 
 type ReleaseLike = {
   chainId: number;
   contracts: {
     gameHub: Address;
     vrfHub: Address;
+    poolRegistry: Address;
   };
   pools?: Array<{
     active?: boolean;
@@ -47,6 +49,16 @@ function parseMilliseconds(value: string | undefined, fallback: number, name: st
   return Math.floor(parsed);
 }
 
+/** Non-negative seconds as milliseconds; zero disables what it bounds. */
+function parseSeconds(value: string | undefined, fallbackSeconds: number, name: string) {
+  const text = value?.trim();
+  if (!text) return fallbackSeconds * 1000;
+  const parsed = Number(text);
+  if (!Number.isFinite(parsed) || parsed < 0)
+    throw new Error(`${name} must be a non-negative number of seconds`);
+  return Math.floor(parsed * 1000);
+}
+
 function parseOptionalBlock(value: string | undefined) {
   if (!value) return undefined;
   return BigInt(value);
@@ -81,6 +93,19 @@ function parsePositiveInteger(value: string | undefined, fallback: number, name:
   return parsed;
 }
 
+/** The floor depends on GameHub constants, so startup checks it once they are read. */
+function parseVoidGasLimit(value: string | undefined) {
+  const text = value?.trim();
+  if (!text) return DEFAULT_VOID_GAS_LIMIT;
+  if (!/^\d+$/.test(text)) throw new Error("KEEPER_VOID_GAS_LIMIT must be a positive integer");
+  const parsed = BigInt(text);
+  if (parsed > MAX_VOID_GAS_LIMIT)
+    throw new Error(
+      `KEEPER_VOID_GAS_LIMIT must be at most ${MAX_VOID_GAS_LIMIT}: Base caps a transaction at 16,777,216 gas`
+    );
+  return parsed;
+}
+
 function resolveVaultProviderLedgerPools(release: ReleaseLike) {
   return (release.pools ?? [])
     .filter((pool) => pool.active !== false)
@@ -93,9 +118,19 @@ function resolveVaultProviderLedgerPools(release: ReleaseLike) {
     }));
 }
 
+/** Inactive pools included: every Bank of the release is governed by the same timelock. */
+function resolveReleaseBanks(release: ReleaseLike) {
+  return [...new Set((release.pools ?? []).map((pool) => getAddress(pool.bank)))];
+}
+
 export function loadRelease(path: string): ReleaseLike {
   const raw = JSON.parse(readFileSync(path, "utf8")) as ReleaseLike;
-  if (!raw.chainId || !raw.contracts?.gameHub || !raw.contracts?.vrfHub) {
+  if (
+    !raw.chainId ||
+    !raw.contracts?.gameHub ||
+    !raw.contracts?.vrfHub ||
+    !raw.contracts?.poolRegistry
+  ) {
     throw new Error(`Invalid keeper release file: ${path}`);
   }
   return raw;
@@ -129,6 +164,8 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     chainId,
     gameHub: release.contracts.gameHub,
     vrfHub: release.contracts.vrfHub,
+    poolRegistry: getAddress(release.contracts.poolRegistry),
+    releaseBanks: resolveReleaseBanks(release),
     httpRpcUrl: requireEnv(env, "KEEPER_RPC_HTTP"),
     wsRpcUrl: env.KEEPER_RPC_WS?.trim() || undefined,
     privateKey: requireEnv(env, "KEEPER_PRIVATE_KEY") as Hex,
@@ -171,6 +208,13 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     vaultProviderLedgerScanIntervalMs: parseMs(
       env.KEEPER_VAULT_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS,
       60_000
+    ),
+    voidGasLimit: parseVoidGasLimit(env.KEEPER_VOID_GAS_LIMIT),
+    // Payables, Vault ledger and governance degrade when finalized has not advanced for this long.
+    finalizedStallMs: parseSeconds(
+      env.KEEPER_FINALIZED_STALL_SECONDS,
+      3_600,
+      "KEEPER_FINALIZED_STALL_SECONDS"
     )
   };
 }

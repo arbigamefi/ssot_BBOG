@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PublicClient } from "viem";
+import { UnknownBlockGrace } from "./block-grace.js";
 import { readPoolHealth } from "./pools.js";
 const bank = "0x1111111111111111111111111111111111111111" as const;
 const vault = "0x2222222222222222222222222222222222222222" as const;
@@ -102,5 +103,36 @@ describe("NFT pool health", () => {
       lpStatus: 4,
       error: expect.stringContaining("unavailable")
     });
+  });
+
+  it("holds a read that reached a node without the pinned block for five consecutive minutes", async () => {
+    const f = fixture();
+    let now = Date.parse("2026-10-11T00:00:00.000Z");
+    const grace = new UnknownBlockGrace(() => now);
+    const original = f.readContract.getMockImplementation()!;
+    let missing = true;
+    f.readContract.mockImplementation(async (q) => {
+      if (missing && q.functionName === "getSSOT") throw new Error("header not found");
+      return original(q);
+    });
+    const first = await readPoolHealth(pool, f.client, grace);
+    expect(first.error).toBeUndefined();
+    expect(first).toMatchObject({
+      transientError: "Error: header not found",
+      transientSince: "2026-10-11T00:00:00.000Z"
+    });
+    now += 299_999;
+    expect((await readPoolHealth(pool, f.client, grace)).error).toBeUndefined();
+    now += 1;
+    expect(await readPoolHealth(pool, f.client, grace)).toMatchObject({
+      error: "Error: header not found"
+    });
+    missing = false;
+    const recovered = await readPoolHealth(pool, f.client, grace);
+    expect(recovered.error).toBeUndefined();
+    expect(recovered.transientError).toBeUndefined();
+    // Any other failure is reported at once.
+    f.readContract.mockRejectedValueOnce(new Error("execution reverted"));
+    expect((await readPoolHealth(pool, f.client, grace)).error).toBe("Error: execution reverted");
   });
 });

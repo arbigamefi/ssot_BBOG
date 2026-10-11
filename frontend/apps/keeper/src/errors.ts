@@ -1,3 +1,14 @@
+import {
+  BaseError,
+  BlockNotFoundError,
+  ContractFunctionRevertedError,
+  ExecutionRevertedError,
+  HttpRequestError,
+  SocketClosedError,
+  TimeoutError,
+  WebSocketRequestError
+} from "viem";
+
 /**
  * Error text that is safe to log and to publish in the health snapshot.
  *
@@ -114,4 +125,94 @@ function describeWithRootCause(error: unknown) {
   if (root === error) return line;
   const facts = [textOf(root), ...tagsOf(root)].filter((fact): fact is string => Boolean(fact));
   return facts.some((fact) => !line.includes(fact)) ? `${line} <- ${describeOne(root)}` : line;
+}
+
+/**
+ * The contract revert inside a viem error: its decoded custom error when the ABI knows it. Undefined for
+ * transport, funding and other failures, where the call never reached a verdict.
+ */
+export function findContractRevert(
+  error: unknown
+): { errorName?: string; args?: readonly unknown[] } | undefined {
+  if (!(error instanceof BaseError)) return undefined;
+  const reverted = error.walk(
+    (cause) =>
+      cause instanceof ContractFunctionRevertedError || cause instanceof ExecutionRevertedError
+  );
+  if (reverted instanceof ContractFunctionRevertedError)
+    return { errorName: reverted.data?.errorName, args: reverted.data?.args };
+  return reverted instanceof ExecutionRevertedError ? {} : undefined;
+}
+
+/**
+ * describeError with the decoded custom error in front, such as
+ * `SafeERC20FailedOperation(0x…): ContractFunctionExecutionError: …`, so an operator sees why a
+ * settlement reverts. Arguments are chain values, never URLs.
+ */
+export function describeRevert(error: unknown): string {
+  const description = describeError(error);
+  const revert = findContractRevert(error);
+  if (!revert?.errorName) return description;
+  const args = (revert.args ?? []).map((arg) => String(arg)).join(", ");
+  const text = redactUrls(`${revert.errorName}(${args}): ${description}`);
+  return text.length > MAX_DESCRIPTION_LENGTH
+    ? `${text.slice(0, MAX_DESCRIPTION_LENGTH - 1)}…`
+    : text;
+}
+
+/** The request never reached an EVM: these never classify an execution or a missing block. */
+const TRANSPORT_FAILURES = [
+  HttpRequestError,
+  TimeoutError,
+  WebSocketRequestError,
+  SocketClosedError
+];
+
+/**
+ * EVM halts a node reports as an error instead of a revert: geth "out of gas", anvil "EVM error
+ * OutOfGas", invalid opcodes and stack errors.
+ */
+const EXECUTION_HALT =
+  /out ?of ?gas|gas required exceeds allowance|invalid ?(?:fe ?)?opcode|opcode ?not ?found|invalid ?jump|stack ?(?:underflow|overflow)/i;
+
+/** A node without the requested block: geth "header not found", "unknown block", anvil "BlockOutOfRange". */
+const UNKNOWN_BLOCK = /header not found|unknown block|block not found|block ?out ?of ?range/i;
+
+function causeTextMatches(error: BaseError, pattern: RegExp) {
+  return (
+    error.walk((cause) => {
+      const fields = cause as { details?: unknown; shortMessage?: unknown };
+      return [fields.details, fields.shortMessage].some(
+        (text) => typeof text === "string" && pattern.test(text)
+      );
+    }) != null
+  );
+}
+
+function isTransportFailure(error: BaseError) {
+  return error.walk((cause) => TRANSPORT_FAILURES.some((type) => cause instanceof type)) != null;
+}
+
+/** Whether the call ran and the EVM halted, for example out of gas. Transport failures never are. */
+export function isExecutionHalt(error: unknown) {
+  return (
+    error instanceof BaseError &&
+    !isTransportFailure(error) &&
+    causeTextMatches(error, EXECUTION_HALT)
+  );
+}
+
+/**
+ * Whether a read pinned to a block number reached a node that does not have that block yet.
+ * Load-balanced RPC nodes disagree about the head, so this is usually transient.
+ */
+export function isUnknownBlockError(error: unknown) {
+  if (error instanceof BaseError)
+    return (
+      !isTransportFailure(error) &&
+      findContractRevert(error) === undefined &&
+      (error.walk((cause) => cause instanceof BlockNotFoundError) != null ||
+        causeTextMatches(error, UNKNOWN_BLOCK))
+    );
+  return error instanceof Error && UNKNOWN_BLOCK.test(error.message);
 }

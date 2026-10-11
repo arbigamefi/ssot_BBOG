@@ -24,6 +24,7 @@ import {
   buildCasinoReceiptProofText
 } from "../../../../../../features/casino/receipt/view-model";
 import { buildReceiptPath } from "../../../../../../features/casino/receipt/receipt-path";
+import { PlayerPayableClaim } from "../../../../../../features/portfolio/claims/player-payable-claim";
 import { PageTransition } from "../../../../../../components/PageTransition";
 
 export const dynamic = "force-dynamic";
@@ -148,9 +149,17 @@ export default async function CasinoReceiptPage({
     payment: receipt.payment
   });
   const tone = receiptModel.tone;
+  const voided = receiptModel.state === "voided";
+  // A void's claim needs the pool; a receipt row names only the asset, so the pool must be unique.
+  const assetPools =
+    release?.pools.filter((pool) => pool.asset.toLowerCase() === row.asset?.toLowerCase()) ?? [];
+  const payablePool = voided && assetPools.length === 1 ? assetPools[0] : undefined;
 
-  // Lead with the same signed net shown in the in-room result dialog.
-  const heroValue = receiptModel.signedNetValue;
+  // Lead with the same signed net shown in the in-room result dialog; a void leads with the
+  // returned stake, which is the player's money now waiting as a claimable balance.
+  const heroValue = voided
+    ? interpolate(labels.voided.headline, { amount: receiptModel.payoutValue })
+    : receiptModel.signedNetValue;
   // Re-shared links name the hub even when this one did not.
   const receiptHref = buildReceiptPath({ betId, chainId, gameHub: row.gameHub ?? gameHub });
   const shareText = receiptModel.shareText;
@@ -212,24 +221,44 @@ export default async function CasinoReceiptPage({
               {heroValue}
             </div>
             <p className="mt-1.5 truncate text-xs leading-5 text-fg-muted">{gameLabel}</p>
-            <p
-              className="mt-1.5 text-xs leading-5 text-fg-muted"
-              data-payment-status={receiptModel.payment.status}
-            >
-              {
-                messages.casino.room.payment[
-                  receiptModel.payment.status === "none" ? "noPayment" : receiptModel.payment.status
-                ]
-              }
-            </p>
+            {voided ? (
+              <p className="mt-1.5 text-sm leading-6 text-fg" data-receipt-voided>
+                {labels.voided.body}
+              </p>
+            ) : (
+              <p
+                className="mt-1.5 text-xs leading-5 text-fg-muted"
+                data-payment-status={receiptModel.payment.status}
+              >
+                {
+                  messages.casino.room.payment[
+                    receiptModel.payment.status === "none"
+                      ? "noPayment"
+                      : receiptModel.payment.status
+                  ]
+                }
+              </p>
+            )}
           </div>
         </div>
+
+        {payablePool && receiptModel.player ? (
+          <div className="border-b border-border-soft px-4 py-3">
+            <PlayerPayableClaim
+              chainId={chainId}
+              poolId={payablePool.poolId}
+              player={receiptModel.player as `0x${string}`}
+              symbol={symbol}
+              decimals={decimals}
+            />
+          </div>
+        ) : null}
 
         {/* Stat strip — stake / payout / net, like the result dialog. */}
         <div className="grid min-w-0 grid-cols-3 divide-x divide-border-soft border-b border-border-soft">
           <Stat label={labels.metrics.stake} value={receiptModel.stakeValue} />
           <Stat
-            label={labels.metrics.payout}
+            label={voided ? labels.metrics.returned : labels.metrics.payout}
             value={receiptModel.payoutValue}
             tone={tone === "win" ? "success" : "default"}
           />

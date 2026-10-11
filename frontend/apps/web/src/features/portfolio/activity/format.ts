@@ -52,6 +52,7 @@ export function getBigIntField(row: BetRow, key: "stake" | "payout") {
 export function mapBetState(state?: string, payout?: bigint, stake?: bigint): BetStatusGroup {
   if (!state) return "pending";
   const normalized = state.toLowerCase();
+  if (normalized === "voided") return "voided";
   if (
     normalized.includes("final") ||
     normalized.includes("settled") ||
@@ -129,7 +130,8 @@ export function formatOutcome({
   payout,
   decimals,
   symbol,
-  pendingLabel
+  pendingLabel,
+  returnedLabel
 }: {
   status: BetStatusGroup;
   stake: bigint;
@@ -137,8 +139,15 @@ export function formatOutcome({
   decimals: number;
   symbol: string;
   pendingLabel?: string;
+  /** Wraps the amount a refund or void returned, e.g. "{amount} returned". */
+  returnedLabel?: (amount: string) => string;
 }) {
-  if (["won", "lost", "settled", "refunded"].includes(status) && payout != null) {
+  // A timeout refund and a void both return exactly the stake: show that amount, not a zero net.
+  if ((status === "refunded" || status === "voided") && payout != null) {
+    const amount = formatTokenAmount(payout, decimals, symbol, pendingLabel);
+    return returnedLabel ? returnedLabel(amount) : amount;
+  }
+  if (["won", "lost", "settled"].includes(status) && payout != null) {
     const net = payout - stake;
     const sign = net > 0n ? "+" : net < 0n ? "-" : "";
     return `${sign}${formatTokenAmount(net < 0n ? -net : net, decimals, symbol, pendingLabel)}`;

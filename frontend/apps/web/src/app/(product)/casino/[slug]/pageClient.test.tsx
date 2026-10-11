@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 
 const state = {
@@ -10,11 +11,13 @@ const state = {
   betsLoading: false,
   betsError: null as Error | null,
   indexerStatus: { lastSyncedBlock: 321, lagBlocks: 4 },
-  account: null as string | null
+  account: null as string | null,
+  sdkExtra: null as Record<string, unknown> | null
 };
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/casino/dice",
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams()
 }));
 
@@ -50,7 +53,8 @@ vi.mock("../../../../features/ops/useIndexer", () => ({
 
 vi.mock("../../../../ssot/sdk", () => ({
   useSSOTSDK: () => ({
-    sdk: state.account ? { account: state.account } : null
+    // A real SDK keeps its identity across renders.
+    sdk: state.sdkExtra ?? (state.account ? { account: state.account } : null)
   })
 }));
 
@@ -67,7 +71,8 @@ vi.mock("../../../../app-shell/wallet-entry-context", () => ({
 }));
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) =>
+  useLocale: () => "en",
+  useTranslations: (namespace?: string) => (relativeKey: string) =>
     ({
       "casino.room.shell.liveModule": "Live SSOT Module",
       "casino.room.shell.maxBet": "Max bet",
@@ -222,8 +227,13 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.requestId": "Request ID",
       "casino.room.result.facts.netResult": "Net result",
       "casino.room.result.facts.randomHash": "Random hash",
-      "casino.room.result.facts.settlementTx": "Settlement tx"
-    })[key] ?? key
+      "casino.room.result.facts.settlementTx": "Settlement tx",
+      "casino.room.closed.title": "This game is closed.",
+      "casino.room.closed.body":
+        "Bets placed before it closed still settle, and their receipts stay available.",
+      "casino.room.closed.viewBets": "View your bets",
+      "casino.room.closed.browse": "Browse open games"
+    })[namespace ? `${namespace}.${relativeKey}` : relativeKey] ?? relativeKey
 }));
 
 vi.mock("../../../../components/ProductStateCard", () => ({
@@ -373,6 +383,7 @@ describe("GamePageClient", () => {
     state.betsError = null;
     state.indexerStatus = { lastSyncedBlock: 321, lagBlocks: 4 };
     state.account = null;
+    state.sdkExtra = null;
   });
 
   it("shows placeholder when release is unavailable", () => {
@@ -513,5 +524,44 @@ describe("GamePageClient", () => {
     render(<GamePageClient slug="keno" />);
     expect(screen.getByTestId("placeholder")).toBeDefined();
     expect(screen.getByText("Game not found.")).toBeDefined();
+  });
+
+  it("shows a disabled game as closed, without a bet panel", async () => {
+    state.release = MOCK_RELEASE;
+    state.account = "0x1111111111111111111111111111111111111111";
+    state.sdkExtra = {
+      account: state.account,
+      release: { chainId: 84532 },
+      gameHub: {
+        getGameConfig: vi.fn().mockResolvedValue({
+          gameId: MOCK_RELEASE.gamesMeta[0]!.gameId,
+          module: MOCK_RELEASE.gamesMeta[0]!.module,
+          maxBetCount: 25,
+          houseEdgeBps: 200,
+          callbackGasLimit: 2_447_746,
+          disabled: true
+        }),
+        quoteVRFFee: vi.fn()
+      }
+    };
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GamePageClient slug="dice" />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByTestId("game-closed")).toBeDefined();
+    expect(screen.getByText("This game is closed.")).toBeDefined();
+    expect(
+      screen.getByText(
+        "Bets placed before it closed still settle, and their receipts stay available."
+      )
+    ).toBeDefined();
+    expect(screen.getByRole("link", { name: "View your bets" }).getAttribute("href")).toBe(
+      "/portfolio/activity"
+    );
+    await waitFor(() => expect(screen.queryByLabelText("Wallet Balance")).toBeNull());
   });
 });

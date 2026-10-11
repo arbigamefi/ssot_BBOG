@@ -16,6 +16,7 @@ import {
   resolveBetMaxRaw,
   scaleBetAmountInput
 } from "./bet-amount";
+import { PendingSettlementNotice } from "./pending-settlement-notice";
 import { PoolStatusNotice, BetSubmissionFeedback } from "./submission-feedback";
 import type { PoolAvailability } from "./hooks";
 import { formatNativeFee } from "./casino-round";
@@ -47,6 +48,8 @@ export function MobileCasinoActionBar({
   onPlaceBet,
   riskInDisabled = false,
   poolAvailability = "ready",
+  openBets,
+  pendingSettlementBetIds = [],
   onRefreshPool,
   onCheckTransaction,
   checkingTransaction,
@@ -75,6 +78,10 @@ export function MobileCasinoActionBar({
   onPlaceBet: () => void;
   riskInDisabled?: boolean;
   poolAvailability?: PoolAvailability;
+  /** The player's open bets in this pool, for the per-player cap line. */
+  openBets?: number;
+  /** Bets whose result arrived but never settled; shown beside the next bet, never blocking it. */
+  pendingSettlementBetIds?: readonly bigint[];
   onRefreshPool?: () => void;
   onCheckTransaction?: () => void;
   checkingTransaction?: boolean;
@@ -183,10 +190,12 @@ export function MobileCasinoActionBar({
           </div>
         ) : null}
       </div>
+      <PendingSettlementNotice betIds={pendingSettlementBetIds} />
       {!riskInDisabled && !isPending && !manualSettleAvailable && !manualRefundAvailable ? (
         <PoolStatusNotice
           status={poolAvailability}
           symbol={assetSymbol}
+          openBets={openBets}
           onRefresh={onRefreshPool}
         />
       ) : null}

@@ -17,6 +17,7 @@ import { createPostgresBetIndexStore, type BetIndexStore } from "@ssot/bet-index
 import { applyGameHubEventToBet, type BetRow, type GameHubEventName } from "@ssot/ssot/indexer";
 import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
 
+import { isTerminalBetState, TERMINAL_GAMEHUB_EVENTS } from "../../features/betting/bet-state";
 import type {
   AffiliateBetsResponse,
   BetReceiptResponse,
@@ -29,8 +30,7 @@ import { getActiveGameHub, isSameGameHub } from "./active-game-hub";
 const GAME_HUB_EVENTS: GameHubEventName[] = [
   "BetPlaced",
   "BetRandomReady",
-  "BetFinalized",
-  "BetRefunded"
+  ...TERMINAL_GAMEHUB_EVENTS
 ];
 
 const { GameHubAbi } = getContractAbis();
@@ -592,7 +592,8 @@ export async function queryBetReceipt({
   let enriched = false;
   let payment: PlayerPaymentProof | undefined;
   if (
-    (row?.state === "finalized" || row?.state === "refunded") &&
+    row &&
+    isTerminalBetState(row.state) &&
     onActiveGameHub &&
     shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)
   ) {
@@ -633,7 +634,7 @@ export async function queryBetReceipt({
       chainId,
       client
     });
-    if (fallbackRow?.state === "finalized" || fallbackRow?.state === "refunded") {
+    if (fallbackRow && isTerminalBetState(fallbackRow.state)) {
       const proof = await withTimeout(
         queryBetReceiptTerminalTxFallback({
           betId: normalizedBetId,
@@ -645,6 +646,7 @@ export async function queryBetReceipt({
             fallbackRow.terminalTxHash ??
             fallbackRow.finalizedTxHash ??
             fallbackRow.refundedTxHash ??
+            fallbackRow.voidedTxHash ??
             fallbackRow.lastTxHash
         }),
         numberEnv("BET_RECEIPT_RPC_TIMEOUT_MS", DEFAULT_RECEIPT_RPC_TIMEOUT_MS)
@@ -854,7 +856,12 @@ async function queryBetReceiptTerminalTxFallback({
       randomHash: bet.randomHash as Hex,
       requestId: BigInt(bet.requestId).toString(),
       stake: BigInt(bet.stake).toString(),
-      state: terminal.eventName === "BetRefunded" ? "refunded" : "finalized",
+      state:
+        terminal.eventName === "BetRefunded"
+          ? "refunded"
+          : terminal.eventName === "BetVoided"
+            ? "voided"
+            : "finalized",
       terminalTxHash,
       updatedAt,
       updatedBlock
@@ -871,6 +878,16 @@ async function queryBetReceiptTerminalTxFallback({
           args: terminal.args
         })
       ).toString();
+    } else if (terminal.eventName === "BetVoided") {
+      // ADR-0037 §7.4: the whole stake became a player payable; nothing was paid out.
+      row.voidedTxHash = terminalTxHash;
+      row.refundAmount = bigintStringFromUnknown(terminal.args.stake);
+      row.payout = "0";
+      row.payoutGross = "0";
+      if (typeof terminal.args.caller === "string")
+        row.voidCaller = getAddress(terminal.args.caller) as Address;
+      if (typeof terminal.args.settlementErrorPrefix === "string")
+        row.voidSettlementErrorPrefix = terminal.args.settlementErrorPrefix as Hex;
     } else {
       row.refundedTxHash = terminalTxHash;
       row.refundAmount = bigintStringFromUnknown(terminal.args.refundAmount);
@@ -923,7 +940,7 @@ function decodeTerminalReceiptLog({
 }) {
   for (const log of logs) {
     if (log.address?.toLowerCase() !== gameHub.toLowerCase()) continue;
-    for (const eventName of ["BetFinalized", "BetRefunded"] as const) {
+    for (const eventName of TERMINAL_GAMEHUB_EVENTS) {
       try {
         const decoded = decodeEventLog({
           abi: GameHubAbi,
@@ -1003,7 +1020,7 @@ async function queryBetReceiptRpcFallback({
       const logs: Array<EventLogLike & { eventName: GameHubEventName }> = [
         ...placedLogs.map((log) => ({ ...log, eventName: "BetPlaced" as const }))
       ];
-      for (const eventName of ["BetRandomReady", "BetFinalized", "BetRefunded"] as const) {
+      for (const eventName of ["BetRandomReady", ...TERMINAL_GAMEHUB_EVENTS] as const) {
         const eventLogs = await getGameHubLogsInChunks({
           args: { positionId: receiptBetId },
           chunkBlocks,
@@ -1486,15 +1503,10 @@ function affiliateStatsFromRows(
   affiliate: Address,
   rows: readonly BetRow[]
 ): AffiliateBetsResponse["stats"] {
-  if (
-    rows.some(
-      (row) => (row.state === "finalized" || row.state === "refunded") && !getCasinoFinancials(row)
-    )
-  )
-    return null;
+  if (rows.some((row) => isTerminalBetState(row.state) && !getCasinoFinancials(row))) return null;
   return rows.reduce<NonNullable<AffiliateBetsResponse["stats"]>>((stats, row) => {
     stats.betCount += 1;
-    if (row.state === "finalized" || row.state === "refunded") stats.settledCount += 1;
+    if (isTerminalBetState(row.state)) stats.settledCount += 1;
     const financials = getCasinoFinancials(row);
     stats.turnover = addStringBigints(stats.turnover, financials?.turnover.toString());
     stats.payout = addStringBigints(stats.payout, financials?.award.toString());

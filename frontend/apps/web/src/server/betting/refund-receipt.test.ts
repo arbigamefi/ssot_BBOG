@@ -33,7 +33,8 @@ const player = "0x2222222222222222222222222222222222222222";
 const bank = "0x5555555555555555555555555555555555555555";
 const gameId = `0x${"11".repeat(32)}` as const;
 const abi = parseAbi([
-  "event BetFinalized(uint256 indexed positionId, uint256 payoutGross, uint256 payoutNet, uint256 feeOnPayout, uint256 protocolFeeAccrual)"
+  "event BetFinalized(uint256 indexed positionId, uint256 payoutGross, uint256 payoutNet, uint256 feeOnPayout, uint256 protocolFeeAccrual)",
+  "event BetVoided(uint256 indexed positionId, address indexed caller, uint256 stake, bytes32 settlementErrorPrefix)"
 ]);
 const terminal = {
   state: 4,
@@ -315,6 +316,63 @@ describe("receipt refund proof repair", () => {
     expect(result.row).toBeNull();
     expect(writeBetRows).not.toHaveBeenCalled();
   });
+  it("proves a void's returned stake as a player payable from the void transaction", async () => {
+    stored = {
+      ...stored,
+      state: "voided",
+      payout: "0",
+      refundAmount: undefined,
+      terminalTxHash: txHash,
+      lastEventName: "BetVoided"
+    };
+    const hub = activeRelease.release.contracts.gameHub;
+    const bankLog = (
+      eventName: "BetReserveReleased" | "PlayerPayableCreated" | "BetVoided",
+      amount: bigint
+    ) => ({
+      address: bank,
+      topics: encodeEventTopics({
+        abi: PLAYER_PAYMENT_ABI,
+        eventName,
+        args: { betId: 42n, player }
+      }),
+      data: encodeAbiParameters([{ type: "uint256" }], [amount])
+    });
+    const client = clientWithTerminal(terminal);
+    (client.getTransactionReceipt as ReturnType<typeof vi.fn>).mockResolvedValue({
+      blockNumber: 1000n,
+      transactionHash: txHash,
+      logs: [
+        bankLog("BetReserveReleased", 400000n),
+        bankLog("PlayerPayableCreated", 200000n),
+        bankLog("BetVoided", 200000n),
+        {
+          address: hub,
+          topics: encodeEventTopics({
+            abi,
+            eventName: "BetVoided",
+            args: { positionId: 42n, caller: player }
+          }),
+          data: encodeAbiParameters(
+            [{ type: "uint256" }, { type: "bytes32" }],
+            [200000n, `0x${"ab".repeat(32)}`]
+          )
+        }
+      ]
+    });
+    const result = await queryBetReceipt({ betId: "42", chainId: 84532, client });
+    expect(result.row).toMatchObject({
+      state: "voided",
+      stake: "200000",
+      refundAmount: "200000",
+      payout: "0",
+      voidedTxHash: txHash,
+      voidCaller: getAddress(player),
+      voidSettlementErrorPrefix: `0x${"ab".repeat(32)}`
+    });
+    expect(result.payment).toEqual({ status: "payable", amount: "200000" });
+  });
+
   it("keeps failed persistence identified as an RPC receipt", async () => {
     writeBetRows.mockRejectedValue(new Error("database unavailable"));
     const result = await materializeBetReceipt({

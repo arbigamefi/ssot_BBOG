@@ -8,7 +8,7 @@ import type { Address, Hex } from "viem";
  * - bigint values are stringified.
  */
 
-export type BetLifecycleState = "placed" | "randomReady" | "finalized" | "refunded";
+export type BetLifecycleState = "placed" | "randomReady" | "finalized" | "refunded" | "voided";
 
 export interface GameHubEventRow {
   id: string; // `${chainId}:${txHash}:${logIndex}`
@@ -64,6 +64,12 @@ export interface BetRow {
   terminalTxHash?: Hex;
   finalizedTxHash?: Hex;
   refundedTxHash?: Hex;
+  /** GameHub BetVoided: the stake became a player payable and nothing was paid out (ADR-0037 §7.4). */
+  voidedTxHash?: Hex;
+  /** Who executed voidBet. */
+  voidCaller?: Address;
+  /** First 32 bytes of the failed settlement attempt's revert data inside voidBet. */
+  voidSettlementErrorPrefix?: Hex;
   placedBlock?: number;
   placedAt?: number;
   refundDeadline?: number;

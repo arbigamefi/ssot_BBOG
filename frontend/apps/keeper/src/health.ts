@@ -4,11 +4,12 @@ import { dirname } from "node:path";
 import type { Address, Hex } from "viem";
 
 import type { FinalizeOutcome, KeeperConfig, KeeperEvent, KeeperRole } from "./types.js";
+import type { VoidAttemptOutcome } from "./void.js";
 
 export type KeeperHealthStatus = "starting" | "running" | "degraded" | "stopped";
 
 /**
- * Where a failure came from. Scans clear on a successful pass; finalization failures clear
+ * Where a failure came from. Scans clear on a successful pass; finalization and void failures clear
  * only when the same bet is successfully reconciled, including a healthy deferred read.
  */
 export type KeeperFailureSource =
@@ -17,7 +18,10 @@ export type KeeperFailureSource =
   | "finalize"
   | "recovery"
   | "pools"
-  | "payables";
+  | "payables"
+  | "void"
+  | "unbookedResult"
+  | "governance";
 
 export type PoolHealth = {
   bank: Address;
@@ -41,6 +45,12 @@ export type PoolHealth = {
   paused?: boolean;
   lpStatus?: number;
   error?: string;
+  /**
+   * Informational: the block-pinned reads reached a node without that block. Becomes `error` after
+   * five consecutive minutes.
+   */
+  transientError?: string;
+  transientSince?: string;
 };
 
 /** Refused transfers remain owed; discovery and RPC failures require operational attention. */
@@ -49,13 +59,102 @@ export type PayableHealth = {
   scannedThrough?: string;
   /** Discovery covers finalized blocks only; recent debts wait for chain finality. */
   finalizedBlock?: string;
+  /**
+   * Informational: the finalized read was this many blocks below an earlier one, as load-balanced RPC
+   * nodes can be. Nothing past it was scanned; scanning resumes from the cursor once the RPC catches up.
+   */
+  finalizedBehindBy?: string;
+  /** The finalized head has not advanced since then, longer than KEEPER_FINALIZED_STALL_SECONDS. */
+  finalizedStalledSince?: string;
   headBlock?: string;
   caughtUp: boolean;
   pending: number;
   readError?: string;
+  /**
+   * Informational: a block-pinned read reached a node without that block. Becomes `readError` after
+   * five consecutive minutes.
+   */
+  transientReadError?: string;
   claimError?: string;
   error?: string;
 };
+
+/** Progress of a scan that follows the finalized head. */
+export type FinalizedScanHealth = {
+  scannedThrough?: string;
+  finalizedBlock?: string;
+  /** Informational, as in PayableHealth. */
+  finalizedBehindBy?: string;
+  /** As in PayableHealth; degrades the scan's source. */
+  finalizedStalledSince?: string;
+};
+
+/** Indexing of the GovernanceTimelock that governs PoolRegistry, GameHub and every Bank. */
+export type GovernanceHealth = FinalizedScanHealth & {
+  timelock: Address;
+  caughtUp: boolean;
+};
+
+/** A received result whose settlement reverts, waiting for or being voided. */
+export type VoidCandidateHealth = {
+  betId: string;
+  bank: Address;
+  vrfRequestedAt: string;
+  /**
+   * Unix seconds the result was received: the block of its ResultReceived or BetRandomReady event,
+   * or the VRF request time (`request`) when no such event was seen, which can only overstate the age.
+   */
+  receivedAt: string;
+  receivedFrom: "result" | "request";
+  eligibleAt: string;
+  eligible: boolean;
+  reason: string;
+};
+
+export type VoidOutcomeName = "voided" | "settled" | "failed" | "configurationError";
+
+/** The keeper as void executor (ADR-0037 §7.3 operating rule 3). */
+export type VoidHealth = {
+  gasLimit: string;
+  /** Oldest VRF request first; at most 50 are listed. */
+  candidates: VoidCandidateHealth[];
+  candidateCount: number;
+  /** Attempts by outcome: voided, settled inside voidBet, or failed (including configuration errors). */
+  attempts: number;
+  voided: number;
+  settled: number;
+  failed: number;
+  lastOutcomeAt?: string;
+  lastOutcome?: {
+    betId: string;
+    outcome: VoidOutcomeName;
+    txHash?: Hex;
+    settlementErrorPrefix?: Hex;
+    reason?: string;
+  };
+  /** Set while voidBet runs out of gas at KEEPER_VOID_GAS_LIMIT; cleared by the next mined attempt. */
+  configurationError?: string;
+  /**
+   * The unbooked result received first, its age at the last chain-time read, and when voidBet becomes
+   * allowed. Older than one hour degrades `unbookedResult` (ADR-0037 §7.3 rule 4).
+   */
+  oldestUnbooked?: {
+    betId: string;
+    receivedAt: string;
+    receivedFrom: "result" | "request";
+    ageSeconds: string;
+    eligibleAt: string;
+  };
+  /**
+   * After a start no bet is voided until lifecycle recovery has reached the head seen at startup and
+   * the indexed open bets have been requeued once, so every earlier candidate is known.
+   */
+  startupRecoveryComplete: boolean;
+};
+
+const MAX_VOID_CANDIDATES_LISTED = 50;
+/** ADR-0037 §7.3 rule 4: an unbooked result older than this is alerted. */
+export const UNBOOKED_RESULT_ALERT_SECONDS = 3_600n;
 
 /** A running keeper whose event scan has not advanced for this long is reported degraded. */
 export function scanStaleAfterMs(pollIntervalMs: number) {
@@ -96,9 +195,17 @@ export type KeeperHealthSnapshot = {
     retryable: boolean;
   };
   lastError?: string;
+  /**
+   * Informational: the last latest-block read of the event scan was this many blocks below
+   * `lastScannedBlock`. That pass scanned nothing; the stall check still applies.
+   */
+  scanHeadBehindBy?: string;
   pools?: PoolHealth[];
   lastPoolScanAt?: string;
   payables?: PayableHealth[];
+  vaultProviderLedger?: FinalizedScanHealth;
+  governance?: GovernanceHealth;
+  voids?: VoidHealth;
   casinoRecoveryScannedThrough?: string;
   degradedBy?: Array<KeeperFailureSource | "stalled">;
   rpc?: {
@@ -159,7 +266,17 @@ export class KeeperHealthReporter {
       startedAt,
       updatedAt: startedAt,
       lastScannedBlock: config.startBlock?.toString(),
-      queueDepth: 0
+      queueDepth: 0,
+      voids: {
+        gasLimit: config.voidGasLimit.toString(),
+        candidates: [],
+        candidateCount: 0,
+        attempts: 0,
+        voided: 0,
+        settled: 0,
+        failed: 0,
+        startupRecoveryComplete: false
+      }
     };
   }
 
@@ -175,6 +292,10 @@ export class KeeperHealthReporter {
       detail: NonNullable<KeeperHealthSnapshot["lastFinalizeFailure"]>;
     }
   >();
+  /** Open void failures by bet ID; `pass` and `configuration` cover the whole executor. */
+  private readonly voidFailures = new Map<string, string>();
+  /** Latest chain time (seconds) the void executor read; unbooked ages are measured against it. */
+  private chainTime: bigint | undefined;
   private phase: "starting" | "running" | "stopped" = "starting";
   private scanProgressMs: number;
   private lifecycleProgressMs: number;
@@ -236,10 +357,171 @@ export class KeeperHealthReporter {
     });
   }
 
-  /** A bank-provider ledger pass finished without error. */
-  async recordLedgerScan(queueDepth: number) {
-    if (!this.failures.delete("ledger")) return;
+  /** A bank-provider ledger pass finished without error; a stalled finalized head still degrades it. */
+  async recordLedgerScan(queueDepth: number, progress?: FinalizedScanHealth) {
+    if (progress?.finalizedStalledSince)
+      this.fail(
+        "ledger",
+        `Vault ledger finalized head ${progress.finalizedBlock} has not advanced since ${progress.finalizedStalledSince}`
+      );
+    else if (!this.failures.delete("ledger") && progress === undefined) return;
+    await this.update({
+      queueDepth,
+      ...(progress === undefined ? {} : { vaultProviderLedger: progress })
+    });
+  }
+
+  /** The event scan read a latest block below its cursor (informational), or no longer does. */
+  async recordScanHeadBehind(behindBy: bigint | undefined, queueDepth: number) {
+    const value = behindBy?.toString();
+    if (value === this.snapshotData.scanHeadBehindBy) return;
+    await this.update({ queueDepth, scanHeadBehindBy: value });
+  }
+
+  /** A governance timelock pass finished without error; a stalled finalized head still degrades it. */
+  async recordGovernanceScan(governance: GovernanceHealth, queueDepth: number) {
+    if (governance.finalizedStalledSince)
+      this.fail(
+        "governance",
+        `Governance timelock finalized head ${governance.finalizedBlock} has not advanced since ${governance.finalizedStalledSince}`
+      );
+    else this.failures.delete("governance");
+    await this.update({ governance, queueDepth });
+  }
+
+  /**
+   * The void executor's current candidates, oldest VRF request first, measured against the latest
+   * chain time the executor read. An unbooked result older than one hour degrades `unbookedResult`.
+   */
+  async recordVoidCandidates(
+    candidates: VoidCandidateHealth[],
+    queueDepth: number,
+    chainTime?: bigint
+  ) {
+    if (chainTime != null && (this.chainTime == null || chainTime > this.chainTime))
+      this.chainTime = chainTime;
+    const oldest = candidates.reduce<VoidCandidateHealth | undefined>(
+      (first, candidate) =>
+        first == null || BigInt(candidate.receivedAt) < BigInt(first.receivedAt)
+          ? candidate
+          : first,
+      undefined
+    );
+    const age =
+      oldest && this.chainTime != null ? this.chainTime - BigInt(oldest.receivedAt) : undefined;
+    if (oldest && age != null && age > UNBOOKED_RESULT_ALERT_SECONDS)
+      this.fail(
+        "unbookedResult",
+        `bet ${oldest.betId}: result received ${age}s ago cannot be booked; voidBet allowed from ${oldest.eligibleAt}`
+      );
+    else this.failures.delete("unbookedResult");
+    const voids: VoidHealth = {
+      ...this.voidHealth(),
+      candidates: candidates.slice(0, MAX_VOID_CANDIDATES_LISTED),
+      candidateCount: candidates.length
+    };
+    if (oldest)
+      voids.oldestUnbooked = {
+        betId: oldest.betId,
+        receivedAt: oldest.receivedAt,
+        receivedFrom: oldest.receivedFrom,
+        ageSeconds: (age ?? 0n).toString(),
+        eligibleAt: oldest.eligibleAt
+      };
+    else delete voids.oldestUnbooked;
+    await this.update({ queueDepth, voids });
+  }
+
+  /** Whether startup recovery is complete, so the void executor may act. */
+  async recordVoidStartupRecovery(complete: boolean, queueDepth: number) {
+    if (this.voidHealth().startupRecoveryComplete === complete) return;
+    await this.update({
+      queueDepth,
+      voids: { ...this.voidHealth(), startupRecoveryComplete: complete }
+    });
+  }
+
+  async recordVoidOutcome(betId: bigint, outcome: VoidAttemptOutcome, queueDepth: number) {
+    const id = betId.toString();
+    const voids = { ...this.voidHealth() };
+    const last = (detail: Omit<NonNullable<VoidHealth["lastOutcome"]>, "betId">) => {
+      voids.lastOutcomeAt = this.isoNow();
+      voids.lastOutcome = { betId: id, ...detail };
+    };
+    switch (outcome.kind) {
+      case "voided":
+        voids.attempts += 1;
+        voids.voided += 1;
+        last({
+          outcome: "voided",
+          txHash: outcome.txHash,
+          settlementErrorPrefix: outcome.settlementErrorPrefix
+        });
+        break;
+      case "settled":
+        voids.attempts += 1;
+        voids.settled += 1;
+        last({ outcome: "settled", txHash: outcome.txHash });
+        break;
+      case "failed":
+        voids.attempts += 1;
+        voids.failed += 1;
+        last({
+          outcome: "failed",
+          reason: outcome.reason,
+          ...(outcome.txHash ? { txHash: outcome.txHash } : {})
+        });
+        break;
+      case "configurationError":
+        voids.attempts += 1;
+        voids.failed += 1;
+        voids.configurationError = outcome.reason;
+        last({ outcome: "configurationError", reason: outcome.reason });
+        break;
+      default:
+        break;
+    }
+    if (outcome.kind === "voided" || outcome.kind === "settled") {
+      delete voids.configurationError;
+      this.voidFailures.delete("configuration");
+    }
+    if (outcome.kind === "failed") this.setVoidFailure(id, `bet ${id}: ${outcome.reason}`);
+    else if (outcome.kind === "configurationError")
+      this.setVoidFailure("configuration", outcome.reason);
+    else if (outcome.kind !== "notEligible") this.voidFailures.delete(id);
+    this.syncVoidFailure();
+    await this.update({ queueDepth, voids });
+  }
+
+  /** A void pass could not read the chain; cleared by the next pass that does. */
+  async recordVoidPass(error: string | undefined, queueDepth: number) {
+    if (error === undefined && !this.voidFailures.has("pass")) return;
+    if (error === undefined) this.voidFailures.delete("pass");
+    else this.setVoidFailure("pass", error);
+    this.syncVoidFailure();
     await this.update({ queueDepth });
+  }
+
+  /** A bet that left the void executor, settled or terminal, takes its failure with it. */
+  async recordVoidCandidateClosed(betId: bigint, queueDepth: number) {
+    if (!this.voidFailures.delete(betId.toString())) return;
+    this.syncVoidFailure();
+    await this.update({ queueDepth });
+  }
+
+  private voidHealth(): VoidHealth {
+    return this.snapshotData.voids!;
+  }
+
+  private setVoidFailure(key: string, message: string) {
+    this.voidFailures.delete(key);
+    this.voidFailures.set(key, message);
+  }
+
+  private syncVoidFailure() {
+    const latest = [...this.voidFailures.values()].at(-1);
+    if (latest === undefined) this.failures.delete("void");
+    else if (this.failures.get("void") !== latest) this.fail("void", latest);
   }
 
   async recordRecoveryScan(blockNumber: bigint, queueDepth: number, caughtUp = true) {
@@ -259,10 +541,18 @@ export class KeeperHealthReporter {
 
   async recordPayables(payables: PayableHealth[], queueDepth: number) {
     const failures = payables
-      .filter((item) => !item.caughtUp || item.readError || item.claimError)
+      .filter(
+        (item) => !item.caughtUp || item.readError || item.claimError || item.finalizedStalledSince
+      )
       .map(
         (item) =>
-          `${item.bank}: ${item.readError ?? item.claimError ?? `payable discovery incomplete through ${item.scannedThrough ?? "unknown"} (finalized target ${item.finalizedBlock ?? "unknown"})`}`
+          `${item.bank}: ${
+            item.readError ??
+            item.claimError ??
+            (item.finalizedStalledSince
+              ? `finalized head ${item.finalizedBlock} has not advanced since ${item.finalizedStalledSince}`
+              : `payable discovery incomplete through ${item.scannedThrough ?? "unknown"} (finalized target ${item.finalizedBlock ?? "unknown"})`)
+          }`
       );
     if (failures.length) this.fail("payables", failures.join("; "));
     else this.failures.delete("payables");
@@ -325,10 +615,11 @@ export class KeeperHealthReporter {
     await this.update({ ...failurePatch, queueDepth });
   }
 
+  /** Finalization and void failures are per bet and have their own recorders. */
   async recordError(
     message: string,
     queueDepth: number,
-    source: Exclude<KeeperFailureSource, "finalize">
+    source: Exclude<KeeperFailureSource, "finalize" | "void">
   ) {
     this.fail(source, message);
     await this.update({ queueDepth });

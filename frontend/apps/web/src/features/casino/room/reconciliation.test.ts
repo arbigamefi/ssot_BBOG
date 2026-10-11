@@ -21,6 +21,24 @@ describe("game room reconciliation helpers", () => {
     expect(isTerminalIndexedBet(finalizedBet)).toBe(true);
     expect(isTerminalIndexedBet({ ...finalizedBet, state: "randomReady" })).toBe(false);
     expect(isTerminalIndexedBet({ ...finalizedBet, state: "refunded" })).toBe(true);
+    expect(isTerminalIndexedBet({ ...finalizedBet, state: "voided" })).toBe(true);
+  });
+
+  it("extracts a void's returned stake from GameHub BetVoided", () => {
+    const txHash = `0x${"cc".repeat(32)}`;
+    expect(
+      extractTerminalProofFromRows(
+        [
+          { eventName: "BetRandomReady", txHash, argsJson: JSON.stringify({ positionId: "123" }) },
+          {
+            eventName: "BetVoided",
+            txHash,
+            argsJson: JSON.stringify({ positionId: "123", caller: "0x01", stake: "500" })
+          }
+        ] as any,
+        123n
+      )
+    ).toEqual({ kind: "voided", refund: { refundAmount: 500n, txHash } });
   });
 
   it("extracts terminal payout and refund proofs by bet id", () => {

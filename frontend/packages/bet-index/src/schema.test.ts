@@ -14,4 +14,22 @@ describe("bet index schema", () => {
     expect(BET_INDEX_SCHEMA_SQL).toContain("primary key (chain_id, tx_hash, log_index)");
     expect(BET_INDEX_SCHEMA_SQL).toContain("primary key (chain_id, game_hub, bet_id)");
   });
+
+  it("stores the void receipt on the bet and the governance timelock queue", () => {
+    for (const column of [
+      "voided_tx_hash text",
+      "void_caller text",
+      "void_settlement_error_prefix text"
+    ])
+      expect(BET_INDEX_SCHEMA_SQL).toContain(column);
+    expect(BET_INDEX_SCHEMA_SQL).toContain(
+      "create table if not exists governance_timelock_operations"
+    );
+    expect(BET_INDEX_SCHEMA_SQL).toContain(
+      "primary key (chain_id, timelock, operation_id, batch_index)"
+    );
+    expect(BET_INDEX_SCHEMA_SQL).toContain(
+      "create table if not exists governance_timelock_delay_changes"
+    );
+  });
 });

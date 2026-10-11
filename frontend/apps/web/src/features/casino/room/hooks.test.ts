@@ -5,6 +5,7 @@ import {
   formatTokenBalance,
   pickKenoStrobeSpots,
   useGameWalletBalance,
+  usePlayerOpenHolds,
   usePoolSnapshot
 } from "./hooks";
 
@@ -70,6 +71,7 @@ describe("live pool availability", () => {
     maxOpenHolds: 128n,
     accountingValid: true,
     riskInPaused: false,
+    poolActive: true,
     riskReserveBps: 1000
   };
   it("keeps betting available when a received result gates only LP cash operations", async () => {
@@ -86,7 +88,10 @@ describe("live pool availability", () => {
   it.each([
     [{ ...snapshot, openHolds: 128n }, "full"],
     [{ ...snapshot, L: 0n }, "noLiquidity"],
-    [{ ...snapshot, accountingValid: false }, "invalidAccounting"]
+    [{ ...snapshot, accountingValid: false }, "invalidAccounting"],
+    // ADR-0037 §9 D1: a registered pool takes LP deposits before betting starts.
+    [{ ...snapshot, poolActive: false }, "inactive"],
+    [{ ...snapshot, poolActive: false, riskInPaused: true }, "paused"]
   ])("blocks non-executable Bank state: %s", async (value, expected) => {
     const sdk = { bank: { getSnapshot: vi.fn().mockResolvedValue(value) } };
     const { result } = renderHook(() => usePoolSnapshot({ sdk, poolId: 1 }));
@@ -137,5 +142,40 @@ describe("live pool availability", () => {
     await waitFor(() => expect(result.current.status).toBe("paused"));
     await act(async () => finishOld(snapshot));
     expect(result.current.status).toBe("paused");
+  });
+});
+
+describe("per-player open bets", () => {
+  const player = "0x0000000000000000000000000000000000000001" as const;
+  it("reports the cap of two open bets per player and pool (ADR-0037 §5)", async () => {
+    const getOpenHolds = vi
+      .fn()
+      .mockResolvedValueOnce({ open: 2n, max: 2n })
+      .mockResolvedValue({ open: 1n, max: 2n });
+    const sdk = { bank: { getOpenHolds } };
+    const { result } = renderHook(() => usePlayerOpenHolds({ sdk, poolId: 1, account: player }));
+    await waitFor(() => expect(result.current.atLimit).toBe(true));
+    expect(getOpenHolds).toHaveBeenCalledWith(1, player);
+    // A settlement frees a slot; the room refreshes right after it.
+    act(() => result.current.refresh());
+    await waitFor(() => expect(result.current.atLimit).toBe(false));
+    expect(result.current.holds).toEqual({ open: 1n, max: 2n });
+  });
+  it("never blocks on a failed read: planning checks the cap again", async () => {
+    const sdk = { bank: { getOpenHolds: vi.fn().mockRejectedValue(new Error("offline")) } };
+    const { result } = renderHook(() => usePlayerOpenHolds({ sdk, poolId: 1, account: player }));
+    await waitFor(() => expect(sdk.bank.getOpenHolds).toHaveBeenCalled());
+    expect(result.current).toMatchObject({ holds: null, atLimit: false });
+  });
+  it("shows no count without a wallet or for another wallet's read", async () => {
+    const getOpenHolds = vi.fn().mockResolvedValue({ open: 2n, max: 2n });
+    const sdk = { bank: { getOpenHolds } };
+    const { result, rerender } = renderHook(
+      ({ account }: { account?: `0x${string}` }) => usePlayerOpenHolds({ sdk, poolId: 1, account }),
+      { initialProps: { account: player as `0x${string}` | undefined } }
+    );
+    await waitFor(() => expect(result.current.atLimit).toBe(true));
+    rerender({ account: undefined });
+    expect(result.current).toMatchObject({ holds: null, atLimit: false });
   });
 });

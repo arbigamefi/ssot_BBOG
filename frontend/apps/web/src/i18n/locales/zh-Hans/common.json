@@ -63,6 +63,27 @@
       "unavailableHint": "主网投注暂未开放。",
       "choose": "选择钱包",
       "dismiss": "关闭钱包提示"
+    },
+    "txErrors": {
+      "canceled": "你已在钱包中取消了这次请求。",
+      "wallet": "请先连接或解锁钱包。",
+      "network": "钱包所在网络与本页面不同，请在钱包中切换到本页面使用的网络。",
+      "gas": "当前网络的 ETH 不足以支付 Gas，请先补充 ETH。",
+      "connection": "无法连接网络。如果钱包已经发出交易，请先核对交易再重试。",
+      "unconfirmed": "交易尚未确认，请先查看钱包记录再重试。",
+      "reverted": "交易在链上失败，没有产生任何变更，但已消耗 Gas。",
+      "contextChanged": "钱包或网络已变化，请核对操作后重试。",
+      "depositsPaused": "该资金池已暂停入金，提款照常可用。",
+      "voidNotEligible": "这笔投注暂时还不能作废，请在显示的时间之后再试。",
+      "voidGasTooLow": "你的钱包无法发出作废所需的 Gas（约 1,100 万）。运营方的 keeper 也会作废符合条件的投注，你可以等待。",
+      "playerLimit": "你在该资金池的未结算投注已达上限，请等其中一笔结算后再试。",
+      "gameClosed": "该游戏已关闭，不再接受新投注。",
+      "invalidAmount": "请输入数字金额，小数点用“.”，例如 12.5，小数位不超过 {decimals} 位。",
+      "refundNotReady": "这笔投注暂时还不能退款。只有到退款时间仍未开奖时，才可以退款。",
+      "betChanged": "这笔投注的状态已经变化，请刷新页面查看最新状态。",
+      "resultReceived": "开奖结果已经到达，这笔投注会结算或作废，而不是退款。详情页会显示接下来的处理。",
+      "readFailed": "暂时无法从链上读取，不会默认为零，请稍后再查看。",
+      "unknown": "交易未能完成，请先查看钱包记录再重试。"
     }
   },
   "metadata": {
@@ -224,14 +245,16 @@
           "pending": "未结",
           "won": "已赢",
           "lost": "已输",
-          "refunded": "已退款"
+          "refunded": "已退款",
+          "voided": "已作废"
         },
         "stateLabel": {
           "won": "已赢",
           "lost": "已输",
           "pending": "未结",
           "settled": "已结算",
-          "cancelled": "已退款"
+          "cancelled": "已退款",
+          "voided": "已作废"
         },
         "openOnExplorer": "在区块浏览器中打开交易",
         "openOnExplorerWithChain": "在 {chain} 区块浏览器中打开",
@@ -343,6 +366,9 @@
             "detail": "VRF 未在协议超时时间前完成。你可以退回本金。",
             "status": "可退款"
           },
+          "resultUnbooked": {
+            "status": "待结算"
+          },
           "failed": {
             "label": "回合监控失败",
             "detail": "无法从 RPC provider 读取最新回合状态。",
@@ -352,6 +378,9 @@
             "label": "准备就绪",
             "detail": "点击一次即可在需要时完成授权、下注，并自动跟踪结算。",
             "status": "就绪"
+          },
+          "voided": {
+            "status": "本金已退回"
           }
         },
         "metrics": {
@@ -368,6 +397,11 @@
           "random": "随机数",
           "settle": "结算",
           "result": "结果"
+        },
+        "pendingSettlement": {
+          "body": "开奖结果已到达，但这笔投注尚未结算。如果结算一直失败，可以在投注详情页将其作废并退回本金。",
+          "notice": "第 #{betId} 号投注已有开奖结果，但尚未结算。你可以继续下注；如果它的结算一直失败，可以在它的详情页将其作废并退回本金。",
+          "link": "查看投注详情"
         }
       },
       "betPanel": {
@@ -567,7 +601,8 @@
           "settled": "已结算",
           "refunded": "已退款",
           "vrfReady": "VRF 就绪",
-          "placed": "已下注"
+          "placed": "已下注",
+          "voided": "已作废"
         },
         "empty": "等待第一局..."
       },
@@ -605,6 +640,10 @@
           "revealed": {
             "label": "结果已揭晓",
             "detail": "开奖号码已由 VRF 给出，资金结算仍在等待中。"
+          },
+          "voided": {
+            "label": "本金已退回",
+            "detail": "已收到开奖结果，但无法完成结算，因此你的本金已作为可领取余额退回给你。VRF 费用不退还。"
           }
         },
         "sections": {
@@ -654,7 +693,8 @@
           "sicBoDice": "开出骰子",
           "sicBoTotal": "总点数",
           "sicBoTriple": "围骰",
-          "sicBoMultiplier": "本局倍率"
+          "sicBoMultiplier": "本局倍率",
+          "returnedStake": "退回本金"
         },
         "actions": {
           "close": "关闭",
@@ -669,7 +709,8 @@
           "shareToX": "分享到 X",
           "shareToTelegram": "分享到 Telegram",
           "shareToWhatsApp": "分享到 WhatsApp",
-          "linkCopied": "链接已复制"
+          "linkCopied": "链接已复制",
+          "openClaims": "前往领取"
         }
       },
       "receipt": {
@@ -686,13 +727,15 @@
           "placed": "已下注",
           "randomReady": "随机数就绪",
           "finalized": "已结算",
-          "refunded": "已退款"
+          "refunded": "已退款",
+          "voided": "已作废"
         },
         "metrics": {
           "stake": "投注金额",
           "payout": "结算金额",
           "net": "净额",
-          "state": "状态"
+          "state": "状态",
+          "returned": "已退回"
         },
         "facts": {
           "game": "游戏",
@@ -722,6 +765,10 @@
           "play": "进入该游戏",
           "explorer": "查看交易",
           "casino": "前往赌场"
+        },
+        "voided": {
+          "headline": "已退回 {amount}",
+          "body": "已收到开奖结果，但无法完成结算，因此你的本金已作为可领取余额退回给你。VRF 费用不退还。"
         }
       },
       "gameInfo": {
@@ -965,7 +1012,9 @@
         "contextChanged": "钱包、网络或投注设置已变化，已停止后续提交。请核对当前设置后继续。",
         "capacity": "该池暂时满额，请等待已有投注结算后重试。",
         "minimumStake": "每轮下注额低于该池最低要求，请刷新池状态并提高每轮金额。",
-        "houseEdgeChanged": "当前费率超过你确认的上限。请刷新并核对费率后重新下注。"
+        "houseEdgeChanged": "当前费率超过你确认的上限。请刷新并核对费率后重新下注。",
+        "playerLimit": "你在这个金库的未结算投注已达上限，请等其中一笔结算后再下注。",
+        "gameClosed": "该游戏已关闭，不再接受新投注；关闭前已下的投注仍会结算。"
       },
       "poolStatus": {
         "loading": "正在检查 {symbol} 金库状态…",
@@ -984,13 +1033,25 @@
         "gameUnavailable": "无法确认本游戏的链上准入或费用，请刷新。",
         "gameUnavailableLabel": "游戏配置不可用",
         "invalidCount": "所选轮数超过本游戏的当前上限，请减少轮数。",
-        "invalidCountLabel": "调整下注轮数"
+        "invalidCountLabel": "调整下注轮数",
+        "playerLimit": "你在这个金库有 {count} 笔未结算的投注。请等其中一笔结算后再下注。",
+        "playerLimitLabel": "等待投注结算",
+        "checkAgain": "重新检查",
+        "viewOpenBets": "查看未结算投注",
+        "inactive": "{symbol} 金库目前不接受新投注，已下的投注仍会结算。",
+        "inactiveLabel": "金库暂不接受投注"
       },
       "payment": {
         "transferred": "本笔结算交易已将结算金额转入玩家钱包。",
-        "payable": "本笔结算时转账未完成，金额已为你的钱包保留。转账恢复后会自动支付给你，你也可以在资金池页面自行领取。",
+        "payable": "本笔结算时转账未完成，金额已为你的钱包保留。转账恢复后会自动支付给你，你也可以在领取页面自行领取。",
         "unknown": "结算金额已确认，尚未核实本笔钱包转账。",
         "noPayment": "本笔无须向玩家转账。"
+      },
+      "closed": {
+        "title": "该游戏已关闭。",
+        "body": "关闭前已下的投注仍会结算，相关收据也会一直保留。",
+        "viewBets": "查看我的投注",
+        "browse": "浏览开放中的游戏"
       }
     },
     "directory": {
@@ -1251,7 +1312,7 @@
         },
         "settled": {
           "label": "已结算结果",
-          "detail": "已有最终胜、负、退款或失败状态的下注。"
+          "detail": "已结束的投注：赢、输、退款或作废。"
         }
       },
       "filters": {
@@ -1290,13 +1351,16 @@
           "stake": "本金",
           "settlement": "结算",
           "updated": "更新"
-        }
+        },
+        "returned": "已退回 {amount}"
       },
       "status": {
         "won": "获胜",
         "closed": "已关闭",
         "settled": "已结算",
-        "open": "未关闭"
+        "open": "未关闭",
+        "refunded": "已退款",
+        "voided": "已作废"
       },
       "detail": {
         "common": {
@@ -1310,7 +1374,8 @@
           "placed": "已下注",
           "refunded": "退款已结算",
           "pending": "待读取",
-          "refreshing": "刷新中"
+          "refreshing": "刷新中",
+          "voided": "已作废"
         },
         "hero": {
           "back": "返回账本",
@@ -1344,7 +1409,8 @@
         "outcomes": {
           "refunded": "退款已结算",
           "netResult": "净结果",
-          "loss": "亏损"
+          "loss": "亏损",
+          "voided": "退回本金"
         },
         "metrics": {
           "settlementState": {
@@ -1416,6 +1482,10 @@
             "refunded": {
               "title": "退款已结算",
               "description": "退款路径已完成结算；转账状态需另行核实。"
+            },
+            "voided": {
+              "title": "本金已退回",
+              "description": "开奖结果无法结算，本金已作为可领取余额退回。"
             }
           }
         },
@@ -1450,6 +1520,24 @@
             "time": "时间"
           },
           "empty": "还没有已索引生命周期事件。"
+        },
+        "void": {
+          "eyebrow": "作废并退回本金",
+          "voidedTitle": "你的本金已退回",
+          "voidedBody": "已收到开奖结果，但无法完成结算，因此你的本金已作为可领取余额退回给你。VRF 费用不退还。",
+          "returnedStake": "退回本金",
+          "stuckTitle": "开奖结果已到达，但这笔投注尚未结算",
+          "notYet": "如果结算一直失败，这笔投注可在 {time} 起作废，本金将退回给你。",
+          "eligible": "这笔投注现在可以作废。作废时会先再尝试结算一次；只有仍然失败时，本金才会作为可领取余额退回给你。VRF 费用不退还。",
+          "action": "作废并退回本金",
+          "voiding": "作废中…",
+          "keeperNote": "运营方的 keeper 也会作废符合条件的投注，等待也没关系。部分智能合约钱包无法发出这笔交易，因为它需要约 1,100 万 Gas。",
+          "toast": {
+            "voided": "投注已作废，本金已成为可领取余额。",
+            "settled": "作废尝试中，这笔投注已正常结算。",
+            "sent": "交易已确认，正在刷新投注。"
+          },
+          "connect": "连接钱包以作废这笔投注"
         }
       },
       "loading": "正在加载记录…"
@@ -1612,7 +1700,29 @@
         "claimedFees": "已领取 {amount} {symbol} 协议费用",
         "protocolFeeFailed": "协议费用领取失败"
       },
-      "loading": "正在加载领取…"
+      "loading": "正在加载领取…",
+      "payable": {
+        "claimable": "待领取：{amount}",
+        "claim": "领取 {amount}",
+        "claiming": "领取中…",
+        "connect": "连接钱包以领取",
+        "claimed": "已领取 {amount}，款项已付至玩家钱包。",
+        "note": "领取会把该资金池欠玩家的全部余额一次付清，且始终付到玩家本人的钱包。任何人都可以发起领取。",
+        "nothing": "该资金池目前没有待领取的余额。退回的余额通常会自动支付到玩家钱包。",
+        "unavailable": "无法读取可领取余额，不会默认为零。",
+        "openClaims": "前往领取页面领取"
+      },
+      "player": {
+        "eyebrow": "玩家余额",
+        "title": "退回的本金与未付赔款",
+        "description": "作废投注退回的本金，以及结算时未能转出的赔款，都会在这里等待领取。领取总是付到你的钱包，资金池暂停时也可以领取。运营方的 keeper 通常会自动发放这些款项。",
+        "connect": "连接钱包，查看各资金池欠你多少。",
+        "checking": "正在查询各资金池欠你的金额…",
+        "empty": "没有可领取的款项。目前没有任何资金池欠这个钱包款项。",
+        "unavailable": "无法读取资金池 #{poolId}（{symbol}）的余额，不会默认为零。",
+        "pool": "{symbol} · 资金池 #{poolId}",
+        "claim": "领取"
+      }
     },
     "referral": {
       "common": {
@@ -1627,7 +1737,8 @@
       },
       "errors": {
         "walletUnavailable": "钱包不可用",
-        "poolUnavailable": "资金池不可用"
+        "poolUnavailable": "资金池不可用",
+        "rejected": "无法绑定该推荐人：你的钱包可能已有推荐人，或者这个链接会让你推荐自己或形成循环。"
       },
       "hero": {
         "eyebrow": "推广账户",
@@ -1897,10 +2008,6 @@
       "ownerChanged": "此钱包已不是该 NFT 的所有者，请刷新存款列表。",
       "deposited": "入金已确认，新 NFT 开始独立的 24 小时锁定期。",
       "withdrawn": "提款已确认，正在刷新剩余资本。",
-      "playerClaimed": "玩家款项已支付。",
-      "playerDebtDetail": "这是玩家未付赔款，与 LP 资本独立；只能支付到玩家本人地址。暂停期间仍可领取，但发行方限制可能阻止付款。",
-      "playerDebtUnavailable": "玩家应付款读取失败，不能视为零。",
-      "claimPlayer": "领取玩家款项",
       "history": "入金、提款与 NFT 转让",
       "historyDetail": "NFT 转让改变所有权，不代表 USDC 现金流。不知道受让人的取得成本时，不能计算其收益。付款人、初始所有者和提款收款人分别展示。",
       "historyEmpty": "已加载范围内没有存款活动。",
@@ -1922,7 +2029,9 @@
         "invalidPercent": "请输入大于 0 且不超过 100 的比例。",
         "zeroWithdrawal": "该比例取整后为零，请提高比例，或以 100% 关闭已到期的空 NFT。",
         "insufficientFreeCapital": "此比例超过当前可用资本，请使用当前最大值或刷新。"
-      }
+      },
+      "bettingNotStarted": "此资金池尚未开始接受投注。投注需等另一项激活操作在治理时间锁中等待 72 小时并执行后才会开始。现在即可存入。",
+      "bettingStopped": "此资金池已停止接受新投注。恢复投注需要一项在治理中等待 72 小时的变更。存入和提款照常按规则进行。"
     }
   },
   "ops": {
@@ -2092,6 +2201,42 @@
       "blocks": "{count} 个区块",
       "events": "{count} 个事件",
       "pending": "{count} 待处理"
+    },
+    "governance": {
+      "eyebrow": "治理与风险",
+      "title": "时间锁操作与风险控制",
+      "description": "治理时间锁上排过的每一项操作，以及 GameHub 记录的作废窗口和停用游戏。",
+      "timelock": "时间锁 {address}",
+      "indexedThrough": "已索引至区块 {block}（{time}）",
+      "notIndexed": "尚未索引",
+      "loading": "正在读取治理历史…",
+      "unavailable": "无法读取治理历史：投注索引或链不可用。",
+      "stale": "时间锁索引落后超过一小时，最近的操作可能缺失。",
+      "tx": "交易",
+      "operations": {
+        "title": "操作",
+        "empty": "尚未排过任何操作。",
+        "readyAt": "{time} 就绪",
+        "states": {
+          "waiting": "等待中",
+          "ready": "可执行",
+          "executed": "已执行",
+          "cancelled": "已撤销"
+        },
+        "scheduledTx": "排队",
+        "executedTx": "执行",
+        "cancelledTx": "撤销"
+      },
+      "voidWindows": {
+        "title": "作废窗口",
+        "empty": "尚未开启过作废窗口。",
+        "row": "资金池 #{pool}：在 {cohortEnd} 之前请求的投注，可在请求 24 小时后作废。开启者 {caller}。"
+      },
+      "disabledGames": {
+        "title": "已停用的游戏",
+        "empty": "尚未停用任何游戏。",
+        "row": "{game} 已被 {caller} 停用。"
+      }
     }
   },
   "marketing": {
@@ -2811,6 +2956,79 @@
       "rowsSampled": "采样行数",
       "durableRequired": "需要 durable 索引",
       "durableConfigured": "已配置 durable 索引"
+    }
+  },
+  "governance": {
+    "queue": {
+      "eyebrow": "治理时间锁",
+      "title": "已排队的治理变更",
+      "explainer": "所有变更都要等待 72 小时，之后任何人才能执行。如果你不同意某项变更，可以在它执行前提取已到期的存款。",
+      "loading": "正在检查已排队的变更…",
+      "unavailable": "无法加载已排队的治理变更。在依赖这份列表之前，请稍后再查看。",
+      "empty": "当前没有排队中的治理变更。",
+      "stale": "这份列表可能不完整：索引最后一次读取时间锁是在 {time}。",
+      "staleUnknown": "这份列表可能不完整：索引尚未读取时间锁。",
+      "ready": "可以执行",
+      "executableFrom": "{time} 起可执行",
+      "scheduledTx": "排队交易 {tx}",
+      "critical": "关键",
+      "sendsValue": "（同时转出 {amount} ETH）"
+    },
+    "contracts": {
+      "poolRegistry": "资金池注册表",
+      "gameHub": "游戏中心合约",
+      "bank": "资金池 {pool} 的 Bank",
+      "referralRegistry": "推荐注册表",
+      "timelock": "治理时间锁"
+    },
+    "calls": {
+      "unknown": "无法识别的调用：{target}（函数选择器 {selector}）",
+      "unknownNoData": "对 {target} 的调用，不含函数数据",
+      "baseUnits": "{amount} 个最小单位",
+      "registerPool": "登记资金池 {pool}（{asset}），Bank 为 {bank}",
+      "activatePool": "在资金池 {pool} 开始接受投注",
+      "deactivatePool": "停止资金池 {pool} 接受新投注",
+      "registerHub": "登记投注中心 {hub}",
+      "unregisterHub": "取消登记投注中心 {hub}",
+      "allowHub": "允许中心 {hub} 在资金池 {pool} 接受投注",
+      "disallowHub": "禁止中心 {hub} 在资金池 {pool} 接受投注",
+      "registerGame": "新增游戏 {game}（模块 {module}，每笔最多 {rounds} 轮）",
+      "queueEdgeChange": "把庄家优势改为 {percent}；执行后满 7 天才能生效",
+      "cancelEdgeChange": "撤销待生效的庄家优势调整",
+      "setRefundTimeout": "把退款超时设为 {duration}",
+      "createReferralConfig": "新建推荐配置：玩家返水 {player}，一级 {level1}，二级 {level2}，暂扣 {holdback}",
+      "setActiveReferralConfig": "切换到推荐配置 #{id}",
+      "disableGame": "永久关闭游戏 {game}",
+      "openVoidWindow": "为资金池 {pool} 开启作废窗口",
+      "pausePool": "暂停资金池 {pool}",
+      "unpausePool": "恢复资金池 {pool}",
+      "setMinBetAmount": "把资金池 {pool} 的最低投注设为 {amount}",
+      "setRiskReserveBps": "把资金池 {pool} 的风险储备设为 {percent}",
+      "setWithdrawalBufferBps": "把资金池 {pool} 的提款缓冲设为 {percent}",
+      "setHoldbackVestingSeconds": "把资金池 {pool} 的推荐暂扣释放期设为 {duration}",
+      "setMinPlayerTurnoverForUnlock": "把资金池 {pool} 中解锁推荐奖励所需的玩家流水设为 {amount}",
+      "setGuardian": "让 {account} 成为资金池 {pool} 的守护者（guardian）",
+      "rescuePoolAsset": "从资金池 {pool} 的 Bank 转出 {amount} 到 {account}",
+      "rescueToken": "从资金池 {pool} 的 Bank 把代币 {token} 的 {amount} 转到 {account}",
+      "claimProtocolFees": "从资金池 {pool} 支付 {amount} 协议费给 {account}",
+      "setSettlementRouterOnce": "把资金池 {pool} 的 Bank 接入结算路由 {account}",
+      "setRandomnessConsumerOnce": "把资金池 {pool} 的 Bank 的随机数消费者设为 {account}",
+      "setBinderOnce": "允许 {account} 为玩家绑定推荐人",
+      "updateDelay": "把治理延迟改为 {duration}",
+      "grantRole": "把{role}授予 {account}",
+      "revokeRole": "收回 {account} 的{role}",
+      "renounceRole": "放弃 {account} 持有的{role}",
+      "setSentinel": "让 {account} 成为{contract}的哨兵（sentinel）",
+      "removeSentinel": "移除{contract}的哨兵（sentinel）",
+      "transferGovernance": "把{contract}的治理权移交给 {account}",
+      "acceptGovernance": "接管{contract}的治理权",
+      "otherFunction": "在{contract}上调用 {signature}"
+    },
+    "roles": {
+      "DEFAULT_ADMIN_ROLE": "管理员角色",
+      "PROPOSER_ROLE": "提案者角色",
+      "EXECUTOR_ROLE": "执行者角色",
+      "CANCELLER_ROLE": "撤销者角色"
     }
   }
 }

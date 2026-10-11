@@ -181,4 +181,31 @@ describe("casino receipt OG route", () => {
       }
     }
   );
+
+  it("labels a voided bet with its returned stake", async () => {
+    queryBetReceiptMock.mockResolvedValue({
+      betId: "286",
+      chainId: 84532,
+      source: "postgres",
+      row: {
+        asset: "0x0000000000000000000000000000000000000001",
+        betId: "286",
+        chainId: 84532,
+        state: "voided",
+        stake: "2500000",
+        payout: "0",
+        refundAmount: "2500000"
+      }
+    });
+    const { GET } = await import("./route");
+    const response = await GET(request("/casino/receipt/84532/286/og"), {
+      params: Promise.resolve({ betId: "286", chainId: "84532" })
+    });
+    expect(response.status).toBe(200);
+    expect(renderOgCardMock.mock.calls[0]?.[0]).toMatchObject({
+      title: "Stake returned 2.5 USDC",
+      badge: "voided",
+      tone: "warning"
+    });
+  });
 });

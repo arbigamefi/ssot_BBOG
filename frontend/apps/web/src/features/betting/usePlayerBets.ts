@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 import { useSSOTRuntime } from "../../ssot/runtime";
+import { isTerminalBetState } from "./bet-state";
 import type { PlayerBetsResponse } from "./recent-bets";
 
 export function usePlayerBets({
@@ -88,7 +89,8 @@ export function usePlayerBets({
 
 /**
  * Merges index rows with the browser's cached rows. Bet ids restart in every GameHub deployment,
- * so rows are matched by their explicit chain, hub and bet id.
+ * so rows are matched by their explicit chain, hub and bet id. A terminal row is never replaced by an
+ * open row of the same block: a void records the random and ends the bet in one transaction.
  */
 export function mergeBetRows(
   serverRows: readonly BetRow[],
@@ -100,7 +102,12 @@ export function mergeBetRows(
   for (const row of serverRows) merged.set(key(row), row);
   for (const row of localRows) {
     const existing = merged.get(key(row));
-    if (!existing || row.updatedBlock >= existing.updatedBlock) {
+    if (
+      !existing ||
+      row.updatedBlock > existing.updatedBlock ||
+      (row.updatedBlock === existing.updatedBlock &&
+        (isTerminalBetState(row.state) || !isTerminalBetState(existing.state)))
+    ) {
       merged.set(key(row), row);
     }
   }

@@ -63,6 +63,27 @@
       "unavailableHint": "Mainnet betting is not yet available.",
       "choose": "Choose wallet",
       "dismiss": "Close wallet prompt"
+    },
+    "txErrors": {
+      "canceled": "You canceled the request in your wallet.",
+      "wallet": "Connect or unlock your wallet first.",
+      "network": "Your wallet is on another network. Switch it to the network this page uses.",
+      "gas": "You need more ETH on this network to pay for gas.",
+      "connection": "The network could not be reached. If your wallet sent a transaction, check it before trying again.",
+      "unconfirmed": "The transaction is not confirmed yet. Check your wallet activity before trying again.",
+      "reverted": "The transaction failed on-chain and changed nothing, but gas was spent.",
+      "contextChanged": "Your wallet or network changed. Review the action and try again.",
+      "depositsPaused": "Deposits are paused in this pool. Withdrawals stay open.",
+      "voidNotEligible": "This bet cannot be voided yet. Try again after the time shown.",
+      "voidGasTooLow": "Your wallet could not send the gas a void needs (about 11 million). The operator's keeper voids eligible bets too, so you can wait.",
+      "playerLimit": "You already have the most open bets allowed in this pool. Try again after one settles.",
+      "gameClosed": "This game is closed and takes no new bets.",
+      "invalidAmount": "Enter the amount as a number with a dot for decimals, for example 12.5, and at most {decimals} decimal places.",
+      "refundNotReady": "This bet cannot be refunded yet. The refund opens only if the draw has not arrived by the refund time.",
+      "betChanged": "This bet has already moved on. Refresh the page to see where it stands.",
+      "resultReceived": "The draw result already arrived, so this bet settles or is voided instead of refunded. Its details page shows what happens next.",
+      "readFailed": "This could not be read from the chain just now. It is not assumed to be zero; check again shortly.",
+      "unknown": "The transaction could not be completed. Check your wallet activity before trying again."
     }
   },
   "metadata": {
@@ -224,14 +245,16 @@
           "pending": "Pending",
           "won": "Won",
           "lost": "Lost",
-          "refunded": "Refunded"
+          "refunded": "Refunded",
+          "voided": "Voided"
         },
         "stateLabel": {
           "won": "Won",
           "lost": "Lost",
           "pending": "Pending",
           "settled": "Settled",
-          "cancelled": "Refunded"
+          "cancelled": "Refunded",
+          "voided": "Voided"
         },
         "openOnExplorer": "Open transaction on block explorer",
         "openOnExplorerWithChain": "Open on {chain} block explorer",
@@ -343,6 +366,9 @@
             "detail": "VRF did not complete before the protocol timeout. You can refund the stake.",
             "status": "Refundable"
           },
+          "resultUnbooked": {
+            "status": "Settlement pending"
+          },
           "failed": {
             "label": "Round monitor failed",
             "detail": "Unable to read the latest round state from the RPC provider.",
@@ -352,6 +378,9 @@
             "label": "Ready",
             "detail": "One click will approve if needed, place the bet, and watch settlement.",
             "status": "Ready"
+          },
+          "voided": {
+            "status": "Stake returned"
           }
         },
         "metrics": {
@@ -368,6 +397,11 @@
           "random": "Random",
           "settle": "Settle",
           "result": "Result"
+        },
+        "pendingSettlement": {
+          "body": "The draw result arrived, but this bet has not settled yet. If settlement keeps failing, the bet can be voided on its page and your stake returned.",
+          "notice": "Bet #{betId} has its draw result but has not settled yet. You can keep playing; if its settlement keeps failing, it can be voided on its page and the stake returned to you.",
+          "link": "Open bet details"
         }
       },
       "betPanel": {
@@ -567,7 +601,8 @@
           "settled": "SETTLED",
           "refunded": "REFUNDED",
           "vrfReady": "VRF READY",
-          "placed": "PLACED"
+          "placed": "PLACED",
+          "voided": "VOIDED"
         },
         "empty": "Waiting for first play..."
       },
@@ -605,6 +640,10 @@
           "revealed": {
             "label": "Result revealed",
             "detail": "Opened numbers are available from VRF. Settlement is still pending."
+          },
+          "voided": {
+            "label": "Stake returned",
+            "detail": "The result was received but could not be settled, so your stake was returned to you as a claimable balance. The VRF fee is not refunded."
           }
         },
         "sections": {
@@ -654,7 +693,8 @@
           "sicBoDice": "Dice opened",
           "sicBoTotal": "Total",
           "sicBoTriple": "Triple",
-          "sicBoMultiplier": "Roll multiplier"
+          "sicBoMultiplier": "Roll multiplier",
+          "returnedStake": "Returned stake"
         },
         "actions": {
           "close": "Close",
@@ -669,7 +709,8 @@
           "shareToX": "Share to X",
           "shareToTelegram": "Share to Telegram",
           "shareToWhatsApp": "Share to WhatsApp",
-          "linkCopied": "Link copied"
+          "linkCopied": "Link copied",
+          "openClaims": "Go to Claims"
         }
       },
       "receipt": {
@@ -686,13 +727,15 @@
           "placed": "Placed",
           "randomReady": "Random ready",
           "finalized": "Finalized",
-          "refunded": "Refunded"
+          "refunded": "Refunded",
+          "voided": "Voided"
         },
         "metrics": {
           "stake": "Stake",
           "payout": "Settlement amount",
           "net": "Net",
-          "state": "State"
+          "state": "State",
+          "returned": "Returned"
         },
         "facts": {
           "game": "Game",
@@ -722,6 +765,10 @@
           "play": "Play this game",
           "explorer": "View transaction",
           "casino": "Browse casino"
+        },
+        "voided": {
+          "headline": "{amount} returned",
+          "body": "The result was received but could not be settled, so your stake was returned to you as a claimable balance. The VRF fee is not refunded."
         }
       },
       "gameInfo": {
@@ -965,7 +1012,9 @@
         "contextChanged": "Your wallet, network or bet settings changed. The next step was stopped; review the current settings before continuing.",
         "capacity": "This pool is temporarily full. Try again after an open bet settles.",
         "minimumStake": "The amount per round is below the pool minimum. Refresh pool state and increase the amount per round.",
-        "houseEdgeChanged": "The current house edge exceeds the rate you accepted. Refresh and review the fee before betting again."
+        "houseEdgeChanged": "The current house edge exceeds the rate you accepted. Refresh and review the fee before betting again.",
+        "playerLimit": "You already have the most open bets allowed in this pool. Place the next one after one settles.",
+        "gameClosed": "This game is closed and takes no new bets. Bets placed before it closed still settle."
       },
       "poolStatus": {
         "loading": "Checking the {symbol} pool before new bets…",
@@ -984,13 +1033,25 @@
         "gameUnavailable": "Game admission or its fee quote could not be confirmed. Refresh before betting.",
         "gameUnavailableLabel": "Game settings unavailable",
         "invalidCount": "The selected round count exceeds this game’s current limit. Choose fewer rounds.",
-        "invalidCountLabel": "Adjust round count"
+        "invalidCountLabel": "Adjust round count",
+        "playerLimit": "You have {count, plural, one {# open bet} other {# open bets}} in this pool. Place the next one after one settles.",
+        "playerLimitLabel": "Wait for a bet to settle",
+        "checkAgain": "Check again",
+        "viewOpenBets": "View your open bets",
+        "inactive": "The {symbol} pool is not taking new bets right now. Bets already placed still settle.",
+        "inactiveLabel": "Pool not open for bets"
       },
       "payment": {
         "transferred": "This settlement transaction transferred the settlement amount to the player wallet.",
-        "payable": "The transfer did not complete during this settlement, so the amount is held for your wallet. It is paid to you automatically once the transfer can go through; you can also claim it yourself on Earn.",
+        "payable": "The transfer did not complete during this settlement, so the amount is held for your wallet. It is paid to you automatically once the transfer can go through; you can also claim it yourself on the Claims page.",
         "unknown": "The settlement amount is confirmed; the wallet transfer for this bet has not been verified.",
         "noPayment": "No player transfer is due for this bet."
+      },
+      "closed": {
+        "title": "This game is closed.",
+        "body": "Bets placed before it closed still settle, and their receipts stay available.",
+        "viewBets": "View your bets",
+        "browse": "Browse open games"
       }
     },
     "directory": {
@@ -1251,7 +1312,7 @@
         },
         "settled": {
           "label": "Settled outcomes",
-          "detail": "Bets with final win, loss, refund, or failure state."
+          "detail": "Bets that ended in a win, loss, refund or void."
         }
       },
       "filters": {
@@ -1290,13 +1351,16 @@
           "stake": "Stake",
           "settlement": "Settlement",
           "updated": "Updated"
-        }
+        },
+        "returned": "{amount} returned"
       },
       "status": {
         "won": "Won",
         "closed": "Closed",
         "settled": "Settled",
-        "open": "Open"
+        "open": "Open",
+        "refunded": "Refunded",
+        "voided": "Voided"
       },
       "detail": {
         "common": {
@@ -1310,7 +1374,8 @@
           "placed": "Placed",
           "refunded": "Refund settled",
           "pending": "Pending",
-          "refreshing": "Refreshing"
+          "refreshing": "Refreshing",
+          "voided": "Voided"
         },
         "hero": {
           "back": "Back to ledger",
@@ -1344,7 +1409,8 @@
         "outcomes": {
           "refunded": "Refund settled",
           "netResult": "Net result",
-          "loss": "Loss"
+          "loss": "Loss",
+          "voided": "Returned stake"
         },
         "metrics": {
           "settlementState": {
@@ -1416,6 +1482,10 @@
             "refunded": {
               "title": "Refund settled",
               "description": "The refund path settled; the wallet transfer must be verified separately."
+            },
+            "voided": {
+              "title": "Stake returned",
+              "description": "The result could not be settled, so the stake was returned as a claimable balance."
             }
           }
         },
@@ -1450,6 +1520,24 @@
             "time": "Time"
           },
           "empty": "No indexed lifecycle events yet."
+        },
+        "void": {
+          "eyebrow": "Void and refund",
+          "voidedTitle": "Your stake was returned",
+          "voidedBody": "The result was received but could not be settled, so your stake was returned to you as a claimable balance. The VRF fee is not refunded.",
+          "returnedStake": "Returned stake",
+          "stuckTitle": "The result arrived, but this bet is not settled",
+          "notYet": "If settlement keeps failing, this bet can be voided and your stake returned from {time}.",
+          "eligible": "This bet can now be voided. The void first tries to settle it once more; only if that fails is your stake returned as a claimable balance. The VRF fee is not refunded.",
+          "action": "Void and refund",
+          "voiding": "Voiding…",
+          "keeperNote": "The operator's keeper voids eligible bets too, so waiting is fine. Some smart-contract wallets cannot send this transaction because it needs about 11 million gas.",
+          "toast": {
+            "voided": "Bet voided. Your stake is now a claimable balance.",
+            "settled": "The bet settled normally during the void attempt.",
+            "sent": "Transaction confirmed. Refreshing the bet."
+          },
+          "connect": "Connect a wallet to void this bet"
         }
       },
       "loading": "Loading activity…"
@@ -1612,7 +1700,29 @@
         "claimedFees": "Claimed {amount} {symbol} protocol fees",
         "protocolFeeFailed": "Protocol fee claim failed"
       },
-      "loading": "Loading claims…"
+      "loading": "Loading claims…",
+      "payable": {
+        "claimable": "Waiting to be claimed: {amount}",
+        "claim": "Claim {amount}",
+        "claiming": "Claiming…",
+        "connect": "Connect a wallet to claim",
+        "claimed": "Claimed {amount}. It was paid to the player's wallet.",
+        "note": "A claim pays the whole balance this pool owes the player, always to the player's wallet. Anyone can send it.",
+        "nothing": "Nothing is waiting to be claimed in this pool. Returned balances are usually paid to the player's wallet automatically.",
+        "unavailable": "The claimable balance could not be read. It is not assumed to be zero.",
+        "openClaims": "Claim it on the Claims page"
+      },
+      "player": {
+        "eyebrow": "Player balance",
+        "title": "Returned stakes and unpaid payouts",
+        "description": "Stakes returned from voided bets and payouts that could not be transferred when a bet settled wait here. A claim always pays your wallet, also while a pool is paused. The operator's keeper usually sends these automatically.",
+        "connect": "Connect a wallet to see what the pools owe you.",
+        "checking": "Checking what the pools owe you…",
+        "empty": "Nothing to claim. No pool owes this wallet anything right now.",
+        "unavailable": "The balance in pool #{poolId} ({symbol}) could not be read. It is not assumed to be zero.",
+        "pool": "{symbol} · Pool #{poolId}",
+        "claim": "Claim"
+      }
     },
     "referral": {
       "common": {
@@ -1627,7 +1737,8 @@
       },
       "errors": {
         "walletUnavailable": "Wallet unavailable",
-        "poolUnavailable": "Pool unavailable"
+        "poolUnavailable": "Pool unavailable",
+        "rejected": "This referrer cannot be linked. Your wallet may already have a referrer, or the link would refer you to yourself or create a loop."
       },
       "hero": {
         "eyebrow": "Affiliate account",
@@ -1897,10 +2008,6 @@
       "ownerChanged": "This wallet no longer owns the selected NFT. Refresh the deposit list.",
       "deposited": "Deposit confirmed. A new NFT has its own 24-hour lock.",
       "withdrawn": "Withdrawal confirmed. Refreshing the remaining capital.",
-      "playerClaimed": "Player payment confirmed.",
-      "playerDebtDetail": "This unpaid player award is separate from LP capital. Payment goes only to the player address. It can be claimed while the pool is paused, subject to issuer restrictions.",
-      "playerDebtUnavailable": "Player debt could not be read; it is not assumed to be zero.",
-      "claimPlayer": "Claim player payment",
       "history": "Deposits, withdrawals and NFT transfers",
       "historyDetail": "NFT transfers change ownership without transferring the underlying tokens. An NFT recipient’s return cannot be calculated without its acquisition cost. Payer, initial owner and withdrawal recipient are shown separately.",
       "historyEmpty": "No deposit activity found in the loaded range.",
@@ -1922,7 +2029,9 @@
         "invalidPercent": "Enter a percentage greater than 0 and no more than 100.",
         "zeroWithdrawal": "This percentage rounds to zero assets. Increase it or close a mature empty NFT at 100%.",
         "insufficientFreeCapital": "This percentage exceeds the available capital. Use the current maximum or refresh."
-      }
+      },
+      "bettingNotStarted": "Betting has not started in this pool. It starts only after a separate activation, which waits 72 hours in the governance timelock. You can deposit now.",
+      "bettingStopped": "New bets are stopped in this pool. Restarting them needs a governance change that waits 72 hours. Deposits and withdrawals follow the usual rules."
     }
   },
   "ops": {
@@ -2092,6 +2201,42 @@
       "blocks": "{count} blocks",
       "events": "{count} events",
       "pending": "{count} pending"
+    },
+    "governance": {
+      "eyebrow": "Governance and risk",
+      "title": "Timelock operations and risk controls",
+      "description": "Every operation scheduled on the governance timelock, with the void windows and disabled games the GameHub recorded.",
+      "timelock": "Timelock {address}",
+      "indexedThrough": "indexed through block {block} ({time})",
+      "notIndexed": "not indexed yet",
+      "loading": "Reading governance history…",
+      "unavailable": "Governance history could not be read: the bet index or the chain is unavailable.",
+      "stale": "The timelock index is more than an hour behind; recent operations may be missing.",
+      "tx": "Tx",
+      "operations": {
+        "title": "Operations",
+        "empty": "No operation has been scheduled.",
+        "readyAt": "Ready at {time}",
+        "states": {
+          "waiting": "Waiting",
+          "ready": "Ready",
+          "executed": "Executed",
+          "cancelled": "Cancelled"
+        },
+        "scheduledTx": "Scheduled",
+        "executedTx": "Executed",
+        "cancelledTx": "Cancelled"
+      },
+      "voidWindows": {
+        "title": "Void windows",
+        "empty": "No void window has been opened.",
+        "row": "Pool #{pool}: bets requested by {cohortEnd} can be voided 24 hours after their request. Opened by {caller}."
+      },
+      "disabledGames": {
+        "title": "Disabled games",
+        "empty": "No game has been disabled.",
+        "row": "{game} was disabled by {caller}."
+      }
     }
   },
   "marketing": {
@@ -2811,6 +2956,79 @@
       "rowsSampled": "Rows sampled",
       "durableRequired": "Durable required",
       "durableConfigured": "Durable configured"
+    }
+  },
+  "governance": {
+    "queue": {
+      "eyebrow": "Governance timelock",
+      "title": "Scheduled governance changes",
+      "explainer": "Changes wait 72 hours before anyone can execute them. If you disagree with one, you can withdraw a mature deposit before it executes.",
+      "loading": "Checking scheduled changes…",
+      "unavailable": "Scheduled governance changes could not be loaded. Check again before relying on this list.",
+      "empty": "No governance change is scheduled.",
+      "stale": "This list may be incomplete: the index last read the timelock at {time}.",
+      "staleUnknown": "This list may be incomplete: the index has not read the timelock yet.",
+      "ready": "Ready to execute",
+      "executableFrom": "Executable from {time}",
+      "scheduledTx": "Scheduled in {tx}",
+      "critical": "Critical",
+      "sendsValue": "(also sends {amount} ETH)"
+    },
+    "contracts": {
+      "poolRegistry": "pool registry",
+      "gameHub": "game hub",
+      "bank": "Bank of pool {pool}",
+      "referralRegistry": "referral registry",
+      "timelock": "governance timelock"
+    },
+    "calls": {
+      "unknown": "Unrecognized call to {target} (function selector {selector})",
+      "unknownNoData": "Call to {target} with no function data",
+      "baseUnits": "{amount} base units",
+      "registerPool": "Register pool {pool} for {asset} with Bank {bank}",
+      "activatePool": "Start betting in pool {pool}",
+      "deactivatePool": "Stop new bets in pool {pool}",
+      "registerHub": "Register betting hub {hub}",
+      "unregisterHub": "Unregister betting hub {hub}",
+      "allowHub": "Let hub {hub} take bets in pool {pool}",
+      "disallowHub": "Stop hub {hub} from taking bets in pool {pool}",
+      "registerGame": "Add game {game} (module {module}, up to {rounds} rounds per bet)",
+      "queueEdgeChange": "Change the house edge to {percent}; it can take effect 7 days after this executes",
+      "cancelEdgeChange": "Cancel the pending house edge change",
+      "setRefundTimeout": "Set the refund timeout to {duration}",
+      "createReferralConfig": "Create a referral config: player rakeback {player}, level 1 {level1}, level 2 {level2}, holdback {holdback}",
+      "setActiveReferralConfig": "Switch to referral config #{id}",
+      "disableGame": "Close game {game} for good",
+      "openVoidWindow": "Open a void window for pool {pool}",
+      "pausePool": "Pause pool {pool}",
+      "unpausePool": "Unpause pool {pool}",
+      "setMinBetAmount": "Set the minimum bet in pool {pool} to {amount}",
+      "setRiskReserveBps": "Set the risk reserve in pool {pool} to {percent}",
+      "setWithdrawalBufferBps": "Set the withdrawal buffer in pool {pool} to {percent}",
+      "setHoldbackVestingSeconds": "Set referral holdback vesting in pool {pool} to {duration}",
+      "setMinPlayerTurnoverForUnlock": "Set the player turnover that unlocks locked referral rewards in pool {pool} to {amount}",
+      "setGuardian": "Make {account} the guardian of pool {pool}",
+      "rescuePoolAsset": "Send {amount} from the Bank of pool {pool} to {account}",
+      "rescueToken": "Send {amount} of token {token} from the Bank of pool {pool} to {account}",
+      "claimProtocolFees": "Pay {amount} of protocol fees from pool {pool} to {account}",
+      "setSettlementRouterOnce": "Connect the Bank of pool {pool} to settlement router {account}",
+      "setRandomnessConsumerOnce": "Set the randomness consumer of the Bank of pool {pool} to {account}",
+      "setBinderOnce": "Let {account} bind referrers for players",
+      "updateDelay": "Change the governance delay to {duration}",
+      "grantRole": "Grant the {role} to {account}",
+      "revokeRole": "Revoke the {role} from {account}",
+      "renounceRole": "Give up the {role} held by {account}",
+      "setSentinel": "Make {account} the sentinel of the {contract}",
+      "removeSentinel": "Remove the sentinel of the {contract}",
+      "transferGovernance": "Hand governance of the {contract} to {account}",
+      "acceptGovernance": "Accept governance of the {contract}",
+      "otherFunction": "Call {signature} on the {contract}"
+    },
+    "roles": {
+      "DEFAULT_ADMIN_ROLE": "admin role",
+      "PROPOSER_ROLE": "proposer role",
+      "EXECUTOR_ROLE": "executor role",
+      "CANCELLER_ROLE": "canceller role"
     }
   }
 }

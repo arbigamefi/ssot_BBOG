@@ -83,4 +83,12 @@ describe("game-aware VRF quote", () => {
     await waitFor(() => expect(result.current.quoteError).toBe("offline"));
     expect(result.current.config).toBeUndefined();
   });
+  it("never quotes a disabled game and reports it closed (ADR-0037 §6)", async () => {
+    const { sdk, getGameConfig, quoteVRFFee } = setup();
+    getGameConfig.mockResolvedValue({ ...config, disabled: true });
+    const { result } = renderHook(() => useCasinoVrfQuote({ sdk, gameId, betCount: 1 }));
+    await waitFor(() => expect(result.current.config?.disabled).toBe(true));
+    expect(quoteVRFFee).not.toHaveBeenCalled();
+    expect(result.current.quote).toBeUndefined();
+  });
 });

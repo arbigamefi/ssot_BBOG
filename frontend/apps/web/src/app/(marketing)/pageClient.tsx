@@ -10,6 +10,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { useRecentBets } from "../../features/betting/useRecentBets";
 import { getCatalogRooms } from "../../features/casino/catalog";
+import { useDisabledGameIds, withoutDisabledRooms } from "../../features/casino/useDisabledGames";
 import { getExplorerBaseUrl } from "../../features/earn/format";
 import { formatTokenAmount, shortAddress, timeAgo } from "../../features/marketing/format";
 import { HomeActivity } from "../../features/marketing/home-activity";
@@ -41,6 +42,7 @@ function toBigOrNull(value?: string | bigint | number): bigint | null {
 
 export function HomePageClient() {
   const t = useTranslations("marketing");
+  const tBetState = useTranslations("casino.room.receipt.status");
   const locale = useLocale();
   const { chainId, release } = useRelease();
   const { data: latestBets = [] } = useRecentBets({
@@ -62,9 +64,15 @@ export function HomePageClient() {
   });
   const assetOverviews = landingOverview?.assets ?? [];
 
+  const disabledGameIds = useDisabledGameIds();
   const rooms = React.useMemo(
-    () => getCatalogRooms(release?.gamesMeta as Array<{ slug: string; label: string }> | undefined),
-    [release?.gamesMeta]
+    () =>
+      withoutDisabledRooms(
+        getCatalogRooms(release?.gamesMeta as Array<{ slug: string; label: string }> | undefined),
+        release?.gamesMeta,
+        disabledGameIds
+      ),
+    [disabledGameIds, release?.gamesMeta]
   );
 
   // Keep each asset separate, including a successfully read zero balance.
@@ -97,6 +105,11 @@ export function HomePageClient() {
     return map;
   }, [release?.gamesMeta]);
 
+  // Never show a raw state name; the chip only appears while no payout is shown.
+  const activityStateLabel = (state: BetRow["state"] | undefined) =>
+    state === "randomReady" || state === "finalized" || state === "refunded" || state === "voided"
+      ? tBetState(state)
+      : t("format.placedFallback");
   const activityAssetFallback = assetOverviews[0];
   const activityAssetByAddress = React.useMemo(() => {
     const map = new Map<string, { decimals: number; symbol: string }>();
@@ -136,7 +149,7 @@ export function HomePageClient() {
       game: bet.gameId
         ? (gameLabelById.get(String(bet.gameId).toLowerCase()) ?? t("format.roomFallback"))
         : t("format.roomFallback"),
-      state: String(bet.state ?? t("format.placedFallback")),
+      state: activityStateLabel(bet.state),
       payout:
         settled && payout != null
           ? formatTokenAmount(payout, activityDecimals, activitySymbol, locale, "")

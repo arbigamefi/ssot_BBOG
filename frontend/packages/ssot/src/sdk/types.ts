@@ -108,6 +108,11 @@ export interface GameConfig {
   module: Address;
   maxBetCount: number;
   callbackGasLimit: number;
+  /**
+   * Irreversible stop (ADR-0037 §6): no new bets or quotes. Accepted bets still settle, refund or
+   * void; a restored game is a new gameId.
+   */
+  disabled: boolean;
 }
 
 export type GameHubSettlementProof = {
@@ -130,9 +135,40 @@ export type GameHubRefundProof = {
   refundAmount?: bigint;
 };
 
+/**
+ * A void books the stake as a player payable, never a transfer (ADR-0037 §7.4). Like the terminal
+ * receipt it mirrors, refundAmount is the stake and payouts are zero; the VRF fee is not refunded.
+ */
+export type GameHubVoidProof = GameHubRefundProof & {
+  /** First 32 bytes of the failed settlement attempt's revert data (GameHub BetVoided). */
+  settlementErrorPrefix?: Hex;
+};
+
 export type GameHubTerminalProof =
   | { kind: "settled"; settlement: GameHubSettlementProof }
-  | { kind: "refunded"; refund: GameHubRefundProof };
+  | { kind: "refunded"; refund: GameHubRefundProof }
+  | { kind: "voided"; refund: GameHubVoidProof };
+
+/** Void eligibility of one bet at one block (ADR-0037 §7.2, §7.3). */
+export interface VoidStatus {
+  betId: bigint;
+  /** voidBet passes its state, receipt and eligibility checks at `blockTimestamp`. */
+  voidable: boolean;
+  /**
+   * Unix seconds from which voidBet is eligible: vrfRequestedAt + VOID_DELAY inside a window of the
+   * bet's Bank, otherwise vrfRequestedAt + PUBLIC_VOID_DELAY. Eligibility still needs a received result.
+   */
+  eligibleAt: number;
+  /** vrfRequestedAt <= voidCohortEnd(bank): a void window covers this bet. */
+  inWindow: boolean;
+  /** The bet's VRF request is Received: the seed is stored and the result is not booked. */
+  resultReceived: boolean;
+  blockNumber: bigint;
+  blockTimestamp: number;
+}
+
+/** "voided" from GameHub BetVoided, "settled" from BetFinalized; absent when the receipt is unavailable. */
+export type VoidBetResult = TxResult & { outcome?: "voided" | "settled" };
 
 export interface ExecutePlanResult {
   approveTx?: TxResult;
@@ -150,6 +186,7 @@ export type BindPlaceBetTxResult =
 
 export interface SSOTGameHubAPI {
   getGameConfig(gameId: Hex, opts?: { blockNumber?: bigint }): Promise<GameConfig>;
+  isGameDisabled(gameId: Hex, opts?: { blockNumber?: bigint }): Promise<boolean>;
   quoteVRFFee(gameId: Hex, betCount: number, gasPriceBudget?: bigint): Promise<bigint>;
   planPlaceBet(input: PlaceBetInput): Promise<PlaceBetPlan | { error: DomainError }>;
   executePlan(
@@ -178,17 +215,15 @@ export interface SSOTGameHubAPI {
    */
   finalize(betId: bigint): Promise<TxResult>;
 
-  /**
-   * Bind a referrer for the connected wallet.
-   * Once bound, the referrer relationship is permanent.
-   */
-  bindReferrer(referrer: Address): Promise<TxResult>;
+  /** Reads the bet, its VRF request, voidCohortEnd(bank) and the latest block at one block. */
+  getVoidStatus(betId: bigint, opts?: { blockNumber?: bigint }): Promise<VoidStatus>;
 
   /**
-   * Query the referrer of a given player.
-   * Returns zero address if no referrer is bound.
+   * Anyone may call it once the bet is eligible. The contract first tries settlement with exactly
+   * VOID_SETTLEMENT_GAS; only if that fails is the stake booked as a player payable. Sent with the
+   * fixed VOID_BET_GAS_LIMIT.
    */
-  referrerOf(player: Address): Promise<Address>;
+  voidBet(betId: bigint): Promise<VoidBetResult>;
 
   getBet(betId: bigint): Promise<DomainBet>;
   getBetParams(betId: bigint): Promise<Hex>;
@@ -245,6 +280,13 @@ export interface SSOTBankAPI {
   /** Player's cumulative turnover (used for XP unlock eligibility check). */
   playerTurnover(poolId: number, player: Address): Promise<bigint>;
 
+  /** The player's open holds in this pool's Bank and MAX_OPEN_HOLDS_PER_PLAYER, at one block. */
+  getOpenHolds(
+    poolId: number,
+    player: Address,
+    opts?: { blockNumber?: bigint }
+  ): Promise<{ open: bigint; max: bigint }>;
+
   // Protocol fee claim (governance only)
   claimProtocolFees(
     poolId: number,
@@ -266,4 +308,17 @@ export interface SSOTBankAPI {
 export interface SSOTVRFHubAPI {
   getRefundCredit(user: Address): Promise<bigint>;
   claimRefundCredit(): Promise<TxResult>;
+}
+
+/** ReferralRegistry (release contracts.refRegistry). */
+export interface SSOTReferralAPI {
+  /** Binds the connected wallet's referrer: first touch, permanent, no cycles. */
+  bind(referrer: Address): Promise<TxResult>;
+  /** Zero address when no referrer is bound. */
+  referrerOf(player: Address): Promise<Address>;
+}
+
+export interface SSOTGovernanceAPI {
+  /** PoolRegistry.governance(), verified equal to GameHub.governance() at the same block. */
+  getTimelock(opts?: { blockNumber?: bigint }): Promise<Address>;
 }

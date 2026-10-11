@@ -70,6 +70,7 @@ export function PortfolioActivityPageClient() {
           assetDecimals: assetMaps.decimals,
           labels: {
             pending: t("portfolio.activity.common.pending"),
+            returned: (amount) => t("portfolio.activity.ledger.returned", { amount }),
             unknownGame: t("portfolio.activity.common.unknownGame"),
             asset: t("portfolio.activity.common.asset"),
             justNow: t("portfolio.activity.time.justNow"),
@@ -106,7 +107,7 @@ export function PortfolioActivityPageClient() {
     const open = activityRows.filter((item) => isOpenStatus(item.status)).length;
     const won = activityRows.filter((item) => item.status === "won").length;
     const closed = activityRows.filter((item) =>
-      ["lost", "refunded", "settled"].includes(item.status)
+      ["lost", "refunded", "settled", "voided"].includes(item.status)
     ).length;
     return [
       {
@@ -156,6 +157,7 @@ function enrichBetRow({
   assetDecimals: ReadonlyMap<string, number>;
   labels: {
     pending: string;
+    returned: (amount: string) => string;
     unknownGame: string;
     asset: string;
     justNow: string;
@@ -191,7 +193,8 @@ function enrichBetRow({
       payout,
       decimals,
       symbol: assetSymbol,
-      pendingLabel: labels.pending
+      pendingLabel: labels.pending,
+      returnedLabel: labels.returned
     }),
     relativeTime: formatRelativeTime(row.updatedAt, labels),
     updatedBlock: row.updatedBlock

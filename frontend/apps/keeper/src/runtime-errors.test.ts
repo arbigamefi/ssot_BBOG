@@ -53,7 +53,8 @@ const config: KeeperConfig = {
   betIndexDatabaseUrl: "postgres://unused.invalid",
   betIndexSsl: false,
   vaultProviderLedgerPools: [],
-  vaultProviderLedgerScanIntervalMs: 0
+  vaultProviderLedgerScanIntervalMs: 0,
+  voidGasLimit: 11_000_000n
 };
 
 type Watcher = { eventName: string; onError: (error: unknown) => void };
@@ -146,6 +147,7 @@ describe("runtime error reporting", () => {
       ["casino.keeper.gamehub_index_watch_error", "BetPlaced"],
       ["casino.keeper.gamehub_index_watch_error", "BetFinalized"],
       ["casino.keeper.gamehub_index_watch_error", "BetRefunded"],
+      ["casino.keeper.gamehub_index_watch_error", "BetVoided"],
       ["casino.keeper.vrfhub_watch_error", "ResultReceived"],
       ["casino.keeper.vrfhub_watch_error", "CallbackAttempt"]
     ]);
@@ -208,8 +210,8 @@ describe("runtime error reporting", () => {
     let aRecovered = false;
     let bSettled = result === "raced";
     const readContract = vi.fn(
-      async ({ functionName, args }: { functionName: string; args: readonly [bigint] }) => {
-        const betId = args[0];
+      async ({ functionName, args }: { functionName: string; args?: readonly [bigint] }) => {
+        const betId = args?.[0];
         if (functionName === "getRequest") return { bank: hub, hub, betId, state: 2 };
         if (betId === failedBetId && failure === "read" && !aRecovered) throw new Error(reason);
         return {
@@ -254,7 +256,8 @@ describe("runtime error reporting", () => {
     expect(
       attempts.mock.calls.filter(
         ([call]) =>
-          call.args[0] === failedBetId &&
+          // Startup reads the GameHub void constants, which take no arguments.
+          call.args?.[0] === failedBetId &&
           (!("functionName" in call) || call.functionName !== "getRequest")
       )
     ).toHaveLength(2);

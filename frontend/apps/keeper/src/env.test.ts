@@ -16,7 +16,8 @@ function writeRelease() {
       chainId: 84532,
       contracts: {
         gameHub: "0x0000000000000000000000000000000000000001",
-        vrfHub: "0x0000000000000000000000000000000000000002"
+        vrfHub: "0x0000000000000000000000000000000000000002",
+        poolRegistry: "0x0000000000000000000000000000000000000066"
       },
       meta: { blockNumber: 123 }
     })
@@ -124,7 +125,8 @@ it("only reconciles the active pools in the current release", () => {
       chainId: 84532,
       contracts: {
         gameHub: "0x0000000000000000000000000000000000000001",
-        vrfHub: "0x0000000000000000000000000000000000000002"
+        vrfHub: "0x0000000000000000000000000000000000000002",
+        poolRegistry: "0x0000000000000000000000000000000000000066"
       },
       pools: [
         {
@@ -140,4 +142,68 @@ it("only reconciles the active pools in the current release", () => {
   );
   const config = loadKeeperConfig(baseEnv({ KEEPER_RELEASE_PATH: path }));
   expect(config.vaultProviderLedgerPools).toEqual([]);
+  // Governance is checked on every Bank of the release, inactive pools included.
+  expect(config.releaseBanks).toEqual(["0x0000000000000000000000000000000000000004"]);
+  expect(config.poolRegistry).toBe("0x0000000000000000000000000000000000000066");
+});
+
+it("refuses a release without its PoolRegistry, whose governance is the timelock to index", () => {
+  const path = writeRelease();
+  writeFileSync(
+    path,
+    JSON.stringify({
+      chainId: 84532,
+      contracts: {
+        gameHub: "0x0000000000000000000000000000000000000001",
+        vrfHub: "0x0000000000000000000000000000000000000002"
+      },
+      meta: { blockNumber: 123 }
+    })
+  );
+  expect(() => loadKeeperConfig(baseEnv({ KEEPER_RELEASE_PATH: path }))).toThrow(
+    /Invalid keeper release file/
+  );
+});
+
+describe("void gas limit", () => {
+  it("defaults to 11,000,000", () => {
+    expect(loadKeeperConfig(baseEnv()).voidGasLimit).toBe(11_000_000n);
+  });
+
+  it("accepts an override up to 16,000,000", () => {
+    expect(loadKeeperConfig(baseEnv({ KEEPER_VOID_GAS_LIMIT: "16000000" })).voidGasLimit).toBe(
+      16_000_000n
+    );
+  });
+
+  it.each(["16000001", "16777216"])("rejects %s, above Base's per-transaction cap", (value) => {
+    expect(() => loadKeeperConfig(baseEnv({ KEEPER_VOID_GAS_LIMIT: value }))).toThrow(
+      /KEEPER_VOID_GAS_LIMIT must be at most 16000000/
+    );
+  });
+
+  it.each(["11e6", "-1", "1.5", "eleven"])("rejects the malformed value %s", (value) => {
+    expect(() => loadKeeperConfig(baseEnv({ KEEPER_VOID_GAS_LIMIT: value }))).toThrow(
+      /KEEPER_VOID_GAS_LIMIT must be a positive integer/
+    );
+  });
+});
+
+describe("finalized stall limit", () => {
+  it("defaults to one hour and accepts seconds, zero disabling it", () => {
+    expect(loadKeeperConfig(baseEnv()).finalizedStallMs).toBe(3_600_000);
+    expect(
+      loadKeeperConfig(baseEnv({ KEEPER_FINALIZED_STALL_SECONDS: "900" })).finalizedStallMs
+    ).toBe(900_000);
+    expect(
+      loadKeeperConfig(baseEnv({ KEEPER_FINALIZED_STALL_SECONDS: "0" })).finalizedStallMs
+    ).toBe(0);
+  });
+
+  it("rejects a negative or malformed value", () => {
+    for (const value of ["-1", "an hour"])
+      expect(() => loadKeeperConfig(baseEnv({ KEEPER_FINALIZED_STALL_SECONDS: value }))).toThrow(
+        /KEEPER_FINALIZED_STALL_SECONDS must be a non-negative number of seconds/
+      );
+  });
 });

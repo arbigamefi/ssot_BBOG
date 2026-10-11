@@ -10,6 +10,7 @@ export type BetStatusGroup =
   | "lost"
   | "settled"
   | "refunded"
+  | "voided"
   | "failed";
 
 export type BetMetric = {

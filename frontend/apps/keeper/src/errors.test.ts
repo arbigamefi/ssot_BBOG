@@ -1,15 +1,29 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import {
+  BaseError,
+  ContractFunctionRevertedError,
+  createPublicClient,
+  encodeErrorResult,
+  ExecutionRevertedError,
+  http,
   HttpRequestError,
   LimitExceededRpcError,
   RpcRequestError,
   SocketClosedError,
   WebSocketRequestError
 } from "viem";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { describeError, redactUrls } from "./errors.js";
+import { GAME_HUB_KEEPER_ABI } from "./abi.js";
+import {
+  describeError,
+  describeRevert,
+  findContractRevert,
+  isExecutionHalt,
+  isUnknownBlockError,
+  redactUrls
+} from "./errors.js";
 
 const KEY = "rpc-api-key-that-must-not-be-logged";
 const WS_URL = `wss://base-mainnet.g.alchemy.com/v2/${KEY}`;
@@ -160,5 +174,143 @@ describe("redactUrls", () => {
     expect(
       redactUrls(`ws ${WS_URL}, http ${HTTP_URL}?apikey=abc, db postgres://keeper:pw@db:5432/bets.`)
     ).toBe("ws [redacted-url], http [redacted-url], db [redacted-url].");
+  });
+});
+
+describe("contract reverts", () => {
+  const revert = new BaseError("simulation failed", {
+    cause: new ContractFunctionRevertedError({
+      abi: GAME_HUB_KEEPER_ABI,
+      functionName: "voidBet",
+      data: encodeErrorResult({
+        abi: GAME_HUB_KEEPER_ABI,
+        errorName: "VoidNotEligible",
+        args: [7n, 100n, 200n]
+      })
+    })
+  });
+
+  it("finds the decoded custom error and its arguments", () => {
+    expect(findContractRevert(revert)).toEqual({
+      errorName: "VoidNotEligible",
+      args: [7n, 100n, 200n]
+    });
+    expect(describeRevert(revert)).toMatch(
+      /^VoidNotEligible\(7, 100, 200\): BaseError: simulation failed/
+    );
+  });
+
+  it("recognizes a revert without data, and nothing else", () => {
+    expect(findContractRevert(new ExecutionRevertedError())).toEqual({});
+    expect(
+      findContractRevert(new HttpRequestError({ body: {}, status: 429, url: HTTP_URL }))
+    ).toBeUndefined();
+    expect(findContractRevert(new Error("execution reverted"))).toBeUndefined();
+    expect(
+      describeRevert(new HttpRequestError({ body: {}, status: 429, url: HTTP_URL }))
+    ).not.toContain(KEY);
+  });
+});
+
+/** Real viem errors from a JSON-RPC stub that answers like geth, Alchemy or anvil. */
+describe("execution halts and unknown blocks", () => {
+  let url: string;
+  let close: () => void;
+  let reply: { status?: number; error?: { code: number; message: string } } = {};
+  beforeAll(async () => {
+    const server = createServer((request, response) => {
+      let body = "";
+      request.on("data", (chunk) => (body += chunk));
+      request.on("end", () => {
+        const { id, method } = JSON.parse(body) as { id: number; method: string };
+        if (reply.status) {
+          response.statusCode = reply.status;
+          response.end("unavailable");
+          return;
+        }
+        response.setHeader("content-type", "application/json");
+        const result =
+          method === "eth_getBlockByNumber" ? { result: null } : { error: reply.error };
+        response.end(JSON.stringify({ jsonrpc: "2.0", id, ...result }));
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    close = () => server.close();
+  });
+  afterAll(() => close());
+
+  const failure = async (call: (client: ReturnType<typeof stubClient>) => Promise<unknown>) => {
+    try {
+      await call(stubClient());
+    } catch (error) {
+      return error;
+    }
+    throw new Error("the stub call did not fail");
+  };
+  const stubClient = () => createPublicClient({ transport: http(url, { retryCount: 0 }) });
+  const simulateFinalize = (client: ReturnType<typeof stubClient>) =>
+    client.simulateContract({
+      address: "0x0000000000000000000000000000000000000001",
+      abi: GAME_HUB_KEEPER_ABI,
+      functionName: "finalize",
+      args: [1n],
+      gas: 3_050_000n,
+      account: "0x0000000000000000000000000000000000000002"
+    });
+  const pinnedRead = (client: ReturnType<typeof stubClient>) =>
+    client.readContract({
+      address: "0x0000000000000000000000000000000000000001",
+      abi: GAME_HUB_KEEPER_ABI,
+      functionName: "VOID_DELAY",
+      blockNumber: 5n
+    });
+
+  it.each([
+    ["geth", -32000, "out of gas"],
+    ["anvil", -32003, "EVM error OutOfGas"],
+    ["an invalid opcode", -32000, "invalid opcode: INVALID"]
+  ])(
+    "classifies %s halting the finalize simulation as an execution halt",
+    async (_node, code, message) => {
+      reply = { error: { code, message } };
+      const error = await failure(simulateFinalize);
+      expect(isExecutionHalt(error)).toBe(true);
+      expect(findContractRevert(error)).toBeUndefined();
+      expect(isUnknownBlockError(error)).toBe(false);
+    }
+  );
+
+  it.each([
+    ["geth", -32000, "header not found"],
+    ["Alchemy", -32602, "Unknown block number"],
+    ["anvil", -32602, "BlockOutOfRangeError: block height is 0 but requested was 5"]
+  ])("classifies %s missing the pinned block as an unknown block", async (_node, code, message) => {
+    reply = { error: { code, message } };
+    const error = await failure(pinnedRead);
+    expect(isUnknownBlockError(error)).toBe(true);
+    expect(isExecutionHalt(error)).toBe(false);
+  });
+
+  it("classifies a block-number read that finds no block as an unknown block", async () => {
+    reply = {};
+    expect(
+      isUnknownBlockError(await failure((client) => client.getBlock({ blockNumber: 9n })))
+    ).toBe(true);
+  });
+
+  it("never classifies a transport failure, a provider limit or a contract revert", async () => {
+    for (const next of [
+      { status: 503 },
+      { error: { code: -32005, message: "limit exceeded" } },
+      { error: { code: 3, message: "execution reverted: header not found" } }
+    ]) {
+      reply = next;
+      const error = await failure(pinnedRead);
+      expect(isUnknownBlockError(error)).toBe(false);
+      if (next.status) expect(isExecutionHalt(error)).toBe(false);
+    }
+    expect(isExecutionHalt(new Error("out of gas"))).toBe(false);
+    expect(isUnknownBlockError(new Error("header not found"))).toBe(true);
   });
 });

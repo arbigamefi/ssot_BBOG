@@ -190,12 +190,57 @@ function mapRevert(errorName: string, args?: unknown[]): DomainError {
         message: "The deposit exceeds the pool's admitted capital bound.",
         severity: "warning"
       };
+    case "DepositsPaused":
+      return {
+        code: "DEPOSITS_PAUSED",
+        message: "LP deposits are paused for this pool. Withdrawals stay open.",
+        severity: "warning"
+      };
     case "RiskInPaused":
+      // GameHub reports the pool (paused Bank or inactive pool); the Bank's own error has no argument.
+      // A pause closes only new bets and LP deposits (ADR-0037 §4).
       return {
         code: "RISK_IN_PAUSED",
-        message: "New bets and optional withdrawals are currently paused for this asset.",
+        message: "New bets are closed for this pool: it is paused or inactive.",
         severity: "warning",
-        details: { asset: args?.[0] }
+        details: { poolId: args?.[0] }
+      };
+    case "GameIsDisabled":
+      return {
+        code: "GAME_DISABLED",
+        message: "This game is disabled for good and accepts no new bets or quotes.",
+        severity: "warning",
+        details: { gameId: args?.[0] }
+      };
+    case "VoidNotEligible":
+      return {
+        code: "VOID_NOT_ELIGIBLE",
+        message: "This bet cannot be voided yet.",
+        severity: "warning",
+        retryable: true,
+        details: { betId: args?.[0], nowTs: args?.[1], eligibleAt: args?.[2] }
+      };
+    case "VoidGasTooLow":
+      return {
+        code: "VOID_GAS_TOO_LOW",
+        message: "The transaction gas limit is below the void's settlement-attempt floor.",
+        severity: "error",
+        details: { gasLeft: args?.[0], required: args?.[1] }
+      };
+    case "NoUnbookedResult":
+      return {
+        code: "NO_UNBOOKED_RESULT",
+        message: "This pool's Bank has no unbooked result, so no void window can be opened.",
+        severity: "warning",
+        details: { bank: args?.[0] }
+      };
+    case "ForeignGovernance":
+      return {
+        code: "FOREIGN_GOVERNANCE",
+        message:
+          "The target has a different or pending governance than the registry and cannot be admitted.",
+        severity: "error",
+        details: { target: args?.[0] }
       };
     case "UnknownGame":
       return {
@@ -286,6 +331,15 @@ function mapRevert(errorName: string, args?: unknown[]): DomainError {
         message: "This pool is at its open-bet capacity. Try again after a bet settles.",
         severity: "warning",
         retryable: true
+      };
+    case "PlayerOpenHoldLimit":
+      return {
+        code: "PLAYER_OPEN_HOLD_LIMIT",
+        message:
+          "This wallet already has the most open bets allowed in this pool. Try again after one settles.",
+        severity: "warning",
+        retryable: true,
+        details: { player: args?.[0] }
       };
     case "SolvencyViolation":
       return {

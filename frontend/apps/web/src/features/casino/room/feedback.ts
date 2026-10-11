@@ -25,6 +25,10 @@ export function getBetErrorKind(error?: StepperDisplayError) {
     case "POOL_CAPACITY_FULL":
     case "OPEN_HOLD_LIMIT":
       return "capacity";
+    case "PLAYER_OPEN_HOLD_LIMIT":
+      return "playerLimit";
+    case "GAME_DISABLED":
+      return "gameClosed";
     case "STAKE_BELOW_MINIMUM":
       return "minimumStake";
     case "INSUFFICIENT_LIQUIDITY":
@@ -52,6 +56,33 @@ export function getBetErrorKind(error?: StepperDisplayError) {
     default:
       return error?.details?.transactionSubmitted === false ? "notSubmitted" : "unknown";
   }
+}
+
+/** Failures that say nothing about the contract: the wallet, the connection or the page context. */
+const NOT_CONTRACT_REVERTS = new Set([
+  "USER_REJECTED",
+  "WALLET_NOT_CONNECTED",
+  "SDK_NOT_READY",
+  "CHAIN_MISMATCH",
+  "WALLET_CONTEXT_CHANGED",
+  "BET_CONTEXT_CHANGED",
+  "INSUFFICIENT_NATIVE_BALANCE",
+  "RPC_ERROR",
+  "TX_TIMEOUT",
+  "TX_STATUS_UNKNOWN",
+  "UNKNOWN",
+  "UNKNOWN_TX_ERROR"
+]);
+
+/**
+ * The contract refused the transaction: a simulated revert (custom error or reason) or a mined revert.
+ * The SDK names wallet, connection and context failures, and passes other viem failures on under
+ * their PascalCase error name; none of those is a revert.
+ */
+export function isContractRevert(error?: StepperDisplayError) {
+  const code = error?.code;
+  if (!code || NOT_CONTRACT_REVERTS.has(code)) return false;
+  return !/^[A-Z][A-Za-z]*Error$/.test(code);
 }
 
 export function isBetSubmissionUnconfirmed(error?: StepperDisplayError) {

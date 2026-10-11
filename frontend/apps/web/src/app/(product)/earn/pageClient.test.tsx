@@ -7,7 +7,7 @@ const ACCOUNT = "0x0000000000000000000000000000000000000007";
 const BANK = "0x0000000000000000000000000000000000000002";
 const VAULT = "0x0000000000000000000000000000000000000003";
 const ASSET = "0x0000000000000000000000000000000000000001";
-const state = { sdk: null as any, readOnly: false };
+const state = { sdk: null as any, readOnly: false, poolListedActive: true };
 const tx = { ok: true, txHash: "0x123" };
 vi.mock("next-intl", () => ({
   useLocale: () => "en",
@@ -24,7 +24,7 @@ vi.mock("../../../ssot/release/ReleaseProvider", () => ({
         {
           poolId: 1,
           domainId: 1,
-          active: true,
+          active: state.poolListedActive,
           bank: BANK,
           vault: VAULT,
           asset: ASSET,
@@ -42,6 +42,9 @@ vi.mock("../../../components/PageTransition", () => ({
 }));
 vi.mock("../../../features/earn/BankrollPerformancePanel", () => ({
   BankrollPerformancePanel: () => null
+}));
+vi.mock("../../../features/governance/governance-queue-panel", () => ({
+  GovernanceQueuePanel: () => null
 }));
 vi.mock("../../../features/earn/useBankProviderLedger", () => ({
   useBankProviderLedger: () => ({ entries: [], coverageComplete: true })
@@ -94,6 +97,7 @@ function mount() {
 }
 beforeEach(() => {
   state.readOnly = false;
+  state.poolListedActive = true;
   state.sdk = {
     account: ACCOUNT,
     bank: {
@@ -108,6 +112,8 @@ beforeEach(() => {
         lpFreeCapital: 99_000_000n,
         lpStatus: "ready",
         riskInPaused: false,
+        poolActive: true,
+        totalBetsHeld: 3n,
         totalTurnover: 0n,
         totalPayoutGross: 0n,
         updatedAtBlock: 10n,
@@ -315,20 +321,86 @@ describe("NFT Earn console", () => {
     });
     expect(screen.queryByText("26 USDC")).toBeNull();
   });
-  it("keeps player debt claim separate and available while the pool is paused", async () => {
+  it("leaves a player's own payable to Claims and never reads it here", async () => {
+    mount();
+    await waitFor(() => expect(state.sdk.bank.getSnapshot).toHaveBeenCalled());
+    expect(state.sdk.bank.getPlayerPayable).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "earn.nft.claimPlayer" })).toBeNull();
+  });
+  it("takes deposits before betting starts and says when betting starts (ADR-0037 D1)", async () => {
+    state.poolListedActive = false;
+    state.sdk.bank.getSnapshot.mockResolvedValue({
+      bank: BANK,
+      vault: VAULT,
+      L: 0n,
+      lpStatus: "ready",
+      riskInPaused: false,
+      poolActive: false,
+      totalBetsHeld: 0n,
+      updatedAtBlock: 10n
+    });
+    mount();
+    expect(await screen.findByText("earn.nft.bettingNotStarted")).toBeTruthy();
+    expect(screen.queryByText("earn.actions.depositsClosed.title")).toBeNull();
+    fireEvent.change(screen.getByLabelText("earn.actions.amount"), { target: { value: "2" } });
+    const button = screen.getByRole("button", { name: "earn.actions.submit.deposit" });
+    await waitFor(() => expect(button).not.toBeDisabled());
+    fireEvent.click(button);
+    await waitFor(() =>
+      expect(state.sdk.vault.addDeposit).toHaveBeenCalledWith(1, 2_000_000n, ACCOUNT)
+    );
+  });
+  it("says new bets are stopped when a pool that took bets is inactive", async () => {
     state.sdk.bank.getSnapshot.mockResolvedValue({
       bank: BANK,
       vault: VAULT,
       L: 1n,
       lpStatus: "ready",
-      riskInPaused: true,
+      riskInPaused: false,
+      poolActive: false,
+      totalBetsHeld: 5n,
       updatedAtBlock: 10n
     });
-    state.sdk.bank.getPlayerPayable.mockResolvedValue(2_000_000n);
     mount();
-    const button = await screen.findByRole("button", { name: "earn.nft.claimPlayer" });
-    expect(button).not.toBeDisabled();
+    expect(await screen.findByText("earn.nft.bettingStopped")).toBeTruthy();
+  });
+  it("shows deposit refusals by code, never the SDK's English message", async () => {
+    state.sdk.vault.addDeposit.mockResolvedValue({
+      ok: false,
+      txHash: "0x0",
+      error: {
+        code: "DEPOSITS_PAUSED",
+        message: "LP deposits are paused (SDK text)",
+        severity: "warning"
+      }
+    });
+    mount();
+    fireEvent.change(screen.getByLabelText("earn.actions.amount"), { target: { value: "1" } });
+    const button = screen.getByRole("button", { name: "earn.actions.submit.deposit" });
+    await waitFor(() => expect(button).not.toBeDisabled());
     fireEvent.click(button);
-    await waitFor(() => expect(state.sdk.bank.claimPlayerPayable).toHaveBeenCalledWith(1, ACCOUNT));
+    const { toast } = await import("@ssot/ui");
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("app.txErrors.depositsPaused"));
+  });
+  it("refuses a malformed amount with copy, never the parser's text", async () => {
+    mount();
+    fireEvent.change(screen.getByLabelText("earn.actions.amount"), { target: { value: "1.2.3" } });
+    const button = screen.getByRole("button", { name: "earn.actions.submit.deposit" });
+    await waitFor(() => expect(button).not.toBeDisabled());
+    fireEvent.click(button);
+    const { toast } = await import("@ssot/ui");
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("app.txErrors.invalidAmount"));
+    expect(state.sdk.vault.addDeposit).not.toHaveBeenCalled();
+  });
+  it("shows an unexpected thrown error as generic copy", async () => {
+    state.sdk.vault.addDeposit.mockRejectedValue(new Error("raw provider text 0xdeadbeef"));
+    mount();
+    fireEvent.change(screen.getByLabelText("earn.actions.amount"), { target: { value: "1" } });
+    const button = screen.getByRole("button", { name: "earn.actions.submit.deposit" });
+    await waitFor(() => expect(button).not.toBeDisabled());
+    fireEvent.click(button);
+    const { toast } = await import("@ssot/ui");
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("earn.toast.failed"));
+    expect(toast.error).not.toHaveBeenCalledWith("raw provider text 0xdeadbeef");
   });
 });

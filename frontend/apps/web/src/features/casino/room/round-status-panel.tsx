@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
@@ -39,6 +40,14 @@ function getPhaseCopy(phase: CasinoRoundPhase, t: Translate) {
     case "refundable":
       return {
         status: t("casino.room.roundStatus.phases.refundable.status")
+      };
+    case "result_unbooked":
+      return {
+        status: t("casino.room.roundStatus.phases.resultUnbooked.status")
+      };
+    case "voided":
+      return {
+        status: t("casino.room.roundStatus.phases.voided.status")
       };
     case "failed":
       return {
@@ -85,6 +94,9 @@ export function CasinoRoundStatusPanel({
     phase === "settling" ||
     phase === "manual_settle_offered" ||
     phase === "loading_quote";
+  // The result arrived but settlement lags: the bet's page holds the void once it is eligible.
+  const settlementPending =
+    betId != null && (phase === "result_unbooked" || phase === "manual_settle_offered");
 
   return (
     <div
@@ -125,6 +137,22 @@ export function CasinoRoundStatusPanel({
           value={requestId == null || requestId === 0n ? "—" : requestId.toString()}
         />
       </div>
+      {settlementPending ? (
+        <div
+          className="mt-2 border-t border-border-soft pt-2"
+          data-testid="round-settlement-pending"
+        >
+          <p className="text-xs leading-5 text-fg-muted">
+            {t("casino.room.roundStatus.pendingSettlement.body")}
+          </p>
+          <Link
+            href={`/portfolio/activity/${betId.toString()}`}
+            className="mt-1 inline-flex min-h-11 items-center text-xs font-bold text-brand hover:text-brand-hover"
+          >
+            {t("casino.room.roundStatus.pendingSettlement.link")}
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }

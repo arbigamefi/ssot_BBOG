@@ -5,7 +5,8 @@ import type { SSOTRelease } from "../release/schema";
 const GAME_HUB_ROUND_EVENTS_ABI = parseAbi([
   "event BetRandomReady(uint256 indexed positionId, uint256 indexed requestId, bytes32 randomHash)",
   "event BetFinalized(uint256 indexed positionId, uint256 payoutGross, uint256 payoutNet, uint256 feeOnPayout, uint256 protocolFeeAccrual)",
-  "event BetRefunded(uint256 indexed positionId, uint256 refundAmount)"
+  "event BetRefunded(uint256 indexed positionId, uint256 refundAmount)",
+  "event BetVoided(uint256 indexed positionId, address indexed caller, uint256 stake, bytes32 settlementErrorPrefix)"
 ]);
 
 export function gameHubRoundEventMatchesBet(

@@ -46,4 +46,29 @@ describe("FinalizeQueue", () => {
     now = 3_000;
     expect(queue.nextReady()?.betId).toBe(1n);
   });
+
+  it("knows whether a lower bet, queued or in flight, has never been examined", () => {
+    const queue = new FinalizeQueue(() => 1_000);
+    queue.enqueue(event(5n));
+    expect(queue.hasUnexaminedBefore(5n)).toBe(false);
+    expect(queue.hasUnexaminedBefore(6n)).toBe(true);
+    const item = queue.nextReady()!;
+    expect(queue.hasUnexaminedBefore(6n)).toBe(true); // in flight, not yet answered
+    queue.retry(item, 60_000);
+    expect(queue.hasUnexaminedBefore(6n)).toBe(false);
+    queue.enqueue(event(9n), 10_000); // a backup's delayed bet is unexamined too
+    expect(queue.hasUnexaminedBefore(10n)).toBe(true);
+    expect(queue.hasUnexaminedBefore(9n)).toBe(false);
+  });
+
+  it("keeps the earliest result block a queued bet was seen with", () => {
+    const queue = new FinalizeQueue(() => 1_000);
+    queue.enqueue({ ...event(3n), resultBlockNumber: 120n });
+    queue.enqueue({ ...event(3n), resultBlockNumber: 110n });
+    queue.enqueue(event(3n));
+    const item = queue.nextReady()!;
+    expect(item.resultBlockNumber).toBe(110n);
+    queue.enqueue({ ...event(3n), resultBlockNumber: 100n });
+    expect(queue.retry(item, 60_000).resultBlockNumber).toBe(100n);
+  });
 });

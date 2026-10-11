@@ -103,11 +103,19 @@ export type PoolSnapshot = {
   maxOpenHolds: bigint;
   accountingValid: boolean;
   riskInPaused: boolean;
+  /** PoolRegistry activity: an inactive pool takes no new bets (not started, or stopped). */
+  poolActive: boolean;
   riskReserveBps: number;
 };
 
 type SnapshotSdk = {
   bank?: { getSnapshot: (poolId: number) => Promise<PoolSnapshot> };
+};
+
+type OpenHoldsSdk = {
+  bank?: {
+    getOpenHolds: (poolId: number, player: `0x${string}`) => Promise<{ open: bigint; max: bigint }>;
+  };
 };
 
 /**
@@ -119,8 +127,10 @@ export type PoolAvailability =
   | "loading"
   | "unavailable"
   | "paused"
+  | "inactive"
   | "ready"
   | "full"
+  | "playerLimit"
   | "noLiquidity"
   | "invalidAccounting"
   | "gameUnavailable"
@@ -164,11 +174,13 @@ export function usePoolSnapshot({
               ? "invalidAccounting"
               : snapshot.riskInPaused
                 ? "paused"
-                : snapshot.openHolds >= snapshot.maxOpenHolds
-                  ? "full"
-                  : snapshot.L <= 0n
-                    ? "noLiquidity"
-                    : "ready"
+                : !snapshot.poolActive
+                  ? "inactive"
+                  : snapshot.openHolds >= snapshot.maxOpenHolds
+                    ? "full"
+                    : snapshot.L <= 0n
+                      ? "noLiquidity"
+                      : "ready"
           });
       } catch {
         if (!cancelled)
@@ -193,6 +205,69 @@ export function usePoolSnapshot({
   return {
     snapshot: current?.snapshot ?? null,
     status: current?.status ?? ("loading" as PoolAvailability),
+    refresh
+  };
+}
+
+/**
+ * The connected player's open bets in one pool's Bank and the per-player cap (ADR-0037 §5: two).
+ * A failed read reports no limit: planPlaceBet checks the cap again before any wallet prompt.
+ */
+export function usePlayerOpenHolds({
+  sdk,
+  poolId,
+  account,
+  refreshMs = 20_000
+}: {
+  sdk: OpenHoldsSdk | null | undefined;
+  poolId: number | undefined;
+  account: `0x${string}` | undefined;
+  refreshMs?: number;
+}) {
+  const bank = sdk?.bank;
+  const [revision, refresh] = React.useReducer((value: number) => value + 1, 0);
+  const [readState, setReadState] = React.useState<{
+    bank: OpenHoldsSdk["bank"];
+    poolId?: number;
+    account?: string;
+    holds: { open: bigint; max: bigint } | null;
+  }>();
+
+  React.useEffect(() => {
+    if (!bank || poolId == null || !account) return;
+    let cancelled = false;
+    let reading = false;
+    const read = async () => {
+      if (reading) return;
+      reading = true;
+      try {
+        const holds = await bank.getOpenHolds(poolId, account);
+        if (!cancelled) setReadState({ bank, poolId, account, holds });
+      } catch {
+        if (!cancelled) setReadState({ bank, poolId, account, holds: null });
+      } finally {
+        reading = false;
+      }
+    };
+    void read();
+    const interval = setInterval(read, Math.max(1_000, refreshMs));
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [account, bank, poolId, refreshMs, revision]);
+
+  // Never show another wallet's or pool's count.
+  const holds =
+    readState &&
+    readState.bank === bank &&
+    readState.poolId === poolId &&
+    readState.account === account
+      ? readState.holds
+      : null;
+  return {
+    holds,
+    atLimit: holds != null && holds.open >= holds.max,
     refresh
   };
 }

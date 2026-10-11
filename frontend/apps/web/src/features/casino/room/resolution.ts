@@ -3,6 +3,7 @@ import type { DomainBet } from "@ssot/ssot";
 import type { GameHubTerminalProof, SSOTGameHubAPI } from "@ssot/ssot/sdk";
 import type { SSOTDb } from "@ssot/ssot/indexer";
 
+import { isTerminalBetState, type TerminalBetState } from "../../betting/bet-state";
 import {
   findIndexedBetById,
   isTerminalIndexedBet,
@@ -47,12 +48,22 @@ export type CasinoRoundRefundedResult = CasinoRoundResultBase & {
   refund: CompleteRefundProof;
 };
 
-export type CasinoTerminalRoundResult = CasinoRoundSettledResult | CasinoRoundRefundedResult;
+/** The result arrived but could not be settled; the stake became a claimable player balance. */
+export type CasinoRoundVoidedResult = CasinoRoundResultBase & {
+  kind: "voided";
+  refund: CompleteRefundProof;
+};
+
+export type CasinoTerminalRoundResult =
+  | CasinoRoundSettledResult
+  | CasinoRoundRefundedResult
+  | CasinoRoundVoidedResult;
 
 export type CasinoRoundResult =
   | CasinoRoundIndexingResult
   | CasinoRoundSettledResult
-  | CasinoRoundRefundedResult;
+  | CasinoRoundRefundedResult
+  | CasinoRoundVoidedResult;
 
 function hasCompleteSettlement(
   settlement: SettlementProof | undefined
@@ -68,7 +79,8 @@ export function isCasinoTerminalRoundResult(
   result: CasinoRoundResult | null | undefined
 ): result is CasinoTerminalRoundResult {
   if (result?.kind === "settled") return hasCompleteSettlement(result.settlement);
-  if (result?.kind === "refunded") return hasCompleteRefund(result.refund);
+  if (result?.kind === "refunded" || result?.kind === "voided")
+    return hasCompleteRefund(result.refund);
   return false;
 }
 
@@ -115,15 +127,17 @@ function buildSettledRoundResult({
   };
 }
 
-function buildRefundedRoundResult({
+function buildReturnedStakeRoundResult({
   bet,
+  kind,
   refund
 }: {
   bet: DomainBet;
+  kind: "refunded" | "voided";
   refund: CompleteRefundProof;
-}): CasinoRoundRefundedResult {
+}): CasinoRoundRefundedResult | CasinoRoundVoidedResult {
   return {
-    kind: "refunded",
+    kind,
     betId: bet.betId,
     requestId: bet.requestId,
     randomHash: bet.randomHash,
@@ -145,8 +159,8 @@ export function appendGameHistoryEntry(
 
 export function isTerminalDomainBet(
   bet: DomainBet | null | undefined
-): bet is DomainBet & { state: "finalized" | "refunded" } {
-  return bet?.state === "finalized" || bet?.state === "refunded";
+): bet is DomainBet & { state: TerminalBetState } {
+  return isTerminalBetState(bet?.state);
 }
 
 export function buildCasinoRoundResult({
@@ -158,9 +172,9 @@ export function buildCasinoRoundResult({
   settlement?: SettlementProof;
   refund?: RefundProof;
 }): CasinoRoundResult {
-  if (bet.state === "refunded") {
+  if (bet.state === "refunded" || bet.state === "voided") {
     return hasCompleteRefund(refund)
-      ? buildRefundedRoundResult({ bet, refund })
+      ? buildReturnedStakeRoundResult({ bet, kind: bet.state, refund })
       : buildIndexingRoundResult({ bet, refund });
   }
 
@@ -215,16 +229,19 @@ export async function resolveCasinoTerminalProof({
           settlement: { ...indexedProof.settlement, payment: directProof.settlement.payment }
         };
       }
-      if (indexedProof.kind === "refunded" && directProof?.kind === "refunded") {
+      if (
+        (indexedProof.kind === "refunded" || indexedProof.kind === "voided") &&
+        directProof?.kind === indexedProof.kind
+      ) {
         if (
           directProof.refund.txHash?.toLowerCase() !== indexedProof.refund.txHash?.toLowerCase()
         ) {
           return isCompleteTerminalProof(directProof) ? directProof : indexedProof;
         }
-        return {
-          kind: "refunded",
-          refund: { ...indexedProof.refund, payment: directProof.refund.payment }
-        };
+        const refund = { ...indexedProof.refund, payment: directProof.refund.payment };
+        return indexedProof.kind === "voided"
+          ? { kind: "voided", refund }
+          : { kind: "refunded", refund };
       }
       return indexedProof;
     }

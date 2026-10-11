@@ -60,6 +60,8 @@ export interface TxPipeline {
     args: readonly unknown[];
     value?: bigint;
     gasPrice?: bigint;
+    /** Explicit gas limit for both the simulation and the signed transaction. */
+    gas?: bigint;
     /** Final synchronous intent check immediately before the wallet request. */
     beforeWrite?: () => void;
   }): Promise<TxResult>;
@@ -181,6 +183,7 @@ export function createTxPipeline(opts?: {
     args: readonly unknown[];
     value?: bigint;
     gasPrice?: bigint;
+    gas?: bigint;
     beforeWrite?: () => void;
   }): Promise<TxResult> {
     // Simulate with retry on transient errors
@@ -196,7 +199,9 @@ export function createTxPipeline(opts?: {
           functionName: params.functionName as any,
           args: params.args as any,
           value: params.value,
-          ...(params.gasPrice == null ? {} : { gasPrice: params.gasPrice })
+          ...(params.gasPrice == null ? {} : { gasPrice: params.gasPrice }),
+          // The simulated request carries the limit into writeContract unchanged.
+          ...(params.gas == null ? {} : { gas: params.gas })
         });
         break; // success
       } catch (e) {

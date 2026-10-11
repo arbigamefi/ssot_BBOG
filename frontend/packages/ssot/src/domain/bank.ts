@@ -26,6 +26,11 @@ export interface DomainBankSnapshot {
   accountingValid: boolean;
   lpStatus: LPStatus;
   unbookedResultCount: bigint;
+  /**
+   * PoolRegistry.isPoolActive at the same block. False means the pool takes no new bets: either
+   * betting has not started (ADR-0037 §9 D1) or it was stopped. LP deposits follow riskInPaused only.
+   */
+  poolActive: boolean;
   openHolds: bigint;
   maxOpenHolds: bigint;
   minBetAmount: bigint;
@@ -49,6 +54,9 @@ export interface DomainBankSnapshot {
   totalBetsHeld: bigint;
   totalBetsSettled: bigint;
   totalBetsRefunded: bigint;
+  totalBetsVoided: bigint;
+  /** Stakes a void returned as player payables (ADR-0037 §7.4); the VRF fee is not refunded. */
+  totalVoided: bigint;
   snapshotTimestamp: bigint;
   updatedAtBlock: bigint;
 }

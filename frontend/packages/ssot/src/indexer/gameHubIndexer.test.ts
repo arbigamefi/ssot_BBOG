@@ -199,8 +199,8 @@ describe("gameHubIndexer.syncOnce()", () => {
     await indexer.syncOnce();
 
     expect(client.getBlockNumber).toHaveBeenCalledTimes(1);
-    // 4 event types → 4 getLogs calls
-    expect(client.getLogs).toHaveBeenCalledTimes(4);
+    // 5 event types → 5 getLogs calls
+    expect(client.getLogs).toHaveBeenCalledTimes(5);
   });
 
   it("inserts cursor after sync", async () => {
@@ -253,7 +253,8 @@ describe("gameHubIndexer.syncOnce()", () => {
       .mockResolvedValueOnce(mockLogs) // BetPlaced
       .mockResolvedValueOnce([]) // BetRandomReady
       .mockResolvedValueOnce([]) // BetFinalized
-      .mockResolvedValueOnce([]); // BetRefunded
+      .mockResolvedValueOnce([]) // BetRefunded
+      .mockResolvedValueOnce([]); // BetVoided
 
     indexer = createGameHubIndexer({
       release: MOCK_RELEASE,

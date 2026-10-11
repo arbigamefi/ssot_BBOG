@@ -38,7 +38,11 @@ export function BetDetailLifecycle({
               "portfolio.activity.detail.lifecycle.steps.finalized.description"
             ),
             refunded: t("portfolio.activity.detail.lifecycle.steps.refunded.title"),
-            refundedDescription: t("portfolio.activity.detail.lifecycle.steps.refunded.description")
+            refundedDescription: t(
+              "portfolio.activity.detail.lifecycle.steps.refunded.description"
+            ),
+            voided: t("portfolio.activity.detail.lifecycle.steps.voided.title"),
+            voidedDescription: t("portfolio.activity.detail.lifecycle.steps.voided.description")
           })}
         />
       </div>

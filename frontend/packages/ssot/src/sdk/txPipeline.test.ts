@@ -163,6 +163,35 @@ describe("createTxPipeline", () => {
 
       expect(pub.simulateContract).toHaveBeenCalledWith(expect.objectContaining({ value: 100n }));
     });
+
+    it("carries an explicit gas limit from the simulation into the signed request", async () => {
+      const pub = mockPublicClient({
+        simulateContract: vi.fn(async (request: Record<string, unknown>) => ({ request }))
+      });
+      const wal = mockWalletClient();
+      const pipeline = createTxPipeline();
+
+      await pipeline.simulateAndWrite({
+        ...BASE_PARAMS,
+        publicClient: pub,
+        walletClient: wal,
+        account: ACCOUNT,
+        gas: 11_000_000n
+      });
+      expect(pub.simulateContract).toHaveBeenCalledWith(
+        expect.objectContaining({ gas: 11_000_000n })
+      );
+      expect(wal.writeContract).toHaveBeenCalledWith(expect.objectContaining({ gas: 11_000_000n }));
+
+      await pipeline.simulateAndWrite({
+        ...BASE_PARAMS,
+        publicClient: pub,
+        walletClient: wal,
+        account: ACCOUNT
+      });
+      // Without a limit the wallet keeps estimating; no undefined gas key overrides it.
+      expect(pub.simulateContract.mock.calls[1][0]).not.toHaveProperty("gas");
+    });
   });
 
   // ——— writeNoSimulate ———

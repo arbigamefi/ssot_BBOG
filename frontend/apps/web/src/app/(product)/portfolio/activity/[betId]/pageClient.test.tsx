@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 
 const gameId = "0x1111111111111111111111111111111111111111111111111111111111111111";
 const asset = "0x0000000000000000000000000000000000000001";
 const player = "0x0000000000000000000000000000000000000002";
+const bank = "0x0000000000000000000000000000000000000003";
 
 const state = {
   chainId: 84532,
@@ -13,13 +14,23 @@ const state = {
   release: {
     releaseDigest: "0x7ad0f2cb0000000000000000000000000000000000000000000000000000e1349f",
     assets: [{ address: asset, symbol: "USDC", decimals: 6 }],
+    pools: [{ poolId: 1, asset, bank, symbol: "USDC", decimals: 6, active: true }],
     gamesMeta: [{ gameId, label: "Dice" }]
   } as any,
   localBet: null as any,
   onChainBet: null as any,
   timeline: [] as any[],
-  sdkAccount: null as string | null
+  sdkAccount: null as string | null,
+  voidStatus: null as any,
+  payable: 0n,
+  flowError: undefined as any
 };
+
+const sdkCalls = vi.hoisted(() => ({
+  voidBet: vi.fn(),
+  claimPlayerPayable: vi.fn()
+}));
+const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 
 vi.mock("next-intl", async () => {
   const messages = (await import("../../../../../i18n/locales/en/common.json")).default as Record<
@@ -46,7 +57,10 @@ vi.mock("next-intl", async () => {
   }
 
   return {
-    useTranslations: () => translate
+    useLocale: () => "en",
+    useTranslations:
+      (namespace?: string) => (key: string, values?: Record<string, string | number>) =>
+        translate(namespace ? `${namespace}.${key}` : key, values)
   };
 });
 
@@ -68,10 +82,20 @@ function createDb() {
 function createSdk() {
   return {
     account: state.sdkAccount,
+    release: { chainId: 84532 },
     gameHub: {
       getBet: vi.fn(async () => state.onChainBet),
       refund: vi.fn(async () => ({ ok: true, txHash: "0xabc" })),
-      finalize: vi.fn(async () => ({ ok: true, txHash: "0xdef" }))
+      finalize: vi.fn(async () => ({ ok: true, txHash: "0xdef" })),
+      getVoidStatus: vi.fn(async () => {
+        if (!state.voidStatus) throw new Error("no void status");
+        return state.voidStatus;
+      }),
+      voidBet: sdkCalls.voidBet
+    },
+    bank: {
+      getPlayerPayable: vi.fn(async () => state.payable),
+      claimPlayerPayable: sdkCalls.claimPlayerPayable
     }
   };
 }
@@ -98,10 +122,10 @@ vi.mock("../../../../../components/PageTransition", () => ({
 
 vi.mock("../../../../../features/tx/useDirectTxAction", () => ({
   useDirectTxAction: () => ({
-    status: "idle",
+    status: state.flowError ? "failed" : "idle",
     steps: [],
-    hasActivity: false,
-    error: undefined,
+    hasActivity: Boolean(state.flowError),
+    error: state.flowError,
     txHash: undefined,
     journalEntry: undefined,
     busy: false,
@@ -124,10 +148,7 @@ vi.mock("@ssot/ui", () => ({
       <span>{subtitle}</span>
     </div>
   ),
-  toast: {
-    success: vi.fn(),
-    error: vi.fn()
-  }
+  toast: toastMock
 }));
 
 vi.mock("next/link", () => ({
@@ -211,6 +232,13 @@ describe("BetDetailPageClient", () => {
     state.onChainBet = null;
     state.timeline = [];
     state.sdkAccount = null;
+    state.voidStatus = null;
+    state.payable = 0n;
+    state.flowError = undefined;
+    sdkCalls.voidBet.mockReset();
+    sdkCalls.claimPlayerPayable.mockReset();
+    toastMock.success.mockReset();
+    toastMock.error.mockReset();
     vi.unstubAllGlobals();
   });
 
@@ -307,5 +335,215 @@ describe("BetDetailPageClient", () => {
 
     expect(await screen.findByRole("button", { name: /Finalize bet/i })).toBeDefined();
     expect(screen.queryByRole("button", { name: /Refund stake/i })).toBeNull();
+  });
+
+  it("explains a voided bet, shows the returned stake and offers the claim", async () => {
+    state.sdkAccount = player;
+    state.payable = 1_000_000n;
+    sdkCalls.claimPlayerPayable.mockResolvedValue({ ok: true, txHash: `0x${"1".repeat(64)}` });
+    seedBet({
+      state: "voided",
+      requestId: 7n,
+      randomHash: "0xc1dd6522ffc33603f07c9f43cc35e6ad9f0fd8228b7715f072787026f04f5894"
+    });
+    state.timeline.push({
+      id: "84532:0x789:2",
+      chainId: 84532,
+      gameHub: player,
+      blockNumber: 130,
+      txHash: "0x7894567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      logIndex: 2,
+      eventName: "BetVoided",
+      argsJson: JSON.stringify({ positionId: "42", caller: player, stake: "1000000" }),
+      createdAt: 1_765_100_000
+    });
+
+    renderWithQueryClient(<BetDetailPageClient betId="42" />);
+
+    expect(await screen.findByText("Your stake was returned")).toBeDefined();
+    expect(
+      screen.getByText(
+        "The result was received but could not be settled, so your stake was returned to you as a claimable balance. The VRF fee is not refunded."
+      )
+    ).toBeDefined();
+    // The seed stays visible as for any other bet.
+    expect(screen.getByText("0xc1dd...5894")).toBeDefined();
+    expect(screen.getAllByText("Voided").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Returned stake").length).toBeGreaterThan(0);
+    const claim = await screen.findByRole("button", { name: "Claim 1 USDC" });
+    fireEvent.click(claim);
+    await waitFor(() => expect(sdkCalls.claimPlayerPayable).toHaveBeenCalledWith(1, player));
+  });
+
+  it("says when a stuck bet becomes voidable", async () => {
+    state.sdkAccount = player;
+    state.voidStatus = {
+      betId: 42n,
+      voidable: false,
+      eligibleAt: 1_765_604_800,
+      inWindow: false,
+      resultReceived: true,
+      blockNumber: 1n,
+      blockTimestamp: 1_765_000_000
+    };
+    seedBet({ state: "randomReady" });
+
+    renderWithQueryClient(<BetDetailPageClient betId="42" />);
+
+    expect(
+      await screen.findByText("The result arrived, but this bet is not settled")
+    ).toBeDefined();
+    const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(
+      new Date(1_765_604_800_000)
+    );
+    expect(
+      screen.getByText(
+        `If settlement keeps failing, this bet can be voided and your stake returned from ${when}.`
+      )
+    ).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Void and refund" })).toBeNull();
+  });
+
+  it("voids an eligible stuck bet and reports the outcome", async () => {
+    state.sdkAccount = player;
+    state.voidStatus = {
+      betId: 42n,
+      voidable: true,
+      eligibleAt: 1_765_086_400,
+      inWindow: true,
+      resultReceived: true,
+      blockNumber: 1n,
+      blockTimestamp: 1_765_100_000
+    };
+    sdkCalls.voidBet.mockResolvedValue({
+      ok: true,
+      txHash: `0x${"2".repeat(64)}`,
+      outcome: "voided"
+    });
+    seedBet({ state: "randomReady" });
+
+    renderWithQueryClient(<BetDetailPageClient betId="42" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Void and refund" }));
+    await waitFor(() => expect(sdkCalls.voidBet).toHaveBeenCalledWith(42n));
+    expect(toastMock.success).toHaveBeenCalledWith(
+      "Bet voided. Your stake is now a claimable balance."
+    );
+    expect(
+      screen.getByText(
+        "The operator's keeper voids eligible bets too, so waiting is fine. Some smart-contract wallets cannot send this transaction because it needs about 11 million gas."
+      )
+    ).toBeDefined();
+  });
+
+  it("explains a void a smart wallet could not send", async () => {
+    state.sdkAccount = player;
+    state.voidStatus = {
+      betId: 42n,
+      voidable: true,
+      eligibleAt: 1_765_086_400,
+      inWindow: true,
+      resultReceived: true,
+      blockNumber: 1n,
+      blockTimestamp: 1_765_100_000
+    };
+    sdkCalls.voidBet.mockResolvedValue({
+      ok: false,
+      txHash: "0x0",
+      error: { code: "VOID_GAS_TOO_LOW", message: "raw SDK text", severity: "error" }
+    });
+    seedBet({ state: "randomReady" });
+
+    renderWithQueryClient(<BetDetailPageClient betId="42" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Void and refund" }));
+    await waitFor(() =>
+      expect(toastMock.error).toHaveBeenCalledWith(
+        "Your wallet could not send the gas a void needs (about 11 million). The operator's keeper voids eligible bets too, so you can wait."
+      )
+    );
+  });
+
+  it("drops the timeout refund once the result was received", async () => {
+    state.sdkAccount = player;
+    state.voidStatus = {
+      betId: 42n,
+      voidable: true,
+      eligibleAt: 1_765_086_400,
+      inWindow: true,
+      resultReceived: true,
+      blockNumber: 1n,
+      blockTimestamp: 1_765_100_000
+    };
+    seedBet({ state: "placed" });
+
+    renderWithQueryClient(<BetDetailPageClient betId="42" />);
+
+    expect(await screen.findByRole("button", { name: "Void and refund" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /Refund stake/i })).toBeNull();
+  });
+
+  it("keeps the timeout refund while the result has not arrived", async () => {
+    state.sdkAccount = player;
+    state.voidStatus = {
+      betId: 42n,
+      voidable: false,
+      eligibleAt: 1_765_604_800,
+      inWindow: false,
+      resultReceived: false,
+      blockNumber: 1n,
+      blockTimestamp: 1_765_000_000
+    };
+    seedBet({ state: "placed" });
+
+    renderWithQueryClient(<BetDetailPageClient betId="42" />);
+
+    expect(await screen.findByRole("button", { name: /Refund stake/i })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Void and refund" })).toBeNull();
+  });
+
+  it("offers no void for a request that never received its result", async () => {
+    state.voidStatus = {
+      betId: 42n,
+      voidable: false,
+      eligibleAt: 1_765_604_800,
+      inWindow: false,
+      resultReceived: false,
+      blockNumber: 1n,
+      blockTimestamp: 1_765_000_000
+    };
+    seedBet({ state: "placed" });
+
+    renderWithQueryClient(<BetDetailPageClient betId="42" />);
+
+    expect(await screen.findByRole("heading", { name: /Dice receipt/i })).toBeDefined();
+    await waitFor(() => expect(screen.queryByTestId("bet-void-status")).toBeNull());
+  });
+  it("explains a refused refund by its code, never the SDK's English message", async () => {
+    state.sdkAccount = player;
+    state.voidStatus = {
+      betId: 42n,
+      voidable: false,
+      eligibleAt: 1_765_604_800,
+      inWindow: false,
+      resultReceived: false,
+      blockNumber: 1n,
+      blockTimestamp: 1_765_000_000
+    };
+    state.flowError = {
+      code: "REFUND_NOT_READY",
+      message: "Refund is not ready yet (timeout not reached).",
+      severity: "warning"
+    };
+    seedBet({ state: "placed" });
+
+    renderWithQueryClient(<BetDetailPageClient betId="42" />);
+
+    expect(
+      await screen.findByText(
+        "This bet cannot be refunded yet. The refund opens only if the draw has not arrived by the refund time."
+      )
+    ).toBeDefined();
+    expect(screen.queryByText("Refund is not ready yet (timeout not reached).")).toBeNull();
   });
 });

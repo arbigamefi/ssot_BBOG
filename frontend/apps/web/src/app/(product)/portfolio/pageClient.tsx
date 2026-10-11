@@ -27,6 +27,7 @@ import type {
 } from "../../../features/portfolio/overview/types";
 import { getPoolAssetContext } from "../../../features/assets/pool-asset";
 import { useTxJournal } from "../../../features/portfolio/overview/useTxJournal";
+import { readErrorMessage, thrownErrorMessage } from "../../../features/tx/tx-error-copy";
 import { useDirectTxAction } from "../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../ssot/sdk";
@@ -151,9 +152,7 @@ export function PortfolioPageClient() {
     void navigator.clipboard
       .writeText(account)
       .then(() => toast.success(t("portfolio.overview.toast.walletCopied")))
-      .catch((error) =>
-        toast.error((error as Error)?.message ?? t("portfolio.overview.toast.walletCopyFailed"))
-      );
+      .catch(() => toast.error(t("portfolio.overview.toast.walletCopyFailed")));
   }, [account, t]);
 
   const handleClaimRefund = React.useCallback(async () => {
@@ -164,7 +163,7 @@ export function PortfolioPageClient() {
       toast.success(t("portfolio.overview.toast.refundClaimed"));
       await refetchRefundCredit();
     } catch (error) {
-      toast.error((error as Error).message ?? t("portfolio.overview.toast.refundClaimFailed"));
+      toast.error(thrownErrorMessage(t, error, "portfolio.overview.toast.refundClaimFailed"));
     }
   }, [account, claimRefundFlow, readOnly, refetchRefundCredit, sdk, t]);
 
@@ -231,13 +230,13 @@ export function PortfolioPageClient() {
         {balancesError ? (
           <ErrorCallout
             title={t("portfolio.overview.alerts.assetQueryFailed")}
-            message={(balancesError as Error).message}
+            message={readErrorMessage(t)}
           />
         ) : null}
         {refundError ? (
           <ErrorCallout
             title={t("portfolio.overview.alerts.refundQueryFailed")}
-            message={(refundError as Error).message}
+            message={readErrorMessage(t)}
           />
         ) : null}
 

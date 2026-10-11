@@ -30,6 +30,19 @@ describe("mergeBetRows", () => {
     expect(rows[0]).toMatchObject({ betId: "7", state: "finalized", updatedBlock: 102 });
   });
 
+  it("never lets an open row of the same block replace a terminal one", () => {
+    // A void records the random and ends the bet in one transaction.
+    const terminal = row({ betId: "7", id: "84532:7", state: "voided", updatedBlock: 100 });
+    const open = row({ betId: "7", id: "84532:7", state: "randomReady", updatedBlock: 100 });
+    expect(mergeBetRows([terminal], [open], 10)[0]?.state).toBe("voided");
+    expect(mergeBetRows([open], [terminal], 10)[0]?.state).toBe("voided");
+    // A later local row still wins.
+    expect(
+      mergeBetRows([terminal], [{ ...open, state: "voided", updatedBlock: 101 }], 10)[0]
+        ?.updatedBlock
+    ).toBe(101);
+  });
+
   it("sorts newest rows first and respects the limit", () => {
     const rows = mergeBetRows(
       [row({ betId: "1", id: "84532:1", updatedBlock: 10 })],

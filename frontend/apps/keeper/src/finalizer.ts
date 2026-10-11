@@ -1,7 +1,8 @@
 import type { Hex } from "viem";
-import { describeError } from "./errors.js";
+import { describeError, describeRevert } from "./errors.js";
 import { isTerminalState, shouldFinalize } from "./state.js";
 import type { BetRead, FinalizeOutcome, RequestRead, KeeperEvent, KeeperLogger } from "./types.js";
+import { isSettlementFailure, VOID_RECHECK_MS } from "./void.js";
 
 export type FinalizerDeps = {
   readBet: (betId: bigint) => Promise<BetRead>;
@@ -13,6 +14,16 @@ export type FinalizerDeps = {
   writeRefund?: (betId: bigint) => Promise<Hex>;
   waitFinalizeReceipt: (txHash: Hex) => Promise<{ status: "success" | "reverted" }>;
   materializeReceipt?: (event: KeeperEvent, txHash: Hex) => Promise<void>;
+  /**
+   * Called when the finalize simulation of a received result reverts: the result cannot be booked now.
+   * Reads the bet's void eligibility, hands the bet to the void executor and returns the chain time
+   * (seconds) from which voidBet may be called.
+   */
+  assessVoid?: (
+    bet: BetRead,
+    reason: string,
+    event: KeeperEvent
+  ) => Promise<{ eligibleAt: bigint; chainTime: bigint }>;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
   verifyAttempts?: number;
@@ -96,9 +107,32 @@ export async function finalizeIfReady(
       }
       action = "refund";
     }
-    await (action === "refund"
-      ? deps.simulateRefund!(event.betId)
-      : deps.simulateFinalize(event.betId));
+    if (action === "refund") await deps.simulateRefund!(event.betId);
+    else {
+      try {
+        await deps.simulateFinalize(event.betId);
+      } catch (error) {
+        // Only a settlement that reverts or halts, out of gas included, means the received result
+        // cannot be booked; a transport failure or a GameHub state race stays an ordinary retryable
+        // failure. The bet stays queued: its settlement is tried again at least once a minute, and
+        // next exactly when voidBet becomes allowed.
+        if (!deps.assessVoid || !isSettlementFailure(error)) throw error;
+        const { eligibleAt, chainTime } = await deps.assessVoid(
+          before,
+          describeRevert(error),
+          event
+        );
+        return {
+          kind: "deferred",
+          state: before.state,
+          retryAfterMs:
+            eligibleAt > chainTime
+              ? Math.min(Number(eligibleAt - chainTime) * 1000, VOID_RECHECK_MS)
+              : VOID_RECHECK_MS,
+          voidEligibleAt: eligibleAt
+        };
+      }
+    }
     const txHash = await (action === "refund"
       ? deps.writeRefund!(event.betId)
       : deps.writeFinalize(event.betId));

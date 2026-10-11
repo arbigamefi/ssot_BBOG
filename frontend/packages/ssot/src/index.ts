@@ -27,6 +27,9 @@ export type {
   GameHubTerminalProof,
   GameHubSettlementProof,
   GameHubRefundProof,
+  GameHubVoidProof,
+  VoidStatus,
+  VoidBetResult,
   PlayerPaymentProof,
   ReconcilePlaceBetTxResult,
   BindPlaceBetTxResult,
@@ -36,6 +39,11 @@ export type {
   VaultProviderLedgerEntry,
   GameConfig,
   SSOTVRFHubAPI,
+  SSOTReferralAPI,
+  SSOTGovernanceAPI,
+  DecodedGovernanceCall,
+  GovernanceContract,
+  GovernanceCallArgument,
   Address,
   Hex
 } from "./sdk";

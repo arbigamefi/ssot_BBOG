@@ -16,6 +16,10 @@ import { getDefaultCasinoPoolAssetContext } from "../../../features/assets/pool-
 import { getCatalogRooms } from "../../../features/casino/catalog";
 import { CasinoGameMark } from "../../../features/casino/CasinoMiniIcons";
 import { useCasinoStats } from "../../../features/casino/useCasinoStats";
+import {
+  useDisabledGameIds,
+  withoutDisabledRooms
+} from "../../../features/casino/useDisabledGames";
 import { formatTokenAmount } from "../../../features/marketing/format";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 
@@ -123,6 +127,7 @@ export function GamesListClient() {
   const { data: casinoStats } = useCasinoStats({ asset: casinoAsset?.address });
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<FilterKey>("all");
+  const disabledGameIds = useDisabledGameIds();
 
   if (!release) {
     return (
@@ -133,8 +138,11 @@ export function GamesListClient() {
     );
   }
 
-  const rooms = getCatalogRooms(
-    release.gamesMeta as Array<{ slug: string; label: string }> | undefined
+  // A disabled game takes no new bets for good (ADR-0037 §6); its room only shows a closed state.
+  const rooms = withoutDisabledRooms(
+    getCatalogRooms(release.gamesMeta as Array<{ slug: string; label: string }> | undefined),
+    release.gamesMeta,
+    disabledGameIds
   );
 
   if (!rooms.length) {

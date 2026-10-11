@@ -31,13 +31,14 @@ function getRecentLabel(gameSlug: string, t: Translate) {
 function getBetStateLabel(state: string, t: Translate) {
   if (state === "finalized") return t("casino.room.history.states.settled");
   if (state === "refunded") return t("casino.room.history.states.refunded");
+  if (state === "voided") return t("casino.room.history.states.voided");
   if (state === "randomReady") return t("casino.room.history.states.vrfReady");
   return t("casino.room.history.states.placed");
 }
 
 function getBetStateClass(state: string) {
   if (state === "finalized") return "border-success/25 bg-success-soft text-success";
-  if (state === "refunded") return "border-border bg-surface-2 text-fg-muted";
+  if (state === "refunded" || state === "voided") return "border-border bg-surface-2 text-fg-muted";
   if (state === "randomReady") return "border-warn/25 bg-warn-soft text-warn";
   return "border-brand/25 bg-brand-soft text-brand";
 }

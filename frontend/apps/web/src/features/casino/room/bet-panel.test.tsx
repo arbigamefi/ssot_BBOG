@@ -55,6 +55,8 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.phases.refundable.detail":
         "VRF did not complete before the protocol timeout. You can refund the stake.",
       "casino.room.roundStatus.phases.refundable.status": "Refundable",
+      "casino.room.roundStatus.pendingSettlement.link": "Open bet details",
+      "casino.room.roundStatus.pendingSettlement.notice": "Bet awaiting settlement.",
       "casino.room.roundStatus.phases.failed.label": "Round monitor failed",
       "casino.room.roundStatus.phases.failed.detail":
         "Unable to read the latest round state from the RPC provider.",
@@ -657,6 +659,31 @@ describe("GameRoomBetPanel", () => {
       expect(screen.getAllByText("—").length).toBeGreaterThan(0);
     }
   );
+  it("keeps betting open beside a bet awaiting settlement and offers no refund for it", () => {
+    const onPlaceBet = vi.fn();
+    const onManualRefund = vi.fn();
+    renderPanel({
+      hasAccount: true,
+      pendingSettlementBetIds: [7n],
+      onPlaceBet,
+      onManualRefund
+    });
+
+    const button = screen.getByRole("button", { name: "PLACE BET" });
+    expect(button).not.toBeDisabled();
+    fireEvent.click(button);
+    expect(onPlaceBet).toHaveBeenCalledOnce();
+    expect(onManualRefund).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Refund stake" })).toBeNull();
+    expect(screen.getByTestId("pending-settlement-notice")).toHaveTextContent(
+      "Bet awaiting settlement."
+    );
+    expect(screen.getByRole("link", { name: "Open bet details" })).toHaveAttribute(
+      "href",
+      "/portfolio/activity/7"
+    );
+  });
+
   it("routes refund fallback through the primary button", () => {
     const onManualRefund = vi.fn();
     renderPanel({

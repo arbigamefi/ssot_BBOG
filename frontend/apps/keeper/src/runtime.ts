@@ -19,6 +19,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import {
   createPostgresBetIndexStore,
   enrichFinalizedBetEvents,
+  GOVERNANCE_TIMELOCK_CURSOR_SOURCE,
   readSettledBetRefund,
   type BetIndexEvent,
   type BetRow,
@@ -36,15 +37,34 @@ import {
   type GameHubLog,
   fetchGameHubLogs
 } from "./gamehub-logs.js";
-import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
+import { UnknownBlockGrace } from "./block-grace.js";
+import { fetchGovernanceTimelockEvents, verifyGovernanceTimelock } from "./governance.js";
+import { HeadMonitor } from "./head-monitor.js";
+import {
+  createFileHealthSink,
+  KeeperHealthReporter,
+  type FinalizedScanHealth,
+  type GovernanceHealth
+} from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
 import { isScanTruncated, splitBlockRange, type BlockRange } from "./scan.js";
 import { mapBetState, mapRequestState } from "./state.js";
-import type { BetRead, KeeperConfig, KeeperEvent, KeeperLogger } from "./types.js";
+import type { BetRead, FinalizeOutcome, KeeperConfig, KeeperEvent, KeeperLogger } from "./types.js";
 import { BANK_KEEPER_ABI } from "./abi.js";
 import { readPoolHealth } from "./pools.js";
 import { createPayableClaimer } from "./payables.js";
 import type { PayableHealth } from "./health.js";
+import {
+  attemptVoid,
+  checkVoidGasLimit,
+  compareVoidCandidates,
+  VOID_PARAMETER_FUNCTIONS,
+  VoidConfigurationError,
+  voidEligibleAt,
+  type VoidAttemptOutcome,
+  type VoidCandidate,
+  type VoidParameters
+} from "./void.js";
 
 // Stage-2 admission calls GameHub with 3m execution gas. Transactions also pay intrinsic gas
 // (21k + 36 calldata bytes); use the same 3.05m envelope for eth_call and the actual transaction.
@@ -53,6 +73,10 @@ export const CASINO_TRANSACTION_GAS = 3_050_000n;
 type GameHubEventName = BetIndexEvent["eventName"];
 const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
 const VAULT_PROVIDER_LEDGER_CURSOR_SOURCE = "vault-provider-ledger-finalized";
+/** PoolRegistry, GameHub and Bank governance are reread this often while indexing. */
+const GOVERNANCE_REVERIFY_MS = 3_600_000;
+/** KEEPER_FINALIZED_STALL_SECONDS default. */
+const DEFAULT_FINALIZED_STALL_MS = 3_600_000;
 const CASINO_RECOVERY_PAGE_SIZE = 50;
 /**
  * Indexed-bet recovery re-reads every requeued bet on chain, so after scans it runs
@@ -245,9 +269,23 @@ export function createKeeperRuntime({
   let scanning = false;
   let vaultProviderLedgerScanning = false;
   let lastScannedBlock = config.startBlock ?? 0n;
-  let vaultProviderLedgerLastScannedBlock =
-    (config.casinoRecoveryStartBlock ?? config.startBlock ?? 0n) - 1n;
-  let vaultProviderLedgerFinalizedBlock: bigint | undefined;
+  // Finalized-head scans start at the release origin, inclusive.
+  const finalizedOrigin = (config.casinoRecoveryStartBlock ?? config.startBlock ?? 0n) - 1n;
+  const finalizedStallMs = config.finalizedStallMs ?? DEFAULT_FINALIZED_STALL_MS;
+  let vaultProviderLedgerLastScannedBlock = finalizedOrigin;
+  const vaultProviderLedgerHead = new HeadMonitor({
+    scanner: VAULT_PROVIDER_LEDGER_CURSOR_SOURCE,
+    head: "finalized",
+    logger,
+    stallMs: finalizedStallMs
+  });
+  // Pool and governance reads pinned to a block number may reach a node without that block.
+  const blockGrace = new UnknownBlockGrace();
+  const gameHubScanHead = new HeadMonitor({
+    scanner: BET_INDEX_CURSOR_SOURCE,
+    head: "latest",
+    logger
+  });
   let recoveryAfterBetId = 0n;
   let recoveringIndexedBets = false;
   let drainingQueue = false;
@@ -262,9 +300,30 @@ export function createKeeperRuntime({
       bank: pool.bank,
       origin: recoveryOrigin,
       chunkSize: config.scanChunkBlocks,
-      maxChunks: config.scanMaxChunksPerPass
+      maxChunks: config.scanMaxChunksPerPass,
+      logger,
+      finalizedStallMs
     })
   );
+  /** Received results whose settlement reverts, by bet ID (ADR-0037 §7.3 operating rule 3). */
+  const voidCandidates = new Map<string, VoidCandidate>();
+  let voidParameters: VoidParameters | undefined;
+  let voidPassRunning = false;
+  let voidPassRequested = false;
+  // After a start no bet is voided until every earlier candidate can be known: lifecycle recovery has
+  // reached the head seen at startup and the indexed open bets have been requeued once.
+  let startupHead: bigint | undefined;
+  let indexedRequeueComplete = false;
+  let startupRecoveryComplete = false;
+  let waitingForStartupRecoveryLogged = false;
+  let governance:
+    | {
+        timelock: Address;
+        verifiedAt: number;
+        scannedThrough: bigint;
+        head: HeadMonitor;
+      }
+    | undefined;
   const recoverySource = `casino-open-bets-v1:${recoveryOrigin ?? 0n}`;
   let recoveryScannedThrough = recoveryOrigin == null ? 0n : recoveryOrigin - 1n;
   let writeTail: Promise<unknown> = Promise.resolve();
@@ -331,6 +390,10 @@ export function createKeeperRuntime({
       // Rotate rather than repeatedly selecting a stale/poisoned prefix. Restart
       // intentionally begins at zero; on-chain getBet makes replay idempotent.
       recoveryAfterBetId = ids.length < CASINO_RECOVERY_PAGE_SIZE ? 0n : ids[ids.length - 1]!;
+      if (ids.length < CASINO_RECOVERY_PAGE_SIZE && !indexedRequeueComplete) {
+        indexedRequeueComplete = true;
+        checkStartupRecovery();
+      }
     } finally {
       recoveringIndexedBets = false;
     }
@@ -348,13 +411,15 @@ export function createKeeperRuntime({
       state: number;
       refundDeadline: bigint;
       bank: Address;
+      vrfRequestedAt?: bigint;
     };
     return {
       betId: BigInt(bet.betId),
       requestId: BigInt(bet.requestId),
       state: mapBetState(Number(bet.state)),
       bank: bet.bank,
-      refundDeadline: BigInt(bet.refundDeadline)
+      refundDeadline: BigInt(bet.refundDeadline),
+      ...(bet.vrfRequestedAt == null ? {} : { vrfRequestedAt: BigInt(bet.vrfRequestedAt) })
     };
   };
 
@@ -460,6 +525,321 @@ export function createKeeperRuntime({
     });
   };
 
+  // ---------------------------------------------------------------------------------------------
+  // Void executor: the operator's keeper attempts every eligible bet in VRF request order, in
+  // consecutive blocks, and publishes the results (ADR-0037 §7.3 operating rule 3).
+  // ---------------------------------------------------------------------------------------------
+
+  const readVoidParameters = async (): Promise<VoidParameters> => {
+    const entries = await Promise.all(
+      (Object.entries(VOID_PARAMETER_FUNCTIONS) as Array<[keyof VoidParameters, string]>).map(
+        async ([key, functionName]) => {
+          const value = await publicClient.readContract({
+            address: config.gameHub,
+            abi: GAME_HUB_KEEPER_ABI,
+            functionName
+          });
+          if (typeof value !== "bigint") throw new Error(`GameHub ${functionName} is unreadable`);
+          return [key, value] as const;
+        }
+      )
+    );
+    return Object.fromEntries(entries) as VoidParameters;
+  };
+
+  /** Reads the GameHub void constants once and checks KEEPER_VOID_GAS_LIMIT against them. */
+  const requireVoidParameters = async () => {
+    if (voidParameters) return voidParameters;
+    const parameters = await readVoidParameters();
+    checkVoidGasLimit(config.voidGasLimit, parameters);
+    voidParameters = parameters;
+    logger.info("casino.void.parameters", {
+      voidDelay: parameters.voidDelay.toString(),
+      publicVoidDelay: parameters.publicVoidDelay.toString(),
+      settlementGas: parameters.settlementGas.toString(),
+      reserveGas: parameters.reserveGas.toString(),
+      callOverhead: parameters.callOverhead.toString(),
+      gasLimit: config.voidGasLimit.toString()
+    });
+    return parameters;
+  };
+
+  const readVoidCohortEnd = async (bank: Address) =>
+    BigInt(
+      (await publicClient.readContract({
+        address: config.gameHub,
+        abi: GAME_HUB_KEEPER_ABI,
+        functionName: "voidCohortEnd",
+        args: [bank]
+      })) as bigint
+    );
+
+  const publishVoidCandidates = (chainTime?: bigint) =>
+    writeHealth(
+      health.recordVoidCandidates(
+        [...voidCandidates.values()].sort(compareVoidCandidates).map((candidate) => ({
+          betId: candidate.betId.toString(),
+          bank: candidate.bank,
+          vrfRequestedAt: candidate.vrfRequestedAt.toString(),
+          receivedAt: candidate.receivedAt.toString(),
+          receivedFrom: candidate.receivedFrom,
+          eligibleAt: candidate.eligibleAt.toString(),
+          // Time only moves forward and a void window only moves eligibility earlier.
+          eligible: candidate.eligibleSeenAt != null,
+          reason: candidate.reason
+        })),
+        queue.size,
+        chainTime
+      )
+    );
+
+  /**
+   * When the result was received: the block of the ResultReceived or BetRandomReady event that queued
+   * the bet. Without one, the VRF request time stands in; it can only make the age larger.
+   */
+  const resolveReceivedAt = async (
+    previous: VoidCandidate | undefined,
+    event: KeeperEvent | undefined,
+    vrfRequestedAt: bigint
+  ): Promise<Pick<VoidCandidate, "receivedAt" | "receivedFrom">> => {
+    if (previous?.receivedFrom === "result") return previous;
+    if (event?.resultBlockNumber != null) {
+      try {
+        const block = await publicClient.getBlock({ blockNumber: event.resultBlockNumber });
+        return { receivedAt: block.timestamp, receivedFrom: "result" };
+      } catch {
+        // The request time stands in until a later check reads the block.
+      }
+    }
+    return { receivedAt: vrfRequestedAt, receivedFrom: "request" };
+  };
+
+  const closeVoidCandidate = (betId: bigint) => {
+    if (!voidCandidates.delete(betId.toString())) return;
+    publishVoidCandidates();
+    writeHealth(health.recordVoidCandidateClosed(betId, queue.size));
+  };
+
+  /**
+   * finalizeIfReady found that the settlement of a received result reverts. The bet becomes (or stays)
+   * a void candidate; the answer tells the queue when voidBet becomes allowed.
+   */
+  const assessVoid = async (bet: BetRead, reason: string, event?: KeeperEvent) => {
+    const parameters = await requireVoidParameters();
+    if (bet.vrfRequestedAt == null || !bet.bank)
+      throw new Error("Void eligibility needs the bet's Bank and VRF request time");
+    const [cohortEnd, clock] = await Promise.all([readVoidCohortEnd(bet.bank), readRefundClock()]);
+    const eligibleAt = voidEligibleAt(bet.vrfRequestedAt, cohortEnd, parameters);
+    const eligible = eligibleAt <= clock.timestamp;
+    const key = bet.betId.toString();
+    const previous = voidCandidates.get(key);
+    const received = await resolveReceivedAt(previous, event, bet.vrfRequestedAt);
+    const changed =
+      !previous ||
+      previous.eligibleAt !== eligibleAt ||
+      (eligible && previous.eligibleSeenAt == null);
+    // Updated in place: a void pass may hold this candidate while the queue rechecks the bet.
+    const candidate: VoidCandidate = previous ?? {
+      betId: bet.betId,
+      bank: bet.bank,
+      vrfRequestedAt: bet.vrfRequestedAt,
+      eligibleAt,
+      reason,
+      ...received
+    };
+    Object.assign(candidate, {
+      bank: bet.bank,
+      vrfRequestedAt: bet.vrfRequestedAt,
+      eligibleAt,
+      reason,
+      receivedAt: received.receivedAt,
+      receivedFrom: received.receivedFrom
+    });
+    if (eligible) candidate.eligibleSeenAt ??= Date.now();
+    voidCandidates.set(key, candidate);
+    if (changed)
+      logger.warn("casino.void.candidate", {
+        betId: key,
+        bank: bet.bank,
+        vrfRequestedAt: bet.vrfRequestedAt.toString(),
+        eligibleAt: eligibleAt.toString(),
+        chainTime: clock.timestamp.toString(),
+        receivedAt: candidate.receivedAt.toString(),
+        receivedFrom: candidate.receivedFrom,
+        eligible,
+        reason
+      });
+    publishVoidCandidates(clock.timestamp);
+    if (eligible) requestVoidPass();
+    return { eligibleAt, chainTime: clock.timestamp };
+  };
+
+  /** A queue outcome other than an unbookable deferral shows the bet left the void executor. */
+  const syncVoidCandidate = (betId: bigint, outcome: FinalizeOutcome) => {
+    if (outcome.kind === "failed") return;
+    if (outcome.kind === "deferred" && outcome.voidEligibleAt != null) return;
+    closeVoidCandidate(betId);
+  };
+
+  const voidAttemptDeps = {
+    gameHub: config.gameHub,
+    gasLimit: config.voidGasLimit,
+    readBet,
+    readRequest,
+    simulateFinalize,
+    simulateVoid: async (betId: bigint) => {
+      const { result } = await publicClient.simulateContract({
+        account: account.address,
+        address: config.gameHub,
+        abi: GAME_HUB_KEEPER_ABI,
+        functionName: "voidBet",
+        args: [betId],
+        gas: config.voidGasLimit
+      });
+      return result === true;
+    },
+    writeVoid: async (betId: bigint) =>
+      walletClient.writeContract({
+        account,
+        chain,
+        address: config.gameHub,
+        abi: GAME_HUB_KEEPER_ABI,
+        functionName: "voidBet",
+        args: [betId],
+        gas: config.voidGasLimit
+      }),
+    waitVoidReceipt: async (txHash: Hex) => {
+      const receipt = await publicClient.waitForTransactionReceipt({
+        checkReplacement: false,
+        hash: txHash,
+        pollingInterval: 1_000
+      });
+      return { status: receipt.status, logs: receipt.logs };
+    },
+    materializeReceipt: (betId: bigint, txHash: Hex) =>
+      materializeCasinoReceipt({ source: "void", betId, receivedAt: Date.now() }, txHash),
+    logger
+  };
+
+  const handleVoidOutcome = (candidate: VoidCandidate, outcome: VoidAttemptOutcome) => {
+    const betId = candidate.betId.toString();
+    if (outcome.kind === "notEligible") {
+      candidate.eligibleAt = outcome.eligibleAt;
+      candidate.eligibleSeenAt = undefined;
+    } else if (outcome.kind === "failed") {
+      logger.error("casino.void.failed", { betId, error: outcome.reason, txHash: outcome.txHash });
+    } else if (outcome.kind === "configurationError") {
+      logger.error("casino.void.configuration_error", { betId, error: outcome.reason });
+    } else {
+      voidCandidates.delete(betId);
+      if (outcome.kind === "bookable") logger.info("casino.void.bookable", { betId });
+      if (outcome.kind === "dropped")
+        logger.info("casino.void.dropped", { betId, reason: outcome.reason });
+      // Reconcile the queued bet now: it is terminal, or back on the normal finalize path.
+      enqueue({ source: "void", betId: candidate.betId, receivedAt: Date.now() });
+    }
+    writeHealth(health.recordVoidOutcome(candidate.betId, outcome, queue.size));
+    publishVoidCandidates();
+  };
+
+  const voidEligibleCandidates = async () => {
+    if (voidCandidates.size === 0) return;
+    const parameters = await requireVoidParameters();
+    const { timestamp: chainTime } = await readRefundClock();
+    // One read per Bank: a void window moves the eligibility of its whole cohort.
+    const cohortEnds = new Map<string, bigint>();
+    for (const candidate of voidCandidates.values()) {
+      const bank = candidate.bank.toLowerCase();
+      let cohortEnd = cohortEnds.get(bank);
+      if (cohortEnd == null) {
+        cohortEnd = await readVoidCohortEnd(candidate.bank);
+        cohortEnds.set(bank, cohortEnd);
+      }
+      candidate.eligibleAt = voidEligibleAt(candidate.vrfRequestedAt, cohortEnd, parameters);
+      if (candidate.eligibleAt <= chainTime) candidate.eligibleSeenAt ??= Date.now();
+    }
+    publishVoidCandidates(chainTime);
+    if (!checkStartupRecovery()) {
+      if (!waitingForStartupRecoveryLogged)
+        logger.info("casino.void.waiting_for_startup_recovery", {
+          recoveryScannedThrough: recoveryScannedThrough.toString(),
+          startupHead: startupHead?.toString(),
+          indexedRequeueComplete
+        });
+      waitingForStartupRecoveryLogged = true;
+      return;
+    }
+    const eligible = [...voidCandidates.values()]
+      .filter((candidate) => candidate.eligibleAt <= chainTime)
+      .sort(compareVoidCandidates);
+    for (const { betId } of eligible) {
+      if (stopped) return;
+      const attempt = await withWriteLock(async () => {
+        // The queue may have closed the candidate, or updated it, while this pass waited.
+        const candidate = voidCandidates.get(betId.toString());
+        if (stopped || !candidate) return null;
+        // A backup leaves each newly eligible bet to the primary for its configured delay.
+        if (
+          config.role === "backup" &&
+          Date.now() - (candidate.eligibleSeenAt ?? Date.now()) < config.backupDelayMs
+        )
+          return undefined;
+        // Bet IDs follow VRF request time: a lower bet never examined may belong first.
+        if (queue.hasUnexaminedBefore(betId)) return undefined;
+        return { candidate, outcome: await attemptVoid(candidate, voidAttemptDeps) };
+      });
+      if (attempt === undefined) return;
+      if (attempt === null) continue;
+      handleVoidOutcome(attempt.candidate, attempt.outcome);
+      if (attempt.outcome.kind === "configurationError") return;
+    }
+  };
+
+  const runVoidPass = async () => {
+    voidPassRunning = true;
+    try {
+      while (voidPassRequested && !stopped) {
+        voidPassRequested = false;
+        try {
+          await voidEligibleCandidates();
+          writeHealth(health.recordVoidPass(undefined, queue.size));
+        } catch (error) {
+          const description = describeError(error);
+          logger.error("casino.void.pass_failed", { error: description });
+          writeHealth(health.recordVoidPass(description, queue.size));
+        }
+      }
+    } finally {
+      voidPassRunning = false;
+    }
+  };
+
+  function requestVoidPass() {
+    voidPassRequested = true;
+    if (voidPassRunning || stopped) return;
+    void trackOperation(runVoidPass());
+  }
+
+  /**
+   * ADR-0037 §7.3 rule 3 orders voids by VRF request time, which only holds once every earlier
+   * candidate is known. After a start, lifecycle recovery must reach the head it saw first and the
+   * indexed open bets must have been requeued once. Latches; wakes the void executor when reached.
+   */
+  function checkStartupRecovery() {
+    if (startupRecoveryComplete) return true;
+    const history =
+      recoveryOrigin == null || (startupHead != null && recoveryScannedThrough >= startupHead);
+    if (!history || (betIndexStore && !indexedRequeueComplete)) return false;
+    startupRecoveryComplete = true;
+    logger.info("casino.void.startup_recovery_complete", {
+      recoveryScannedThrough: recoveryScannedThrough.toString(),
+      startupHead: startupHead?.toString()
+    });
+    writeHealth(health.recordVoidStartupRecovery(true, queue.size));
+    if (voidCandidates.size > 0) requestVoidPass();
+    return true;
+  }
+
   const processItem = async (item: QueueItem) => {
     if (stopped) {
       queue.complete(item.betId);
@@ -476,8 +856,10 @@ export function createKeeperRuntime({
         writeRefund,
         waitFinalizeReceipt,
         materializeReceipt: materializeCasinoReceipt,
+        assessVoid,
         logger
       });
+      syncVoidCandidate(item.betId, outcome);
 
       if (outcome.kind === "deferred") {
         queue.retry(item, outcome.retryAfterMs);
@@ -542,6 +924,7 @@ export function createKeeperRuntime({
       requestId: log.args?.requestId,
       randomHash: log.args?.randomHash,
       blockNumber: log.blockNumber,
+      resultBlockNumber: log.blockNumber,
       txHash: log.transactionHash,
       receivedAt: Date.now()
     });
@@ -605,7 +988,8 @@ export function createKeeperRuntime({
       if (bankProviderCursor != null && bankProviderCursor > vaultProviderLedgerLastScannedBlock) {
         const configuredStartBlock = vaultProviderLedgerLastScannedBlock;
         vaultProviderLedgerLastScannedBlock = bankProviderCursor;
-        vaultProviderLedgerFinalizedBlock = bankProviderCursor;
+        // The cursor was finalized when written, so a later read below it is a lagging RPC node.
+        vaultProviderLedgerHead.seed(bankProviderCursor);
         logger.info("casino.keeper.vault_provider_ledger_cursor_resumed", {
           configuredStartBlock: configuredStartBlock.toString(),
           cursorBlock: bankProviderCursor.toString()
@@ -631,6 +1015,7 @@ export function createKeeperRuntime({
   // Receipt events survive a failed entire Hub delivery. Resolve request identity on
   // the canonical consumer; one consumer may serve other pools and Hubs.
   const enqueueVrfLog = async (log: {
+    eventName?: string;
     args?: { requestId?: bigint };
     blockNumber?: bigint;
     transactionHash?: Hex;
@@ -645,6 +1030,8 @@ export function createKeeperRuntime({
       betId: request.betId,
       requestId,
       blockNumber: log.blockNumber,
+      // A later CallbackAttempt can be a retry; only ResultReceived dates the receipt.
+      ...(log.eventName === "ResultReceived" ? { resultBlockNumber: log.blockNumber } : {}),
       txHash: log.transactionHash,
       receivedAt: Date.now()
     });
@@ -681,6 +1068,9 @@ export function createKeeperRuntime({
 
   const scanMissedEvents = async () => {
     const latest = await publicClient.getBlockNumber();
+    // A lagging RPC node can report a latest block below the cursor: scan nothing and say so.
+    gameHubScanHead.seed(lastScannedBlock);
+    writeHealth(health.recordScanHeadBehind(gameHubScanHead.observe(latest).behindBy, queue.size));
     if (latest <= lastScannedBlock) return;
 
     const fromBlock = lastScannedBlock === 0n ? latest : lastScannedBlock + 1n;
@@ -718,6 +1108,7 @@ export function createKeeperRuntime({
           requestId: args.requestId == null ? undefined : BigInt(args.requestId),
           randomHash: args.randomHash,
           blockNumber: log.blockNumber,
+          resultBlockNumber: log.blockNumber,
           txHash: log.transactionHash,
           receivedAt: Date.now()
         });
@@ -741,41 +1132,131 @@ export function createKeeperRuntime({
     }
   };
 
-  const scanVaultProviderLedgerEvents = async () => {
+  const scanVaultProviderLedgerEvents = async (): Promise<FinalizedScanHealth | undefined> => {
     if (
       !betIndexStore ||
       config.vaultProviderLedgerPools.length === 0 ||
       config.vaultProviderLedgerScanIntervalMs <= 0
     ) {
-      return;
+      return undefined;
     }
     const finalized = await publicClient.getBlock({ blockTag: "finalized" });
     if (finalized.number == null)
       throw new Error("Bank provider ledger requires a numbered finalized block");
-    if (
-      vaultProviderLedgerFinalizedBlock != null &&
-      finalized.number < vaultProviderLedgerFinalizedBlock
-    )
-      throw new Error(
-        `Bank provider ledger finalized block regressed from ${vaultProviderLedgerFinalizedBlock} to ${finalized.number}`
-      );
-    vaultProviderLedgerFinalizedBlock = finalized.number;
+    // A read below the cursor yields no range: nothing is scanned until the RPC catches up.
+    const head = vaultProviderLedgerHead.observe(finalized.number);
     const ranges = splitBlockRange({
       fromBlock: vaultProviderLedgerLastScannedBlock + 1n,
-      toBlock: finalized.number,
+      toBlock: head.target,
       chunkSize: config.scanChunkBlocks,
       maxChunks: config.scanMaxChunksPerPass
     });
-    reportScanCap("vault-provider-ledger", ranges, finalized.number);
+    reportScanCap("vault-provider-ledger", ranges, head.target);
     for (const range of ranges) {
       await writeVaultProviderLedgerRange(betIndexStore, publicClient, config, range, logger);
       vaultProviderLedgerLastScannedBlock = range.toBlock;
     }
+    return {
+      scannedThrough: vaultProviderLedgerLastScannedBlock.toString(),
+      finalizedBlock: head.target.toString(),
+      ...(head.behindBy == null ? {} : { finalizedBehindBy: head.behindBy.toString() }),
+      ...(head.stalledSince == null
+        ? {}
+        : { finalizedStalledSince: new Date(head.stalledSince).toISOString() })
+    };
+  };
+
+  /**
+   * Indexes the GovernanceTimelock that governs the release, through finalized blocks from the release
+   * origin, so LPs can read queued admissions during the delay.
+   */
+  const scanGovernanceTimelock = async (): Promise<GovernanceHealth | undefined> => {
+    if (!betIndexStore || !config.poolRegistry) return undefined;
+    if (!governance || Date.now() - governance.verifiedAt >= GOVERNANCE_REVERIFY_MS) {
+      let timelock: Address;
+      try {
+        timelock = await verifyGovernanceTimelock({
+          client: publicClient,
+          poolRegistry: config.poolRegistry,
+          gameHub: config.gameHub,
+          banks: config.releaseBanks ?? [...banks.values()].map((pool) => pool.bank)
+        });
+      } catch (error) {
+        governance = undefined;
+        throw error;
+      }
+      if (governance?.timelock === timelock) governance.verifiedAt = Date.now();
+      else {
+        const cursor = await betIndexStore.getCursor(
+          config.chainId,
+          GOVERNANCE_TIMELOCK_CURSOR_SOURCE,
+          timelock
+        );
+        const head = new HeadMonitor({
+          scanner: GOVERNANCE_TIMELOCK_CURSOR_SOURCE,
+          head: "finalized",
+          logger,
+          stallMs: finalizedStallMs
+        });
+        if (cursor != null) head.seed(cursor);
+        governance = {
+          timelock,
+          verifiedAt: Date.now(),
+          scannedThrough: cursor != null && cursor > finalizedOrigin ? cursor : finalizedOrigin,
+          head
+        };
+        logger.info("casino.keeper.governance_timelock_verified", {
+          timelock,
+          poolRegistry: config.poolRegistry,
+          scannedThrough: governance.scannedThrough.toString()
+        });
+      }
+    }
+    const state = governance;
+    const finalized = await publicClient.getBlock({ blockTag: "finalized" });
+    if (finalized.number == null)
+      throw new Error("Governance timelock indexing requires a numbered finalized block");
+    const head = state.head.observe(finalized.number);
+    const ranges = splitBlockRange({
+      fromBlock: state.scannedThrough + 1n,
+      toBlock: head.target,
+      chunkSize: config.scanChunkBlocks,
+      maxChunks: config.scanMaxChunksPerPass
+    });
+    reportScanCap(GOVERNANCE_TIMELOCK_CURSOR_SOURCE, ranges, head.target);
+    for (const range of ranges) {
+      const events = await fetchGovernanceTimelockEvents({
+        client: publicClient,
+        chainId: config.chainId,
+        timelock: state.timelock,
+        range
+      });
+      // Rows are persisted before the cursor advances; a failed range is retried whole.
+      await betIndexStore.writeGovernanceTimelockEvents(events);
+      await betIndexStore.setCursor({
+        chainId: config.chainId,
+        source: GOVERNANCE_TIMELOCK_CURSOR_SOURCE,
+        cursorKey: state.timelock,
+        blockNumber: range.toBlock
+      });
+      state.scannedThrough = range.toBlock;
+    }
+    return {
+      timelock: state.timelock,
+      scannedThrough: state.scannedThrough.toString(),
+      finalizedBlock: head.target.toString(),
+      ...(head.behindBy == null ? {} : { finalizedBehindBy: head.behindBy.toString() }),
+      ...(head.stalledSince == null
+        ? {}
+        : { finalizedStalledSince: new Date(head.stalledSince).toISOString() }),
+      caughtUp: state.scannedThrough >= head.target
+    };
   };
 
   const scanUnresolvedHistory = async () => {
     if (recoveryOrigin == null) return;
     const latest = await publicClient.getBlockNumber();
+    startupHead ??= latest;
     const ranges = splitBlockRange({
       fromBlock: recoveryScannedThrough + 1n,
       toBlock: latest,
@@ -798,7 +1279,8 @@ export function createKeeperRuntime({
               source: "scan",
               betId: BigInt(betId as bigint),
               receivedAt: Date.now(),
-              blockNumber: log.blockNumber
+              blockNumber: log.blockNumber,
+              ...(eventName === "BetRandomReady" ? { resultBlockNumber: log.blockNumber } : {})
             });
         }
       }
@@ -820,6 +1302,7 @@ export function createKeeperRuntime({
       queue.size,
       recoveryScannedThrough >= latest
     );
+    checkStartupRecovery();
   };
 
   // claimPlayerPayable pays only the player, so the keeper needs no authority to complete a deferred payout.
@@ -874,13 +1357,24 @@ export function createKeeperRuntime({
         await health.recordError(description, queue.size, "recovery");
       }
       const states = await Promise.all(
-        [...banks.values()].map((pool) => readPoolHealth(pool, publicClient))
+        [...banks.values()].map((pool) => readPoolHealth(pool, publicClient, blockGrace))
       );
       await health.recordPools(states, queue.size);
       const payables: PayableHealth[] = [];
       for (const claimer of payableClaimers)
         payables.push(await claimer.run(publicClient, claimPlayerPayable));
       await health.recordPayables(payables, queue.size);
+      try {
+        const progress = await scanGovernanceTimelock();
+        blockGrace.succeed("governance");
+        if (progress) await health.recordGovernanceScan(progress, queue.size);
+      } catch (error) {
+        const description = describeError(error);
+        if (blockGrace.report("governance", error)) {
+          logger.error("casino.keeper.governance_scan_failed", { error: description });
+          await health.recordError(description, queue.size, "governance");
+        } else logger.warn("casino.keeper.governance_scan_transient", { error: description });
+      }
     } catch (error) {
       await health.recordError(describeError(error), queue.size, "pools");
     } finally {
@@ -914,8 +1408,8 @@ export function createKeeperRuntime({
     if (stopped || vaultProviderLedgerScanning) return;
     vaultProviderLedgerScanning = true;
     try {
-      await scanVaultProviderLedgerEvents();
-      writeHealth(health.recordLedgerScan(queue.size));
+      const progress = await scanVaultProviderLedgerEvents();
+      writeHealth(health.recordLedgerScan(queue.size, progress));
     } catch (error) {
       const description = describeError(error);
       logger.error("casino.keeper.vault_provider_ledger_scan_failed", { error: description });
@@ -1010,7 +1504,7 @@ export function createKeeperRuntime({
         })
       );
       if (betIndexStore) {
-        for (const eventName of ["BetFinalized", "BetRefunded"] as const) {
+        for (const eventName of ["BetFinalized", "BetRefunded", "BetVoided"] as const) {
           unwatchers.push(
             wsClient.watchContractEvent({
               poll: false,
@@ -1038,7 +1532,10 @@ export function createKeeperRuntime({
               void trackOperation(
                 (async () => {
                   for (const log of logs)
-                    await enqueueVrfLog(log as unknown as Parameters<typeof enqueueVrfLog>[0]);
+                    await enqueueVrfLog({
+                      ...(log as unknown as Parameters<typeof enqueueVrfLog>[0]),
+                      eventName
+                    });
                   await drainQueue();
                 })()
               ).catch((error) => {
@@ -1072,10 +1569,21 @@ export function createKeeperRuntime({
       startupScanEnabled: config.startupScanEnabled,
       wsEnabled: Boolean(wsClient),
       vaultProviderLedgerPoolCount: config.vaultProviderLedgerPools.length,
-      vaultProviderLedgerScanIntervalMs: config.vaultProviderLedgerScanIntervalMs
+      vaultProviderLedgerScanIntervalMs: config.vaultProviderLedgerScanIntervalMs,
+      voidGasLimit: config.voidGasLimit.toString(),
+      poolRegistry: config.poolRegistry
     });
     writeHealth(health.recordStarted(lastScannedBlock, queue.size));
+    // A KEEPER_VOID_GAS_LIMIT outside the GameHub floor and Base's cap stops the keeper here. An
+    // unreadable GameHub only defers the check to the first void candidate.
+    try {
+      await requireVoidParameters();
+    } catch (error) {
+      if (error instanceof VoidConfigurationError) throw error;
+      logger.warn("casino.void.parameters_unavailable", { error: describeError(error) });
+    }
     await initializeBetIndex();
+    checkStartupRecovery();
 
     // Connecting cannot access the store or submit writes. Do not join a stalled
     // handshake on shutdown; the stopped check closes any socket that arrives later.
@@ -1358,7 +1866,12 @@ async function buildTerminalBetRow({
     randomHash: bet.randomHash,
     requestId: BigInt(bet.requestId).toString(),
     stake: BigInt(bet.stake).toString(),
-    state: terminal.eventName === "BetRefunded" ? "refunded" : "finalized",
+    state:
+      terminal.eventName === "BetRefunded"
+        ? "refunded"
+        : terminal.eventName === "BetVoided"
+          ? "voided"
+          : "finalized",
     terminalTxHash: txHash,
     updatedAt,
     updatedBlock: Number(receipt.blockNumber ?? 0n)
@@ -1376,6 +1889,14 @@ async function buildTerminalBetRow({
         args: terminal.args
       })
     ).toString();
+  } else if (terminal.eventName === "BetVoided") {
+    // The stake became a player payable; nothing was paid out.
+    row.voidedTxHash = txHash;
+    row.refundAmount = bigintString(terminal.args.stake);
+    row.payout = "0";
+    row.payoutGross = "0";
+    row.voidCaller = getAddress(String(terminal.args.caller)) as Address;
+    row.voidSettlementErrorPrefix = terminal.args.settlementErrorPrefix as Hex;
   } else {
     row.refundedTxHash = txHash;
     row.refundAmount = bigintString(terminal.args.refundAmount);
@@ -1399,7 +1920,7 @@ function decodeTerminalLog({
 }) {
   for (const log of logs) {
     if (log.address == null || getAddress(log.address) !== getAddress(gameHub)) continue;
-    for (const eventName of ["BetFinalized", "BetRefunded"] as const) {
+    for (const eventName of ["BetFinalized", "BetRefunded", "BetVoided"] as const) {
       try {
         const decoded = decodeEventLog({
           abi: GAME_HUB_KEEPER_ABI,

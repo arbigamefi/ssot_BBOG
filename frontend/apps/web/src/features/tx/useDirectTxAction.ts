@@ -8,6 +8,7 @@ import type { StepState, TxStepItem, TxStatus } from "@ssot/ui";
 
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 import { useSSOTRuntime } from "../../ssot/runtime";
+import { TxCopyError, txCopyDomainError } from "./tx-error-copy";
 
 type DirectTxLabels = {
   preflight: string;
@@ -128,6 +129,8 @@ function buildSteps(
 }
 
 function toDomainError(error: unknown, fallbackMessage = "—"): DomainError {
+  // The page's own refusal keeps its copy key; anything else thrown is unexpected.
+  if (error instanceof TxCopyError) return txCopyDomainError(error);
   if (typeof error === "object" && error && "message" in error) {
     return {
       code: "UNKNOWN_TX_ERROR",

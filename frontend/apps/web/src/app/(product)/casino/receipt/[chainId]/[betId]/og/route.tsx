@@ -91,6 +91,7 @@ export async function GET(
   const payout = getCasinoCashReturned(row);
   const stake = bigintFromString(row.stake);
   const net = stake != null && payout != null ? payout - stake : undefined;
+  // Shared images carry no locale; like the other OG cards they are English.
   const resultLabel =
     row.state === "finalized"
       ? net != null && net >= 0n
@@ -98,12 +99,20 @@ export async function GET(
         : "Settled"
       : row.state === "refunded"
         ? "Refunded"
-        : row.state === "randomReady"
-          ? "Randomness ready"
-          : "Bet placed";
-  const amount = formatTokenAmount(net ?? payout ?? stake, decimals, symbol, 2);
+        : row.state === "voided"
+          ? "Stake returned"
+          : row.state === "randomReady"
+            ? "Randomness ready"
+            : "Bet placed";
+  // A void leads with the returned stake, as the receipt page does.
+  const amount = formatTokenAmount(
+    row.state === "voided" ? payout : (net ?? payout ?? stake),
+    decimals,
+    symbol,
+    2
+  );
   const tone =
-    row.state === "refunded"
+    row.state === "refunded" || row.state === "voided"
       ? "warning"
       : row.state === "finalized"
         ? net != null && net >= 0n

@@ -1,6 +1,12 @@
 import type { BetRow, GameHubEventRow, SSOTDb } from "@ssot/ssot/indexer";
 import type { PlayerPaymentProof } from "@ssot/bet-index/player-payment";
 
+import {
+  isTerminalBetState,
+  isTerminalGameHubEvent,
+  TERMINAL_GAMEHUB_EVENTS
+} from "../../betting/bet-state";
+
 export type IndexedBetSummary = Pick<BetRow, "betId" | "state" | "lastTxHash">;
 
 export type SettlementProof = {
@@ -19,9 +25,11 @@ export type RefundProof = {
   refundAmount?: bigint;
 };
 
+/** A void returns the whole stake as a claimable player balance; refundAmount is that stake. */
 export type TerminalProof =
   | { kind: "settled"; settlement: SettlementProof }
-  | { kind: "refunded"; refund: RefundProof };
+  | { kind: "refunded"; refund: RefundProof }
+  | { kind: "voided"; refund: RefundProof };
 
 export function findIndexedBetById(
   bets: readonly IndexedBetSummary[],
@@ -33,7 +41,7 @@ export function findIndexedBetById(
 }
 
 export function isTerminalIndexedBet(bet: IndexedBetSummary | undefined) {
-  return bet?.state === "finalized" || bet?.state === "refunded";
+  return isTerminalBetState(bet?.state);
 }
 
 export function parseFinalizedPayout(argsJson: string | undefined): SettlementProof | null {
@@ -56,6 +64,15 @@ export function parseRefund(argsJson: string | undefined): RefundProof | null {
   };
 }
 
+/** GameHub BetVoided carries the returned stake. */
+export function parseVoided(argsJson: string | undefined): RefundProof | null {
+  const args = parseArgs(argsJson);
+  if (!args) return null;
+  return {
+    refundAmount: readBigintArg(args.stake)
+  };
+}
+
 export function matchesBetId(argsJson: string | undefined, expectedBetId: string) {
   const args = parseArgs(argsJson);
   if (!args) return false;
@@ -70,11 +87,7 @@ export function extractTerminalProofFromRows(
   const expected = betId.toString();
   const terminal = [...rows]
     .reverse()
-    .find(
-      (row) =>
-        (row.eventName === "BetFinalized" || row.eventName === "BetRefunded") &&
-        matchesBetId(row.argsJson, expected)
-    );
+    .find((row) => isTerminalGameHubEvent(row.eventName) && matchesBetId(row.argsJson, expected));
   if (!terminal) return null;
 
   if (terminal.eventName === "BetFinalized") {
@@ -82,6 +95,11 @@ export function extractTerminalProofFromRows(
     return settlement
       ? { kind: "settled", settlement: { ...settlement, txHash: terminal.txHash } }
       : null;
+  }
+
+  if (terminal.eventName === "BetVoided") {
+    const voided = parseVoided(terminal.argsJson);
+    return voided ? { kind: "voided", refund: { ...voided, txHash: terminal.txHash } } : null;
   }
 
   const refund = parseRefund(terminal.argsJson);
@@ -105,7 +123,10 @@ export async function readTerminalProof({
           .where("txHash")
           .equals(txHash as GameHubEventRow["txHash"])
           .toArray()
-      : await db.gameHubEvents.where("eventName").anyOf("BetFinalized", "BetRefunded").toArray();
+      : await db.gameHubEvents
+          .where("eventName")
+          .anyOf([...TERMINAL_GAMEHUB_EVENTS])
+          .toArray();
     return extractTerminalProofFromRows(rows, betId);
   } catch {
     return null;

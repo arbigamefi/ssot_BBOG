@@ -29,7 +29,8 @@ const baseConfig: KeeperConfig = {
   betIndexSsl: false,
   betIndexWriteEnabled: false,
   vaultProviderLedgerPools: [],
-  vaultProviderLedgerScanIntervalMs: 60_000
+  vaultProviderLedgerScanIntervalMs: 60_000,
+  voidGasLimit: 11_000_000n
 };
 
 const keeper = "0x3333333333333333333333333333333333333333";
@@ -531,6 +532,254 @@ describe("payable health", () => {
       lastError: expect.stringContaining("send failed")
     });
     await health.recordPayables([{ bank, caughtUp: true, pending: 0 }], 0);
+    expect(health.snapshot().status).toBe("running");
+  });
+});
+
+describe("finalized head stalls", () => {
+  it("degrades the ledger, governance and payables while their finalized head has not advanced", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    const since = "2026-09-25T23:00:00.000Z";
+    await health.recordLedgerScan(0, {
+      scannedThrough: "90",
+      finalizedBlock: "90",
+      finalizedStalledSince: since
+    });
+    await health.recordGovernanceScan(
+      {
+        timelock: "0x4444444444444444444444444444444444444444",
+        scannedThrough: "90",
+        finalizedBlock: "90",
+        finalizedStalledSince: since,
+        caughtUp: true
+      },
+      0
+    );
+    await health.recordPayables(
+      [
+        {
+          bank: baseConfig.gameHub,
+          caughtUp: true,
+          pending: 0,
+          finalizedBlock: "90",
+          finalizedStalledSince: since
+        }
+      ],
+      0
+    );
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["ledger", "governance", "payables"],
+      lastError: `${baseConfig.gameHub}: finalized head 90 has not advanced since ${since}`
+    });
+    await health.recordLedgerScan(0, { scannedThrough: "95", finalizedBlock: "95" });
+    await health.recordGovernanceScan(
+      {
+        timelock: "0x4444444444444444444444444444444444444444",
+        scannedThrough: "95",
+        finalizedBlock: "95",
+        caughtUp: true
+      },
+      0
+    );
+    await health.recordPayables([{ bank: baseConfig.gameHub, caughtUp: true, pending: 0 }], 0);
+    expect(health.snapshot()).toMatchObject({ status: "running", degradedBy: undefined });
+  });
+});
+
+describe("finalized-head and governance progress", () => {
+  it("publishes a lagging finalized read as information, not a failure", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    await health.recordLedgerScan(0, {
+      scannedThrough: "47969422",
+      finalizedBlock: "47969244",
+      finalizedBehindBy: "178"
+    });
+    expect(health.snapshot()).toMatchObject({
+      status: "running",
+      degradedBy: undefined,
+      vaultProviderLedger: { finalizedBehindBy: "178" }
+    });
+  });
+
+  it("keeps the event-scan stall check while the latest read lags behind the cursor", async () => {
+    const { health, advance } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    await health.recordScanHeadBehind(3n, 0);
+    expect(health.snapshot()).toMatchObject({ status: "running", scanHeadBehindBy: "3" });
+    advance(300_001);
+    await health.recordHeartbeat(0);
+    expect(health.snapshot()).toMatchObject({ status: "degraded", degradedBy: ["stalled"] });
+    await health.recordScan(101n, 0);
+    await health.recordScanHeadBehind(undefined, 0);
+    expect(health.snapshot()).toMatchObject({ status: "running", scanHeadBehindBy: undefined });
+  });
+
+  it("degrades on a governance indexing failure until the next successful pass", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    await health.recordError("Governance timelock indexing refused: …", 0, "governance");
+    expect(health.snapshot()).toMatchObject({ status: "degraded", degradedBy: ["governance"] });
+    const timelock = "0x4444444444444444444444444444444444444444" as const;
+    await health.recordGovernanceScan(
+      { timelock, scannedThrough: "200", finalizedBlock: "200", caughtUp: true },
+      0
+    );
+    expect(health.snapshot()).toMatchObject({
+      status: "running",
+      governance: { timelock, scannedThrough: "200", caughtUp: true }
+    });
+  });
+});
+
+describe("void executor health", () => {
+  const txHash = `0x${"dd".repeat(32)}` as const;
+  const prefix = `0x${"ab".repeat(32)}` as const;
+
+  it("starts with the configured gas limit, no outcomes and startup recovery pending", async () => {
+    const { health } = clockedReporter();
+    expect(health.snapshot().voids).toEqual({
+      gasLimit: "11000000",
+      candidates: [],
+      candidateCount: 0,
+      attempts: 0,
+      voided: 0,
+      settled: 0,
+      failed: 0,
+      startupRecoveryComplete: false
+    });
+    await health.recordVoidStartupRecovery(true, 0);
+    expect(health.snapshot().voids?.startupRecoveryComplete).toBe(true);
+  });
+
+  it("degrades unbookedResult once the oldest unbooked result is older than one hour", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    const candidate = (betId: string, receivedAt: string) => ({
+      betId,
+      bank: baseConfig.gameHub,
+      vrfRequestedAt: receivedAt,
+      receivedAt,
+      receivedFrom: "result" as const,
+      eligibleAt: String(BigInt(receivedAt) + 604_800n),
+      eligible: false,
+      reason: "SafeERC20FailedOperation(…)"
+    });
+    const candidates = [candidate("8", "2000"), candidate("7", "1000")];
+    await health.recordVoidCandidates(candidates, 0, 4_600n);
+    expect(health.snapshot()).toMatchObject({
+      status: "running",
+      voids: {
+        oldestUnbooked: {
+          betId: "7",
+          receivedAt: "1000",
+          receivedFrom: "result",
+          ageSeconds: "3600",
+          eligibleAt: "605800"
+        }
+      }
+    });
+    await health.recordVoidCandidates(candidates, 0, 4_601n);
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["unbookedResult"],
+      lastError: "bet 7: result received 3601s ago cannot be booked; voidBet allowed from 605800",
+      voids: { oldestUnbooked: { betId: "7", ageSeconds: "3601" } }
+    });
+    // Without a new chain-time read the last one is used; voiding the old result clears the alert.
+    await health.recordVoidCandidates([candidates[0]!], 0);
+    expect(health.snapshot()).toMatchObject({
+      status: "running",
+      voids: { oldestUnbooked: { betId: "8", ageSeconds: "2601" } }
+    });
+    await health.recordVoidCandidates([], 0);
+    expect(health.snapshot().voids?.oldestUnbooked).toBeUndefined();
+  });
+
+  it("counts outcomes and keeps the last one with its transaction", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    await health.recordVoidOutcome(
+      7n,
+      { kind: "voided", txHash, stake: 5n, settlementErrorPrefix: prefix, latencyMs: 10 },
+      0
+    );
+    await health.recordVoidOutcome(8n, { kind: "settled", txHash, latencyMs: 10 }, 0);
+    await health.recordVoidOutcome(9n, { kind: "raced", state: "voided" }, 0);
+    expect(health.snapshot()).toMatchObject({
+      status: "running",
+      voids: {
+        attempts: 2,
+        voided: 1,
+        settled: 1,
+        failed: 0,
+        lastOutcome: { betId: "8", outcome: "settled", txHash },
+        lastOutcomeAt: "2026-09-26T00:00:00.000Z"
+      }
+    });
+  });
+
+  it("degrades on a failed attempt until that bet is resolved, whatever other bets do", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    await health.recordVoidOutcome(7n, { kind: "failed", reason: "voidBet reverted", txHash }, 0);
+    await health.recordVoidOutcome(
+      8n,
+      { kind: "voided", txHash, stake: 5n, settlementErrorPrefix: prefix, latencyMs: 1 },
+      0
+    );
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["void"],
+      lastError: "bet 7: voidBet reverted",
+      voids: { attempts: 2, failed: 1, voided: 1 }
+    });
+    await health.recordVoidOutcome(7n, { kind: "notEligible", eligibleAt: 10n }, 0);
+    expect(health.snapshot().status).toBe("degraded");
+    await health.recordVoidOutcome(7n, { kind: "raced", state: "settled" }, 0);
+    expect(health.snapshot()).toMatchObject({ status: "running", degradedBy: undefined });
+  });
+
+  it("holds a configuration error until a void transaction succeeds", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    const reason = "voidBet needs more gas than KEEPER_VOID_GAS_LIMIT=11000000";
+    await health.recordVoidOutcome(7n, { kind: "configurationError", reason }, 0);
+    await health.recordVoidOutcome(7n, { kind: "raced", state: "voided" }, 0);
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["void"],
+      voids: { configurationError: reason, lastOutcome: { outcome: "configurationError" } }
+    });
+    await health.recordVoidOutcome(8n, { kind: "settled", txHash, latencyMs: 1 }, 0);
+    expect(health.snapshot().status).toBe("running");
+    expect(health.snapshot().voids?.configurationError).toBeUndefined();
+  });
+
+  it("lists candidates and a void pass that cannot read the chain", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    const candidate = {
+      betId: "7",
+      bank: baseConfig.gameHub,
+      vrfRequestedAt: "1000",
+      receivedAt: "1004",
+      receivedFrom: "result" as const,
+      eligibleAt: "87400",
+      eligible: false,
+      reason: "SafeERC20FailedOperation(…)"
+    };
+    await health.recordVoidCandidates(
+      Array.from({ length: 60 }, (_, i) => ({ ...candidate, betId: String(i) })),
+      0
+    );
+    expect(health.snapshot().voids).toMatchObject({ candidateCount: 60 });
+    expect(health.snapshot().voids?.candidates).toHaveLength(50);
+    await health.recordVoidPass("HttpRequestError [status=429]", 0);
+    expect(health.snapshot()).toMatchObject({ status: "degraded", degradedBy: ["void"] });
+    await health.recordVoidPass(undefined, 0);
     expect(health.snapshot().status).toBe("running");
   });
 });

@@ -32,6 +32,7 @@ export function getStateLabel(
     randomReady: string;
     placed: string;
     refunded: string;
+    voided: string;
     pending: string;
   } = {
     won: "—",
@@ -39,6 +40,7 @@ export function getStateLabel(
     randomReady: "—",
     placed: "—",
     refunded: "—",
+    voided: "—",
     pending: "—"
   }
 ) {
@@ -53,8 +55,9 @@ export function getStateLabel(
   if (state === "randomReady") return labels.randomReady;
   if (state === "placed") return labels.placed;
   if (state === "refunded") return labels.refunded;
-  if (!state) return labels.pending;
-  return `${state.charAt(0).toUpperCase()}${state.slice(1)}`;
+  if (state === "voided") return labels.voided;
+  // Never show a raw state name; anything else is still pending proof.
+  return labels.pending;
 }
 
 export function buildLifecycleSteps(
@@ -63,6 +66,8 @@ export function buildLifecycleSteps(
     placed: string;
     refunded: string;
     refundedDescription: string;
+    voided: string;
+    voidedDescription: string;
     placedDescription: string;
     randomReady: string;
     randomReadyDescription: string;
@@ -72,6 +77,8 @@ export function buildLifecycleSteps(
     placed: "—",
     refunded: "—",
     refundedDescription: "—",
+    voided: "—",
+    voidedDescription: "—",
     placedDescription: "—",
     randomReady: "—",
     randomReadyDescription: "—",
@@ -83,6 +90,14 @@ export function buildLifecycleSteps(
     return [
       { title: labels.placed, state: "done" },
       { title: labels.refunded, description: labels.refundedDescription, state: "done" }
+    ];
+  }
+  // A void needs a received result: placement and randomness both happened.
+  if (state === "voided") {
+    return [
+      { title: labels.placed, description: labels.placedDescription, state: "done" },
+      { title: labels.randomReady, description: labels.randomReadyDescription, state: "done" },
+      { title: labels.voided, description: labels.voidedDescription, state: "done" }
     ];
   }
 
@@ -112,6 +127,7 @@ export function eventStatus(eventName: string): TxStatus {
   switch (eventName) {
     case "BetFinalized":
     case "BetRefunded":
+    case "BetVoided":
       return "reconciled";
     case "BetRandomReady":
     case "BetPlaced":

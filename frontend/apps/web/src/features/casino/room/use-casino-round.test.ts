@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   reset: vi.fn(),
   houseEdgeBps: 200,
   quoteFailed: false,
+  unbookedBetId: undefined as bigint | undefined,
+  unbookedState: "placed" as "placed" | "randomReady",
   recovery: vi.fn()
 }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
@@ -32,14 +34,22 @@ vi.mock("./casino-round", () => ({
     refresh: vi.fn()
   }),
   useCasinoRoundWatcher: () =>
-    mocks.quoteFailed
+    mocks.unbookedBetId !== undefined
       ? {
-          phase: "refundable",
-          bet: { betId: 7n, state: "pendingVrf", houseEdgeBps: 200 },
-          manualRefundAvailable: true,
-          manualRefund: mocks.recovery
+          phase: "result_unbooked",
+          bet: { betId: mocks.unbookedBetId, state: mocks.unbookedState, houseEdgeBps: 200 },
+          manualRefundAvailable: false,
+          manualSettleAvailable: false,
+          isLive: false
         }
-      : { phase: "idle" }
+      : mocks.quoteFailed
+        ? {
+            phase: "refundable",
+            bet: { betId: 7n, state: "pendingVrf", houseEdgeBps: 200 },
+            manualRefundAvailable: true,
+            manualRefund: mocks.recovery
+          }
+        : { phase: "idle" }
 }));
 const game: GameMeta = {
   gameId: "0x1111111111111111111111111111111111111111",
@@ -101,6 +111,8 @@ describe("casino submission intent", () => {
     vi.clearAllMocks();
     mocks.houseEdgeBps = 200;
     mocks.quoteFailed = false;
+    mocks.unbookedBetId = undefined;
+    mocks.unbookedState = "placed";
     vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
   });
   afterEach(() => vi.unstubAllEnvs());
@@ -118,6 +130,23 @@ describe("casino submission intent", () => {
     });
     expect(mocks.planNow).not.toHaveBeenCalled();
   });
+  it.each(["placed", "randomReady"] as const)(
+    "hands an unbookable %s bet to a notice and frees the room for new bets",
+    (betState) => {
+      mocks.unbookedBetId = 7n;
+      mocks.unbookedState = betState;
+      const { result, rerender } = renderHook(() => useCasinoRound(props));
+
+      expect(result.current.pendingSettlementBetIds).toEqual([7n]);
+      expect(mocks.reset).toHaveBeenCalledOnce();
+      // A revealed RandomReady outcome must not stay on the stage or keep the panel locked.
+      expect(props.onRoundReset).toHaveBeenCalledOnce();
+      expect(result.current.manualRefundAvailable).toBe(false);
+      rerender();
+      expect(result.current.pendingSettlementBetIds).toEqual([7n]);
+      expect(mocks.reset).toHaveBeenCalledOnce();
+    }
+  );
   it("blocks two immediate clicks before React can render a pending state", async () => {
     let finish!: (plan: any) => void;
     mocks.planNow.mockImplementation(

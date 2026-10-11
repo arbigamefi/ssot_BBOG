@@ -34,6 +34,8 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.phases.settling.status": "Settling",
       "casino.room.roundStatus.actions.settleResult": "Settle result",
       "casino.room.roundStatus.actions.refundStake": "Refund stake",
+      "casino.room.roundStatus.pendingSettlement.notice": "Bet awaiting settlement.",
+      "casino.room.roundStatus.pendingSettlement.link": "Open bet details",
       "casino.room.shell.noCapacity": "No capacity"
     })[key] ?? key
 }));
@@ -255,5 +257,17 @@ describe("MobileCasinoActionBar", () => {
   it("keeps existing-bet settlement available when new bets are paused", () => {
     renderActionBar({ poolAvailability: "paused", manualSettleAvailable: true });
     expect(screen.getByRole("button", { name: "Settle result" })).not.toBeDisabled();
+  });
+  it("shows a bet awaiting settlement without blocking the next bet", () => {
+    const onPlaceBet = vi.fn();
+    renderActionBar({ pendingSettlementBetIds: [7n], onPlaceBet });
+
+    expect(screen.getByText("Bet awaiting settlement.")).toBeDefined();
+    expect(screen.getByRole("link", { name: "Open bet details" }).getAttribute("href")).toBe(
+      "/portfolio/activity/7"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "PLACE BET" }));
+    expect(onPlaceBet).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "Refund stake" })).toBeNull();
   });
 });

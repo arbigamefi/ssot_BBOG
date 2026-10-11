@@ -41,7 +41,8 @@ const GAME_HUB_EVENTS: GameHubEventName[] = [
   "BetPlaced",
   "BetRandomReady",
   "BetFinalized",
-  "BetRefunded"
+  "BetRefunded",
+  "BetVoided"
 ];
 
 export function createGameHubIndexer(params: {

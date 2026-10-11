@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { ErrorCallout, TxStatusChip, TxStepper } from "@ssot/ui";
 
 import { shortHex } from "./format";
+import { txErrorMessage } from "../../../tx/tx-error-copy";
 import type { useDirectTxAction } from "../../../tx/useDirectTxAction";
 
 type ActionFlow = ReturnType<typeof useDirectTxAction>;
@@ -89,7 +90,7 @@ export function BetDetailActions({
           {activeFlow.error ? (
             <ErrorCallout
               title={t("portfolio.activity.detail.actions.transactionError")}
-              message={activeFlow.error.message}
+              message={txErrorMessage(t, activeFlow.error)}
             />
           ) : null}
           <TxStepper

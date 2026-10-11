@@ -219,15 +219,60 @@ describe("NFT liquidity SDK", () => {
       totalRefunded: 4n,
       totalFeeOnPayout: 5n,
       totalProtocolFeeAccrued: 6n,
-      totalBetsHeld: 7n,
+      totalBetsHeld: 9n,
       totalBetsSettled: 6n,
-      totalBetsRefunded: 1n
+      totalBetsRefunded: 1n,
+      totalBetsVoided: 1n,
+      totalVoided: 10n
     });
     expect(
       f.pub.readContract.mock.calls.some(([request]) => request.functionName === "balanceOf")
     ).toBe(false);
     f.state.ssot.accountingValid = false;
     expect((await f.sdk.bank.getSnapshot(1)).lpStatus).toBe("invalidAccounting");
+  });
+  it("reads PoolRegistry activity at the snapshot block", async () => {
+    const f = nftFixture();
+    expect((await f.sdk.bank.getSnapshot(1)).poolActive).toBe(true);
+    f.state.poolActive = false;
+    expect((await f.sdk.bank.getSnapshot(1)).poolActive).toBe(false);
+    expect(f.pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "isPoolActive", args: [1n], blockNumber: 42n })
+    );
+  });
+  it("deposits into a registered pool before betting starts (ADR-0037 §9 D1)", async () => {
+    const f = nftFixture(undefined, { poolListedActive: false });
+    f.state.poolActive = false;
+    expect(await f.sdk.vault.addDeposit(1, 10n)).toMatchObject({ ok: true });
+    expect(f.wallet.writeContract).toHaveBeenLastCalledWith(
+      expect.objectContaining({ address: VAULT, functionName: "addDepositFor", args: [OWNER, 10n] })
+    );
+    // Betting still waits for activation.
+    expect(
+      await f.sdk.gameHub.planPlaceBet({
+        chainId: 84532,
+        gameId: GAME,
+        poolId: 1,
+        betCount: 1,
+        stake: 10n,
+        params: "0x",
+        stakeSpec: encodeStakeSpec({ amountPerRoll: 10n, betCount: 1, stopGain: 0n, stopLoss: 0n }),
+        maxHouseEdgeBps: 200
+      })
+    ).toMatchObject({ error: { code: "POOL_INACTIVE" } });
+  });
+  it("refuses deposits while the Bank is paused, before any approval", async () => {
+    const f = nftFixture();
+    f.state.ssot.riskInPaused = true;
+    expect(await f.sdk.vault.addDeposit(1, 10n)).toEqual({
+      txHash: "0x0",
+      ok: false,
+      error: { code: "DEPOSITS_PAUSED", message: expect.any(String), severity: "warning" }
+    });
+    expect(f.pub.simulateContract).not.toHaveBeenCalled();
+    expect(f.wallet.writeContract).not.toHaveBeenCalled();
+    // A pause never closes an NFT exit (ADR-0037 §4).
+    expect(await f.sdk.vault.withdrawDeposit(1, FIRST_ID, ONE)).toMatchObject({ ok: true });
   });
   it("caps deposits by G including unresolved player principal", async () => {
     const f = nftFixture();

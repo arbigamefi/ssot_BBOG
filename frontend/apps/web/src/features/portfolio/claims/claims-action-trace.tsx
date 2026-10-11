@@ -2,7 +2,8 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { ErrorCallout, TxStepper, TxStatusChip } from "@ssot/ui";
 
-import { serializeErrorDetails, shortHex } from "./format";
+import { txErrorMessage } from "../../tx/tx-error-copy";
+import { shortHex } from "./format";
 import type { ClaimsFlowState } from "./types";
 
 export function ClaimsActionTrace({
@@ -29,8 +30,7 @@ export function ClaimsActionTrace({
       {flow.error ? (
         <ErrorCallout
           title={t("portfolio.claims.trace.error")}
-          message={flow.error.message}
-          details={serializeErrorDetails(flow.error)}
+          message={txErrorMessage(t, flow.error)}
         />
       ) : null}
       <TxStepper

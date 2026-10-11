@@ -9,7 +9,8 @@ import {
   type Address
 } from "viem";
 import { getContractAbis } from "@ssot/ssot/abis";
-const { LiquidityVaultAbi, GameHubAbi, BankAbi, VRFHubAbi } = getContractAbis();
+const { LiquidityVaultAbi, GameHubAbi, BankAbi, VRFHubAbi, SettlementRouterAbi } =
+  getContractAbis();
 const rpc = process.env.BANK_ANVIL_RPC;
 test.skip(!rpc, "Run the isolated Bank browser gate, not the deployment smoke suite");
 test("connected wallet LP cash flow and casino approval-to-callback accounting", async ({
@@ -191,7 +192,7 @@ test("connected wallet LP cash flow and casino approval-to-callback accounting",
   await page.evaluate(() => (window as any).bankTestWallet.releaseSend());
   await expect(
     page
-      .getByText("The wallet or network changed. Review the current action before trying again.", {
+      .getByText("Your wallet or network changed. Review the action and try again.", {
         exact: true
       })
       .first()
@@ -227,7 +228,7 @@ test("connected wallet LP cash flow and casino approval-to-callback accounting",
     .toBe(false);
   await expect(
     page
-      .getByText("The wallet or network changed. Review the current action before trying again.", {
+      .getByText("Your wallet or network changed. Review the action and try again.", {
         exact: true
       })
       .last()
@@ -332,6 +333,13 @@ test("connected wallet LP cash flow and casino approval-to-callback accounting",
   };
   const readHub = (functionName: string, args: any[] = []) =>
     client.readContract({ address: state.hub, abi: GameHubAbi, functionName, args });
+  const router = (await readHub("settlementRouter")) as Address;
+  const nextPositionId = () =>
+    client.readContract({
+      address: router,
+      abi: SettlementRouterAbi,
+      functionName: "nextPositionId"
+    });
   await expect(page.getByRole("button", { name: "PLACE BET", exact: true })).toBeEnabled();
   await page.evaluate(() => (window as any).bankTestWallet.holdNextSend());
   await page.getByRole("button", { name: "PLACE BET", exact: true }).click();
@@ -350,7 +358,7 @@ test("connected wallet LP cash flow and casino approval-to-callback accounting",
   await expect(
     page.getByRole("button", { name: "Check settings and continue", exact: true })
   ).toBeVisible();
-  expect(await readHub("nextPositionIdHint")).toBe(1n);
+  expect(await nextPositionId()).toBe(1n);
   const approvalOnly = await page.evaluate(() => (window as any).bankTestWallet.calls.slice(-1)[0]);
   expect(approvalOnly.params[0].to.toLowerCase()).toBe(state.token.toLowerCase());
   expect(`0x${approvalOnly.params[0].data.slice(34, 74)}`).toBe(state.hub.toLowerCase());
@@ -363,7 +371,7 @@ test("connected wallet LP cash flow and casino approval-to-callback accounting",
   await amount.fill("0.01");
   await expect(page.getByRole("button", { name: "PLACE BET", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "PLACE BET", exact: true }).click();
-  await expect.poll(() => readHub("nextPositionIdHint"), { timeout: 40_000 }).toBe(2n);
+  await expect.poll(nextPositionId, { timeout: 40_000 }).toBe(2n);
   const bet = (await readHub("getBet", [1n])) as any;
   expect(bet.stake).toBe(250_000n);
   expect(bet.houseEdgeBps).toBe(250);
@@ -422,7 +430,7 @@ test("connected wallet LP cash flow and casino approval-to-callback accounting",
   await page.screenshot({ path: testInfo.outputPath("casino-terminal-desktop.png") });
   await result.getByRole("button", { name: "Close", exact: true }).last().click();
   await expect(result).toHaveCount(0);
-  expect(await readHub("nextPositionIdHint")).toBe(2n);
+  expect(await nextPositionId()).toBe(2n);
   await page.goto("/earn?chainId=84532");
   await page.getByRole("button", { name: "Withdraw", exact: true }).click();
   expect(await read("withdrawAfter", [id])).toBe(relocked);

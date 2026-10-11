@@ -1,4 +1,5 @@
-export type BetState = "placed" | "randomReady" | "finalized" | "refunded";
+/** "voided": a received result that could never be booked; the stake became a player payable (ADR-0037 §7). */
+export type BetState = "placed" | "randomReady" | "finalized" | "refunded" | "voided";
 
 export interface DomainBet {
   betId: bigint;

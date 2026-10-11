@@ -2,14 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import type { Address, PublicClient } from "viem";
 import { createPayableClaimer, type PayableClaim } from "./payables.js";
 import { KeeperHealthReporter } from "./health.js";
-import type { KeeperConfig } from "./types.js";
+import type { KeeperConfig, KeeperLogger } from "./types.js";
 
 const bank = "0x0000000000000000000000000000000000000001" as const;
 const alice = "0x00000000000000000000000000000000000000a1" as Address;
 const bob = "0x00000000000000000000000000000000000000b0" as Address;
 const hash = `0x${"ab".repeat(32)}` as const;
 
-function fixture(chunkSize = 1_000n, maxChunks = 5) {
+function fixture(chunkSize = 1_000n, maxChunks = 5, logger?: KeeperLogger) {
   const state = {
     head: 100n,
     events: [] as { blockNumber: bigint; player: Address; removed?: boolean }[],
@@ -48,6 +48,7 @@ function fixture(chunkSize = 1_000n, maxChunks = 5) {
     origin: 10n,
     chunkSize,
     maxChunks,
+    logger,
     now: () => state.clock
   });
   return { state, client, claim, claimer, getContractEvents };
@@ -242,7 +243,8 @@ it.each([
       chainId: 84532,
       role: "primary",
       gameHub: bank,
-      vrfHub: bank
+      vrfHub: bank,
+      voidGasLimit: 11_000_000n
     } as unknown as KeeperConfig,
     keeper: bank
   });
@@ -321,22 +323,78 @@ describe("finalized payable discovery", () => {
     }
   );
 
-  it("keeps a finalized height regression unhealthy until the provider recovers", async () => {
-    const f = fixture();
+  it("scans nothing past a lagging finalized read, without an error, and misses nothing once the RPC catches up", async () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const f = fixture(1_000n, 5, logger);
     f.state.finalizedHead = 90n;
-    await f.claimer.run(f.client, f.claim);
+    expect(await f.claimer.run(f.client, f.claim)).toMatchObject({
+      scannedThrough: "90",
+      caughtUp: true
+    });
+    // Load-balanced nodes disagree: the next reads report an older finalized block (2026-10-11).
     f.state.finalizedHead = 80n;
+    f.state.events.push({ blockNumber: 95n, player: alice });
+    f.state.owed.set(alice, 5n);
+    const health = new KeeperHealthReporter({
+      config: {
+        pollIntervalMs: 15_000,
+        vaultProviderLedgerPools: [],
+        chainId: 84532,
+        role: "primary",
+        gameHub: bank,
+        vrfHub: bank,
+        voidGasLimit: 11_000_000n
+      } as unknown as KeeperConfig,
+      keeper: bank
+    });
+    await health.recordRunning(100n, 0);
     for (let i = 0; i < 2; ++i) {
-      expect(await f.claimer.run(f.client, f.claim)).toMatchObject({
-        caughtUp: false,
+      const lagging = await f.claimer.run(f.client, f.claim);
+      expect(lagging).toMatchObject({
+        caughtUp: true,
         scannedThrough: "90",
         finalizedBlock: "80",
-        readError: "Error: Payable finalized block regressed from 90 to 80"
+        finalizedBehindBy: "10"
       });
+      expect(lagging.error).toBeUndefined();
+      expect(lagging.readError).toBeUndefined();
+      await health.recordPayables([lagging], 0);
     }
+    expect(health.snapshot()).toMatchObject({ status: "running", degradedBy: undefined });
+    expect(health.snapshot().payables?.[0]?.finalizedBehindBy).toBe("10");
     expect(f.getContractEvents).toHaveBeenCalledTimes(1);
-    f.state.finalizedHead = 90n;
-    expect(await f.claimer.run(f.client, f.claim)).toMatchObject({ caughtUp: true });
+    expect(f.claim).not.toHaveBeenCalled();
+    // One warning per occurrence, not one per pass.
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "casino.keeper.head_behind",
+      expect.objectContaining({ head: "finalized", reportedBlock: "80", highestBlock: "90" })
+    );
+
+    // The provider catches up: scanning resumes after the cursor and finds the debt at block 95.
+    f.state.head = 110n;
+    f.state.finalizedHead = 100n;
+    const recovered = await f.claimer.run(f.client, f.claim);
+    expect(recovered).toMatchObject({
+      caughtUp: true,
+      scannedThrough: "100",
+      finalizedBlock: "100"
+    });
+    expect(recovered.finalizedBehindBy).toBeUndefined();
+    expect(f.getContractEvents.mock.calls.at(-1)?.[0]).toMatchObject({
+      fromBlock: 91n,
+      toBlock: 100n
+    });
+    expect(f.claim).toHaveBeenCalledWith(bank, alice);
+    expect(logger.info).toHaveBeenCalledWith(
+      "casino.keeper.head_caught_up",
+      expect.objectContaining({ head: "finalized", block: "100" })
+    );
+
+    // A later lag is a new occurrence.
+    f.state.finalizedHead = 99n;
+    await f.claimer.run(f.client, f.claim);
+    expect(logger.warn).toHaveBeenCalledTimes(2);
   });
 
   it("does not checkpoint a failed finalized log page", async () => {
@@ -412,5 +470,77 @@ describe("payable failure reconciliation", () => {
     expect(first.claimError).toContain(alice);
     expect(f.state.owed.get(bob)).toBe(0n);
     expect((await f.claimer.run(f.client, f.claim)).claimError).toBe(first.claimError);
+  });
+});
+
+describe("finalized stalls and lagging nodes", () => {
+  it("reports a finalized head that has not advanced for the stall limit", async () => {
+    const f = fixture();
+    const claimer = createPayableClaimer({
+      bank,
+      origin: 10n,
+      chunkSize: 1_000n,
+      maxChunks: 5,
+      finalizedStallMs: 3_600_000,
+      now: () => f.state.clock
+    });
+    f.state.finalizedHead = 90n;
+    expect((await claimer.run(f.client, f.claim)).finalizedStalledSince).toBeUndefined();
+    f.state.clock = 3_599_999;
+    expect((await claimer.run(f.client, f.claim)).finalizedStalledSince).toBeUndefined();
+    f.state.clock = 3_600_000;
+    const stalled = await claimer.run(f.client, f.claim);
+    expect(stalled).toMatchObject({
+      caughtUp: true,
+      finalizedBlock: "90",
+      finalizedStalledSince: "1970-01-01T00:00:00.000Z"
+    });
+    const health = new KeeperHealthReporter({
+      config: {
+        pollIntervalMs: 15_000,
+        vaultProviderLedgerPools: [],
+        chainId: 84532,
+        role: "primary",
+        gameHub: bank,
+        vrfHub: bank,
+        voidGasLimit: 11_000_000n
+      } as unknown as KeeperConfig,
+      keeper: bank
+    });
+    await health.recordRunning(100n, 0);
+    await health.recordPayables([stalled], 0);
+    expect(health.snapshot()).toMatchObject({ status: "degraded", degradedBy: ["payables"] });
+    f.state.finalizedHead = 91n;
+    const advanced = await claimer.run(f.client, f.claim);
+    expect(advanced.finalizedStalledSince).toBeUndefined();
+    await health.recordPayables([advanced], 0);
+    expect(health.snapshot().status).toBe("running");
+  });
+
+  it("holds a block-pinned balance read that reaches a node without the block for five minutes", async () => {
+    const f = fixture();
+    f.state.events.push({ blockNumber: 20n, player: alice });
+    f.state.owed.set(alice, 5n);
+    const read = f.client.readContract;
+    let missing = true;
+    f.client.readContract = vi.fn(async (query: Parameters<typeof read>[0]) => {
+      if (missing) throw new Error("header not found");
+      return read(query);
+    }) as unknown as typeof f.client.readContract;
+    const first = await f.claimer.run(f.client, f.claim);
+    expect(first.readError).toBeUndefined();
+    expect(first.transientReadError).toBe("Error: header not found");
+    expect(f.claim).not.toHaveBeenCalled();
+    f.state.clock = 299_999;
+    expect((await f.claimer.run(f.client, f.claim)).readError).toBeUndefined();
+    f.state.clock = 300_000;
+    expect(await f.claimer.run(f.client, f.claim)).toMatchObject({
+      readError: "Error: header not found"
+    });
+    missing = false;
+    const recovered = await f.claimer.run(f.client, f.claim);
+    expect(recovered.readError).toBeUndefined();
+    expect(recovered.transientReadError).toBeUndefined();
+    expect(f.claim).toHaveBeenCalledWith(bank, alice);
   });
 });

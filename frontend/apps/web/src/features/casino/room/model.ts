@@ -5,7 +5,7 @@ export type GameMeta = {
   module: `0x${string}`;
 };
 
-export type BetStatus = "won" | "lost" | "pending" | "settled" | "cancelled";
+export type BetStatus = "won" | "lost" | "pending" | "settled" | "cancelled" | "voided";
 
 export function toGameMeta(raw: unknown): GameMeta {
   const source = raw as {
@@ -31,6 +31,7 @@ export function shortHex(value?: string) {
 export function mapBetState(state?: string): BetStatus {
   if (!state) return "pending";
   const normalized = state.toLowerCase();
+  if (normalized === "voided") return "voided";
   if (normalized.includes("won")) return "won";
   if (normalized.includes("lost")) return "lost";
   if (normalized.includes("final") || normalized.includes("settled")) return "settled";

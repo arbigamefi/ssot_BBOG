@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { DepositCursor } from "@ssot/ssot";
+import type { DepositCursor, DomainError } from "@ssot/ssot";
 import { toast } from "@ssot/ui";
 import { isLpDepositEnabledForChain } from "../../../app-shell/casino-access";
 import { PageTransition } from "../../../components/PageTransition";
@@ -20,13 +20,27 @@ import { buildEarnHeroMetrics } from "../../../features/earn/earn-hero-metrics";
 import { BankProviderLedgerPanel } from "../../../features/earn/BankProviderLedgerPanel";
 import { BankrollPerformancePanel } from "../../../features/earn/BankrollPerformancePanel";
 import { useBankProviderLedger } from "../../../features/earn/useBankProviderLedger";
+import { GovernanceQueuePanel } from "../../../features/governance/governance-queue-panel";
 import { formatTokenAmount, getExplorerBaseUrl, shortHex } from "../../../features/earn/format";
 import type { EarnTab } from "../../../features/earn/types";
 import { getPoolAssetContext, type PoolAssetContext } from "../../../features/assets/pool-asset";
 import { formatUnits, parseDecimalToUnits } from "../../../features/betting/model/units";
+import {
+  thrownErrorMessage,
+  TxCopyError,
+  txErrorMessage
+} from "../../../features/tx/tx-error-copy";
 import { useDirectTxAction, useSequencedTxAction } from "../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../ssot/sdk";
+
+/** SDK codes whose Earn-specific copy already exists. */
+const EARN_ERROR_COPY: Readonly<Record<string, string>> = {
+  NOT_DEPOSIT_OWNER: "earn.nft.ownerChanged",
+  INSUFFICIENT_FREE_CAPITAL: "earn.nft.status.insufficientFreeCapital",
+  LP_UNAVAILABLE: "earn.nft.unavailable",
+  NFT_WITHDRAWAL_UNAVAILABLE: "earn.nft.unavailable"
+};
 
 export function EarnPageClient() {
   const t = useTranslations();
@@ -134,12 +148,6 @@ export function EarnPageClient() {
     queryFn: () => sdk!.bank.getAssetBalance(context!.asset.address, sdk!.account!),
     refetchInterval: 15_000
   });
-  const playerDebt = useQuery({
-    queryKey: ["ssot", "earn", "playerDebt", inputScope, snapshot?.updatedAtBlock.toString()],
-    enabled: Boolean(enabled && sdk?.account && snapshot),
-    queryFn: () =>
-      sdk!.bank.getPlayerPayable(poolId!, sdk!.account!, { blockNumber: snapshot!.updatedAtBlock })
-  });
   const ledger = useBankProviderLedger({
     sdk,
     poolId,
@@ -171,19 +179,18 @@ export function EarnPageClient() {
     labels,
     errorMessage: t("earn.toast.failed")
   });
-  const debtFlow = useDirectTxAction({
-    action: "CLAIM_PLAYER_PAYABLE",
-    labels,
-    errorMessage: t("earn.toast.failed")
-  });
   const currentFlow = tab === "deposit" ? depositFlow : withdrawalFlow;
-  const busy = submitting || depositFlow.busy || withdrawalFlow.busy || debtFlow.busy;
+  const busy = submitting || depositFlow.busy || withdrawalFlow.busy;
   const flow: EarnFlowState = {
     ...currentFlow,
     busy,
     blockNumber: currentFlow.journalEntry?.blockNumber
   };
-  const depositsEnabled = isLpDepositEnabledForChain(chainId) && context?.pool.active === true;
+  // ADR-0037 §9 D1: LPs deposit while the pool is registered but betting has not started; only the
+  // Bank pause (riskInPaused) closes deposits on-chain.
+  const depositsEnabled = isLpDepositEnabledForChain(chainId);
+  // SDK results and our own refusals (TxCopyError) carry a code; no thrown text reaches the toast.
+  const errorCopy = (error: DomainError | undefined) => txErrorMessage(t, error, EARN_ERROR_COPY);
   const writable = Boolean(ready && sdk?.account && poolId && !readOnly);
   const refresh = () =>
     Promise.all([
@@ -192,7 +199,7 @@ export function EarnPageClient() {
       queryClient.invalidateQueries({ queryKey: ["ssot", "landing", "asset-overview"] })
     ]);
 
-  const submit = async (action: "deposit" | "withdraw" | "player") => {
+  const submit = async (action: "deposit" | "withdraw") => {
     if (inFlight.current || busy || !writable || !sdk?.account || !poolId || !context) return;
     inFlight.current = true;
     setSubmitting(true);
@@ -201,52 +208,50 @@ export function EarnPageClient() {
       const result =
         action === "deposit"
           ? await depositFlow.execute(async () => {
-              if (!depositsEnabled) throw new Error(t("earn.actions.depositsClosed.title"));
-              const assets = parseDecimalToUnits(amount, decimals);
-              if (assets <= 0n) throw new Error(t("earn.errors.positiveAmount"));
+              if (!depositsEnabled) throw new TxCopyError("earn.actions.depositsClosed.title");
+              let assets: bigint;
+              try {
+                assets = parseDecimalToUnits(amount, decimals);
+              } catch {
+                throw new TxCopyError("app.txErrors.invalidAmount", { decimals });
+              }
+              if (assets <= 0n) throw new TxCopyError("earn.errors.positiveAmount");
               const [fresh, balance] = await Promise.all([
                 sdk.bank.getSnapshot(poolId),
                 sdk.bank.getAssetBalance(context.asset.address, account)
-              ]);
-              if (fresh.riskInPaused) throw new Error(t("earn.nft.depositsPaused"));
+              ]).catch(() => {
+                // A failed read never reaches the toast as provider text.
+                throw new TxCopyError("earn.nft.unavailable");
+              });
+              if (fresh.riskInPaused) throw new TxCopyError("earn.nft.depositsPaused");
               if (fresh.lpStatus !== "ready")
-                throw new Error(t(`earn.nft.status.${fresh.lpStatus}`));
-              if (assets > balance) throw new Error(t("earn.errors.insufficientWalletBalance"));
+                throw new TxCopyError(`earn.nft.status.${fresh.lpStatus}`);
+              if (assets > balance) throw new TxCopyError("earn.errors.insufficientWalletBalance");
               return sdk.vault.addDeposit(poolId, assets, account);
             })
-          : action === "withdraw"
-            ? await withdrawalFlow.execute(async () => {
-                if (!selected || parsedPercent == null)
-                  throw new Error(t("earn.nft.status.invalidPercent"));
-                const fresh = await sdk.vault.quoteWithdrawal(
-                  poolId,
-                  selected.depositId,
-                  parsedPercent
-                );
-                if (fresh.position.owner.toLowerCase() !== account.toLowerCase())
-                  throw new Error(t("earn.nft.ownerChanged"));
-                if (!fresh.executable)
-                  throw new Error(t(`earn.nft.status.${fresh.reason ?? fresh.position.status}`));
-                return sdk.vault.withdrawDeposit(poolId, selected.depositId, parsedPercent);
-              })
-            : await debtFlow.execute(() => sdk.bank.claimPlayerPayable(poolId, account));
+          : await withdrawalFlow.execute(async () => {
+              if (!selected || parsedPercent == null)
+                throw new TxCopyError("earn.nft.status.invalidPercent");
+              const fresh = await sdk.vault
+                .quoteWithdrawal(poolId, selected.depositId, parsedPercent)
+                .catch(() => {
+                  throw new TxCopyError("earn.nft.unavailable");
+                });
+              if (fresh.position.owner.toLowerCase() !== account.toLowerCase())
+                throw new TxCopyError("earn.nft.ownerChanged");
+              if (!fresh.executable)
+                throw new TxCopyError(`earn.nft.status.${fresh.reason ?? fresh.position.status}`);
+              return sdk.vault.withdrawDeposit(poolId, selected.depositId, parsedPercent);
+            });
       if (!result.ok) {
-        toast.error(result.error?.message ?? t("earn.toast.failed"));
+        toast.error(errorCopy(result.error));
         return;
       }
-      toast.success(
-        t(
-          action === "deposit"
-            ? "earn.nft.deposited"
-            : action === "withdraw"
-              ? "earn.nft.withdrawn"
-              : "earn.nft.playerClaimed"
-        )
-      );
+      toast.success(t(action === "deposit" ? "earn.nft.deposited" : "earn.nft.withdrawn"));
       if (action === "deposit") setAmount("");
       await refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("earn.toast.failed"));
+      toast.error(thrownErrorMessage(t, error, "earn.toast.failed"));
     } finally {
       inFlight.current = false;
       setSubmitting(false);
@@ -267,6 +272,7 @@ export function EarnPageClient() {
           bankAddress={shortHex(snapshot?.vault)}
           metrics={buildEarnHeroMetrics({ snapshot, decimals, symbol, t })}
         />
+        <GovernanceQueuePanel />
         <BankrollPerformancePanel
           assetAddress={context?.asset.address}
           assetDecimals={decimals}
@@ -341,6 +347,15 @@ export function EarnPageClient() {
                       {t(`earn.nft.status.${snapshot.lpStatus}`)}
                     </p>
                   ) : null}
+                  {snapshot?.poolActive === false ? (
+                    <p role="status" className="text-fg" data-testid="earn-betting-inactive">
+                      {t(
+                        snapshot.totalBetsHeld === 0n
+                          ? "earn.nft.bettingNotStarted"
+                          : "earn.nft.bettingStopped"
+                      )}
+                    </p>
+                  ) : null}
                   <button
                     type="button"
                     disabled={busy}
@@ -374,26 +389,6 @@ export function EarnPageClient() {
                 />
               }
             />
-            {playerDebt.error ? (
-              <p role="alert" className="mt-3 text-warn">
-                {t("earn.nft.playerDebtUnavailable")}
-              </p>
-            ) : null}
-            {playerDebt.data != null && playerDebt.data > 0n ? (
-              <div className="mt-4 rounded-md border border-border bg-surface-1 p-4">
-                <h3 className="font-bold">{t("earn.nft.playerDebt")}</h3>
-                <p className="my-2 text-sm text-fg-muted">{t("earn.nft.playerDebtDetail")}</p>
-                <p>{formatTokenAmount(playerDebt.data, decimals, symbol, 6)}</p>
-                <button
-                  type="button"
-                  disabled={!writable || busy}
-                  onClick={() => void submit("player")}
-                  className="mt-2 font-bold text-brand"
-                >
-                  {t("earn.nft.claimPlayer")}
-                </button>
-              </div>
-            ) : null}
           </div>
           <div className="min-w-0 xl:col-start-1 xl:row-start-2">
             <BankProviderLedgerPanel

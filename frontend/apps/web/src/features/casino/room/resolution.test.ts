@@ -59,9 +59,53 @@ describe("game room resolution helpers", () => {
     ]);
   });
 
-  it("marks only finalized and refunded chain bets as terminal", () => {
+  it("marks finalized, refunded and voided chain bets as terminal", () => {
     expect(isTerminalDomainBet(baseBet)).toBe(true);
+    expect(isTerminalDomainBet({ ...baseBet, state: "refunded" })).toBe(true);
+    expect(isTerminalDomainBet({ ...baseBet, state: "voided" })).toBe(true);
     expect(isTerminalDomainBet({ ...baseBet, state: "randomReady" })).toBe(false);
+    expect(isTerminalDomainBet({ ...baseBet, state: "placed" })).toBe(false);
+  });
+
+  it("builds a voided result only once the returned stake is proven", () => {
+    const voidedBet = { ...baseBet, state: "voided" as const };
+    expect(buildCasinoRoundResult({ bet: voidedBet })).toMatchObject({ kind: "indexing" });
+    const result = buildCasinoRoundResult({
+      bet: voidedBet,
+      refund: { refundAmount: 10_000n, txHash: `0x${"dd".repeat(32)}` }
+    });
+    expect(result).toMatchObject({ kind: "voided", refund: { refundAmount: 10_000n } });
+    expect(isCasinoTerminalRoundResult(result)).toBe(true);
+  });
+
+  it("keeps indexed void proof and adds payment evidence from the same transaction", async () => {
+    const txHash = `0x${"ee".repeat(32)}` as const;
+    const payment = { status: "payable" as const, amount: "10000" };
+    const proof = await resolveCasinoTerminalProof({
+      terminalBet: { ...baseBet, state: "voided" },
+      recentBets: [{ betId: "7", state: "voided", lastTxHash: txHash }],
+      db: {
+        gameHubEvents: {
+          where: () => ({
+            equals: () => ({
+              toArray: async () => [
+                {
+                  eventName: "BetVoided",
+                  txHash,
+                  argsJson: JSON.stringify({ positionId: "7", stake: "10000" })
+                }
+              ]
+            })
+          })
+        }
+      } as any,
+      gameHub: {
+        getTerminalProof: vi
+          .fn()
+          .mockResolvedValue({ kind: "voided", refund: { txHash, refundAmount: 10_000n, payment } })
+      }
+    });
+    expect(proof).toEqual({ kind: "voided", refund: { refundAmount: 10_000n, txHash, payment } });
   });
 
   it("builds indexing first and enriches with settlement proof", () => {

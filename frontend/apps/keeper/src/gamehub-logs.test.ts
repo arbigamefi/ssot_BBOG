@@ -44,8 +44,22 @@ describe("fetchGameHubLogs", () => {
       "BetRandomReady",
       "BetFinalized",
       "BetRefunded",
-      "HouseEdgeAllocated"
+      "BetVoided",
+      "HouseEdgeAllocated",
+      "VoidWindowOpened",
+      "GameDisabled"
     ]);
+    // The GameHub's BetVoided, not the Bank's event of the same name.
+    expect(
+      query.events.find((event: { name: string }) => event.name === "BetVoided")
+    ).toMatchObject({
+      inputs: [
+        { name: "positionId", indexed: true },
+        { name: "caller", indexed: true },
+        { name: "stake" },
+        { name: "settlementErrorPrefix" }
+      ]
+    });
     expect([...byEvent.keys()]).toEqual([...GAME_HUB_INDEX_EVENTS]);
     expect(byEvent.get("BetPlaced")!.map((entry) => entry.blockNumber)).toEqual([10n, 12n]);
     expect(byEvent.get("BetRandomReady")).toHaveLength(1);

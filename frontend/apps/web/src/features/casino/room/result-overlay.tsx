@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   ArrowTopRightOnSquareIcon,
@@ -165,6 +166,13 @@ function CopyProofButton({
 type Translate = ReturnType<typeof useTranslations>;
 
 function getOutcome(result: CasinoTerminalRoundResult, t: Translate) {
+  if (result.kind === "voided") {
+    return {
+      label: t("casino.room.result.outcomes.voided.label"),
+      tone: "neutral" as const,
+      detail: t("casino.room.result.outcomes.voided.detail")
+    };
+  }
   if (result.kind === "refunded") {
     return {
       label: t("casino.room.result.outcomes.refunded.label"),
@@ -670,30 +678,36 @@ export function GameRoomResultOverlay({
     gameSlug,
     result
   });
-  // The overlay only ever mounts for a fully settled or refunded round (the
-  // caller gates it behind isCasinoTerminalRoundResult), so every figure here is
-  // final — no pending / random-only states are represented.
+  // The overlay only ever mounts for a fully settled, refunded or voided round
+  // (the caller gates it behind isCasinoTerminalRoundResult), so every figure here
+  // is final — no pending / random-only states are represented.
   const txHash = receiptModel.terminalTxHash;
   const txHref = receiptModel.txHref;
   const payoutLabel =
-    result.kind === "refunded"
-      ? t("casino.room.result.facts.refund")
-      : t("casino.room.result.facts.payout");
-  const gameRows = getGameResultRows(
-    {
-      gameSlug,
-      houseEdgeBps,
-      resultNum,
-      diceDirection,
-      diceTarget,
-      coinSide,
-      rouletteSpots,
-      kenoSpots,
-      kenoResultDrawn,
-      casinoOutcome
-    },
-    t
-  );
+    result.kind === "voided"
+      ? t("casino.room.result.facts.returnedStake")
+      : result.kind === "refunded"
+        ? t("casino.room.result.facts.refund")
+        : t("casino.room.result.facts.payout");
+  // A void booked no game outcome: its drawn result never counted, so none is shown.
+  const gameRows =
+    result.kind === "voided"
+      ? []
+      : getGameResultRows(
+          {
+            gameSlug,
+            houseEdgeBps,
+            resultNum,
+            diceDirection,
+            diceTarget,
+            coinSide,
+            rouletteSpots,
+            kenoSpots,
+            kenoResultDrawn,
+            casinoOutcome
+          },
+          t
+        );
   const fairnessProof = buildFairnessProof({ result, chainId, txHash });
   const shareText = `${outcome.label} · ${receiptModel.signedNetValue} · ${receiptModel.gameLabel}`;
   const receiptPath = chainId
@@ -777,14 +791,24 @@ export function GameRoomResultOverlay({
               {receiptModel.signedNetValue}
             </div>
             <p className="mt-1.5 text-xs leading-5 text-fg-muted">{outcome.detail}</p>
-            <p
-              className="mt-1.5 text-xs leading-5 text-fg-muted"
-              data-payment-status={receiptModel.payment.status}
-            >
-              {t(
-                `casino.room.payment.${receiptModel.payment.status === "none" ? "noPayment" : receiptModel.payment.status}`
-              )}
-            </p>
+            {/* A void never transfers: the detail above already says the stake is a claimable balance. */}
+            {result.kind === "voided" ? (
+              <Link
+                href="/portfolio/claims"
+                className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-brand hover:text-brand-hover"
+              >
+                {t("casino.room.result.actions.openClaims")}
+              </Link>
+            ) : (
+              <p
+                className="mt-1.5 text-xs leading-5 text-fg-muted"
+                data-payment-status={receiptModel.payment.status}
+              >
+                {t(
+                  `casino.room.payment.${receiptModel.payment.status === "none" ? "noPayment" : receiptModel.payment.status}`
+                )}
+              </p>
+            )}
           </div>
         </div>
 

@@ -11,6 +11,7 @@ import { ProductStateCard } from "../../../../components/ProductStateCard";
 import { ClaimsActionPanel } from "../../../../features/portfolio/claims/claims-action-panel";
 import { ClaimsBuckets } from "../../../../features/portfolio/claims/claims-buckets";
 import { ClaimsHero } from "../../../../features/portfolio/claims/claims-hero";
+import { ClaimsPlayerPayables } from "../../../../features/portfolio/claims/claims-player-payables";
 import {
   ClaimsJournal,
   type ClaimsJournalRow
@@ -28,6 +29,11 @@ import type {
 import { TokenLogo } from "../../../../components/TokenLogo";
 import { useCasinoPoolAssetSelection } from "../../../../features/assets/useCasinoPoolAssetSelection";
 import { formatUnits, parseDecimalToUnits } from "../../../../features/betting/model/units";
+import {
+  readErrorMessage,
+  thrownErrorMessage,
+  TxCopyError
+} from "../../../../features/tx/tx-error-copy";
 import { useDirectTxAction } from "../../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
@@ -126,12 +132,8 @@ export function ClaimsPageClient() {
   const handleClaimXP = React.useCallback(async () => {
     if (!sdk?.account || readOnly) return;
     try {
-      const parsed = parseDecimalToUnits(xpClaimAmount || "0", decimals);
-      if (parsed <= 0n) {
-        toast.error(t("portfolio.claims.errors.positiveAmount"));
-        return;
-      }
-      if (!poolId) throw new Error(t("portfolio.claims.errors.poolUnavailable"));
+      const parsed = parseClaimAmount(xpClaimAmount, decimals);
+      if (!poolId) throw new TxCopyError("portfolio.claims.errors.poolUnavailable");
       const result = await xpClaimFlow.execute(() =>
         sdk.bank.claimXPAccrued(poolId, parsed, sdk.account!)
       );
@@ -142,14 +144,14 @@ export function ClaimsPageClient() {
       setXPClaimAmount("");
       await refetchXP();
     } catch (error) {
-      toast.error((error as Error)?.message ?? t("portfolio.claims.toast.xpClaimFailed"));
+      toast.error(thrownErrorMessage(t, error, "portfolio.claims.toast.xpClaimFailed"));
     }
   }, [decimals, poolId, readOnly, refetchXP, sdk, symbol, t, xpClaimAmount, xpClaimFlow]);
 
   const handleSyncHoldback = React.useCallback(async () => {
     if (!sdk?.account || readOnly) return;
     try {
-      if (!poolId) throw new Error(t("portfolio.claims.errors.poolUnavailable"));
+      if (!poolId) throw new TxCopyError("portfolio.claims.errors.poolUnavailable");
       const result = await syncHoldbackFlow.execute(() =>
         sdk.bank.syncXPHoldback(poolId, sdk.account!)
       );
@@ -157,19 +159,15 @@ export function ClaimsPageClient() {
       toast.success(t("portfolio.claims.toast.holdbackSynced"));
       await refetchXP();
     } catch (error) {
-      toast.error((error as Error)?.message ?? t("portfolio.claims.toast.syncHoldbackFailed"));
+      toast.error(thrownErrorMessage(t, error, "portfolio.claims.toast.syncHoldbackFailed"));
     }
   }, [poolId, readOnly, refetchXP, sdk, syncHoldbackFlow, t]);
 
   const handleClaimFees = React.useCallback(async () => {
     if (!sdk?.account || readOnly) return;
     try {
-      const parsed = parseDecimalToUnits(feeAmount || "0", decimals);
-      if (parsed <= 0n) {
-        toast.error(t("portfolio.claims.errors.positiveAmount"));
-        return;
-      }
-      if (!poolId) throw new Error(t("portfolio.claims.errors.poolUnavailable"));
+      const parsed = parseClaimAmount(feeAmount, decimals);
+      if (!poolId) throw new TxCopyError("portfolio.claims.errors.poolUnavailable");
       const result = await protocolFeeFlow.execute(() =>
         sdk.bank.claimProtocolFees(poolId, parsed, sdk.account!)
       );
@@ -183,7 +181,7 @@ export function ClaimsPageClient() {
       setFeeAmount("");
       await refetchSnapshot();
     } catch (error) {
-      toast.error((error as Error)?.message ?? t("portfolio.claims.toast.protocolFeeFailed"));
+      toast.error(thrownErrorMessage(t, error, "portfolio.claims.toast.protocolFeeFailed"));
     }
   }, [decimals, feeAmount, poolId, protocolFeeFlow, readOnly, refetchSnapshot, sdk, symbol, t]);
 
@@ -247,6 +245,7 @@ export function ClaimsPageClient() {
           wallet={sdk?.account ? shortHex(sdk.account, pendingLabel) : undefined}
           metrics={metrics}
         />
+        <ClaimsPlayerPayables />
         {assetOptions.length > 0 ? (
           <section className="grid gap-3 rounded-lg border border-border-soft bg-surface-1 p-4 shadow-e1 md:grid-cols-[minmax(0,22rem)_1fr] md:items-center">
             <div className="min-w-0">
@@ -280,7 +279,7 @@ export function ClaimsPageClient() {
               decimals={decimals}
               symbol={symbol}
               loading={xpLoading}
-              error={(xpError as Error | undefined)?.message}
+              error={xpError ? readErrorMessage(t) : undefined}
             />
             <ClaimsJournal rows={journalRows} explorerBaseUrl={explorerBaseUrl} />
           </div>
@@ -308,6 +307,18 @@ export function ClaimsPageClient() {
       </div>
     </PageTransition>
   );
+}
+
+/** A positive amount in the pool asset's base units; a malformed or zero entry is refused with copy. */
+function parseClaimAmount(input: string, decimals: number) {
+  let parsed: bigint;
+  try {
+    parsed = parseDecimalToUnits(input || "0", decimals);
+  } catch {
+    throw new TxCopyError("app.txErrors.invalidAmount", { decimals });
+  }
+  if (parsed <= 0n) throw new TxCopyError("portfolio.claims.errors.positiveAmount");
+  return parsed;
 }
 
 function toFlowState(flow: {

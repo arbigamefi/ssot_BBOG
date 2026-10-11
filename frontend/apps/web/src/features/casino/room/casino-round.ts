@@ -5,12 +5,16 @@ import type { DomainBet } from "@ssot/ssot";
 import type { GameConfig, Hex, SSOTSDK, TxResult } from "@ssot/ssot/sdk";
 
 import { resolvePublicWsRpcUrl } from "../../../app-shell/rpc";
+import { isTerminalBetState } from "../../betting/bet-state";
 import { formatUnits } from "../../betting/model/units";
+import { isContractRevert } from "./feedback";
 
 export const CASINO_ROUND_MANUAL_SETTLE_DELAY_MS = 30_000;
 export const CASINO_ROUND_SOFT_VRF_TIMEOUT_MS = 60_000;
 export const CASINO_ROUND_READ_RETRY_GRACE_MS = 15_000;
 export const CASINO_ROUND_EVENT_FALLBACK_POLL_INTERVAL_MS = 10_000;
+/** How often a PendingVRF bet past the soft timeout rereads whether its VRF result was received. */
+export const CASINO_ROUND_VRF_RESULT_CHECK_MS = 30_000;
 
 type RoundEventWatcher = (typeof import("@ssot/ssot/sdk"))["watchGameHubRoundEvents"];
 
@@ -30,7 +34,19 @@ export type CasinoRoundPhase =
   | "manual_settle_offered"
   | "settled"
   | "refundable"
+  /**
+   * The VRF result was received but cannot be booked: a PendingVRF bet whose request is Received, or a
+   * RandomReady bet whose settlement the contract reverted. It settles or is voided later (ADR-0037 §7).
+   */
+  | "result_unbooked"
+  | "voided"
   | "failed";
+
+/**
+ * A PendingVRF bet's VRF request as last read: "received" means the seed is stored but not booked, so
+ * GameHub.refund reverts (InvalidRandomReceipt); "awaiting" means the timeout refund may apply.
+ */
+export type CasinoRoundVrfResult = "awaiting" | "received";
 
 export type CasinoRoundSnapshot = {
   phase: CasinoRoundPhase;
@@ -57,6 +73,8 @@ export function deriveCasinoRoundPhase({
   randomReadyAt,
   now,
   refundDeadline,
+  vrfResult,
+  settlementReverted = false,
   softVrfTimeoutMs = CASINO_ROUND_SOFT_VRF_TIMEOUT_MS,
   manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS
 }: {
@@ -65,22 +83,29 @@ export function deriveCasinoRoundPhase({
   randomReadyAt?: number;
   now: number;
   refundDeadline?: number;
+  /** Unread until the watcher checks it; the refund is offered only after a read says "awaiting". */
+  vrfResult?: CasinoRoundVrfResult;
+  /** The contract reverted a manual settlement of this RandomReady bet. */
+  settlementReverted?: boolean;
   softVrfTimeoutMs?: number;
   manualSettleDelayMs?: number;
 }): CasinoRoundPhase {
   if (betState === "finalized") return "settled";
   if (betState === "refunded") return "refundable";
+  if (betState === "voided") return "voided";
   if (betState === "randomReady") {
+    if (settlementReverted) return "result_unbooked";
     if (randomReadyAt && now - randomReadyAt >= manualSettleDelayMs) {
       return "manual_settle_offered";
     }
     return "settling";
   }
   if (betState === "placed") {
+    if (vrfResult === "received") return "result_unbooked";
     const placedAtMs = toUnixMs(placedAt);
     if (placedAtMs != null) {
       const elapsedMs = now - placedAtMs;
-      if (refundDeadline && now >= refundDeadline * 1_000) {
+      if (refundDeadline && now >= refundDeadline * 1_000 && vrfResult === "awaiting") {
         return "refundable";
       }
       if (elapsedMs >= softVrfTimeoutMs) return "timeout_soft";
@@ -88,6 +113,11 @@ export function deriveCasinoRoundPhase({
     return "waiting_vrf";
   }
   return "idle";
+}
+
+/** The watcher's knowledge when it concerns `betId`, otherwise a fresh record for it. */
+function ownKnowledge<T extends { betId?: bigint; checkedAt: number }>(known: T, betId: bigint) {
+  return known.betId === betId ? known : { betId, checkedAt: 0 };
 }
 
 function toUnixMs(value: number | undefined) {
@@ -158,6 +188,11 @@ export function useCasinoVrfQuote({
       let config: GameConfig | undefined;
       try {
         config = await sdk.gameHub.getGameConfig(gameId);
+        // GameHub refuses quotes for a disabled game (ADR-0037 §6); the room shows it closed.
+        if (config.disabled) {
+          update({ phase: "ready", config });
+          return;
+        }
         if (!Number.isInteger(betCount) || betCount < 1 || betCount > config.maxBetCount)
           throw new Error("Game round limit");
         const quote = await sdk.gameHub.quoteVRFFee(gameId, betCount);
@@ -217,6 +252,14 @@ export function useCasinoRoundWatcher({
 }) {
   const [snapshot, setSnapshot] = React.useState<CasinoRoundSnapshot>({ phase: "idle" });
   const terminalBetIdRef = React.useRef<bigint | undefined>();
+  // What the watcher learned beyond getBet, shared by the poll and the manual actions, which can learn
+  // first that a result was received or that its settlement reverts.
+  const knownRef = React.useRef<{
+    betId?: bigint;
+    result?: CasinoRoundVrfResult;
+    checkedAt: number;
+    settlementReverted?: boolean;
+  }>({ checkedAt: 0 });
 
   React.useEffect(() => {
     if (!sdk || !active || betId === undefined) {
@@ -231,6 +274,7 @@ export function useCasinoRoundWatcher({
     let pollInFlight = false;
     let pollQueued = false;
     const startedAt = Date.now();
+    knownRef.current = { betId, checkedAt: 0 };
     const stopPolling = () => {
       terminalReached = true;
       if (interval) {
@@ -239,6 +283,36 @@ export function useCasinoRoundWatcher({
       }
       unwatchEvents?.();
       unwatchEvents = undefined;
+    };
+
+    // A PendingVRF bet past the soft timeout may hold a received but unbooked result, which the timeout
+    // refund cannot take. Read it before offering the refund, and again while it is not received.
+    const checkVrfResult = async (bet: DomainBet) => {
+      const known = knownRef.current;
+      const now = Date.now();
+      const placedAtMs = toUnixMs(bet.placedAt);
+      const overdue =
+        (placedAtMs != null && now - placedAtMs >= softVrfTimeoutMs) ||
+        (bet.refundDeadline > 0 && now >= bet.refundDeadline * 1_000);
+      if (
+        bet.state !== "placed" ||
+        !overdue ||
+        known.result === "received" ||
+        now - known.checkedAt < CASINO_ROUND_VRF_RESULT_CHECK_MS
+      )
+        return;
+      knownRef.current = { ...known, checkedAt: now };
+      try {
+        const status = await sdk.gameHub.getVoidStatus(betId);
+        if (knownRef.current.betId !== betId) return;
+        knownRef.current = {
+          ...knownRef.current,
+          result: status.resultReceived ? "received" : "awaiting",
+          checkedAt: now
+        };
+      } catch {
+        // Unknown: the refund stays hidden until a read says the request still awaits its result.
+      }
     };
 
     const poll = async () => {
@@ -251,6 +325,9 @@ export function useCasinoRoundWatcher({
       try {
         const bet = await sdk.gameHub.getBet(betId);
         if (cancelled || terminalReached) return;
+        await checkVrfResult(bet);
+        if (cancelled || terminalReached) return;
+        const known = knownRef.current.betId === betId ? knownRef.current : undefined;
 
         setSnapshot((current) => {
           const randomReadyAt =
@@ -265,6 +342,8 @@ export function useCasinoRoundWatcher({
               betState: bet.state,
               placedAt: bet.placedAt,
               refundDeadline: bet.refundDeadline,
+              vrfResult: known?.result,
+              settlementReverted: known?.settlementReverted,
               randomReadyAt,
               now: Date.now(),
               softVrfTimeoutMs,
@@ -274,10 +353,7 @@ export function useCasinoRoundWatcher({
           };
         });
 
-        if (
-          (bet.state === "finalized" || bet.state === "refunded") &&
-          terminalBetIdRef.current !== bet.betId
-        ) {
+        if (isTerminalBetState(bet.state) && terminalBetIdRef.current !== bet.betId) {
           terminalBetIdRef.current = bet.betId;
           onTerminal?.(bet);
           stopPolling();
@@ -365,6 +441,18 @@ export function useCasinoRoundWatcher({
     if (!sdk || betId === undefined) return;
     setSnapshot((current) => ({ ...current, phase: "settling", error: undefined }));
     const manualSettleTx = await sdk.gameHub.finalize(betId);
+    // The contract refused to settle: retrying cannot help, the result waits for a void (ADR-0037 §7).
+    // A wallet cancellation or a connection problem keeps the retry.
+    if (!manualSettleTx.ok && isContractRevert(manualSettleTx.error)) {
+      knownRef.current = { ...ownKnowledge(knownRef.current, betId), settlementReverted: true };
+      setSnapshot((current) => ({
+        ...current,
+        settleTx: manualSettleTx,
+        phase: "result_unbooked",
+        error: undefined
+      }));
+      return;
+    }
     setSnapshot((current) => ({
       ...current,
       settleTx: manualSettleTx,
@@ -377,6 +465,21 @@ export function useCasinoRoundWatcher({
     if (!sdk || betId === undefined) return;
     setSnapshot((current) => ({ ...current, phase: "refundable", error: undefined }));
     const refundTx = await sdk.gameHub.refund(betId);
+    // The result arrived after the last read: the refund can never apply, the bet settles or voids.
+    if (!refundTx.ok && refundTx.error?.code === "REVERT_InvalidRandomReceipt") {
+      knownRef.current = {
+        ...ownKnowledge(knownRef.current, betId),
+        result: "received",
+        checkedAt: Date.now()
+      };
+      setSnapshot((current) => ({
+        ...current,
+        refundTx,
+        phase: "result_unbooked",
+        error: undefined
+      }));
+      return;
+    }
     setSnapshot((current) => ({
       ...current,
       refundTx,

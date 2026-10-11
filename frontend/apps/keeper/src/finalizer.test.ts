@@ -1,5 +1,15 @@
-import { HttpRequestError } from "viem";
+import {
+  BaseError,
+  CallExecutionError,
+  ContractFunctionExecutionError,
+  ContractFunctionRevertedError,
+  encodeErrorResult,
+  HttpRequestError,
+  InvalidInputRpcError,
+  RpcRequestError
+} from "viem";
 import { describe, expect, it, vi } from "vitest";
+import { GAME_HUB_KEEPER_ABI } from "./abi.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
 import type { BetRead, KeeperEvent } from "./types.js";
 
@@ -267,6 +277,151 @@ describe("PendingVRF terminalization", () => {
         waitFinalizeReceipt: vi.fn()
       })
     ).toMatchObject({ kind: "failed", retryable: true });
+  });
+});
+
+describe("unbookable received results", () => {
+  // A frozen asset makes the settlement transfer revert; the result can then never be booked.
+  const settlementRevert = () =>
+    new BaseError("finalize simulation reverted", {
+      cause: new ContractFunctionRevertedError({
+        abi: GAME_HUB_KEEPER_ABI,
+        functionName: "finalize",
+        data: encodeErrorResult({
+          abi: GAME_HUB_KEEPER_ABI,
+          errorName: "SafeERC20FailedOperation",
+          args: ["0x0000000000000000000000000000000000000001"]
+        })
+      })
+    });
+  function deps(eligibleAt: bigint, chainTime: bigint) {
+    return {
+      readRequest: vi.fn(async () => canonical("received")),
+      readBet: vi.fn(
+        async (): Promise<BetRead> => ({ ...bet("randomReady"), vrfRequestedAt: 1_000n })
+      ),
+      simulateFinalize: vi.fn(async () => {
+        throw settlementRevert();
+      }),
+      writeFinalize: vi.fn(),
+      waitFinalizeReceipt: vi.fn(),
+      assessVoid: vi.fn(async () => ({ eligibleAt, chainTime }))
+    };
+  }
+
+  it.each([
+    ["seven days away", 605_800n, 1_000n, 60_000],
+    ["thirty seconds away", 1_030n, 1_000n, 30_000],
+    ["already eligible", 87_400n, 90_000n, 60_000]
+  ])(
+    "defers a reverting settlement whose void is %s, rechecking at least once a minute",
+    async (_case, eligibleAt, chainTime, retryAfterMs) => {
+      const d = deps(eligibleAt, chainTime);
+      expect(await finalizeIfReady(baseEvent, d)).toEqual({
+        kind: "deferred",
+        state: "randomReady",
+        retryAfterMs,
+        voidEligibleAt: eligibleAt
+      });
+      expect(d.assessVoid).toHaveBeenCalledWith(
+        expect.objectContaining({ betId: 12n, vrfRequestedAt: 1_000n }),
+        expect.stringContaining("SafeERC20FailedOperation"),
+        baseEvent
+      );
+      expect(d.writeFinalize).not.toHaveBeenCalled();
+    }
+  );
+
+  it("treats a PendingVRF bet whose canonical request was received the same way", async () => {
+    const d = deps(605_800n, 1_000n);
+    d.readBet.mockResolvedValue({
+      ...bet("pendingVrf"),
+      vrfRequestedAt: 1_000n,
+      refundDeadline: 5n
+    });
+    expect(await finalizeIfReady(baseEvent, d)).toMatchObject({
+      kind: "deferred",
+      state: "pendingVrf",
+      voidEligibleAt: 605_800n
+    });
+  });
+
+  it("treats a settlement that runs out of the finalize gas as unbookable now", async () => {
+    const d = deps(605_800n, 1_000n);
+    d.simulateFinalize.mockRejectedValue(
+      new ContractFunctionExecutionError(
+        new CallExecutionError(
+          new InvalidInputRpcError(
+            new RpcRequestError({
+              body: { method: "eth_call" },
+              error: { code: -32000, message: "out of gas" },
+              url: "https://rpc.invalid"
+            })
+          ),
+          {}
+        ),
+        { abi: GAME_HUB_KEEPER_ABI, functionName: "finalize", args: [12n] }
+      )
+    );
+    expect(await finalizeIfReady(baseEvent, d)).toMatchObject({
+      kind: "deferred",
+      voidEligibleAt: 605_800n
+    });
+    expect(d.assessVoid).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.stringContaining("out of gas"),
+      baseEvent
+    );
+  });
+
+  it("keeps a transport failure of the finalize simulation an ordinary retryable failure", async () => {
+    const d = deps(605_800n, 1_000n);
+    d.simulateFinalize.mockRejectedValue(
+      new HttpRequestError({
+        body: { method: "eth_call" },
+        status: 503,
+        url: "https://rpc.invalid"
+      })
+    );
+    expect(await finalizeIfReady(baseEvent, d)).toMatchObject({ kind: "failed", retryable: true });
+    expect(d.assessVoid).not.toHaveBeenCalled();
+  });
+
+  it("reconciles a GameHub state race instead of treating it as an unbookable result", async () => {
+    const d = deps(605_800n, 1_000n);
+    d.simulateFinalize.mockRejectedValue(
+      new BaseError("finalize simulation reverted", {
+        cause: new ContractFunctionRevertedError({
+          abi: GAME_HUB_KEEPER_ABI,
+          functionName: "finalize",
+          data: encodeErrorResult({
+            abi: GAME_HUB_KEEPER_ABI,
+            errorName: "BadState",
+            args: [12n, 4, 3]
+          })
+        })
+      })
+    );
+    d.readBet
+      .mockResolvedValueOnce({ ...bet("randomReady"), vrfRequestedAt: 1_000n })
+      .mockResolvedValueOnce(bet("settled"));
+    expect(await finalizeIfReady(baseEvent, d)).toEqual({ kind: "raced", state: "settled" });
+    expect(d.assessVoid).not.toHaveBeenCalled();
+  });
+
+  it("fails retryably when the void eligibility cannot be read", async () => {
+    const d = deps(605_800n, 1_000n);
+    d.assessVoid.mockRejectedValue(new Error("voidCohortEnd unavailable"));
+    expect(await finalizeIfReady(baseEvent, d)).toEqual({
+      kind: "failed",
+      reason: "Error: voidCohortEnd unavailable",
+      retryable: true
+    });
+  });
+
+  it("stays a failure where no void executor is wired", async () => {
+    const { assessVoid: _unused, ...d } = deps(605_800n, 1_000n);
+    expect(await finalizeIfReady(baseEvent, d)).toMatchObject({ kind: "failed", retryable: true });
   });
 });
 

@@ -7,29 +7,39 @@ import type { PoolAvailability } from "./hooks";
 export function PoolStatusNotice({
   status,
   symbol,
+  openBets,
   onRefresh
 }: {
   status: PoolAvailability;
   symbol: string;
+  /** The player's open bets in this pool, named by the playerLimit line. */
+  openBets?: number;
   onRefresh?: () => void;
 }) {
   const t = useTranslations("casino.room.poolStatus");
   if (status === "ready") return null;
+  const playerLimit = status === "playerLimit";
   return (
     <div
       className="rounded-lg border border-warning/30 bg-surface-1 p-3 text-sm text-fg"
       role="status"
     >
-      <p>{t(status, { symbol })}</p>
-      {status !== "loading" && onRefresh ? (
-        <button
-          type="button"
-          className="mt-1 min-h-11 font-semibold text-brand"
-          onClick={onRefresh}
-        >
-          {t("refresh")}
-        </button>
-      ) : null}
+      <p>{t(status, { symbol, count: openBets ?? 0 })}</p>
+      <div className="mt-1 flex flex-wrap gap-x-4">
+        {status !== "loading" && onRefresh ? (
+          <button type="button" className="min-h-11 font-semibold text-brand" onClick={onRefresh}>
+            {t(playerLimit ? "checkAgain" : "refresh")}
+          </button>
+        ) : null}
+        {playerLimit ? (
+          <a
+            className="inline-flex min-h-11 items-center font-semibold text-brand"
+            href="/portfolio/activity"
+          >
+            {t("viewOpenBets")}
+          </a>
+        ) : null}
+      </div>
     </div>
   );
 }

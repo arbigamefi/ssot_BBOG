@@ -9,7 +9,7 @@ import {
 import { BANK_KEEPER_ABI, GAME_HUB_KEEPER_ABI } from "./abi.js";
 import { createMemoryBetIndexStore, type BetIndexStore } from "@ssot/bet-index";
 import { CASINO_TRANSACTION_GAS, createKeeperRuntime, type KeeperRuntime } from "./runtime.js";
-import type { KeeperConfig } from "./types.js";
+import type { KeeperConfig, KeeperLogger } from "./types.js";
 
 const mock = vi.hoisted(() => ({
   client: {} as Record<string, unknown>,
@@ -31,8 +31,19 @@ const INDEX_EVENTS = [
   "BetRandomReady",
   "BetFinalized",
   "BetRefunded",
-  "HouseEdgeAllocated"
+  "BetVoided",
+  "HouseEdgeAllocated",
+  "VoidWindowOpened",
+  "GameDisabled"
 ];
+// GameHub void constants (ADR-0037 §10), read once at startup.
+const VOID_CONSTANTS: Record<string, bigint> = {
+  VOID_DELAY: 86_400n,
+  PUBLIC_VOID_DELAY: 604_800n,
+  VOID_SETTLEMENT_GAS: 10_000_000n,
+  VOID_RESERVE_GAS: 600_000n,
+  VOID_CALL_OVERHEAD: 5_000n
+};
 type LogQuery = { events: Array<{ name: string }>; fromBlock: bigint; toBlock: bigint };
 const eventNames = (query: LogQuery) => query.events.map((event) => event.name);
 const logQueries = () =>
@@ -59,11 +70,13 @@ const base: KeeperConfig = {
   betIndexDatabaseUrl: "postgres://unused.invalid",
   betIndexSsl: false,
   vaultProviderLedgerPools: [],
-  vaultProviderLedgerScanIntervalMs: 0
+  vaultProviderLedgerScanIntervalMs: 0,
+  voidGasLimit: 11_000_000n
 };
 
 describe("runtime recovery composition", () => {
   let runtime: KeeperRuntime | undefined;
+  let logger: KeeperLogger;
   let canonicalState: number;
   beforeEach(() => {
     vi.useFakeTimers();
@@ -106,6 +119,7 @@ describe("runtime recovery composition", () => {
       args?: bigint[];
     }) => Promise<unknown>;
     mock.client.readContract = vi.fn(async (q) => {
+      if (q.functionName in VOID_CONSTANTS) return VOID_CONSTANTS[q.functionName];
       if (q.functionName === "getRequest")
         return { bank: hub, hub, betId: q.args[0], state: canonicalState };
       const pool = config.vaultProviderLedgerPools.find(
@@ -135,10 +149,8 @@ describe("runtime recovery composition", () => {
       const value = await read(q);
       return q.functionName === "getBet" ? { bank: hub, ...(value as object) } : value;
     });
-    return createKeeperRuntime({
-      config,
-      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
-    });
+    logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    return createKeeperRuntime({ config, logger });
   };
 
   function finalizedLedgerFixture() {
@@ -310,7 +322,7 @@ describe("runtime recovery composition", () => {
     expect(await mock.store!.getVaultProviderLedger(f.query)).toHaveLength(1);
   });
 
-  it.each(["unavailable", "unnumbered", "regressed"])(
+  it.each(["unavailable", "unnumbered"])(
     "reports %s ledger finality without advancing the cursor",
     async (failure) => {
       const f = finalizedLedgerFixture();
@@ -319,8 +331,7 @@ describe("runtime recovery composition", () => {
       await vi.advanceTimersByTimeAsync(0);
       const cursor = await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub);
       const count = f.ranges().length;
-      if (failure === "regressed") f.state.finalized = 75n;
-      else f.state.finalityFailure = failure;
+      f.state.finalityFailure = failure;
       await vi.advanceTimersByTimeAsync(1000);
       expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(
         cursor
@@ -335,6 +346,129 @@ describe("runtime recovery composition", () => {
       expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(20n);
     }
   );
+
+  it("scans nothing past a lagging finalized read, stays healthy and misses nothing once the RPC catches up", async () => {
+    const f = finalizedLedgerFixture();
+    runtime = make({ ...f.config, scanMaxChunksPerPass: 50 });
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    const cursor = () => mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub);
+    expect(await cursor()).toBe(76n);
+    // Production 2026-10-11: a load-balanced node answered with a finalized block below the cursor.
+    f.state.finalized = 70n;
+    f.state.deposit = 80n;
+    const count = f.ranges().length;
+    for (let i = 0; i < 3; ++i) await vi.advanceTimersByTimeAsync(1000);
+    expect(await cursor()).toBe(76n);
+    expect(f.ranges()).toHaveLength(count);
+    expect(runtime.health.snapshot()).toMatchObject({
+      status: "running",
+      degradedBy: undefined,
+      vaultProviderLedger: { scannedThrough: "76", finalizedBlock: "70", finalizedBehindBy: "6" }
+    });
+    const behind = vi
+      .mocked(logger.warn)
+      .mock.calls.filter(
+        ([message, fields]) =>
+          message === "casino.keeper.head_behind" &&
+          fields?.scanner === "vault-provider-ledger-finalized"
+      );
+    expect(behind).toEqual([
+      [
+        "casino.keeper.head_behind",
+        {
+          scanner: "vault-provider-ledger-finalized",
+          head: "finalized",
+          reportedBlock: "70",
+          highestBlock: "76",
+          behindBy: "6"
+        }
+      ]
+    ]);
+
+    // Caught up: the scan resumes right after the cursor, so the deposit in block 80 is indexed.
+    f.state.finalized = 90n;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await cursor()).toBe(90n);
+    expect(f.ranges().at(-1)).toMatchObject({ fromBlock: 87n, toBlock: 90n });
+    expect(
+      f
+        .ranges()
+        .slice(count)
+        .map((q) => q.fromBlock)
+    ).toEqual([77n, 87n]);
+    expect(await mock.store!.getVaultProviderLedger(f.query)).toMatchObject([
+      { action: "deposit", blockNumber: 80 }
+    ]);
+    expect(runtime.health.snapshot().vaultProviderLedger).toEqual({
+      scannedThrough: "90",
+      finalizedBlock: "90"
+    });
+    expect(runtime.health.snapshot().status).toBe("running");
+  });
+
+  it("degrades the Vault ledger and payables when their finalized head has not advanced for the stall limit", async () => {
+    const f = finalizedLedgerFixture();
+    runtime = make({ ...f.config, scanMaxChunksPerPass: 50, finalizedStallMs: 120_000 });
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("ledger");
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(runtime.health.snapshot()).toMatchObject({
+      degradedBy: expect.arrayContaining(["ledger", "payables"]),
+      vaultProviderLedger: { finalizedBlock: "76", finalizedStalledSince: expect.any(String) },
+      payables: [{ finalizedBlock: "76", finalizedStalledSince: expect.any(String) }]
+    });
+    f.state.finalized = 80n;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("ledger");
+    expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("payables");
+  });
+
+  it("holds pool reads that reach a node without the pinned block for five consecutive minutes", async () => {
+    const f = finalizedLedgerFixture();
+    runtime = make({ ...f.config, scanMaxChunksPerPass: 50 });
+    const read = mock.client.readContract as (q: { functionName: string }) => Promise<unknown>;
+    let missing = true;
+    mock.client.readContract = vi.fn(async (q: { functionName: string }) => {
+      if (missing && q.functionName === "getSSOT") throw new Error("header not found");
+      return read(q);
+    });
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(runtime.health.snapshot()).toMatchObject({
+      pools: [{ transientError: "Error: header not found" }]
+    });
+    expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("pools");
+    await vi.advanceTimersByTimeAsync(4 * 60_000);
+    expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("pools");
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(runtime.health.snapshot().degradedBy).toContain("pools");
+    missing = false;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("pools");
+    expect(runtime.health.snapshot().pools?.[0]?.transientError).toBeUndefined();
+  });
+
+  it("reports a latest block below the event cursor as information and scans nothing", async () => {
+    runtime = make({ ...base, pollIntervalMs: 60_000 });
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(runtime.health.snapshot().lastScannedBlock).toBe("120");
+    const queries = logQueries().length;
+    vi.mocked(mock.client.getBlockNumber as ReturnType<typeof vi.fn>).mockResolvedValue(117n);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(logQueries()).toHaveLength(queries);
+    expect(runtime.health.snapshot()).toMatchObject({
+      lastScannedBlock: "120",
+      scanHeadBehindBy: "3",
+      status: "running"
+    });
+    vi.mocked(mock.client.getBlockNumber as ReturnType<typeof vi.fn>).mockResolvedValue(121n);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(runtime.health.snapshot()).toMatchObject({ lastScannedBlock: "121" });
+    expect(runtime.health.snapshot().scanHeadBehindBy).toBeUndefined();
+  });
 
   it("retries missing terminal refunds without checkpointing an incomplete range", async () => {
     const amounts = {

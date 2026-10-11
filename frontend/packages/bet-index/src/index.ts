@@ -2,22 +2,97 @@ import type { VaultProviderLedgerAction } from "./vault-ledger.js";
 export { decodeVaultProviderEvent, type VaultProviderLedgerAction } from "./vault-ledger.js";
 import postgres, { type Sql } from "postgres";
 import { getCasinoFinancials } from "./financials.js";
-import type { Address, Hex } from "viem";
+import { isAddress, type Address, type Hex } from "viem";
+import {
+  createMemoryGovernanceTimelockIndex,
+  GOVERNANCE_TIMELOCK_SCHEMA_SQL,
+  readGovernanceTimelockDelayChangesSql,
+  readGovernanceTimelockOperationsSql,
+  writeGovernanceTimelockEventsSql,
+  type GovernanceTimelockDelayChange,
+  type GovernanceTimelockDelayChangesQuery,
+  type GovernanceTimelockEvent,
+  type GovernanceTimelockOperation,
+  type GovernanceTimelockOperationsQuery
+} from "./governance.js";
 export { enrichFinalizedBetEvents, readSettledBetRefund } from "./terminal-refund.js";
+export {
+  GOVERNANCE_TIMELOCK_CURSOR_SOURCE,
+  governanceTimelockOperationState,
+  parseGovernanceTimelockEvents,
+  type GovernanceTimelockDelayChange,
+  type GovernanceTimelockDelayChangesQuery,
+  type GovernanceTimelockEvent,
+  type GovernanceTimelockEventName,
+  type GovernanceTimelockOperation,
+  type GovernanceTimelockOperationState,
+  type GovernanceTimelockOperationsQuery
+} from "./governance.js";
 
-export type BetLifecycleState = "placed" | "randomReady" | "finalized" | "refunded";
+export type BetLifecycleState = "placed" | "randomReady" | "finalized" | "refunded" | "voided";
+
+/** States after which a bet never changes again. */
+export const TERMINAL_BET_STATES = ["finalized", "refunded", "voided"] as const;
+
+export function isTerminalBetState(state: BetLifecycleState | string | undefined) {
+  return (TERMINAL_BET_STATES as readonly string[]).includes(state ?? "");
+}
 
 /** GameHub events that move a bet through its lifecycle. */
 export type GameHubLifecycleEventName =
   | "BetPlaced"
   | "BetRandomReady"
   | "BetFinalized"
-  | "BetRefunded";
+  | "BetRefunded"
+  | "BetVoided";
+
+/** GameHub events that end a bet. */
+export const TERMINAL_GAMEHUB_EVENTS = ["BetFinalized", "BetRefunded", "BetVoided"] as const;
+
+/** Risk decisions the GameHub records for the operations page; they belong to no single bet. */
+export type GameHubOperatorEventName = "VoidWindowOpened" | "GameDisabled";
+
 /**
  * GameHub events the index stores. A v1.6 GameHub also emits HouseEdgeAllocated when it settles a
  * bet: it annotates the bet and never changes its lifecycle.
  */
-export type GameHubEventName = GameHubLifecycleEventName | "HouseEdgeAllocated";
+export type GameHubEventName =
+  | GameHubLifecycleEventName
+  | "HouseEdgeAllocated"
+  | GameHubOperatorEventName;
+
+type GameHubOperatorEventBase = {
+  chainId: number;
+  gameHub: Address;
+  blockNumber: number;
+  /** Chain block timestamp in milliseconds when available. */
+  blockTimestamp?: number;
+  txHash: Hex;
+  logIndex: number;
+  caller: Address;
+};
+
+export type GameHubOperatorEvent =
+  | (GameHubOperatorEventBase & {
+      eventName: "VoidWindowOpened";
+      poolId: string;
+      bank: Address;
+      /** Unix seconds: bets of this Bank requested at or before it may be voided 24 hours after their request. */
+      cohortEnd: string;
+    })
+  | (GameHubOperatorEventBase & { eventName: "GameDisabled"; gameId: Hex });
+
+export type GameHubOperatorEventQuery = {
+  chainId: number;
+  gameHub: Address;
+  limit: number;
+  eventName?: GameHubOperatorEventName;
+};
+
+const GAMEHUB_OPERATOR_EVENTS: readonly GameHubOperatorEventName[] = [
+  "VoidWindowOpened",
+  "GameDisabled"
+];
 
 /**
  * How a settled bet's house edge was allocated, from the GameHub's HouseEdgeAllocated event (v1.6).
@@ -64,6 +139,12 @@ export type BetRow = {
   terminalTxHash?: Hex;
   finalizedTxHash?: Hex;
   refundedTxHash?: Hex;
+  /** Set by GameHub `BetVoided`: the stake was booked as a player payable, nothing was paid out. */
+  voidedTxHash?: Hex;
+  /** Who executed `voidBet`. */
+  voidCaller?: Address;
+  /** First 32 bytes of the settlement attempt's revert data inside `voidBet`. */
+  voidSettlementErrorPrefix?: Hex;
   placedBlock?: number;
   placedAt?: number;
   /** Immutable on-chain refund eligibility, in milliseconds. */
@@ -255,7 +336,7 @@ export type BetIndexStore = {
     afterBetId: bigint;
     limit: number;
   }) => Promise<bigint[]>;
-  /** All placed or random-ready bets without a recorded terminal event, for timeout recovery. */
+  /** All placed or random-ready bets without a recorded terminal event, for timeout and void recovery. */
   getUnresolvedBetIds: (query: {
     chainId: number;
     gameHub: Address;
@@ -349,6 +430,16 @@ export type BetIndexStore = {
       gameId?: Hex;
     } & Pick<BetIndexQuery, "gameHub">
   ) => Promise<BetIndexCasinoTimeseriesPoint[]>;
+  /** VoidWindowOpened and GameDisabled of one GameHub, newest first. */
+  getGameHubOperatorEvents: (query: GameHubOperatorEventQuery) => Promise<GameHubOperatorEvent[]>;
+  writeGovernanceTimelockEvents: (events: readonly GovernanceTimelockEvent[]) => Promise<void>;
+  /** Timelock operations in schedule order, each call of a batch on its own row. */
+  getGovernanceTimelockOperations: (
+    query: GovernanceTimelockOperationsQuery
+  ) => Promise<GovernanceTimelockOperation[]>;
+  getGovernanceTimelockDelayChanges: (
+    query: GovernanceTimelockDelayChangesQuery
+  ) => Promise<GovernanceTimelockDelayChange[]>;
   getCursor: (chainId: number, source: string, cursorKey: string) => Promise<bigint | null>;
   setCursor: (cursor: BetIndexCursor) => Promise<void>;
   close?: () => Promise<void>;
@@ -390,6 +481,9 @@ create table if not exists bets (
   terminal_tx_hash text,
   finalized_tx_hash text,
   refunded_tx_hash text,
+  voided_tx_hash text,
+  void_caller text,
+  void_settlement_error_prefix text,
   placed_block bigint,
   placed_at timestamptz,
   refund_deadline timestamptz,
@@ -463,7 +557,7 @@ create table if not exists indexer_cursors (
   updated_at timestamptz not null default now(),
   primary key (chain_id, source, cursor_key)
 );
-`;
+${GOVERNANCE_TIMELOCK_SCHEMA_SQL}`;
 
 export type PostgresBetIndexConfig = {
   connectionString: string;
@@ -477,6 +571,7 @@ export function createMemoryBetIndexStore(): BetIndexStore {
   const cursors = new Map<string, bigint>();
   const gameHubEvents = new Map<string, BetIndexEvent>();
   const houseEdges = new Map<string, BetHouseEdgeAllocation>();
+  const governance = createMemoryGovernanceTimelockIndex();
   const withHouseEdge = (row: BetRow): BetRow => {
     const houseEdge = houseEdges.get(row.id);
     return houseEdge ? { ...row, houseEdge } : row;
@@ -486,13 +581,17 @@ export function createMemoryBetIndexStore(): BetIndexStore {
     const changed = new Map<string, BetRow>();
     const sorted = [...input].sort(compareEvents);
     for (const event of sorted) {
-      gameHubEvents.set(`${event.chainId}:${event.txHash}:${event.logIndex}`, event);
-      const key = betKey(event.chainId, event.gameHub, betIdOf(event));
+      const eventKey = `${event.chainId}:${event.txHash.toLowerCase()}:${event.logIndex}`;
+      // Like the PostgreSQL primary key, the first copy of a log is kept.
+      if (!gameHubEvents.has(eventKey)) gameHubEvents.set(eventKey, event);
       if (!isLifecycleEvent(event)) {
+        if (event.eventName !== "HouseEdgeAllocated") continue;
+        const key = betKey(event.chainId, event.gameHub, betIdOf(event));
         const houseEdge = houseEdgeFromArgs(event.args);
         if (houseEdge && !houseEdges.has(key)) houseEdges.set(key, houseEdge);
         continue;
       }
+      const key = betKey(event.chainId, event.gameHub, betIdOf(event));
       const existing = bets.get(key);
       const next = applyEventToBet(existing, event);
       if (!existing || next.updatedBlock >= existing.updatedBlock) {
@@ -540,7 +639,7 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         (includePending && event.eventName === "BetPlaced")
       )
         ready.add(id);
-      if (event.eventName === "BetFinalized" || event.eventName === "BetRefunded") terminal.add(id);
+      if (isTerminalGameHubEvent(event.eventName)) terminal.add(id);
     }
     return [...ready]
       .filter((id) => id > afterBetId && !terminal.has(id))
@@ -705,6 +804,32 @@ export function createMemoryBetIndexStore(): BetIndexStore {
             (!gameId || row.gameId?.toLowerCase() === gameId.toLowerCase())
         )
       }),
+    getGameHubOperatorEvents: async ({ chainId, gameHub, limit, eventName }) =>
+      [...gameHubEvents.values()]
+        .filter(
+          (event) =>
+            event.chainId === chainId &&
+            event.gameHub.toLowerCase() === gameHub.toLowerCase() &&
+            isOperatorEventName(event.eventName) &&
+            (!eventName || event.eventName === eventName)
+        )
+        .sort((a, b) => compareEvents(b, a))
+        .slice(0, limit)
+        .map((event) =>
+          operatorEventFromArgs({
+            args: event.args,
+            blockNumber: Number(event.blockNumber),
+            blockTimestamp: event.blockTimestamp,
+            chainId: event.chainId,
+            eventName: event.eventName,
+            gameHub: event.gameHub,
+            logIndex: event.logIndex,
+            txHash: event.txHash
+          })
+        ),
+    writeGovernanceTimelockEvents: async (events) => governance.write(events),
+    getGovernanceTimelockOperations: async (query) => governance.operations(query),
+    getGovernanceTimelockDelayChanges: async (query) => governance.delayChanges(query),
     getCursor: async (chainId: number, source: string, cursorKey: string) =>
       cursors.get(cursorId(chainId, source, cursorKey)) ?? null,
     setCursor: async (cursor: BetIndexCursor) => {
@@ -755,13 +880,19 @@ async function upsertVaultProviderLedgerRow(sql: SqlTag, row: VaultProviderLedge
   `;
 }
 
+/**
+ * The newest write sets state and last event, except that a terminal row never returns to an open state:
+ * a ready event of the same block written after the void or settlement, for example by a separate
+ * watcher, keeps the terminal state and its last event.
+ */
 async function upsertBetRow(sql: SqlTag, row: BetRow) {
   const normalized = normalizeBetRow(row);
   await sql`
     insert into bets (
       chain_id, game_hub, bet_id, state, game_id, asset, player, referrer_l1, referrer_l2, stake, payout,
       payout_gross, refund_amount, request_id, random_hash, terminal_tx_hash,
-      finalized_tx_hash, refunded_tx_hash, placed_block, placed_at, refund_deadline,
+      finalized_tx_hash, refunded_tx_hash, voided_tx_hash, void_caller, void_settlement_error_prefix,
+      placed_block, placed_at, refund_deadline,
       updated_block, last_tx_hash, last_event_name, updated_at
     ) values (
       ${normalized.chainId},
@@ -782,6 +913,9 @@ async function upsertBetRow(sql: SqlTag, row: BetRow) {
       ${normalized.terminalTxHash ?? null},
       ${normalized.finalizedTxHash ?? null},
       ${normalized.refundedTxHash ?? null},
+      ${normalized.voidedTxHash ?? null},
+      ${normalized.voidCaller ?? null},
+      ${normalized.voidSettlementErrorPrefix ?? null},
       ${normalized.placedBlock ?? null},
       ${normalized.placedAt == null ? null : new Date(normalized.placedAt)},
       ${normalized.refundDeadline == null ? null : new Date(normalized.refundDeadline)},
@@ -792,7 +926,10 @@ async function upsertBetRow(sql: SqlTag, row: BetRow) {
     )
     on conflict (chain_id, game_hub, bet_id) do update set
       state = case
-        when excluded.updated_block >= bets.updated_block then excluded.state
+        when excluded.updated_block >= bets.updated_block
+          and (bets.state not in ('finalized', 'refunded', 'voided')
+            or excluded.state in ('finalized', 'refunded', 'voided'))
+        then excluded.state
         else bets.state
       end,
       game_id = coalesce(excluded.game_id, bets.game_id),
@@ -809,20 +946,34 @@ async function upsertBetRow(sql: SqlTag, row: BetRow) {
       terminal_tx_hash = coalesce(excluded.terminal_tx_hash, bets.terminal_tx_hash),
       finalized_tx_hash = coalesce(excluded.finalized_tx_hash, bets.finalized_tx_hash),
       refunded_tx_hash = coalesce(excluded.refunded_tx_hash, bets.refunded_tx_hash),
+      voided_tx_hash = coalesce(excluded.voided_tx_hash, bets.voided_tx_hash),
+      void_caller = coalesce(excluded.void_caller, bets.void_caller),
+      void_settlement_error_prefix = coalesce(
+        excluded.void_settlement_error_prefix, bets.void_settlement_error_prefix
+      ),
       placed_block = coalesce(bets.placed_block, excluded.placed_block),
       placed_at = coalesce(bets.placed_at, excluded.placed_at),
       refund_deadline = coalesce(bets.refund_deadline, excluded.refund_deadline),
       updated_block = greatest(bets.updated_block, excluded.updated_block),
       last_tx_hash = case
-        when excluded.updated_block >= bets.updated_block then excluded.last_tx_hash
+        when excluded.updated_block >= bets.updated_block
+          and (bets.state not in ('finalized', 'refunded', 'voided')
+            or excluded.state in ('finalized', 'refunded', 'voided'))
+        then excluded.last_tx_hash
         else bets.last_tx_hash
       end,
       last_event_name = case
-        when excluded.updated_block >= bets.updated_block then excluded.last_event_name
+        when excluded.updated_block >= bets.updated_block
+          and (bets.state not in ('finalized', 'refunded', 'voided')
+            or excluded.state in ('finalized', 'refunded', 'voided'))
+        then excluded.last_event_name
         else bets.last_event_name
       end,
       updated_at = case
-        when excluded.updated_block >= bets.updated_block then excluded.updated_at
+        when excluded.updated_block >= bets.updated_block
+          and (bets.state not in ('finalized', 'refunded', 'voided')
+            or excluded.state in ('finalized', 'refunded', 'voided'))
+        then excluded.updated_at
         else bets.updated_at
       end
   `;
@@ -833,10 +984,11 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
   // principal is neither turnover nor winnings.
   // Validate in the aggregation statement too: a newly indexed terminal row
   // arriving after the coverage check must not be silently skipped by SUM.
-  const turnover = sql`case when state in ('finalized', 'refunded') then
+  // A void books the whole stake back as a player payable: like a refund it consumes nothing.
+  const turnover = sql`case when state in ('finalized', 'refunded', 'voided') then
     case when nullif(stake, '')::numeric >= 0
       and nullif(refund_amount, '')::numeric between 0 and nullif(stake, '')::numeric
-      and (state = 'refunded' or nullif(payout, '')::numeric >= 0)
+      and (state <> 'finalized' or nullif(payout, '')::numeric >= 0)
     then case when state = 'finalized' then stake::numeric - refund_amount::numeric else 0 end
     else ('Incomplete casino financials for bet ' || bet_id)::numeric end
     else 0 end`;
@@ -861,7 +1013,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       select bet_id from bets where chain_id = ${chainId}
       ${asset ? sql`and asset = ${asset.toLowerCase()}` : sql``}
       ${hubFilter(gameHub)}
-      and state in ('finalized', 'refunded') and (
+      and state in ('finalized', 'refunded', 'voided') and (
         nullif(stake, '') is null or nullif(refund_amount, '') is null
         or stake::numeric < 0 or refund_amount::numeric < 0
         or refund_amount::numeric > stake::numeric
@@ -888,7 +1040,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
           and not exists (
             select 1 from gamehub_events terminal
             where terminal.chain_id = e.chain_id and terminal.game_hub = e.game_hub
-              and terminal.event_name in ('BetFinalized', 'BetRefunded')
+              and terminal.event_name in ('BetFinalized', 'BetRefunded', 'BetVoided')
               and coalesce(terminal.args_json->>'positionId', terminal.args_json->>'betId', '0')::numeric
                 = coalesce(e.args_json->>'positionId', e.args_json->>'betId', '0')::numeric
           )
@@ -1044,7 +1196,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       const rows = await sql`
         select
           count(*)::text as bet_count,
-          count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
+          count(*) filter (where state in ('finalized', 'refunded', 'voided'))::text as settled_count,
           coalesce(sum(${turnover}), 0)::text as turnover,
           coalesce(sum(${award}), 0)::text as payout,
           coalesce(sum(${gross}), 0)::text as payout_gross
@@ -1067,7 +1219,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       const rows = await sql`
         select
           count(*)::text as bet_count,
-          count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
+          count(*) filter (where state in ('finalized', 'refunded', 'voided'))::text as settled_count,
           count(*) filter (
             where state = 'finalized'
               and ${award} > coalesce(${turnover}, 0)
@@ -1098,7 +1250,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         select
           player,
           count(*)::text as bet_count,
-          count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
+          count(*) filter (where state in ('finalized', 'refunded', 'voided'))::text as settled_count,
           coalesce(sum(${turnover}), 0)::text as turnover,
           coalesce(sum(${award}), 0)::text as payout,
           coalesce(sum(${gross}), 0)::text as payout_gross
@@ -1199,7 +1351,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         select
           game_id,
           count(*)::text as bet_count,
-          count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
+          count(*) filter (where state in ('finalized', 'refunded', 'voided'))::text as settled_count,
           count(*) filter (
             where state = 'finalized'
               and ${award} > coalesce(${turnover}, 0)
@@ -1233,7 +1385,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         select
           to_char(date_trunc('day', coalesce(placed_at, updated_at) at time zone 'utc'), 'YYYY-MM-DD') as date,
           count(*)::text as bet_count,
-          count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
+          count(*) filter (where state in ('finalized', 'refunded', 'voided'))::text as settled_count,
           count(*) filter (
             where state = 'finalized'
               and ${award} > coalesce(${turnover}, 0)
@@ -1263,6 +1415,32 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         wonCount: Number(row.wonCount ?? 0)
       }));
     },
+    getGameHubOperatorEvents: async ({ chainId, gameHub, limit, eventName }) => {
+      const names = eventName ? [eventName] : [...GAMEHUB_OPERATOR_EVENTS];
+      const rows = await sql`
+        select chain_id, game_hub, block_number, block_timestamp, tx_hash, log_index, event_name, args_json
+        from gamehub_events
+        where chain_id = ${chainId} and game_hub = ${gameHub.toLowerCase()}
+          and event_name in ${sql(names)}
+        order by block_number desc, log_index desc
+        limit ${limit}
+      `;
+      return rows.map((row) =>
+        operatorEventFromArgs({
+          args: (row.argsJson ?? {}) as Record<string, unknown>,
+          blockNumber: Number(row.blockNumber),
+          blockTimestamp: optionalDateMs(row.blockTimestamp),
+          chainId: Number(row.chainId),
+          eventName: String(row.eventName) as GameHubEventName,
+          gameHub: String(row.gameHub) as Address,
+          logIndex: Number(row.logIndex),
+          txHash: String(row.txHash) as Hex
+        })
+      );
+    },
+    writeGovernanceTimelockEvents: (events) => writeGovernanceTimelockEventsSql(sql, events),
+    getGovernanceTimelockOperations: (query) => readGovernanceTimelockOperationsSql(sql, query),
+    getGovernanceTimelockDelayChanges: (query) => readGovernanceTimelockDelayChangesSql(sql, query),
     getCursor: async (chainId: number, source: string, cursorKey: string) => {
       const rows = await sql`
         select block_number from indexer_cursors
@@ -1307,8 +1485,68 @@ function serializeValue(value: unknown): unknown {
 
 type BetLifecycleEvent = BetIndexEvent & { eventName: GameHubLifecycleEventName };
 
+const LIFECYCLE_EVENTS: readonly string[] = [
+  "BetPlaced",
+  "BetRandomReady",
+  ...TERMINAL_GAMEHUB_EVENTS
+];
+
 function isLifecycleEvent(event: BetIndexEvent): event is BetLifecycleEvent {
-  return event.eventName !== "HouseEdgeAllocated";
+  return LIFECYCLE_EVENTS.includes(event.eventName);
+}
+
+function isTerminalGameHubEvent(eventName: string) {
+  return (TERMINAL_GAMEHUB_EVENTS as readonly string[]).includes(eventName);
+}
+
+function isOperatorEventName(eventName: string): eventName is GameHubOperatorEventName {
+  return (GAMEHUB_OPERATOR_EVENTS as readonly string[]).includes(eventName);
+}
+
+function operatorAddress(value: unknown) {
+  if (typeof value !== "string" || !isAddress(value, { strict: false }))
+    throw new Error("Malformed GameHub operator event address");
+  return value.toLowerCase() as Address;
+}
+
+function operatorUint(value: unknown) {
+  const text = typeof value === "bigint" || typeof value === "number" ? String(value) : value;
+  if (typeof text !== "string" || !/^\d+$/.test(text))
+    throw new Error("Malformed GameHub operator event integer");
+  return text;
+}
+
+type StoredOperatorEvent = Omit<GameHubOperatorEventBase, "caller"> & {
+  eventName: GameHubEventName;
+  args: Record<string, unknown>;
+};
+
+/** Typed VoidWindowOpened or GameDisabled from decoded or stored arguments; malformed rows fail loudly. */
+function operatorEventFromArgs(event: StoredOperatorEvent): GameHubOperatorEvent {
+  const base = {
+    chainId: event.chainId,
+    gameHub: event.gameHub.toLowerCase() as Address,
+    blockNumber: event.blockNumber,
+    ...(event.blockTimestamp == null ? {} : { blockTimestamp: event.blockTimestamp }),
+    txHash: event.txHash.toLowerCase() as Hex,
+    logIndex: event.logIndex,
+    caller: operatorAddress(event.args.caller)
+  };
+  if (event.eventName === "VoidWindowOpened")
+    return {
+      ...base,
+      eventName: "VoidWindowOpened",
+      poolId: operatorUint(event.args.poolId),
+      bank: operatorAddress(event.args.bank),
+      cohortEnd: operatorUint(event.args.cohortEnd)
+    };
+  if (event.eventName === "GameDisabled") {
+    const gameId = typeof event.args.gameId === "string" ? event.args.gameId.toLowerCase() : "";
+    if (!/^0x[0-9a-f]{64}$/.test(gameId))
+      throw new Error("Malformed GameHub operator event gameId");
+    return { ...base, eventName: "GameDisabled", gameId: gameId as Hex };
+  }
+  throw new Error(`Not a GameHub operator event: ${event.eventName}`);
 }
 
 const HOUSE_EDGE_AMOUNTS = [
@@ -1399,7 +1637,10 @@ function normalizeBetRow({ houseEdge: _derived, ...row }: BetRow): BetRow {
     referrerL2: row.referrerL2?.toLowerCase() as Address | undefined,
     randomHash: row.randomHash?.toLowerCase() as Hex | undefined,
     refundedTxHash: row.refundedTxHash?.toLowerCase() as Hex | undefined,
-    terminalTxHash: row.terminalTxHash?.toLowerCase() as Hex | undefined
+    terminalTxHash: row.terminalTxHash?.toLowerCase() as Hex | undefined,
+    voidedTxHash: row.voidedTxHash?.toLowerCase() as Hex | undefined,
+    voidCaller: row.voidCaller?.toLowerCase() as Address | undefined,
+    voidSettlementErrorPrefix: row.voidSettlementErrorPrefix?.toLowerCase() as Hex | undefined
   };
 }
 
@@ -1422,7 +1663,7 @@ function isVaultProviderLedgerBeforeCursor(
 }
 
 function requireRowFinancials(row: BetRow) {
-  if (row.state !== "finalized" && row.state !== "refunded") return undefined;
+  if (!isTerminalBetState(row.state)) return undefined;
   const financials = getCasinoFinancials(row);
   if (!financials) throw new Error("Casino financials are not ready");
   return financials;
@@ -1438,7 +1679,7 @@ function affiliateStatsFromRows({
   return rows.reduce<BetIndexAffiliateStats>(
     (stats, row) => {
       stats.betCount += 1;
-      if (row.state === "finalized" || row.state === "refunded") stats.settledCount += 1;
+      if (isTerminalBetState(row.state)) stats.settledCount += 1;
       const financials = requireRowFinancials(row);
       stats.turnover = addStringBigints(stats.turnover, financials?.turnover.toString());
       stats.payout = addStringBigints(stats.payout, financials?.award.toString());
@@ -1470,7 +1711,7 @@ function casinoStatsFromRows({
   const stats = rows.reduce<BetIndexCasinoStats>(
     (next, row) => {
       next.betCount += 1;
-      if (row.state === "finalized" || row.state === "refunded") next.settledCount += 1;
+      if (isTerminalBetState(row.state)) next.settledCount += 1;
       const financials = requireRowFinancials(row);
       if (row.state === "finalized" && financials && financials.net > 0n) next.wonCount += 1;
       if (row.player) players.add(row.player.toLowerCase());
@@ -1753,21 +1994,46 @@ function applyEventToBet(prev: BetRow | undefined, event: BetLifecycleEvent): Be
     next.refundedTxHash = event.txHash;
   }
 
+  // ADR-0037 §7.4: the whole stake becomes a player payable; nothing is paid out or consumed.
+  if (event.eventName === "BetVoided") {
+    if (event.args.stake != null) {
+      const stake = toBigintString(event.args.stake);
+      next.stake ??= stake;
+      next.refundAmount = stake;
+    }
+    next.payout = "0";
+    next.payoutGross = "0";
+    if (typeof event.args.caller === "string")
+      next.voidCaller = event.args.caller.toLowerCase() as Address;
+    if (typeof event.args.settlementErrorPrefix === "string")
+      next.voidSettlementErrorPrefix = event.args.settlementErrorPrefix.toLowerCase() as Hex;
+    next.terminalTxHash = event.txHash;
+    next.voidedTxHash = event.txHash;
+  }
+
+  const eventBlock = Number(event.blockNumber);
+  // Mirrors upsertBetRow: an older event, or an open-state event after the end, is not the latest event.
+  const latest =
+    eventBlock >= next.updatedBlock &&
+    !(isTerminalBetState(next.state) && !isTerminalGameHubEvent(event.eventName));
   next.state = reduceState(next.state, event.eventName);
-  next.updatedBlock = Math.max(next.updatedBlock, Number(event.blockNumber));
-  next.lastTxHash = event.txHash;
-  next.lastEventName = event.eventName;
-  next.updatedAt = timestamp;
+  next.updatedBlock = Math.max(next.updatedBlock, eventBlock);
+  if (latest) {
+    next.lastTxHash = event.txHash;
+    next.lastEventName = event.eventName;
+    next.updatedAt = timestamp;
+  }
   return next;
 }
 
-function reduceState(prev: BetLifecycleState, eventName: BetIndexEvent["eventName"]) {
+function reduceState(
+  prev: BetLifecycleState,
+  eventName: BetIndexEvent["eventName"]
+): BetLifecycleState {
+  if (eventName === "BetVoided") return "voided";
   if (eventName === "BetRefunded") return "refunded";
   if (eventName === "BetFinalized") return "finalized";
-  if (eventName === "BetRandomReady") {
-    if (prev === "finalized" || prev === "refunded") return prev;
-    return "randomReady";
-  }
+  if (eventName === "BetRandomReady") return isTerminalBetState(prev) ? prev : "randomReady";
   return prev;
 }
 
@@ -1798,6 +2064,9 @@ function rowFromDatabase(row: Record<string, unknown>): BetRow {
     state: normalizeState(row.state),
     stake: optionalString(row.stake),
     terminalTxHash: optionalHex(row.terminalTxHash),
+    voidedTxHash: optionalHex(row.voidedTxHash),
+    voidCaller: optionalAddress(row.voidCaller),
+    voidSettlementErrorPrefix: optionalHex(row.voidSettlementErrorPrefix),
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.getTime() : Date.now(),
     updatedBlock: Number(row.updatedBlock),
     ...(houseEdge ? { houseEdge } : {})
@@ -1861,7 +2130,8 @@ function normalizeState(value: unknown): BetLifecycleState {
     value === "placed" ||
     value === "randomReady" ||
     value === "finalized" ||
-    value === "refunded"
+    value === "refunded" ||
+    value === "voided"
   ) {
     return value;
   }

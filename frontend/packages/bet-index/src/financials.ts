@@ -16,12 +16,17 @@ function unsigned(value: CasinoFinancialRow["stake"]): bigint | undefined {
   }
 }
 
-/** Financial facts are complete only when the unused-stake refund is proven. */
+/**
+ * Financial facts are complete only when the unused-stake refund is proven. A refund and a void return the
+ * stake and consume none of it; only a finalized bet has an award and turnover.
+ */
 export function getCasinoFinancials(row: CasinoFinancialRow) {
-  if (row.state !== "finalized" && row.state !== "refunded") return undefined;
+  if (row.state !== "finalized" && row.state !== "refunded" && row.state !== "voided")
+    return undefined;
+  const settled = row.state === "finalized";
   const stake = unsigned(row.stake);
   const refund = unsigned(row.refundAmount);
-  const award = row.state === "refunded" ? 0n : unsigned(row.payout);
+  const award = settled ? unsigned(row.payout) : 0n;
   if (stake == null || refund == null || award == null || refund > stake) return undefined;
   return {
     stake,
@@ -29,7 +34,7 @@ export function getCasinoFinancials(row: CasinoFinancialRow) {
     award,
     returned: award + refund,
     net: award + refund - stake,
-    turnover: row.state === "refunded" ? 0n : stake - refund
+    turnover: settled ? stake - refund : 0n
   };
 }
 

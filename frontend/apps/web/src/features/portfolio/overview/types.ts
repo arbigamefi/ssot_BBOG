@@ -1,3 +1,4 @@
+import type { DomainError } from "@ssot/ssot";
 import type { TxStepItem, TxStatus } from "@ssot/ui";
 
 export type PortfolioAssetRow = {
@@ -35,7 +36,8 @@ export type PortfolioFlowState = {
   steps: readonly TxStepItem[];
   hasActivity: boolean;
   busy: boolean;
-  error?: { message: string; details?: unknown };
+  /** Shown by its code (tx-error-copy), never by its message. */
+  error?: DomainError;
   txHash?: string;
   blockNumber?: number;
   reset: () => void;

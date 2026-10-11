@@ -17,6 +17,10 @@ import { BetDetailLifecycle } from "../../../../../features/portfolio/activity/d
 import { BetDetailSummary } from "../../../../../features/portfolio/activity/detail/bet-detail-summary";
 import { BetDetailTimeline } from "../../../../../features/portfolio/activity/detail/bet-detail-timeline";
 import {
+  BetVoidPanel,
+  useBetVoidStatus
+} from "../../../../../features/portfolio/activity/detail/bet-void-panel";
+import {
   formatNativeAmount,
   formatTimestamp,
   formatTokenAmount,
@@ -32,6 +36,7 @@ import type {
   BetDetailMetric
 } from "../../../../../features/portfolio/activity/detail/types";
 import { isTerminalDomainBet } from "../../../../../features/casino/room/resolution";
+import { thrownErrorMessage } from "../../../../../features/tx/tx-error-copy";
 import { useDirectTxAction } from "../../../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../../../ssot/release/ReleaseProvider";
 import { useSSOTRuntime } from "../../../../../ssot/runtime";
@@ -92,15 +97,22 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
 
   const settlementProof = React.useMemo(() => extractSettlementProof(timeline), [timeline]);
   const refundProof = React.useMemo(() => extractRefundProof(timeline), [timeline]);
+  const voidProof = React.useMemo(() => extractVoidProof(timeline), [timeline]);
   const betState = onChainBet?.state ?? localBet?.state ?? null;
+  // GameHub books a void's terminal refund as exactly the stake (ADR-0037 §7.4).
+  const voidedRefund =
+    voidProof?.refundAmount ?? (onChainBet?.state === "voided" ? onChainBet.stake : undefined);
+  const refundAmount =
+    betState === "refunded"
+      ? (refundProof?.refundAmount ?? onChainBet?.refund)
+      : betState === "voided"
+        ? voidedRefund
+        : (settlementProof?.refundAmount ?? onChainBet?.refund);
   const cashReturned = getCasinoCashReturned({
     state: betState ?? undefined,
     stake: onChainBet?.stake ?? localBet?.stake,
     payout: settlementProof?.payoutNet ?? onChainBet?.payout,
-    refundAmount:
-      betState === "refunded"
-        ? (refundProof?.refundAmount ?? onChainBet?.refund)
-        : (settlementProof?.refundAmount ?? onChainBet?.refund)
+    refundAmount
   });
   const stateLabels = React.useMemo(
     () => ({
@@ -110,6 +122,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       randomReady: t("portfolio.activity.detail.state.randomReady"),
       placed: t("portfolio.activity.detail.state.placed"),
       refunded: t("portfolio.activity.detail.state.refunded"),
+      voided: t("portfolio.activity.detail.state.voided"),
       pending: t("portfolio.activity.detail.state.pending")
     }),
     [t]
@@ -173,7 +186,13 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
     }
   });
 
-  const canRefund = betState === "placed" && !readOnly && Boolean(sdk?.account);
+  const voidStatus = useBetVoidStatus(onChainBet);
+  // A received result cannot take the timeout refund (it reverts); the void panel takes over.
+  const canRefund =
+    betState === "placed" &&
+    voidStatus.data?.resultReceived !== true &&
+    !readOnly &&
+    Boolean(sdk?.account);
   const canFinalize = betState === "randomReady" && !readOnly && Boolean(sdk?.account);
 
   const handleRefund = React.useCallback(async () => {
@@ -184,7 +203,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       toast.success(t("portfolio.activity.detail.toast.refunded"));
       void refetchOnChain();
     } catch (error) {
-      toast.error((error as Error).message ?? t("portfolio.activity.detail.toast.refundFailed"));
+      toast.error(thrownErrorMessage(t, error, "portfolio.activity.detail.toast.refundFailed"));
     }
   }, [parsedBetId, refetchOnChain, refundFlow, sdk, t]);
 
@@ -196,18 +215,19 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       toast.success(t("portfolio.activity.detail.toast.finalized"));
       void refetchOnChain();
     } catch (error) {
-      toast.error((error as Error).message ?? t("portfolio.activity.detail.toast.finalizeFailed"));
+      toast.error(thrownErrorMessage(t, error, "portfolio.activity.detail.toast.finalizeFailed"));
     }
   }, [manualFinalizeFlow, parsedBetId, refetchOnChain, sdk, t]);
 
   const outcome = React.useMemo(
     () =>
-      deriveOutcome(onChainBet, betState, settlementProof, refundProof, {
+      deriveOutcome(onChainBet, betState, settlementProof, refundProof, voidedRefund, {
         refunded: t("portfolio.activity.detail.outcomes.refunded"),
+        voided: t("portfolio.activity.detail.outcomes.voided"),
         netResult: t("portfolio.activity.detail.outcomes.netResult"),
         loss: t("portfolio.activity.detail.outcomes.loss")
       }),
-    [betState, onChainBet, refundProof, settlementProof, t]
+    [betState, onChainBet, refundProof, settlementProof, t, voidedRefund]
   );
 
   const metrics = React.useMemo<BetDetailMetric[]>(
@@ -299,13 +319,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       },
       {
         label: t("portfolio.activity.detail.facts.refund"),
-        value: formatTokenAmount(
-          refundProof?.refundAmount ?? onChainBet?.refund,
-          decimals,
-          symbol,
-          4,
-          emptyLabel
-        )
+        value: formatTokenAmount(refundAmount, decimals, symbol, 4, emptyLabel)
       },
       {
         label: t("portfolio.activity.detail.facts.placedAt"),
@@ -345,7 +359,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       localBet?.player,
       onChainBet,
       primaryTxHash,
-      refundProof?.refundAmount,
+      refundAmount,
       cashReturned,
       settlementProof?.protocolFeeAccrual,
       symbol,
@@ -380,6 +394,13 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
         <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
           <BetDetailFacts facts={receiptFacts} />
           <div className="space-y-8">
+            <BetVoidPanel
+              bet={onChainBet}
+              chainId={chainId}
+              symbol={symbol}
+              decimals={decimals}
+              onVoidSent={() => void refetchOnChain()}
+            />
             <BetDetailLifecycle state={betState} facts={lifecycleFacts} />
             <BetDetailActions
               canFinalize={canFinalize}
@@ -424,12 +445,15 @@ function deriveOutcome(
   state?: string | null,
   settlementProof?: SettlementProof | null,
   refundProof?: RefundProof | null,
+  voidedRefund?: bigint,
   labels: {
     refunded: string;
+    voided: string;
     netResult: string;
     loss: string;
   } = {
     refunded: "—",
+    voided: "—",
     netResult: "—",
     loss: "—"
   }
@@ -437,6 +461,7 @@ function deriveOutcome(
   if (!bet || !state) return null;
   if (state === "refunded")
     return { label: labels.refunded, value: refundProof?.refundAmount ?? bet.refund };
+  if (state === "voided") return { label: labels.voided, value: voidedRefund };
   const award = settlementProof?.payoutNet ?? bet.payout;
   const refund = settlementProof?.refundAmount ?? bet.refund;
   const payout = award != null && refund != null ? award + refund : undefined;
@@ -461,6 +486,15 @@ function extractSettlementProof(timeline: GameHubEventRow[]): SettlementProof | 
     feeOnPayout: readBigintArg(args.feeOnPayout),
     protocolFeeAccrual: readBigintArg(args.protocolFeeAccrual)
   };
+}
+
+/** GameHub BetVoided names the stake it returned as a player payable. */
+function extractVoidProof(timeline: GameHubEventRow[]): RefundProof | null {
+  const row = [...timeline].reverse().find((event) => event.eventName === "BetVoided");
+  if (!row) return null;
+  const args = parseArgs(row.argsJson);
+  if (!args) return null;
+  return { refundAmount: readBigintArg(args.stake) };
 }
 
 function extractRefundProof(timeline: GameHubEventRow[]): RefundProof | null {

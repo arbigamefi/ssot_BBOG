@@ -229,7 +229,7 @@ describe("recent bets server aggregation", () => {
           transactionHash: "0xccc"
         }
       ])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValue([]);
     const getBlock = vi.fn().mockImplementation(({ blockNumber }) =>
       Promise.resolve({
         timestamp: blockNumber + 1_000n
@@ -263,8 +263,77 @@ describe("recent bets server aggregation", () => {
       state: "finalized",
       updatedAt: Number(finalizedBlock + 1_000n) * 1000
     });
-    expect(getLogs).toHaveBeenCalledTimes(4);
+    // BetPlaced, BetRandomReady and the three terminal events, including BetVoided.
+    expect(getLogs).toHaveBeenCalledTimes(5);
     expect(getBlock).toHaveBeenCalledTimes(3);
+  });
+
+  it("folds a voided bet from receipt logs with its stake returned", async () => {
+    process.env.BET_INDEX_READ_ENABLED = "0";
+    process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
+    process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
+    process.env.BET_RECEIPT_WINDOW_BLOCKS = "9";
+    process.env.BET_RECEIPT_LOG_CHUNK_BLOCKS = "10";
+
+    const release = loadEmbeddedRelease(84532);
+    if (!release.ok) throw new Error(release.error);
+    const releaseBlock = BigInt(release.release.meta?.blockNumber ?? 0);
+    const log = (args: Record<string, unknown>, block: bigint, logIndex: number, hash: string) => ({
+      args,
+      blockNumber: releaseBlock + block,
+      logIndex,
+      transactionHash: hash
+    });
+    const byEvent: Record<string, unknown[]> = {
+      BetPlaced: [
+        log(
+          { asset: ASSET, gameId: GAME_ID, player: PLAYER, positionId: 8n, stake: 10n },
+          1n,
+          1,
+          "0xaaa"
+        )
+      ],
+      // A void of a PendingVRF bet records the random in the same transaction.
+      BetRandomReady: [log({ positionId: 8n, requestId: 99n }, 3n, 2, "0xeee")],
+      BetVoided: [
+        log(
+          {
+            positionId: 8n,
+            caller: AFFILIATE,
+            stake: 10n,
+            settlementErrorPrefix: `0x${"0".repeat(64)}`
+          },
+          3n,
+          3,
+          "0xeee"
+        )
+      ]
+    };
+    const getLogs = vi.fn(
+      async ({ event }: { event: { name: string } }) => byEvent[event.name] ?? []
+    );
+
+    const response = await queryBetReceipt({
+      betId: "8",
+      chainId: 84532,
+      client: {
+        getBlock: vi.fn(async ({ blockNumber }) => ({ timestamp: blockNumber + 1_000n })),
+        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(9n)),
+        getLogs
+      } as any,
+      now: () => 1234
+    });
+
+    expect(getLogs.mock.calls.map(([params]) => params.event.name)).toContain("BetVoided");
+    expect(response.row).toMatchObject({
+      betId: "8",
+      state: "voided",
+      stake: "10",
+      refundAmount: "10",
+      terminalTxHash: "0xeee",
+      voidedTxHash: "0xeee",
+      lastEventName: "BetVoided"
+    });
   });
 
   it("degrades receipt queries when the durable receipt index is unreachable", async () => {
@@ -318,7 +387,8 @@ describe("recent bets server aggregation", () => {
 
     expect(response.source).toBe("rpc-window");
     expect(response.rows).toHaveLength(0);
-    expect(getLogs).toHaveBeenCalledTimes(12);
+    // Three chunks for each of the five lifecycle events, BetVoided included.
+    expect(getLogs).toHaveBeenCalledTimes(15);
     for (const call of getLogs.mock.calls) {
       const params = call[0] as { fromBlock: bigint; toBlock: bigint };
       expect(params.toBlock - params.fromBlock + 1n).toBeLessThanOrEqual(10n);
@@ -398,7 +468,7 @@ describe("recent bets server aggregation", () => {
           transactionHash: "0xccc"
         }
       ])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValue([]);
 
     const response = await queryPlayerBets({
       chainId: 84532,

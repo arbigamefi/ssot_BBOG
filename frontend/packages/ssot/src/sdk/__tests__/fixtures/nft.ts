@@ -20,13 +20,17 @@ export const release = {
     gameHub: BANK,
     vrfHub: BANK,
     refRegistry: BANK,
-    settlementRouter: BANK
+    settlementRouter: BANK,
+    poolRegistry: BANK
   },
   games: { [GAME]: MODULE },
   gamesMeta: [{ gameId: GAME, module: MODULE, maxBetCount: 25, callbackGasLimit: 2_447_746 }]
 } as unknown as SSOTRelease;
 
-export function nftFixture(assertWalletContext?: () => void) {
+export function nftFixture(
+  assertWalletContext?: () => void,
+  { poolListedActive = true }: { poolListedActive?: boolean } = {}
+) {
   const state = {
     allowance: 0n,
     nftCount: 2n,
@@ -41,6 +45,9 @@ export function nftFixture(assertWalletContext?: () => void) {
     minBetAmount: 1n,
     unbooked: 0n,
     requiredReserve: 20n,
+    gameDisabled: false,
+    playerOpenHolds: 0n,
+    poolActive: true,
     ssot: {
       L: 100n,
       P: 20n,
@@ -94,17 +101,24 @@ export function nftFixture(assertWalletContext?: () => void) {
           case "getSSOT":
             return state.ssot;
           case "getPerformance":
-            return [1n, 2n, 3n, 4n, 5n, 6n, 7n, 6n, 1n];
+            // held 9 = settled 6 + refunded 1 + voided 1 + open 1
+            return [1n, 2n, 3n, 4n, 5n, 6n, 9n, 6n, 1n, 1n, 10n];
           case "lpAccounting":
             return [state.ssot.P, state.ssot.R, state.status];
           case "openHolds":
             return 1n;
           case "MAX_OPEN_HOLDS":
             return 128n;
+          case "openHoldsOf":
+            return state.playerOpenHolds;
+          case "MAX_OPEN_HOLDS_PER_PLAYER":
+            return 2n;
           case "minBetAmount":
             return state.minBetAmount;
           case "unbookedResultCount":
             return state.unbooked;
+          case "isPoolActive":
+            return state.poolActive;
           case "playerPayable":
             return 2n;
           case "allowance":
@@ -130,6 +144,8 @@ export function nftFixture(assertWalletContext?: () => void) {
             return state.houseEdgeBps;
           case "gameCallbackGasLimit":
             return 2_447_746;
+          case "gameDisabled":
+            return state.gameDisabled;
           case "quoteVRFFee":
             return [100n, 2_447_746];
           case "riskInPaused":
@@ -149,7 +165,9 @@ export function nftFixture(assertWalletContext?: () => void) {
   };
   const wallet = { writeContract: vi.fn().mockResolvedValue(HASH) };
   const sdk = createSSOTSDK({
-    release,
+    release: poolListedActive
+      ? release
+      : { ...release, pools: release.pools.map((pool) => ({ ...pool, active: false })) },
     publicClient: pub as unknown as PublicClient,
     walletClient: wallet as unknown as WalletClient,
     account: OWNER,

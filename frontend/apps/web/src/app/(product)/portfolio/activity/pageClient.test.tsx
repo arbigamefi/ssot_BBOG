@@ -120,4 +120,29 @@ describe("PortfolioActivityPageClient", () => {
       "/portfolio/activity/42"
     );
   });
+  it("reads a timeout refund like a void: the returned stake, never a loss", () => {
+    const row = (betId: string, state: string) => ({
+      id: `84532:${betId}`,
+      chainId: 84532,
+      betId,
+      state,
+      gameId: "0x1111111111111111111111111111111111111111111111111111111111111111",
+      asset: "0x0000000000000000000000000000000000000001",
+      updatedBlock: 10,
+      lastTxHash: "0x1234",
+      lastEventName: state === "voided" ? "BetVoided" : "BetRefunded",
+      updatedAt: Date.now(),
+      stake: "1000000",
+      payout: "0",
+      refundAmount: "1000000"
+    });
+    state.bets = [row("42", "refunded"), row("43", "voided")];
+
+    render(<PortfolioActivityPageClient />);
+
+    expect(screen.getAllByText("1 USDC returned").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Refunded").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Voided").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Closed")).toBeNull();
+  });
 });

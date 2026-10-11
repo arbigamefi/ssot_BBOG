@@ -40,7 +40,8 @@ const config: KeeperConfig = {
   betIndexWriteEnabled: false,
   betIndexSsl: false,
   vaultProviderLedgerPools: [],
-  vaultProviderLedgerScanIntervalMs: 0
+  vaultProviderLedgerScanIntervalMs: 0,
+  voidGasLimit: 11_000_000n
 };
 type Watcher = {
   eventName: string;

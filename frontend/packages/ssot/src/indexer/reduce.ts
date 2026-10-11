@@ -1,7 +1,12 @@
 import type { Address, Hex } from "viem";
 import type { BetLifecycleState, BetRow } from "./store";
 
-export type GameHubEventName = "BetPlaced" | "BetRandomReady" | "BetFinalized" | "BetRefunded";
+export type GameHubEventName =
+  | "BetPlaced"
+  | "BetRandomReady"
+  | "BetFinalized"
+  | "BetRefunded"
+  | "BetVoided";
 
 export interface GameHubEventNormalized {
   chainId: number;
@@ -76,6 +81,19 @@ export function applyGameHubEventToBet(
     next.refundedTxHash = ev.txHash;
   }
 
+  if (ev.eventName === "BetVoided") {
+    // Like the terminal receipt: the stake is returned as a player payable, payouts are zero.
+    if (ev.args.stake != null) {
+      next.refundAmount = toBigintString(ev.args.stake);
+      next.payout = next.refundAmount;
+    }
+    if (ev.args.caller) next.voidCaller = ev.args.caller as Address;
+    if (ev.args.settlementErrorPrefix)
+      next.voidSettlementErrorPrefix = ev.args.settlementErrorPrefix as Hex;
+    next.terminalTxHash = ev.txHash;
+    next.voidedTxHash = ev.txHash;
+  }
+
   next.gameHub = ev.gameHub;
 
   // state transitions
@@ -94,9 +112,10 @@ export function reduceState(
 ): BetLifecycleState {
   if (eventName === "BetRefunded") return "refunded";
   if (eventName === "BetFinalized") return "finalized";
+  if (eventName === "BetVoided") return "voided";
   if (eventName === "BetRandomReady") {
-    // Do not regress from finalized/refunded.
-    if (prev === "finalized" || prev === "refunded") return prev;
+    // Do not regress from a terminal state.
+    if (prev === "finalized" || prev === "refunded" || prev === "voided") return prev;
     return "randomReady";
   }
   // BetPlaced

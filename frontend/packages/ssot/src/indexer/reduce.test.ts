@@ -115,6 +115,36 @@ describe("indexer reducer", () => {
     });
   });
 
+  it("ends a voided bet with its stake as the refund and never reopens it", () => {
+    const caller = "0x0000000000000000000000000000000000000006";
+    const prefix = "0x" + "08c379a0".padEnd(64, "0");
+    let bet = applyGameHubEventToBet(undefined, {
+      ...mk("BetPlaced", 10, TX1),
+      args: { ...mk("BetPlaced", 10, TX1).args, stake: 100n }
+    });
+    // voidBet records the random first, so BetRandomReady precedes BetVoided in one transaction.
+    bet = applyGameHubEventToBet(bet, mk("BetRandomReady", 20, TX4));
+    bet = applyGameHubEventToBet(bet, {
+      ...mk("BetVoided", 20, TX4),
+      args: { positionId: 123n, caller, stake: 100n, settlementErrorPrefix: prefix }
+    });
+    expect(bet).toMatchObject({
+      state: "voided",
+      refundAmount: "100",
+      payout: "100",
+      terminalTxHash: TX4,
+      voidedTxHash: TX4,
+      voidCaller: caller,
+      voidSettlementErrorPrefix: prefix,
+      lastEventName: "BetVoided"
+    });
+    expect(bet.finalizedTxHash).toBeUndefined();
+    expect(bet.payoutGross).toBeUndefined();
+    bet = applyGameHubEventToBet(bet, mk("BetRandomReady", 21, TX2));
+    expect(bet.state).toBe("voided");
+    expect(reduceState("voided", "BetRandomReady")).toBe("voided");
+  });
+
   it("records the issuing GameHub", () => {
     expect(applyGameHubEventToBet(undefined, mk("BetPlaced", 10, TX1)).gameHub).toBe(HUB);
   });

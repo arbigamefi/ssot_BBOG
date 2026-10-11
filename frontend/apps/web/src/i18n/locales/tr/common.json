@@ -50,6 +50,27 @@
       "description": "Uygulama gibi daha hızlı bir deneyim için ana ekrana ekleyin.",
       "action": "Yükle",
       "dismiss": "Kapat"
+    },
+    "txErrors": {
+      "canceled": "İsteği cüzdanınızda iptal ettiniz.",
+      "wallet": "Önce cüzdanınızı bağlayın veya kilidini açın.",
+      "network": "Cüzdanınız başka bir ağda. Bu sayfanın kullandığı ağa geçin.",
+      "gas": "Gas ücretini ödemek için bu ağda daha fazla ETH gerekiyor.",
+      "connection": "Ağa ulaşılamadı. Cüzdanınız bir işlem gönderdiyse, tekrar denemeden önce onu kontrol edin.",
+      "unconfirmed": "İşlem henüz onaylanmadı. Tekrar denemeden önce cüzdan geçmişinizi kontrol edin.",
+      "reverted": "İşlem zincirde başarısız oldu ve hiçbir şeyi değiştirmedi, ancak gas harcandı.",
+      "contextChanged": "Cüzdanınız veya ağınız değişti. İşlemi gözden geçirip tekrar deneyin.",
+      "depositsPaused": "Bu havuzda para yatırma duraklatıldı. Çekimler açık kalır.",
+      "voidNotEligible": "Bu bahis henüz geçersiz kılınamaz. Gösterilen zamandan sonra tekrar deneyin.",
+      "voidGasTooLow": "Cüzdanınız geçersiz kılma için gereken gas'ı (yaklaşık 11 milyon) gönderemedi. Operatörün keeper'ı da uygun bahisleri geçersiz kılar; bekleyebilirsiniz.",
+      "playerLimit": "Bu havuzda izin verilen en fazla açık bahse zaten sahipsiniz. Biri sonuçlandıktan sonra tekrar deneyin.",
+      "gameClosed": "Bu oyun kapandı ve yeni bahis almıyor.",
+      "invalidAmount": "Tutarı ondalık ayırıcı olarak nokta kullanarak sayı şeklinde girin, örneğin 12.5; en fazla {decimals} ondalık basamak.",
+      "refundNotReady": "Bu bahis henüz iade edilemez. İade, yalnızca çekiliş iade süresine kadar gelmezse açılır.",
+      "betChanged": "Bu bahsin durumu zaten değişti. Güncel durumunu görmek için sayfayı yenileyin.",
+      "resultReceived": "Çekiliş sonucu zaten geldi; bu bahis iade edilmek yerine ödenecek ya da geçersiz kılınacak. Ayrıntı sayfası sonraki adımı gösterir.",
+      "readFailed": "Bu bilgi şu anda zincirden okunamadı. Sıfır kabul edilmez; birazdan tekrar kontrol edin.",
+      "unknown": "İşlem tamamlanamadı. Tekrar denemeden önce cüzdan geçmişinizi kontrol edin."
     }
   },
   "locale": {
@@ -864,10 +885,6 @@
       "ownerChanged": "Bu cüzdan artık seçilen NFT’nin sahibi değil. Likidite NFT’leri listesini yenileyin.",
       "deposited": "Para yatırma işlemi onaylandı. Yeni NFT için ayrı bir 24 saatlik kilit başladı.",
       "withdrawn": "Çekim onaylandı. Kalan sermaye güncelleniyor.",
-      "playerClaimed": "Oyuncu ödemesi onaylandı.",
-      "playerDebtDetail": "Oyuncuya henüz ödenmemiş bu kazanç, LP sermayesinden ayrıdır. Ödeme yalnızca oyuncunun adresine yapılır. Havuz duraklatılmışken de alınabilir; tokenı ihraç eden kuruluşun kısıtlamaları geçerlidir.",
-      "playerDebtUnavailable": "Oyuncuya olan borç okunamadı; sıfır olduğu varsayılmıyor.",
-      "claimPlayer": "Oyuncu ödemesini al",
       "history": "Para yatırma, çekme ve NFT transferleri",
       "historyDetail": "NFT transferleri, NFT’nin temsil ettiği tokenlar hareket etmeden sahipliği değiştirir. NFT’yi alan kişinin getirisi, edinme maliyeti bilinmeden hesaplanamaz. Ödeyen kişi, ilk sahip ve çekim ödemesini alan kişi ayrı gösterilir.",
       "historyEmpty": "Yüklenen aralıkta likidite NFT’leriyle ilgili bir işlem bulunamadı.",
@@ -889,7 +906,9 @@
         "invalidPercent": "0’dan büyük ve en fazla 100 olan bir yüzde girin.",
         "zeroWithdrawal": "Bu yüzde, yuvarlama sonucunda sıfır tutara karşılık geliyor. Yüzdeyi artırın veya kilit süresi dolmuş boş bir NFT’yi %100 ile kapatın.",
         "insufficientFreeCapital": "Bu yüzde kullanılabilir sermayeyi aşıyor. Güncel azami tutarı kullanın veya yenileyin."
-      }
+      },
+      "bettingNotStarted": "Bu havuzda bahisler henüz başlamadı. Bahisler, yönetişim zaman kilidinde 72 saat bekleyen ayrı bir etkinleştirmeden sonra başlar. Şimdiden para yatırabilirsiniz.",
+      "bettingStopped": "Bu havuzda yeni bahisler durduruldu. Yeniden başlatmak için 72 saat bekleyen bir yönetişim değişikliği gerekir. Para yatırma ve çekme olağan kurallara tabidir."
     }
   },
   "casino": {
@@ -1066,7 +1085,8 @@
           "settled": "ÖDENDİ",
           "refunded": "İADE",
           "vrfReady": "VRF HAZIR",
-          "placed": "BAHİS"
+          "placed": "BAHİS",
+          "voided": "GEÇERSİZ"
         },
         "empty": "İlk oyun bekleniyor..."
       },
@@ -1171,6 +1191,9 @@
             "detail": "VRF, protokol zaman aşımından önce tamamlanmadı. Bahsi iade edebilirsiniz.",
             "status": "İade edilebilir"
           },
+          "resultUnbooked": {
+            "status": "Ödeme bekliyor"
+          },
           "failed": {
             "label": "Tur izleyici başarısız",
             "detail": "RPC sağlayıcısından en son tur durumu okunamadı.",
@@ -1180,6 +1203,9 @@
             "label": "Hazır",
             "detail": "Tek tık gerekirse onaylar, bahsi yapar ve ödemeyi izler.",
             "status": "Hazır"
+          },
+          "voided": {
+            "status": "Bahis tutarı iade edildi"
           }
         },
         "metrics": {
@@ -1196,6 +1222,11 @@
           "random": "Rastgele",
           "settle": "Ödeme",
           "result": "Sonuç"
+        },
+        "pendingSettlement": {
+          "body": "Çekiliş sonucu geldi ama bu bahis henüz ödenmedi. Ödeme başarısız olmaya devam ederse bahis kendi sayfasında geçersiz kılınabilir ve bahis tutarınız iade edilir.",
+          "notice": "#{betId} numaralı bahsin çekiliş sonucu geldi ama henüz ödenmedi. Oynamaya devam edebilirsiniz; ödemesi başarısız olmaya devam ederse bahis kendi sayfasında geçersiz kılınabilir ve bahis tutarınız iade edilir.",
+          "link": "Bahis ayrıntılarını aç"
         }
       },
       "selection": {
@@ -1320,6 +1351,10 @@
           "revealed": {
             "label": "Sonuç açıklandı",
             "detail": "Açılan sayılar VRF'ten geldi. Ödeme hâlâ beklemede."
+          },
+          "voided": {
+            "label": "Bahis tutarı iade edildi",
+            "detail": "Sonuç alındı ancak bahis sonuçlandırılamadı; bu yüzden bahis tutarınız size talep edilebilir bakiye olarak iade edildi. VRF ücreti iade edilmez."
           }
         },
         "sections": {
@@ -1369,7 +1404,8 @@
           "sicBoDice": "Açılan zarlar",
           "sicBoTotal": "Toplam",
           "sicBoTriple": "Üçlü",
-          "sicBoMultiplier": "Atış çarpanı"
+          "sicBoMultiplier": "Atış çarpanı",
+          "returnedStake": "İade edilen bahis tutarı"
         },
         "actions": {
           "close": "Kapat",
@@ -1384,7 +1420,8 @@
           "shareToX": "X'te paylaş",
           "shareToTelegram": "Telegram'da paylaş",
           "shareToWhatsApp": "WhatsApp'ta paylaş",
-          "linkCopied": "Bağlantı kopyalandı"
+          "linkCopied": "Bağlantı kopyalandı",
+          "openClaims": "Taleplere git"
         }
       },
       "receipt": {
@@ -1401,13 +1438,15 @@
           "placed": "Yapıldı",
           "randomReady": "Rastgelelik hazır",
           "finalized": "Finalize edildi",
-          "refunded": "İade edildi"
+          "refunded": "İade edildi",
+          "voided": "Geçersiz kılındı"
         },
         "metrics": {
           "stake": "Bahis",
           "payout": "Toplam iade edilen",
           "net": "Net",
-          "state": "Durum"
+          "state": "Durum",
+          "returned": "İade edilen"
         },
         "facts": {
           "game": "Oyun",
@@ -1426,6 +1465,10 @@
           "play": "Bu oyunu oyna",
           "explorer": "İşlemi görüntüle",
           "casino": "Kumarhaneye git"
+        },
+        "voided": {
+          "headline": "{amount} iade edildi",
+          "body": "Sonuç alındı ancak bahis sonuçlandırılamadı; bu yüzden bahis tutarınız size talep edilebilir bakiye olarak iade edildi. VRF ücreti iade edilmez."
         }
       },
       "audit": {
@@ -1485,14 +1528,16 @@
           "pending": "Bekleyen",
           "won": "Kazanan",
           "lost": "Kaybeden",
-          "refunded": "İade edilen"
+          "refunded": "İade edilen",
+          "voided": "Geçersiz kılınan"
         },
         "stateLabel": {
           "won": "Kazanıldı",
           "lost": "Kaybedildi",
           "pending": "Beklemede",
           "settled": "Ödendi",
-          "cancelled": "İade edildi"
+          "cancelled": "İade edildi",
+          "voided": "Geçersiz kılındı"
         },
         "openOnExplorer": "İşlemi blok gezgininde aç",
         "openOnExplorerWithChain": "{chain} gezgininde aç",
@@ -1778,10 +1823,27 @@
         "gameUnavailable": "Oyunun kabul koşulları veya ücret teklifi doğrulanamadı. Bahis yapmadan önce yenileyin.",
         "gameUnavailableLabel": "Oyun ayarları alınamıyor",
         "invalidCount": "Seçilen tur sayısı bu oyunun güncel sınırını aşıyor. Daha az tur seçin.",
-        "invalidCountLabel": "Tur sayısını ayarlayın"
+        "invalidCountLabel": "Tur sayısını ayarlayın",
+        "playerLimit": "Bu havuzda {count} açık bahsiniz var. Biri sonuçlandıktan sonra yenisini yapın.",
+        "playerLimitLabel": "Bir bahsin sonuçlanmasını bekleyin",
+        "checkAgain": "Tekrar kontrol et",
+        "viewOpenBets": "Açık bahislerinizi görün",
+        "inactive": "{symbol} havuzu şu anda yeni bahis almıyor. Yapılmış bahisler yine sonuçlandırılır.",
+        "inactiveLabel": "Havuz bahse kapalı"
       },
       "feedback": {
-        "houseEdgeChanged": "Güncel kasa payı kabul ettiğiniz oranı aşıyor. Yeniden bahis yapmadan önce yenileyip oranı kontrol edin."
+        "houseEdgeChanged": "Güncel kasa payı kabul ettiğiniz oranı aşıyor. Yeniden bahis yapmadan önce yenileyip oranı kontrol edin.",
+        "playerLimit": "Bu havuzda izin verilen en fazla açık bahse zaten sahipsiniz. Biri sonuçlandıktan sonra yenisini yapın.",
+        "gameClosed": "Bu oyun kapandı ve yeni bahis almıyor. Kapanmadan önce yapılan bahisler yine sonuçlandırılır."
+      },
+      "payment": {
+        "payable": "Bu sonuçlandırmada transfer tamamlanamadı; tutar cüzdanınız için ayrıldı. Transfer mümkün olduğunda size otomatik olarak ödenir; isterseniz Talepler sayfasından kendiniz de alabilirsiniz."
+      },
+      "closed": {
+        "title": "Bu oyun kapandı.",
+        "body": "Kapanmadan önce yapılan bahisler yine sonuçlandırılır ve makbuzları erişilebilir kalır.",
+        "viewBets": "Bahislerinizi görün",
+        "browse": "Açık oyunlara göz atın"
       }
     }
   },
@@ -1922,7 +1984,8 @@
       },
       "errors": {
         "walletUnavailable": "Cüzdan kullanılamıyor",
-        "poolUnavailable": "Havuz kullanılamıyor"
+        "poolUnavailable": "Havuz kullanılamıyor",
+        "rejected": "Bu davet eden bağlanamıyor. Cüzdanınızın zaten bir davet edeni olabilir ya da bağlantı sizi kendinize yönlendirir veya bir döngü oluşturur."
       },
       "hero": {
         "eyebrow": "Ortak hesabı",
@@ -2139,7 +2202,29 @@
         "claimedFees": "{amount} {symbol} protokol ücreti talep edildi",
         "protocolFeeFailed": "Protokol ücreti talebi başarısız"
       },
-      "loading": "Talepler yükleniyor…"
+      "loading": "Talepler yükleniyor…",
+      "payable": {
+        "claimable": "Talep edilebilir: {amount}",
+        "claim": "{amount} al",
+        "claiming": "Alınıyor…",
+        "connect": "Almak için cüzdan bağlayın",
+        "claimed": "{amount} alındı. Tutar oyuncunun cüzdanına ödendi.",
+        "note": "Talep, bu havuzun oyuncuya olan borcunun tamamını her zaman oyuncunun cüzdanına öder. Herkes gönderebilir.",
+        "nothing": "Bu havuzda talep edilecek bir şey yok. İade edilen bakiyeler genellikle oyuncunun cüzdanına otomatik olarak ödenir.",
+        "unavailable": "Talep edilebilir bakiye okunamadı. Sıfır kabul edilmez.",
+        "openClaims": "Talepler sayfasından alın"
+      },
+      "player": {
+        "eyebrow": "Oyuncu bakiyesi",
+        "title": "İade edilen bahisler ve ödenmemiş kazançlar",
+        "description": "Geçersiz kılınan bahislerden iade edilen tutarlar ve sonuçlandırmada transfer edilemeyen kazançlar burada bekler. Talep her zaman cüzdanınıza öder, havuz duraklatılmışken de. Operatörün keeper'ı bunları genellikle otomatik gönderir.",
+        "connect": "Havuzların size ne borçlu olduğunu görmek için cüzdan bağlayın.",
+        "checking": "Havuzların size borcu kontrol ediliyor…",
+        "empty": "Talep edilecek bir şey yok. Şu anda hiçbir havuzun bu cüzdana borcu yok.",
+        "unavailable": "#{poolId} havuzundaki ({symbol}) bakiye okunamadı. Sıfır kabul edilmez.",
+        "pool": "{symbol} · Havuz #{poolId}",
+        "claim": "Al"
+      }
     },
     "activity": {
       "common": {
@@ -2172,7 +2257,7 @@
         },
         "settled": {
           "label": "Ödenen sonuçlar",
-          "detail": "Nihai kazanç, kayıp, iade veya hata durumundaki bahisler."
+          "detail": "Kazanç, kayıp, iade veya geçersiz kılmayla biten bahisler."
         }
       },
       "filters": {
@@ -2211,13 +2296,16 @@
           "stake": "Bahis",
           "settlement": "Ödeme",
           "updated": "Güncellendi"
-        }
+        },
+        "returned": "{amount} iade edildi"
       },
       "status": {
         "won": "Kazandı",
         "closed": "Kapandı",
         "settled": "Ödendi",
-        "open": "Açık"
+        "open": "Açık",
+        "refunded": "İade edildi",
+        "voided": "Geçersiz kılındı"
       },
       "detail": {
         "common": {
@@ -2231,7 +2319,8 @@
           "placed": "Yapıldı",
           "refunded": "İade edildi",
           "pending": "Beklemede",
-          "refreshing": "Yenileniyor"
+          "refreshing": "Yenileniyor",
+          "voided": "Geçersiz kılındı"
         },
         "hero": {
           "back": "Deftere dön",
@@ -2265,7 +2354,8 @@
         "outcomes": {
           "refunded": "İade edildi",
           "netResult": "Net sonuç",
-          "loss": "Kayıp"
+          "loss": "Kayıp",
+          "voided": "İade edilen bahis tutarı"
         },
         "metrics": {
           "settlementState": {
@@ -2337,6 +2427,10 @@
             "refunded": {
               "title": "İade edildi",
               "description": "Bahis oyuncuya iade edildi."
+            },
+            "voided": {
+              "title": "Bahis tutarı iade edildi",
+              "description": "Sonuç sonuçlandırılamadı; bahis tutarı talep edilebilir bakiye olarak iade edildi."
             }
           }
         },
@@ -2371,6 +2465,24 @@
             "time": "Zaman"
           },
           "empty": "Henüz indekslenmiş yaşam döngüsü olayı yok."
+        },
+        "void": {
+          "eyebrow": "Geçersiz kılma ve iade",
+          "voidedTitle": "Bahis tutarınız iade edildi",
+          "voidedBody": "Sonuç alındı ancak bahis sonuçlandırılamadı; bu yüzden bahis tutarınız size talep edilebilir bakiye olarak iade edildi. VRF ücreti iade edilmez.",
+          "returnedStake": "İade edilen bahis tutarı",
+          "stuckTitle": "Sonuç geldi ancak bu bahis sonuçlandırılmadı",
+          "notYet": "Sonuçlandırma başarısız olmaya devam ederse bu bahis {time} itibarıyla geçersiz kılınabilir ve bahis tutarınız iade edilir.",
+          "eligible": "Bu bahis artık geçersiz kılınabilir. İşlem önce bahsi bir kez daha sonuçlandırmayı dener; bu da başarısız olursa bahis tutarınız talep edilebilir bakiye olarak iade edilir. VRF ücreti iade edilmez.",
+          "action": "Geçersiz kıl ve iade et",
+          "voiding": "Geçersiz kılınıyor…",
+          "keeperNote": "Operatörün keeper'ı da uygun bahisleri geçersiz kılar; beklemek sorun değil. Bazı akıllı sözleşme cüzdanları bu işlemi gönderemez, çünkü yaklaşık 11 milyon gas gerekir.",
+          "toast": {
+            "voided": "Bahis geçersiz kılındı. Bahis tutarınız artık talep edilebilir bakiye.",
+            "settled": "Geçersiz kılma denemesi sırasında bahis normal şekilde sonuçlandırıldı.",
+            "sent": "İşlem onaylandı. Bahis yenileniyor."
+          },
+          "connect": "Bu bahsi geçersiz kılmak için cüzdan bağlayın"
         }
       },
       "loading": "Etkinlik yükleniyor…"
@@ -2420,6 +2532,117 @@
       "rowsSampled": "Örnek satırlar",
       "durableRequired": "Durable gerekli",
       "durableConfigured": "Durable yapılandırıldı"
+    }
+  },
+  "governance": {
+    "queue": {
+      "eyebrow": "Yönetişim zaman kilidi",
+      "title": "Planlanmış yönetişim değişiklikleri",
+      "explainer": "Değişiklikler, herhangi biri tarafından yürütülebilmeden önce 72 saat bekler. Birine katılmıyorsanız, yürütülmeden önce kilidi açılmış bir yatırımınızı çekebilirsiniz.",
+      "loading": "Planlanmış değişiklikler kontrol ediliyor…",
+      "unavailable": "Planlanmış yönetişim değişiklikleri yüklenemedi. Bu listeye güvenmeden önce tekrar kontrol edin.",
+      "empty": "Planlanmış yönetişim değişikliği yok.",
+      "stale": "Bu liste eksik olabilir: dizin zaman kilidini en son {time} tarihinde okudu.",
+      "staleUnknown": "Bu liste eksik olabilir: dizin zaman kilidini henüz okumadı.",
+      "ready": "Yürütülmeye hazır",
+      "executableFrom": "{time} itibarıyla yürütülebilir",
+      "scheduledTx": "{tx} ile planlandı",
+      "critical": "Kritik",
+      "sendsValue": "(ayrıca {amount} ETH gönderir)"
+    },
+    "contracts": {
+      "poolRegistry": "havuz kaydı",
+      "gameHub": "oyun merkezi",
+      "bank": "{pool} havuzunun Bank'ı",
+      "referralRegistry": "davet kaydı",
+      "timelock": "yönetişim zaman kilidi"
+    },
+    "calls": {
+      "unknown": "{target} adresine tanınmayan çağrı (fonksiyon seçici {selector})",
+      "unknownNoData": "{target} adresine fonksiyon verisi olmadan çağrı",
+      "baseUnits": "{amount} temel birim",
+      "registerPool": "{asset} için {pool} havuzunu {bank} Bank'ıyla kaydet",
+      "activatePool": "{pool} havuzunda bahisleri başlat",
+      "deactivatePool": "{pool} havuzunda yeni bahisleri durdur",
+      "registerHub": "{hub} bahis merkezini kaydet",
+      "unregisterHub": "{hub} bahis merkezinin kaydını kaldır",
+      "allowHub": "{hub} merkezinin {pool} havuzunda bahis almasına izin ver",
+      "disallowHub": "{hub} merkezinin {pool} havuzunda bahis almasını durdur",
+      "registerGame": "{game} oyununu ekle (modül {module}, bahis başına en fazla {rounds} tur)",
+      "queueEdgeChange": "Kasa payını {percent} olarak değiştir; yürütüldükten 7 gün sonra geçerli olabilir",
+      "cancelEdgeChange": "Bekleyen kasa payı değişikliğini iptal et",
+      "setRefundTimeout": "İade zaman aşımını {duration} olarak ayarla",
+      "createReferralConfig": "Davet yapılandırması oluştur: oyuncu rakeback {player}, 1. seviye {level1}, 2. seviye {level2}, tutma {holdback}",
+      "setActiveReferralConfig": "#{id} davet yapılandırmasına geç",
+      "disableGame": "{game} oyununu kalıcı olarak kapat",
+      "openVoidWindow": "{pool} havuzu için geçersiz kılma penceresi aç",
+      "pausePool": "{pool} havuzunu duraklat",
+      "unpausePool": "{pool} havuzunun duraklatmasını kaldır",
+      "setMinBetAmount": "{pool} havuzunda en düşük bahsi {amount} yap",
+      "setRiskReserveBps": "{pool} havuzunda risk rezervini {percent} yap",
+      "setWithdrawalBufferBps": "{pool} havuzunda çekim tamponunu {percent} yap",
+      "setHoldbackVestingSeconds": "{pool} havuzunda davet tutmasının serbest kalma süresini {duration} yap",
+      "setMinPlayerTurnoverForUnlock": "{pool} havuzunda kilitli davet ödüllerini açan oyuncu hacmini {amount} yap",
+      "setGuardian": "{account} adresini {pool} havuzunun koruyucusu (guardian) yap",
+      "rescuePoolAsset": "{pool} havuzunun Bank'ından {account} adresine {amount} gönder",
+      "rescueToken": "{pool} havuzunun Bank'ından {token} tokenından {amount} miktarını {account} adresine gönder",
+      "claimProtocolFees": "{pool} havuzundan {account} adresine {amount} protokol ücreti öde",
+      "setSettlementRouterOnce": "{pool} havuzunun Bank'ını {account} sonuçlandırma yönlendiricisine bağla",
+      "setRandomnessConsumerOnce": "{pool} havuzunun Bank'ı için rastgelelik tüketicisini {account} yap",
+      "setBinderOnce": "{account} adresinin oyuncular için davet eden bağlamasına izin ver",
+      "updateDelay": "Yönetişim gecikmesini {duration} olarak değiştir",
+      "grantRole": "{account} adresine {role} ver",
+      "revokeRole": "{account} adresinden {role} geri al",
+      "renounceRole": "{account} adresinin sahip olduğu {role} bırak",
+      "setSentinel": "{account} adresini {contract} için nöbetçi (sentinel) yap",
+      "removeSentinel": "{contract} için nöbetçiyi (sentinel) kaldır",
+      "transferGovernance": "{contract} yönetişimini {account} adresine devret",
+      "acceptGovernance": "{contract} yönetişimini kabul et",
+      "otherFunction": "{contract} üzerinde {signature} çağır"
+    },
+    "roles": {
+      "DEFAULT_ADMIN_ROLE": "yönetici rolünü",
+      "PROPOSER_ROLE": "öneren rolünü",
+      "EXECUTOR_ROLE": "yürütücü rolünü",
+      "CANCELLER_ROLE": "iptal eden rolünü"
+    }
+  },
+  "ops": {
+    "governance": {
+      "eyebrow": "Yönetişim ve risk",
+      "title": "Zaman kilidi işlemleri ve risk kontrolleri",
+      "description": "Yönetişim zaman kilidinde planlanan her işlem ile GameHub'ın kaydettiği geçersiz kılma pencereleri ve devre dışı oyunlar.",
+      "timelock": "Zaman kilidi {address}",
+      "indexedThrough": "{block} bloğuna kadar dizinlendi ({time})",
+      "notIndexed": "henüz dizinlenmedi",
+      "loading": "Yönetişim geçmişi okunuyor…",
+      "unavailable": "Yönetişim geçmişi okunamadı: bahis dizini veya zincir kullanılamıyor.",
+      "stale": "Zaman kilidi dizini bir saatten fazla geride; son işlemler eksik olabilir.",
+      "tx": "İşlem",
+      "operations": {
+        "title": "İşlemler",
+        "empty": "Henüz hiçbir işlem planlanmadı.",
+        "readyAt": "{time} itibarıyla hazır",
+        "states": {
+          "waiting": "Bekliyor",
+          "ready": "Hazır",
+          "executed": "Yürütüldü",
+          "cancelled": "İptal edildi"
+        },
+        "scheduledTx": "Planlandı",
+        "executedTx": "Yürütüldü",
+        "cancelledTx": "İptal edildi"
+      },
+      "voidWindows": {
+        "title": "Geçersiz kılma pencereleri",
+        "empty": "Hiç geçersiz kılma penceresi açılmadı.",
+        "row": "#{pool} havuzu: {cohortEnd} tarihine kadar istenen bahisler, istekten 24 saat sonra geçersiz kılınabilir. Açan: {caller}."
+      },
+      "disabledGames": {
+        "title": "Devre dışı oyunlar",
+        "empty": "Hiçbir oyun devre dışı bırakılmadı.",
+        "row": "{game}, {caller} tarafından devre dışı bırakıldı."
+      }
     }
   }
 }

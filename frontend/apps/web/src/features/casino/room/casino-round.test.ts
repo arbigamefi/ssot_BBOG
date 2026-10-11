@@ -34,7 +34,8 @@ describe("casino round helpers", () => {
         betState: "placed",
         placedAt: 1,
         now: 3_602_000,
-        refundDeadline: 3_601
+        refundDeadline: 3_601,
+        vrfResult: "awaiting"
       })
     ).toBe("refundable");
 
@@ -57,9 +58,51 @@ describe("casino round helpers", () => {
     ).toBe("manual_settle_offered");
   });
 
+  it("offers the timeout refund only after a read says the VRF request still awaits", () => {
+    const pastDeadline = {
+      betState: "placed",
+      placedAt: 1,
+      now: 3_602_000,
+      refundDeadline: 3_601
+    } as const;
+    expect(deriveCasinoRoundPhase(pastDeadline)).toBe("timeout_soft");
+    expect(deriveCasinoRoundPhase({ ...pastDeadline, vrfResult: "received" })).toBe(
+      "result_unbooked"
+    );
+    // A received result is unbooked from the moment it is read, deadline or not.
+    expect(
+      deriveCasinoRoundPhase({
+        betState: "placed",
+        placedAt: 1,
+        now: 62_000,
+        vrfResult: "received"
+      })
+    ).toBe("result_unbooked");
+    // A RandomReady bet whose settlement the contract reverted waits for a void instead.
+    expect(
+      deriveCasinoRoundPhase({
+        betState: "randomReady",
+        randomReadyAt: 1_000,
+        now: 40_000,
+        settlementReverted: true
+      })
+    ).toBe("result_unbooked");
+    // RandomReady never takes the timeout refund: it settles (or is voided later).
+    expect(
+      deriveCasinoRoundPhase({
+        betState: "randomReady",
+        randomReadyAt: 1_000,
+        now: 3_602_000,
+        refundDeadline: 3_601,
+        vrfResult: "awaiting"
+      })
+    ).toBe("manual_settle_offered");
+  });
+
   it("maps terminal bet states", () => {
     expect(deriveCasinoRoundPhase({ betState: "finalized", now: 1 })).toBe("settled");
     expect(deriveCasinoRoundPhase({ betState: "refunded", now: 1 })).toBe("refundable");
+    expect(deriveCasinoRoundPhase({ betState: "voided", now: 1 })).toBe("voided");
   });
 
   it("formats native VRF fees without scientific notation", () => {

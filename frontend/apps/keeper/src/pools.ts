@@ -1,5 +1,6 @@
 import { getAddress, type Address, type PublicClient } from "viem";
 import { BANK_KEEPER_ABI, LIQUIDITY_VAULT_KEEPER_ABI } from "./abi.js";
+import type { UnknownBlockGrace } from "./block-grace.js";
 import { describeError } from "./errors.js";
 import type { PoolHealth } from "./health.js";
 import type { VaultProviderLedgerPool } from "./vault-provider-ledger.js";
@@ -11,10 +12,14 @@ const LP_UNBOOKED_RESULT = 2;
 const LP_INVALID_ACCOUNTING = 3;
 const LP_UNAVAILABLE = 4;
 
-/** Observe both custodians at one block. NFT maturity requires no keeper write. */
+/**
+ * Observe both custodians at one block. NFT maturity requires no keeper write. With `grace`, a read
+ * that reaches a node without that block is reported only once it has persisted for five minutes.
+ */
 export async function readPoolHealth(
   pool: VaultProviderLedgerPool,
-  client: Pick<PublicClient, "getBlock" | "readContract">
+  client: Pick<PublicClient, "getBlock" | "readContract">,
+  grace?: UnknownBlockGrace
 ): Promise<PoolHealth> {
   const result: PoolHealth = { bank: pool.bank, vault: pool.vault };
   try {
@@ -78,8 +83,13 @@ export async function readPoolHealth(
       result.lpStatus === LP_UNAVAILABLE
     )
       result.error = `LP accounting unavailable (status ${result.lpStatus})`;
+    grace?.succeed(pool.bank);
   } catch (error) {
-    result.error = describeError(error);
+    if (!grace || grace.report(pool.bank, error)) result.error = describeError(error);
+    else {
+      result.transientError = describeError(error);
+      result.transientSince = new Date(grace.since(pool.bank)!).toISOString();
+    }
   }
   return result;
 }

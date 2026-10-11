@@ -2,6 +2,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { ErrorCallout, TxStepper, TxStatusChip } from "@ssot/ui";
 
+import { txErrorMessage } from "../../tx/tx-error-copy";
 import { shortHex } from "./format";
 import type { PortfolioFlowState } from "./types";
 
@@ -25,7 +26,10 @@ export function PortfolioActionTrace({
   return (
     <div className="space-y-3">
       {flow.error ? (
-        <ErrorCallout title={t("portfolio.overview.trace.error")} message={flow.error.message} />
+        <ErrorCallout
+          title={t("portfolio.overview.trace.error")}
+          message={txErrorMessage(t, flow.error)}
+        />
       ) : null}
       <TxStepper
         title={t("portfolio.overview.trace.title")}

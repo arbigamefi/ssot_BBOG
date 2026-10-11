@@ -7,6 +7,7 @@ import { PageTransition } from "../../../components/PageTransition";
 import { getDefaultCasinoPoolAssetContext } from "../../../features/assets/pool-asset";
 import { shortHex } from "../../../features/ops/format";
 import { OpsEventTrail } from "../../../features/ops/ops-event-trail";
+import { OpsGovernancePanel } from "../../../features/ops/ops-governance-panel";
 import { OpsHero } from "../../../features/ops/ops-hero";
 import { OpsReleasePanel } from "../../../features/ops/ops-release-panel";
 import { OpsWorkerPanel } from "../../../features/ops/ops-worker-panel";
@@ -310,6 +311,7 @@ export function OpsPageClient() {
             summaryDescription: t("hero.summaryDescription")
           }}
         />
+        <OpsGovernancePanel />
         <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
           <OpsReleasePanel
             rows={releaseRows}

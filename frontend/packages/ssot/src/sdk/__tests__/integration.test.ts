@@ -82,6 +82,8 @@ function gameRead(functionName: string): unknown {
       return 25;
     case "gameCallbackGasLimit":
       return 2_447_746;
+    case "gameDisabled":
+      return false;
     default:
       throw new Error(`Unexpected game read: ${functionName}`);
   }
@@ -529,27 +531,25 @@ describe("createSSOTSDK", () => {
     });
     const settlementTx =
       "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" as Hex;
-    pub.getContractEvents
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          args: {
-            positionId: 8n,
-            payoutGross: 1_000_000n,
-            payoutNet: 980_000n,
-            feeOnPayout: 20_000n,
-            protocolFeeAccrual: 10_000n
-          },
-          transactionHash: settlementTx,
-          blockNumber: 119n,
-          logIndex: 2
-        }
-      ])
-      .mockResolvedValueOnce([]);
+    pub.getContractEvents.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        args: {
+          positionId: 8n,
+          payoutGross: 1_000_000n,
+          payoutNet: 980_000n,
+          feeOnPayout: 20_000n,
+          protocolFeeAccrual: 10_000n
+        },
+        transactionHash: settlementTx,
+        blockNumber: 119n,
+        logIndex: 2
+      }
+    ]);
 
     const proof = await sdk.gameHub.getTerminalProof(8n);
 
+    // Storage names the terminal kind, so each chunk costs one log query for that event only.
+    expect(pub.getContractEvents).toHaveBeenCalledTimes(2);
     expect(pub.getContractEvents).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
@@ -560,7 +560,7 @@ describe("createSSOTSDK", () => {
       })
     );
     expect(pub.getContractEvents).toHaveBeenNthCalledWith(
-      3,
+      2,
       expect.objectContaining({
         eventName: "BetFinalized",
         args: { positionId: 8n },
@@ -723,6 +723,10 @@ describe("createSSOTSDK", () => {
           return 0n;
         case "MAX_OPEN_HOLDS":
           return 128n;
+        case "openHoldsOf":
+          return 0n;
+        case "MAX_OPEN_HOLDS_PER_PLAYER":
+          return 2n;
         case "minBetAmount":
           return 1n;
         default:
@@ -780,6 +784,10 @@ describe("createSSOTSDK", () => {
           return 0n;
         case "MAX_OPEN_HOLDS":
           return 128n;
+        case "openHoldsOf":
+          return 0n;
+        case "MAX_OPEN_HOLDS_PER_PLAYER":
+          return 2n;
         case "minBetAmount":
           return 1n;
         default:
@@ -850,6 +858,10 @@ describe("createSSOTSDK", () => {
           return holds;
         case "MAX_OPEN_HOLDS":
           return 128n;
+        case "openHoldsOf":
+          return 0n;
+        case "MAX_OPEN_HOLDS_PER_PLAYER":
+          return 2n;
         default:
           return gameRead(functionName);
       }
@@ -890,5 +902,190 @@ describe("createSSOTSDK", () => {
 
     expect(result.ok).toBe(false);
     expect(result.error?.code).toBe("WALLET_NOT_CONNECTED");
+  });
+
+  describe("launch-candidate gates before any wallet prompt", () => {
+    const planInput: PlaceBetInput = {
+      chainId: 84532,
+      gameId: GAME_ID,
+      poolId: 1,
+      betCount: 1,
+      stake: 10n,
+      params: "0x",
+      maxHouseEdgeBps: 3000,
+      stakeSpec: encodeStakeSpec({ amountPerRoll: 10n, betCount: 1, stopGain: 0n, stopLoss: 0n })
+    };
+    function planReads(overrides: Record<string, unknown> = {}) {
+      pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+        if (functionName in overrides) return overrides[functionName];
+        switch (functionName) {
+          case "riskInPaused":
+            return false;
+          case "quoteVRFFee":
+            return [1000n, 200000];
+          case "maxPayout":
+            return 20n;
+          case "getSSOT":
+            return { G: 100n, L: 100n, R: 0n, riskReserveBps: 0n, accountingValid: true };
+          case "allowance":
+            return 0n;
+          case "minBetAmount":
+            return 1n;
+          case "openHolds":
+            return 0n;
+          case "MAX_OPEN_HOLDS":
+            return 128n;
+          case "openHoldsOf":
+            return 0n;
+          case "MAX_OPEN_HOLDS_PER_PLAYER":
+            return 2n;
+          default:
+            return gameRead(functionName);
+        }
+      });
+    }
+
+    it("reports a disabled game in its config and refuses to plan a bet on it", async () => {
+      planReads({ gameDisabled: true });
+      expect(await sdk.gameHub.getGameConfig(GAME_ID)).toMatchObject({ disabled: true });
+      expect(await sdk.gameHub.isGameDisabled(GAME_ID)).toBe(true);
+      expect(await sdk.gameHub.planPlaceBet(planInput)).toEqual({
+        error: {
+          code: "GAME_DISABLED",
+          message: expect.any(String),
+          severity: "warning",
+          details: { gameId: GAME_ID }
+        }
+      });
+      expect(pub.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "gameDisabled",
+          args: [GAME_ID],
+          blockNumber: 130n
+        })
+      );
+      // GameHub would revert the quote as well, so planning stops before it.
+      expect(
+        pub.readContract.mock.calls.some(
+          ([call]: [{ functionName: string }]) => call.functionName === "quoteVRFFee"
+        )
+      ).toBe(false);
+      expect(wal.writeContract).not.toHaveBeenCalled();
+    });
+
+    it.each([1n, 2n])("plans a bet with %s of 2 open holds for this player", async (open) => {
+      planReads({ openHoldsOf: open });
+      const result = await sdk.gameHub.planPlaceBet(planInput);
+      if (open === 2n) {
+        expect(result).toEqual({
+          error: {
+            code: "PLAYER_OPEN_HOLD_LIMIT",
+            message: expect.any(String),
+            severity: "warning",
+            retryable: true,
+            details: { player: ACCOUNT, open: "2", max: "2" }
+          }
+        });
+      } else {
+        expect(result).not.toHaveProperty("error");
+      }
+      for (const functionName of ["openHoldsOf", "MAX_OPEN_HOLDS_PER_PLAYER"])
+        expect(pub.readContract).toHaveBeenCalledWith(
+          expect.objectContaining({ address: getAddress(BANK), functionName, blockNumber: 130n })
+        );
+      expect(pub.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({ functionName: "openHoldsOf", args: [ACCOUNT] })
+      );
+      expect(wal.writeContract).not.toHaveBeenCalled();
+    });
+
+    it("reads a player's open holds and the per-player cap at one block", async () => {
+      planReads({ openHoldsOf: 1n });
+      expect(await sdk.bank.getOpenHolds(1, ACCOUNT)).toEqual({ open: 1n, max: 2n });
+      expect(pub.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: getAddress(BANK),
+          functionName: "openHoldsOf",
+          args: [ACCOUNT],
+          blockNumber: 130n
+        })
+      );
+    });
+  });
+
+  describe("ReferralRegistry", () => {
+    const REFERRER = "0x3333333333333333333333333333333333333333" as Address;
+    const REGISTRY = getAddress(TEST_RELEASE.contracts.refRegistry);
+
+    it("binds the connected wallet's referrer on ReferralRegistry, not GameHub", async () => {
+      expect(await sdk.referral.bind(REFERRER)).toMatchObject({ ok: true, txHash: TX_HASH });
+      expect(pub.simulateContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: REGISTRY,
+          functionName: "bind",
+          args: [ACCOUNT, REFERRER],
+          account: ACCOUNT
+        })
+      );
+      expect(journal.map((entry) => entry.action)).toContain("BIND_REFERRER");
+      // The GameHub forwarders are gone, with no aliases (ADR-0037 §10).
+      expect(sdk.gameHub).not.toHaveProperty("bindReferrer");
+      expect(sdk.gameHub).not.toHaveProperty("referrerOf");
+    });
+
+    it("reads the referrer from ReferralRegistry", async () => {
+      pub.readContract.mockResolvedValueOnce(REFERRER);
+      expect(await sdk.referral.referrerOf(ACCOUNT)).toBe(REFERRER);
+      expect(pub.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({ address: REGISTRY, functionName: "referrerOf", args: [ACCOUNT] })
+      );
+    });
+
+    it("decodes a refused bind from real revert bytes before any wallet prompt", async () => {
+      const abi = getContractAbis().ReferralRegistryAbi;
+      pub.simulateContract.mockRejectedValueOnce(
+        new BaseError("wrapped", {
+          cause: new ContractFunctionRevertedError({
+            abi,
+            data: encodeErrorResult({ abi, errorName: "InvalidConfig" }),
+            functionName: "bind"
+          })
+        })
+      );
+      expect(await sdk.referral.bind(REFERRER)).toMatchObject({
+        ok: false,
+        error: { code: "INVALID_CONFIG", details: { transactionSubmitted: false } }
+      });
+      expect(wal.writeContract).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("governance timelock", () => {
+    const TIMELOCK = "0x7777777777777777777777777777777777777777" as Address;
+    function governanceOf(registry: Address, hub: Address) {
+      pub.readContract.mockImplementation(async ({ address }: { address: Address }) => {
+        if (address === getAddress(TEST_RELEASE.contracts.poolRegistry)) return registry;
+        if (address === getAddress(TEST_RELEASE.contracts.gameHub)) return hub;
+        throw new Error(`Unexpected governance read at ${address}`);
+      });
+    }
+
+    it("returns PoolRegistry.governance() when GameHub reports the same at that block", async () => {
+      governanceOf(TIMELOCK.toLowerCase() as Address, TIMELOCK);
+      expect(await sdk.governance.getTimelock()).toBe(getAddress(TIMELOCK));
+      for (const contract of ["poolRegistry", "gameHub"] as const)
+        expect(pub.readContract).toHaveBeenCalledWith(
+          expect.objectContaining({
+            address: getAddress(TEST_RELEASE.contracts[contract]),
+            functionName: "governance",
+            blockNumber: 130n
+          })
+        );
+    });
+
+    it("refuses a GameHub governed by anything else", async () => {
+      governanceOf(TIMELOCK, ACCOUNT);
+      await expect(sdk.governance.getTimelock()).rejects.toThrow("different governance");
+    });
   });
 });

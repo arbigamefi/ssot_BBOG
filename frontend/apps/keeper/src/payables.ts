@@ -1,8 +1,11 @@
 import type { Address, Hex, PublicClient } from "viem";
 import { BANK_KEEPER_ABI } from "./abi.js";
+import { UnknownBlockGrace } from "./block-grace.js";
 import { describeError } from "./errors.js";
+import { HeadMonitor } from "./head-monitor.js";
 import type { PayableHealth } from "./health.js";
 import { splitBlockRange } from "./scan.js";
+import type { KeeperLogger } from "./types.js";
 
 const RETRY_BASE_MS = 5 * 60_000;
 const RETRY_MAX_MS = 6 * 60 * 60_000;
@@ -26,6 +29,8 @@ type TrackedPlayer = {
   error?: string;
   claimError?: string;
   readError?: string;
+  /** A block-pinned read reached a node without that block; it becomes `readError` after five minutes. */
+  transientReadError?: string;
 };
 
 /**
@@ -35,27 +40,47 @@ type TrackedPlayer = {
  *
  * Discovery is memory-only and replays finalized blocks from the release origin after a restart. New debts
  * therefore wait for chain finality before automatic discovery. A monotonic finalized cursor preserves
- * coverage even when a small scan budget takes many passes to catch up. Events only nominate players:
- * the on-chain balance decides whether a claim is sent. An explicitly recognized token refusal leaves
- * the debt owed and retries with backoff. Unrecognized failures require operational attention.
+ * coverage even when a small scan budget takes many passes to catch up. A finalized read below the
+ * cursor scans nothing and is reported as `finalizedBehindBy`, not as an error; a finalized head that has
+ * not advanced for `finalizedStallMs` is reported as `finalizedStalledSince`. Events only nominate
+ * players: the on-chain balance decides whether a claim is sent. An explicitly recognized token refusal
+ * leaves the debt owed and retries with backoff. Unrecognized failures require operational attention.
  */
 export function createPayableClaimer({
   bank,
   origin,
   chunkSize,
   maxChunks,
+  logger,
+  finalizedStallMs,
   now = Date.now
 }: {
   bank: Address;
   origin?: bigint;
   chunkSize: bigint;
   maxChunks: number;
+  logger?: KeeperLogger;
+  finalizedStallMs?: number;
   now?: () => number;
 }) {
   const players = new Map<string, TrackedPlayer>();
   let nextBlock = origin ?? 0n;
   let scannedThrough = origin == null ? undefined : origin - 1n;
-  let lastFinalizedBlock: bigint | undefined;
+  const finality = new HeadMonitor({
+    scanner: `payables:${bank}`,
+    head: "finalized",
+    logger,
+    now,
+    stallMs: finalizedStallMs
+  });
+  const grace = new UnknownBlockGrace(now);
+  /** Pinned reads go to whichever node answers: hold its unknown-block failures for five minutes. */
+  const recordReadFailure = (item: TrackedPlayer, key: string, failure: unknown) => {
+    const description = describeError(failure);
+    const persistent = grace.report(key, failure);
+    item.readError = persistent ? description : undefined;
+    item.transientReadError = persistent ? undefined : description;
+  };
 
   return {
     async run(client: PayableClient, claim: PayableClaim): Promise<PayableHealth> {
@@ -71,6 +96,8 @@ export function createPayableClaimer({
       let readError: string | undefined;
       let head: bigint | undefined;
       let finalizedBlock: bigint | undefined;
+      let finalizedBehindBy: bigint | undefined;
+      let finalizedStalledSince: string | undefined;
       let caughtUp = false;
       try {
         const block = await client.getBlock();
@@ -80,12 +107,11 @@ export function createPayableClaimer({
         const finalized = await client.getBlock({ blockTag: "finalized" });
         if (finalized.number == null)
           throw new Error("Payable discovery requires a numbered finalized block");
-        finalizedBlock = finalized.number;
-        if (lastFinalizedBlock != null && finalizedBlock < lastFinalizedBlock)
-          throw new Error(
-            `Payable finalized block regressed from ${lastFinalizedBlock} to ${finalizedBlock}`
-          );
-        lastFinalizedBlock = finalizedBlock;
+        const observed = finality.observe(finalized.number);
+        finalizedBlock = observed.target;
+        finalizedBehindBy = observed.behindBy;
+        if (observed.stalledSince != null)
+          finalizedStalledSince = new Date(observed.stalledSince).toISOString();
         for (const range of splitBlockRange({
           fromBlock: nextBlock,
           toBlock: finalizedBlock,
@@ -121,6 +147,7 @@ export function createPayableClaimer({
         // Rotate both debtors and finality watchers so the bounded pass cannot starve later players.
         players.delete(item.player.toLowerCase());
         players.set(item.player.toLowerCase(), item);
+        const key = item.player.toLowerCase();
         let owed: bigint;
         try {
           owed = (await client.readContract({
@@ -130,9 +157,11 @@ export function createPayableClaimer({
             args: [item.player],
             ...(head != null ? { blockNumber: head } : {})
           })) as bigint;
+          grace.succeed(`head:${key}`);
           item.readError = undefined;
+          item.transientReadError = undefined;
         } catch (failure) {
-          item.readError = describeError(failure);
+          recordReadFailure(item, `head:${key}`, failure);
           continue;
         }
         try {
@@ -179,25 +208,32 @@ export function createPayableClaimer({
             args: [item.player],
             blockNumber: finalizedBlock
           })) as bigint;
-          if (finalizedOwed === 0n) players.delete(item.player.toLowerCase());
+          grace.succeed(`finalized:${key}`);
+          if (finalizedOwed === 0n) players.delete(key);
         } catch (failure) {
-          item.readError = describeError(failure);
+          recordReadFailure(item, `finalized:${key}`, failure);
         }
       }
 
       const tracked = [...players.values()];
       readError ??= tracked.find((item) => item.readError)?.readError;
       const claimError = tracked.find((item) => item.claimError)?.claimError;
+      const transientReadError = tracked.find(
+        (item) => item.transientReadError
+      )?.transientReadError;
       return {
         bank,
         scannedThrough: scannedThrough?.toString(),
         finalizedBlock: finalizedBlock?.toString(),
+        ...(finalizedBehindBy == null ? {} : { finalizedBehindBy: finalizedBehindBy.toString() }),
+        ...(finalizedStalledSince ? { finalizedStalledSince } : {}),
         headBlock: head?.toString(),
         caughtUp,
         pending: tracked.filter((item) => item.zeroObservedAt == null).length,
         error: error ?? claimError ?? tracked.find((item) => item.error)?.error,
         ...(claimError ? { claimError } : {}),
-        ...(readError ? { readError } : {})
+        ...(readError ? { readError } : {}),
+        ...(transientReadError ? { transientReadError } : {})
       };
     }
   };

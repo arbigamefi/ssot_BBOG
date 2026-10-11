@@ -13,13 +13,17 @@ import { GAME_HUB_KEEPER_ABI } from "./abi.js";
 /**
  * GameHub events written to the bet index, in the order the keeper writes them. HouseEdgeAllocated
  * annotates a settled bet (v1.6) and does not change its lifecycle, so its order does not matter.
+ * VoidWindowOpened and GameDisabled record risk decisions for the operations page.
  */
 export const GAME_HUB_INDEX_EVENTS = [
   "BetPlaced",
   "BetRandomReady",
   "BetFinalized",
   "BetRefunded",
-  "HouseEdgeAllocated"
+  "BetVoided",
+  "HouseEdgeAllocated",
+  "VoidWindowOpened",
+  "GameDisabled"
 ] as const;
 
 export type GameHubIndexEventName = (typeof GAME_HUB_INDEX_EVENTS)[number];

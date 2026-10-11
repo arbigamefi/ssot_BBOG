@@ -11,6 +11,7 @@ function log(
     | "BetReserveReleased"
     | "BetSettled"
     | "BetRefunded"
+    | "BetVoided"
     | "PlayerPayableCreated"
     | "Transfer",
   amount = 296n,
@@ -81,6 +82,44 @@ describe("terminal transaction player payment evidence", () => {
       amount: "296"
     });
     expect(proof([log("Transfer"), release(), settled(), log("Transfer")]).status).toBe("unknown");
+  });
+  it("proves a void by the payable of the whole stake, its only payment", () => {
+    // Bank.voidBet: BetReserveReleased, PlayerPayableCreated(stake), BetVoided(stake), one transaction.
+    const voided = [release(), log("PlayerPayableCreated", 1_000n), log("BetVoided", 1_000n)];
+    expect(proof(voided, 1_000n)).toEqual({ status: "payable", amount: "1000" });
+    // The claim that later pays the payable is not part of the void.
+    expect(proof([...voided, log("Transfer", 1_000n)], 1_000n).status).toBe("payable");
+  });
+  it.each([
+    ["no payable", [release(), log("BetVoided", 1_000n)]],
+    [
+      "a transfer instead of the payable",
+      [release(), log("Transfer", 1_000n), log("BetVoided", 1_000n)]
+    ],
+    ["a partial payable", [release(), log("PlayerPayableCreated", 999n), log("BetVoided", 1_000n)]],
+    [
+      "another bet's payable",
+      [release(), log("PlayerPayableCreated", 1_000n, bank, 8n), log("BetVoided", 1_000n)]
+    ],
+    [
+      "another emitter's void",
+      [release(), log("PlayerPayableCreated", 1_000n), log("BetVoided", 1_000n, other)]
+    ],
+    [
+      "the payable after the void",
+      [release(), log("BetVoided", 1_000n), log("PlayerPayableCreated", 1_000n)]
+    ],
+    [
+      "a second terminal event",
+      [release(), log("PlayerPayableCreated", 1_000n), log("BetVoided", 1_000n), settled()]
+    ]
+  ])("keeps a void with %s unknown", (_case, logs) => {
+    expect(proof(logs, 1_000n).status).toBe("unknown");
+  });
+  it("requires the void to book exactly the expected amount", () => {
+    expect(
+      proof([release(), log("PlayerPayableCreated", 1_000n), log("BetVoided", 1_000n)], 999n).status
+    ).toBe("unknown");
   });
   it("requires one matching reserve release, terminal event and exact transfer", () => {
     expect(proof([log("Transfer"), settled()]).status).toBe("unknown");

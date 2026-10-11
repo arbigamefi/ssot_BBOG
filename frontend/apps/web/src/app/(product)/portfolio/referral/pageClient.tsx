@@ -28,6 +28,16 @@ import {
   isZeroAddress,
   normalizeReferralAddress
 } from "../../../../features/referral/referral-link";
+import { isTerminalBetState } from "../../../../features/betting/bet-state";
+import { txErrorMessage } from "../../../../features/tx/tx-error-copy";
+
+/** ReferralRegistry refuses a self-referral, a second binding and a cycle alike (InvalidConfig). */
+const REFERRAL_ERROR_COPY: Readonly<Record<string, string>> = {
+  INVALID_CONFIG: "portfolio.referral.errors.rejected",
+  ZERO_ADDRESS: "portfolio.referral.errors.rejected"
+};
+
+const BET_STATE_LABELS = new Set(["placed", "randomReady", "finalized", "refunded", "voided"]);
 
 export function ReferralPageClient() {
   const t = useTranslations();
@@ -62,7 +72,7 @@ export function ReferralPageClient() {
     enabled: Boolean(sdk?.account && ready),
     queryFn: async () => {
       if (!sdk?.account) throw new Error(t("portfolio.referral.errors.walletUnavailable"));
-      return sdk.gameHub.referrerOf(sdk.account);
+      return sdk.referral.referrerOf(sdk.account);
     },
     refetchInterval: 10_000
   });
@@ -114,15 +124,15 @@ export function ReferralPageClient() {
     if (!sdk || !pendingReferrer || !canBindReferrer) return;
     setBinding(true);
     try {
-      const result = await sdk.gameHub.bindReferrer(pendingReferrer as Address);
+      const result = await sdk.referral.bind(pendingReferrer as Address);
       if (!result.ok) {
-        toast.error(result.error?.message ?? t("portfolio.referral.toast.bindFailed"));
+        toast.error(txErrorMessage(t, result.error, REFERRAL_ERROR_COPY));
         return;
       }
       toast.success(t("portfolio.referral.toast.bound"));
       await refetchReferrer();
-    } catch (error) {
-      toast.error((error as Error)?.message ?? t("portfolio.referral.toast.bindFailed"));
+    } catch {
+      toast.error(t("portfolio.referral.toast.bindFailed"));
     } finally {
       setBinding(false);
     }
@@ -286,8 +296,14 @@ export function ReferralPageClient() {
                           {formatIndexedAmount(row.stake, decimals, symbol, pendingLabel)}
                         </span>
                         <span className="font-mono text-fg-muted">#{row.betId}</span>
-                        <span className="text-right text-xs font-black uppercase tracking-[0.12em] text-brand">
-                          {row.state}
+                        <span
+                          className={`text-right text-xs font-black uppercase tracking-[0.12em] ${
+                            isTerminalBetState(row.state) ? "text-fg-muted" : "text-brand"
+                          }`}
+                        >
+                          {BET_STATE_LABELS.has(row.state)
+                            ? t(`casino.room.receipt.status.${row.state}`)
+                            : pendingLabel}
                         </span>
                       </div>
                     ))}

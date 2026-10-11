@@ -15,7 +15,8 @@ import {
   type Address,
   type Hex
 } from "viem";
-import { createSSOTSDK } from "../create";
+import { createSSOTSDK, VOID_BET_GAS_LIMIT } from "../create";
+import { toDomainError } from "../errors";
 import { encodeStakeSpec } from "../../encoding/stakeSpec";
 import { getContractAbis } from "../../abis/index.mjs";
 import type { SSOTRelease } from "../../release/schema";
@@ -108,6 +109,7 @@ async function fixture(minBetAmount = 10_000n) {
       gameHub: bank.address,
       vrfHub: vrf.address,
       settlementRouter: router.address,
+      poolRegistry: registry.address,
       refRegistry: bank.address
     },
     pools: [
@@ -204,7 +206,18 @@ async function fixture(minBetAmount = 10_000n) {
     }
     if (seed === undefined) throw new Error("No local fixture winning seed found");
     const settle = () => write(wrapper, "fulfillTo", [vrf.address, bet.requestId, [seed!]]);
-    return { playerSdk, hub, betId: placed.betId, settle };
+    const planAnother = () =>
+      playerSdk.gameHub.planPlaceBet({
+        chainId: chain.id,
+        gameId: GAME,
+        poolId: 1,
+        betCount: 1,
+        stake,
+        params,
+        stakeSpec: encodeStakeSpec(spec),
+        maxHouseEdgeBps: 200
+      });
+    return { playerSdk, hub, betId: placed.betId, settle, planAnother };
   }
   return {
     owner,
@@ -344,6 +357,109 @@ describe.skipIf(!rpc)("NFT SDK on isolated Anvil", () => {
     expect(await f.read(f.token, "balanceOf", [f.player])).toBe(before + payable);
     expect(await f.sdk.bank.getPlayerPayable(1, f.player)).toBe(0n);
     expect((await f.sdk.bank.getSnapshot(1)).L).toBe(snapshot.L);
+  }, 40_000);
+
+  it("voids a received result that cannot be booked, with the fixed gas limit", async () => {
+    const f = await fixture();
+    expect((await f.sdk.vault.addDeposit(1, 10_000_000n)).ok).toBe(true);
+    const c = await f.casino(1_000_000n);
+    // An issuer freeze of the Vault fails the winning settlement: the result stays unbooked (P5a).
+    await f.write(f.token, "setBlocked", [f.vault.address, true]);
+    await c.settle();
+    const bet = await c.playerSdk.gameHub.getBet(c.betId);
+    expect(bet.state).toBe("randomReady");
+    const requestedAt = bet.vrfRequestedAt!;
+    expect(await c.playerSdk.gameHub.getVoidStatus(c.betId)).toMatchObject({
+      voidable: false,
+      inWindow: false,
+      resultReceived: true,
+      eligibleAt: requestedAt + 7 * 86_400
+    });
+    expect(await f.sdk.bank.getSnapshot(1)).toMatchObject({
+      unbookedResultCount: 1n,
+      lpStatus: "unbookedResult"
+    });
+    // Governance is the deployer in this isolated fixture; it opens the Bank's window.
+    await f.write(c.hub, "openVoidWindow", [1n]);
+    const windowed = await c.playerSdk.gameHub.getVoidStatus(c.betId);
+    expect(windowed).toMatchObject({
+      voidable: false,
+      inWindow: true,
+      eligibleAt: requestedAt + 86_400
+    });
+    await f.mature(BigInt(windowed.eligibleAt));
+    expect((await c.playerSdk.gameHub.getVoidStatus(c.betId)).voidable).toBe(true);
+    const voided = await c.playerSdk.gameHub.voidBet(c.betId);
+    expect(voided).toMatchObject({ ok: true, outcome: "voided" });
+    expect((await f.client.getTransaction({ hash: voided.txHash })).gas).toBe(VOID_BET_GAS_LIMIT);
+    expect((await c.playerSdk.gameHub.getBet(c.betId)).state).toBe("voided");
+    expect(await c.playerSdk.gameHub.getTerminalProof(c.betId)).toMatchObject({
+      kind: "voided",
+      refund: { refundAmount: 1_000_000n, txHash: voided.txHash }
+    });
+    expect(await f.sdk.bank.getSnapshot(1)).toMatchObject({
+      totalBetsVoided: 1n,
+      totalVoided: 1_000_000n,
+      unbookedResultCount: 0n,
+      openHolds: 0n,
+      playerPayableTotal: 1_000_000n
+    });
+    expect(await f.sdk.bank.getPlayerPayable(1, f.player)).toBe(1_000_000n);
+    expect(await f.sdk.bank.getOpenHolds(1, f.player)).toEqual({ open: 0n, max: 2n });
+    expect(await c.playerSdk.gameHub.getVoidStatus(c.betId)).toMatchObject({
+      voidable: false,
+      resultReceived: false
+    });
+    expect(await c.playerSdk.governance.getTimelock()).toBe(getAddress(f.owner));
+  }, 60_000);
+
+  it("stops a third open bet and a disabled game in planning; binds referrers on the registry", async () => {
+    const f = await fixture();
+    expect((await f.sdk.vault.addDeposit(1, 10_000_000n)).ok).toBe(true);
+    await f.casino(1_000_000n);
+    // A second hub shares the Bank's per-player count (ADR-0037 §5).
+    const second = await f.casino(1_000_000n);
+    expect(await f.sdk.bank.getOpenHolds(1, f.player)).toEqual({ open: 2n, max: 2n });
+    expect(await second.planAnother()).toMatchObject({
+      error: { code: "PLAYER_OPEN_HOLD_LIMIT", details: { open: "2", max: "2" } }
+    });
+    await f.write(second.hub, "disableGame", [GAME]);
+    expect(await second.playerSdk.gameHub.getGameConfig(GAME)).toMatchObject({ disabled: true });
+    expect(await second.planAnother()).toMatchObject({ error: { code: "GAME_DISABLED" } });
+    const referred = f.sdkFor(f.recipient);
+    expect((await referred.referral.bind(f.player)).ok).toBe(true);
+    expect(await referred.referral.referrerOf(f.recipient)).toBe(getAddress(f.player));
+    // First touch is permanent: the registry refuses a second bind in simulation.
+    expect(await referred.referral.bind(f.owner)).toMatchObject({
+      ok: false,
+      error: { code: "INVALID_CONFIG", details: { transactionSubmitted: false } }
+    });
+  }, 60_000);
+
+  it("refuses deposits while paused and still lets a mature NFT exit", async () => {
+    const f = await fixture();
+    expect((await f.sdk.vault.addDeposit(1, 10_000_000n)).ok).toBe(true);
+    await f.write(f.bank, "setRiskInPaused", [true]);
+    expect(await f.sdk.vault.addDeposit(1, 1_000_000n)).toMatchObject({
+      ok: false,
+      error: { code: "DEPOSITS_PAUSED" }
+    });
+    // The Vault's own revert decodes to the same code.
+    const direct = await f.client
+      .simulateContract({
+        ...f.vault,
+        account: f.owner,
+        functionName: "addDepositFor",
+        args: [f.owner, 1_000_000n]
+      })
+      .then(
+        () => undefined,
+        (error: unknown) => toDomainError(error)
+      );
+    expect(direct).toMatchObject({ code: "DEPOSITS_PAUSED" });
+    const position = await f.sdk.vault.getDeposit(1, FIRST_ID);
+    await f.mature(position.withdrawAfter);
+    expect((await f.sdk.vault.withdrawDeposit(1, FIRST_ID, ONE)).ok).toBe(true);
   }, 40_000);
 
   it("closes a matured zero-value NFT after an actual fully reserved loss", async () => {

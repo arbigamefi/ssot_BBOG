@@ -50,6 +50,27 @@
       "description": "Adicione à tela inicial para uma experiência mais rápida, como um app.",
       "action": "Instalar",
       "dismiss": "Dispensar"
+    },
+    "txErrors": {
+      "canceled": "Você cancelou a solicitação na carteira.",
+      "wallet": "Conecte ou desbloqueie sua carteira primeiro.",
+      "network": "Sua carteira está em outra rede. Mude para a rede usada por esta página.",
+      "gas": "Você precisa de mais ETH nesta rede para pagar o gas.",
+      "connection": "Não foi possível acessar a rede. Se a carteira enviou uma transação, confira-a antes de tentar de novo.",
+      "unconfirmed": "A transação ainda não foi confirmada. Confira a atividade da carteira antes de tentar de novo.",
+      "reverted": "A transação falhou on-chain e não alterou nada, mas o gas foi gasto.",
+      "contextChanged": "Sua carteira ou rede mudou. Revise a ação e tente de novo.",
+      "depositsPaused": "Os depósitos estão pausados neste pool. Os saques continuam abertos.",
+      "voidNotEligible": "Esta aposta ainda não pode ser anulada. Tente de novo após o horário indicado.",
+      "voidGasTooLow": "Sua carteira não conseguiu enviar o gas que a anulação exige (cerca de 11 milhões). O keeper do operador também anula as apostas elegíveis, então você pode esperar.",
+      "playerLimit": "Você já tem o máximo de apostas abertas permitido neste pool. Tente de novo depois que uma for liquidada.",
+      "gameClosed": "Este jogo está fechado e não aceita novas apostas.",
+      "invalidAmount": "Digite o valor como número, usando ponto para decimais (por exemplo 12.5), com no máximo {decimals} casas decimais.",
+      "refundNotReady": "Esta aposta ainda não pode ser reembolsada. O reembolso só abre se o sorteio não chegar até o prazo de reembolso.",
+      "betChanged": "Esta aposta já mudou de estado. Atualize a página para ver como ela está.",
+      "resultReceived": "O resultado do sorteio já chegou, então esta aposta será liquidada ou anulada em vez de reembolsada. A página de detalhes mostra o que acontece a seguir.",
+      "readFailed": "Não foi possível ler isto da blockchain agora. O valor não é considerado zero; verifique novamente em instantes.",
+      "unknown": "Não foi possível concluir a transação. Confira a atividade da carteira antes de tentar de novo."
     }
   },
   "locale": {
@@ -864,10 +885,6 @@
       "ownerChanged": "Esta carteira não é mais proprietária do NFT selecionado. Atualize a lista de depósitos.",
       "deposited": "Depósito confirmado. O novo NFT tem seu próprio bloqueio de 24 horas.",
       "withdrawn": "Saque confirmado. Atualizando o capital restante.",
-      "playerClaimed": "Pagamento ao jogador confirmado.",
-      "playerDebtDetail": "Este prêmio ainda não pago ao jogador é separado do capital dos LPs. O pagamento é enviado apenas ao endereço do jogador. Ele pode ser resgatado enquanto o pool estiver pausado, sujeito às restrições do emissor.",
-      "playerDebtUnavailable": "Não foi possível consultar o valor devido ao jogador; ele não é considerado zero.",
-      "claimPlayer": "Resgatar pagamento ao jogador",
       "history": "Depósitos, saques e transferências de NFTs",
       "historyDetail": "Transferências de NFTs mudam a titularidade sem transferir os tokens que os lastreiam. Não é possível calcular o retorno do destinatário de um NFT sem seu custo de aquisição. O pagador, o proprietário inicial e o destinatário do saque são mostrados separadamente.",
       "historyEmpty": "Nenhuma movimentação de depósito foi encontrada no intervalo carregado.",
@@ -889,7 +906,9 @@
         "invalidPercent": "Informe uma porcentagem maior que 0 e menor ou igual a 100.",
         "zeroWithdrawal": "Esta porcentagem resulta em zero ativos após o arredondamento. Aumente-a ou use 100% para encerrar um NFT sem saldo cujo bloqueio já tenha terminado.",
         "insufficientFreeCapital": "Esta porcentagem excede o capital disponível. Use o máximo atual ou atualize."
-      }
+      },
+      "bettingNotStarted": "As apostas ainda não começaram neste pool. Elas só começam após uma ativação separada, que espera 72 horas no timelock de governança. Você já pode depositar.",
+      "bettingStopped": "Novas apostas estão suspensas neste pool. Retomá-las exige uma mudança de governança que espera 72 horas. Depósitos e saques seguem as regras habituais."
     }
   },
   "casino": {
@@ -1066,7 +1085,8 @@
           "settled": "LIQUIDADO",
           "refunded": "REEMBOLSADO",
           "vrfReady": "VRF PRONTO",
-          "placed": "APOSTADO"
+          "placed": "APOSTADO",
+          "voided": "ANULADO"
         },
         "empty": "Aguardando a primeira jogada..."
       },
@@ -1171,6 +1191,9 @@
             "detail": "O VRF não foi concluído antes do tempo limite do protocolo. Você pode reembolsar a aposta.",
             "status": "Reembolsável"
           },
+          "resultUnbooked": {
+            "status": "Liquidação pendente"
+          },
           "failed": {
             "label": "Falha no monitor da rodada",
             "detail": "Não foi possível ler o estado mais recente da rodada no provedor RPC.",
@@ -1180,6 +1203,9 @@
             "label": "Pronto",
             "detail": "Um clique aprova se necessário, faz a aposta e acompanha a liquidação.",
             "status": "Pronto"
+          },
+          "voided": {
+            "status": "Aposta devolvida"
           }
         },
         "metrics": {
@@ -1196,6 +1222,11 @@
           "random": "Aleatório",
           "settle": "Liquidar",
           "result": "Resultado"
+        },
+        "pendingSettlement": {
+          "body": "O resultado do sorteio chegou, mas esta aposta ainda não foi liquidada. Se a liquidação continuar falhando, a aposta pode ser anulada na página dela e o valor apostado devolvido a você.",
+          "notice": "A aposta #{betId} já tem o resultado do sorteio, mas ainda não foi liquidada. Você pode continuar jogando; se a liquidação continuar falhando, ela pode ser anulada na página dela e o valor apostado devolvido a você.",
+          "link": "Abrir detalhes da aposta"
         }
       },
       "selection": {
@@ -1320,6 +1351,10 @@
           "revealed": {
             "label": "Resultado revelado",
             "detail": "Os números abertos vêm do VRF. A liquidação ainda está pendente."
+          },
+          "voided": {
+            "label": "Aposta devolvida",
+            "detail": "O resultado foi recebido, mas não pôde ser liquidado, então sua aposta foi devolvida a você como saldo a resgatar. A taxa de VRF não é reembolsada."
           }
         },
         "sections": {
@@ -1369,7 +1404,8 @@
           "sicBoDice": "Dados abertos",
           "sicBoTotal": "Total",
           "sicBoTriple": "Trinca",
-          "sicBoMultiplier": "Multiplicador da rolagem"
+          "sicBoMultiplier": "Multiplicador da rolagem",
+          "returnedStake": "Aposta devolvida"
         },
         "actions": {
           "close": "Fechar",
@@ -1384,7 +1420,8 @@
           "shareToX": "Compartilhar no X",
           "shareToTelegram": "Compartilhar no Telegram",
           "shareToWhatsApp": "Compartilhar no WhatsApp",
-          "linkCopied": "Link copiado"
+          "linkCopied": "Link copiado",
+          "openClaims": "Ir para Resgates"
         }
       },
       "receipt": {
@@ -1401,13 +1438,15 @@
           "placed": "Apostado",
           "randomReady": "Aleatoriedade pronta",
           "finalized": "Finalizado",
-          "refunded": "Reembolsado"
+          "refunded": "Reembolsado",
+          "voided": "Anulado"
         },
         "metrics": {
           "stake": "Aposta",
           "payout": "Total devolvido",
           "net": "Líquido",
-          "state": "Estado"
+          "state": "Estado",
+          "returned": "Devolvido"
         },
         "facts": {
           "game": "Jogo",
@@ -1426,6 +1465,10 @@
           "play": "Jogar este jogo",
           "explorer": "Ver transação",
           "casino": "Explorar cassino"
+        },
+        "voided": {
+          "headline": "{amount} devolvidos",
+          "body": "O resultado foi recebido, mas não pôde ser liquidado, então sua aposta foi devolvida a você como saldo a resgatar. A taxa de VRF não é reembolsada."
         }
       },
       "audit": {
@@ -1485,14 +1528,16 @@
           "pending": "Pendentes",
           "won": "Ganhas",
           "lost": "Perdidas",
-          "refunded": "Reembolsadas"
+          "refunded": "Reembolsadas",
+          "voided": "Anuladas"
         },
         "stateLabel": {
           "won": "Ganha",
           "lost": "Perdida",
           "pending": "Pendente",
           "settled": "Liquidada",
-          "cancelled": "Reembolsada"
+          "cancelled": "Reembolsada",
+          "voided": "Anulada"
         },
         "openOnExplorer": "Abrir transação no explorador de blocos",
         "openOnExplorerWithChain": "Abrir no explorador da {chain}",
@@ -1778,10 +1823,27 @@
         "gameUnavailable": "Não foi possível confirmar a habilitação do jogo ou a cotação de sua taxa. Atualize antes de apostar.",
         "gameUnavailableLabel": "Configurações do jogo indisponíveis",
         "invalidCount": "A quantidade de rodadas selecionada excede o limite atual deste jogo. Escolha menos rodadas.",
-        "invalidCountLabel": "Ajustar quantidade de rodadas"
+        "invalidCountLabel": "Ajustar quantidade de rodadas",
+        "playerLimit": "Você tem {count, plural, one {# aposta aberta} other {# apostas abertas}} neste pool. Faça a próxima depois que uma for liquidada.",
+        "playerLimitLabel": "Aguarde uma aposta ser liquidada",
+        "checkAgain": "Verificar de novo",
+        "viewOpenBets": "Ver suas apostas abertas",
+        "inactive": "O pool de {symbol} não está aceitando novas apostas agora. As apostas já feitas continuam sendo liquidadas.",
+        "inactiveLabel": "Pool fechado para apostas"
       },
       "feedback": {
-        "houseEdgeChanged": "A margem atual da casa excede a taxa que você aceitou. Atualize e confira a taxa antes de apostar novamente."
+        "houseEdgeChanged": "A margem atual da casa excede a taxa que você aceitou. Atualize e confira a taxa antes de apostar novamente.",
+        "playerLimit": "Você já tem o máximo de apostas abertas permitido neste pool. Faça a próxima depois que uma for liquidada.",
+        "gameClosed": "Este jogo está fechado e não aceita novas apostas. As apostas feitas antes do fechamento continuam sendo liquidadas."
+      },
+      "payment": {
+        "payable": "A transferência não foi concluída nesta liquidação, então o valor fica reservado para a sua carteira. Ele é pago automaticamente quando a transferência puder ser feita; você também pode resgatá-lo na página Resgates."
+      },
+      "closed": {
+        "title": "Este jogo está fechado.",
+        "body": "As apostas feitas antes do fechamento continuam sendo liquidadas, e seus recibos continuam disponíveis.",
+        "viewBets": "Ver suas apostas",
+        "browse": "Ver jogos abertos"
       }
     }
   },
@@ -1922,7 +1984,8 @@
       },
       "errors": {
         "walletUnavailable": "Carteira indisponível",
-        "poolUnavailable": "Pool indisponível"
+        "poolUnavailable": "Pool indisponível",
+        "rejected": "Não é possível vincular este indicador. Sua carteira pode já ter um indicador, ou o link faria você indicar a si mesmo ou criaria um ciclo."
       },
       "hero": {
         "eyebrow": "Conta de afiliado",
@@ -2139,7 +2202,29 @@
         "claimedFees": "Resgatou {amount} {symbol} em taxas do protocolo",
         "protocolFeeFailed": "Falha no resgate de taxas do protocolo"
       },
-      "loading": "Carregando resgates…"
+      "loading": "Carregando resgates…",
+      "payable": {
+        "claimable": "A resgatar: {amount}",
+        "claim": "Resgatar {amount}",
+        "claiming": "Resgatando…",
+        "connect": "Conecte uma carteira para resgatar",
+        "claimed": "{amount} resgatados. O valor foi pago para a carteira do jogador.",
+        "note": "O resgate paga todo o saldo que este pool deve ao jogador, sempre para a carteira do jogador. Qualquer pessoa pode enviá-lo.",
+        "nothing": "Não há nada a resgatar neste pool. Saldos devolvidos costumam ser pagos automaticamente para a carteira do jogador.",
+        "unavailable": "Não foi possível ler o saldo a resgatar. Ele não é considerado zero.",
+        "openClaims": "Resgate na página Resgates"
+      },
+      "player": {
+        "eyebrow": "Saldo do jogador",
+        "title": "Apostas devolvidas e pagamentos pendentes",
+        "description": "Apostas devolvidas de apostas anuladas e pagamentos que não puderam ser transferidos na liquidação ficam aqui. O resgate sempre paga a sua carteira, inclusive com o pool pausado. O keeper do operador costuma enviá-los automaticamente.",
+        "connect": "Conecte uma carteira para ver o que os pools devem a você.",
+        "checking": "Verificando o que os pools devem a você…",
+        "empty": "Nada a resgatar. Nenhum pool deve nada a esta carteira agora.",
+        "unavailable": "Não foi possível ler o saldo no pool #{poolId} ({symbol}). Ele não é considerado zero.",
+        "pool": "{symbol} · Pool #{poolId}",
+        "claim": "Resgatar"
+      }
     },
     "activity": {
       "common": {
@@ -2172,7 +2257,7 @@
         },
         "settled": {
           "label": "Resultados liquidados",
-          "detail": "Apostas com estado final de vitória, perda, reembolso ou falha."
+          "detail": "Apostas encerradas com ganho, perda, reembolso ou anulação."
         }
       },
       "filters": {
@@ -2211,13 +2296,16 @@
           "stake": "Aposta",
           "settlement": "Liquidação",
           "updated": "Atualizado"
-        }
+        },
+        "returned": "{amount} devolvidos"
       },
       "status": {
         "won": "Ganho",
         "closed": "Fechado",
         "settled": "Liquidado",
-        "open": "Em aberto"
+        "open": "Em aberto",
+        "refunded": "Reembolsado",
+        "voided": "Anulado"
       },
       "detail": {
         "common": {
@@ -2231,7 +2319,8 @@
           "placed": "Apostado",
           "refunded": "Reembolsado",
           "pending": "Pendente",
-          "refreshing": "Atualizando"
+          "refreshing": "Atualizando",
+          "voided": "Anulado"
         },
         "hero": {
           "back": "Voltar ao livro",
@@ -2265,7 +2354,8 @@
         "outcomes": {
           "refunded": "Reembolsado",
           "netResult": "Resultado líquido",
-          "loss": "Perda"
+          "loss": "Perda",
+          "voided": "Aposta devolvida"
         },
         "metrics": {
           "settlementState": {
@@ -2337,6 +2427,10 @@
             "refunded": {
               "title": "Reembolsado",
               "description": "Aposta devolvida ao jogador."
+            },
+            "voided": {
+              "title": "Aposta devolvida",
+              "description": "O resultado não pôde ser liquidado, então a aposta foi devolvida como saldo a resgatar."
             }
           }
         },
@@ -2371,6 +2465,24 @@
             "time": "Hora"
           },
           "empty": "Nenhum evento de ciclo de vida indexado ainda."
+        },
+        "void": {
+          "eyebrow": "Anular e reembolsar",
+          "voidedTitle": "Sua aposta foi devolvida",
+          "voidedBody": "O resultado foi recebido, mas não pôde ser liquidado, então sua aposta foi devolvida a você como saldo a resgatar. A taxa de VRF não é reembolsada.",
+          "returnedStake": "Aposta devolvida",
+          "stuckTitle": "O resultado chegou, mas esta aposta não foi liquidada",
+          "notYet": "Se a liquidação continuar falhando, esta aposta pode ser anulada e sua aposta devolvida a partir de {time}.",
+          "eligible": "Esta aposta já pode ser anulada. A anulação primeiro tenta liquidá-la mais uma vez; só se isso falhar sua aposta é devolvida como saldo a resgatar. A taxa de VRF não é reembolsada.",
+          "action": "Anular e reembolsar",
+          "voiding": "Anulando…",
+          "keeperNote": "O keeper do operador também anula apostas elegíveis, então esperar não tem problema. Algumas carteiras de contrato inteligente não conseguem enviar esta transação porque ela precisa de cerca de 11 milhões de gas.",
+          "toast": {
+            "voided": "Aposta anulada. Sua aposta agora é saldo a resgatar.",
+            "settled": "A aposta foi liquidada normalmente durante a tentativa de anulação.",
+            "sent": "Transação confirmada. Atualizando a aposta."
+          },
+          "connect": "Conecte uma carteira para anular esta aposta"
         }
       },
       "loading": "Carregando atividade…"
@@ -2420,6 +2532,117 @@
       "rowsSampled": "Linhas amostradas",
       "durableRequired": "Durável exigido",
       "durableConfigured": "Durável configurado"
+    }
+  },
+  "governance": {
+    "queue": {
+      "eyebrow": "Timelock de governança",
+      "title": "Mudanças de governança agendadas",
+      "explainer": "As mudanças esperam 72 horas antes que qualquer pessoa possa executá-las. Se você discordar de uma, pode sacar um depósito liberado antes que ela seja executada.",
+      "loading": "Verificando mudanças agendadas…",
+      "unavailable": "Não foi possível carregar as mudanças de governança agendadas. Verifique de novo antes de confiar nesta lista.",
+      "empty": "Nenhuma mudança de governança está agendada.",
+      "stale": "Esta lista pode estar incompleta: o índice leu o timelock pela última vez em {time}.",
+      "staleUnknown": "Esta lista pode estar incompleta: o índice ainda não leu o timelock.",
+      "ready": "Pronta para execução",
+      "executableFrom": "Executável a partir de {time}",
+      "scheduledTx": "Agendada em {tx}",
+      "critical": "Crítica",
+      "sendsValue": "(também envia {amount} ETH)"
+    },
+    "contracts": {
+      "poolRegistry": "registro de pools",
+      "gameHub": "hub de jogos",
+      "bank": "Bank do pool {pool}",
+      "referralRegistry": "registro de indicações",
+      "timelock": "timelock de governança"
+    },
+    "calls": {
+      "unknown": "Chamada não reconhecida para {target} (seletor de função {selector})",
+      "unknownNoData": "Chamada para {target} sem dados de função",
+      "baseUnits": "{amount} unidades base",
+      "registerPool": "Registrar o pool {pool} para {asset} com o Bank {bank}",
+      "activatePool": "Iniciar apostas no pool {pool}",
+      "deactivatePool": "Suspender novas apostas no pool {pool}",
+      "registerHub": "Registrar o hub de apostas {hub}",
+      "unregisterHub": "Cancelar o registro do hub de apostas {hub}",
+      "allowHub": "Permitir que o hub {hub} aceite apostas no pool {pool}",
+      "disallowHub": "Impedir que o hub {hub} aceite apostas no pool {pool}",
+      "registerGame": "Adicionar o jogo {game} (módulo {module}, até {rounds} rodadas por aposta)",
+      "queueEdgeChange": "Alterar a margem da casa para {percent}; ela pode entrar em vigor 7 dias após a execução",
+      "cancelEdgeChange": "Cancelar a mudança pendente da margem da casa",
+      "setRefundTimeout": "Definir o prazo de reembolso para {duration}",
+      "createReferralConfig": "Criar uma configuração de indicação: rakeback do jogador {player}, nível 1 {level1}, nível 2 {level2}, retenção {holdback}",
+      "setActiveReferralConfig": "Mudar para a configuração de indicação #{id}",
+      "disableGame": "Fechar o jogo {game} definitivamente",
+      "openVoidWindow": "Abrir uma janela de anulação para o pool {pool}",
+      "pausePool": "Pausar o pool {pool}",
+      "unpausePool": "Retomar o pool {pool}",
+      "setMinBetAmount": "Definir a aposta mínima no pool {pool} para {amount}",
+      "setRiskReserveBps": "Definir a reserva de risco no pool {pool} para {percent}",
+      "setWithdrawalBufferBps": "Definir o buffer de saque no pool {pool} para {percent}",
+      "setHoldbackVestingSeconds": "Definir a liberação da retenção de indicação no pool {pool} para {duration}",
+      "setMinPlayerTurnoverForUnlock": "Definir o volume de apostas do jogador que libera recompensas de indicação bloqueadas no pool {pool} para {amount}",
+      "setGuardian": "Tornar {account} o guardião do pool {pool}",
+      "rescuePoolAsset": "Enviar {amount} do Bank do pool {pool} para {account}",
+      "rescueToken": "Enviar {amount} do token {token} do Bank do pool {pool} para {account}",
+      "claimProtocolFees": "Pagar {amount} de taxas do protocolo do pool {pool} para {account}",
+      "setSettlementRouterOnce": "Conectar o Bank do pool {pool} ao roteador de liquidação {account}",
+      "setRandomnessConsumerOnce": "Definir o consumidor de aleatoriedade do Bank do pool {pool} para {account}",
+      "setBinderOnce": "Permitir que {account} vincule indicadores para jogadores",
+      "updateDelay": "Alterar o atraso de governança para {duration}",
+      "grantRole": "Conceder o {role} a {account}",
+      "revokeRole": "Revogar o {role} de {account}",
+      "renounceRole": "Renunciar ao {role} detido por {account}",
+      "setSentinel": "Tornar {account} o sentinela do {contract}",
+      "removeSentinel": "Remover o sentinela do {contract}",
+      "transferGovernance": "Transferir a governança do {contract} para {account}",
+      "acceptGovernance": "Aceitar a governança do {contract}",
+      "otherFunction": "Chamar {signature} no {contract}"
+    },
+    "roles": {
+      "DEFAULT_ADMIN_ROLE": "papel de administrador",
+      "PROPOSER_ROLE": "papel de proponente",
+      "EXECUTOR_ROLE": "papel de executor",
+      "CANCELLER_ROLE": "papel de cancelador"
+    }
+  },
+  "ops": {
+    "governance": {
+      "eyebrow": "Governança e risco",
+      "title": "Operações do timelock e controles de risco",
+      "description": "Todas as operações agendadas no timelock de governança, com as janelas de anulação e os jogos desativados registrados pelo GameHub.",
+      "timelock": "Timelock {address}",
+      "indexedThrough": "indexado até o bloco {block} ({time})",
+      "notIndexed": "ainda não indexado",
+      "loading": "Lendo o histórico de governança…",
+      "unavailable": "Não foi possível ler o histórico de governança: o índice de apostas ou a rede está indisponível.",
+      "stale": "O índice do timelock está mais de uma hora atrasado; operações recentes podem estar faltando.",
+      "tx": "Tx",
+      "operations": {
+        "title": "Operações",
+        "empty": "Nenhuma operação foi agendada.",
+        "readyAt": "Pronta em {time}",
+        "states": {
+          "waiting": "Aguardando",
+          "ready": "Pronta",
+          "executed": "Executada",
+          "cancelled": "Cancelada"
+        },
+        "scheduledTx": "Agendada",
+        "executedTx": "Executada",
+        "cancelledTx": "Cancelada"
+      },
+      "voidWindows": {
+        "title": "Janelas de anulação",
+        "empty": "Nenhuma janela de anulação foi aberta.",
+        "row": "Pool #{pool}: apostas solicitadas até {cohortEnd} podem ser anuladas 24 horas após a solicitação. Aberta por {caller}."
+      },
+      "disabledGames": {
+        "title": "Jogos desativados",
+        "empty": "Nenhum jogo foi desativado.",
+        "row": "{game} foi desativado por {caller}."
+      }
     }
   }
 }

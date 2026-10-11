@@ -96,6 +96,15 @@ vi.mock("next-intl", () => ({
 }));
 
 const useCasinoStatsMock = vi.hoisted(() => vi.fn(() => ({ data: undefined })));
+const useDisabledGameIdsMock = vi.hoisted(() =>
+  vi.fn((): ReadonlySet<string> | undefined => undefined)
+);
+
+// GameHub disabled-game reads; the filter itself stays real.
+vi.mock("../../../features/casino/useDisabledGames", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../features/casino/useDisabledGames")>()),
+  useDisabledGameIds: useDisabledGameIdsMock
+}));
 
 // Casino analytics hook — stub to the unavailable state so the hero stat
 // cards render "—" without pulling in react-query / fetch.
@@ -145,6 +154,8 @@ describe("GamesListClient", () => {
     state.release = null;
     state.readOnlyReason = null;
     useCasinoStatsMock.mockClear();
+    useDisabledGameIdsMock.mockReset();
+    useDisabledGameIdsMock.mockReturnValue(undefined);
   });
 
   it("shows placeholder when release is null", () => {
@@ -299,6 +310,37 @@ describe("GamesListClient", () => {
     render(<GamesListClient />);
     expect(screen.getAllByTestId("room-entry-card").length).toBeGreaterThan(0);
     expect(screen.getByText("Precision Dice")).toBeDefined();
+  });
+
+  it("hides a game GameHub has disabled for good", () => {
+    useDisabledGameIdsMock.mockReturnValue(new Set(["0x02"]));
+    state.release = {
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
+      assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
+      gamesMeta: MOCK_GAMES_META
+    };
+    render(<GamesListClient />);
+    expect(
+      Array.from(screen.getAllByTestId("room-entry-card")).map((card) =>
+        card.getAttribute("data-slug")
+      )
+    ).toEqual(["dice", "plinko", "slots", "baccarat"]);
+  });
+
+  it("shows no rooms, not the canonical fallback, when every game is disabled", () => {
+    useDisabledGameIdsMock.mockReturnValue(new Set(MOCK_GAMES_META.map((game) => game.gameId)));
+    state.release = {
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
+      assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
+      gamesMeta: MOCK_GAMES_META
+    };
+    render(<GamesListClient />);
+    expect(screen.queryAllByTestId("room-entry-card")).toHaveLength(0);
+    expect(screen.getByText("No games registered in the active release.")).toBeDefined();
   });
 
   it("shows an empty state instead of falling back to all rooms when search misses", () => {

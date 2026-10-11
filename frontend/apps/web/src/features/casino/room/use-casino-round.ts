@@ -14,6 +14,8 @@ import type { PoolAvailability } from "./hooks";
 import { useBetStepperFailureToast, useVrfTimeoutToast } from "./feedback";
 import { useCasinoRoundWatcher, useCasinoVrfQuote, type CasinoRoundPhase } from "./casino-round";
 
+const NO_BET_IDS: readonly bigint[] = [];
+
 export type UseCasinoRoundArgs = {
   sdk: SSOTSDK | undefined;
   release: GameRoomRelease | undefined;
@@ -37,6 +39,8 @@ export type UseCasinoRoundArgs = {
   /** Selected casino pool id (multi-asset). Defaults to the default pool when omitted. */
   poolId?: number;
   poolAvailability?: PoolAvailability;
+  /** The player's open bets in this pool, named when the per-player cap blocks a bet. */
+  openBets?: number;
   onRoundStart: () => void;
   onRoundTerminal: (bet: DomainBet) => void;
   onRoundReset: () => void;
@@ -64,6 +68,7 @@ export function useCasinoRound({
   affiliate,
   poolId,
   poolAvailability = "ready",
+  openBets,
   onRoundStart,
   onRoundTerminal,
   onRoundReset
@@ -132,6 +137,31 @@ export function useCasinoRound({
     manualSettleErrorMessage: t("casino.room.errors.manualSettleFailed"),
     refundErrorMessage: t("casino.room.errors.refundFailed")
   });
+
+  // A received result that cannot be booked settles or is voided 24 hours to 7 days later (ADR-0037
+  // §7). The room hands it to a notice, clears its stage (a RandomReady bet may have been revealed) and
+  // stays open for new bets; the per-player cap still applies.
+  const pendingScope = `${release?.chainId ?? ""}:${sdk?.account?.toLowerCase() ?? ""}`;
+  const [pendingSettlement, setPendingSettlement] = React.useState<{
+    scope: string;
+    betIds: readonly bigint[];
+  }>({ scope: pendingScope, betIds: NO_BET_IDS });
+  const unbookedBetId =
+    roundWatcher.phase === "result_unbooked" ? roundWatcher.bet?.betId : undefined;
+  React.useEffect(() => {
+    if (unbookedBetId === undefined) return;
+    setPendingSettlement((current) => {
+      const betIds = current.scope === pendingScope ? current.betIds : NO_BET_IDS;
+      return {
+        scope: pendingScope,
+        betIds: betIds.includes(unbookedBetId) ? betIds : [...betIds, unbookedBetId]
+      };
+    });
+    reset();
+    onRoundReset();
+  }, [onRoundReset, pendingScope, reset, unbookedBetId]);
+  const pendingSettlementBetIds =
+    pendingSettlement.scope === pendingScope ? pendingSettlement.betIds : NO_BET_IDS;
 
   const roundPhase = React.useMemo<CasinoRoundPhase>(() => {
     if (state.status === "planning") return "loading_quote";
@@ -210,7 +240,10 @@ export function useCasinoRound({
           houseEdgeUnavailable: t("casino.room.poolStatus.gameUnavailable"),
           poolUnavailable: t(
             `casino.room.poolStatus.${availability === "ready" ? "unavailable" : availability}`,
-            { symbol: release.pools?.find((pool) => pool.poolId === poolId)?.symbol ?? "" }
+            {
+              symbol: release.pools?.find((pool) => pool.poolId === poolId)?.symbol ?? "",
+              count: openBets ?? 0
+            }
           )
         }
       });
@@ -234,6 +267,7 @@ export function useCasinoRound({
     kenoSpots,
     onRoundReset,
     onRoundStart,
+    openBets,
     openConnectModal,
     plinkoRisk,
     poolId,
@@ -266,6 +300,8 @@ export function useCasinoRound({
     isTransactionActive,
     isRoundAnimating,
     houseEdgeBps: vrfQuote.config?.houseEdgeBps,
+    /** Disabled for good: the room shows a closed state and takes no bet (ADR-0037 §6). */
+    gameDisabled: vrfQuote.config?.disabled === true,
     maxBetCount: vrfQuote.config?.maxBetCount,
     callbackGasLimit: vrfQuote.config?.callbackGasLimit,
     availability,
@@ -274,6 +310,8 @@ export function useCasinoRound({
     vrfQuoteError: vrfQuote.quoteError,
     activeBetId: state.betId,
     activeBet: roundWatcher.bet,
+    /** Bets this session handed to a notice: their result arrived but never settled. */
+    pendingSettlementBetIds,
     activeRequestId: roundWatcher.bet?.requestId,
     roundError: roundWatcher.error,
     manualSettleAvailable: roundWatcher.manualSettleAvailable,

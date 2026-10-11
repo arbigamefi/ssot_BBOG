@@ -28,6 +28,10 @@ import type {
   SSOTBankAPI,
   SSOTLiquidityVaultAPI,
   SSOTVRFHubAPI,
+  SSOTReferralAPI,
+  SSOTGovernanceAPI,
+  VoidStatus,
+  VoidBetResult,
   Address as AddressT
 } from "./types";
 import { toDomainError } from "./errors";
@@ -41,6 +45,21 @@ const ALLOWANCE_CONFIRMATION_DELAY_MS = 500;
 // below the cap to avoid inclusive range interpretation differences.
 const PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS = 1_900n;
 const PROVIDER_LEDGER_DEFAULT_LIMIT = 50;
+
+/**
+ * Gas limit for GameHub.voidBet. The contract hands the settlement attempt exactly 10M gas
+ * (VOID_SETTLEMENT_GAS) and keeps a 600k reserve for the void branch; the measured minimum
+ * transaction limit is about 10.67M. Base caps a transaction at 16,777,216 gas (EIP-7825).
+ */
+export const VOID_BET_GAS_LIMIT = 11_000_000n;
+
+// SSOTTypes.BetState and IVRFHub.RequestState values used outside mapBetState.
+const BET_STATE_PENDING_VRF = 2;
+const BET_STATE_RANDOM_READY = 3;
+const BET_STATE_SETTLED = 4;
+const BET_STATE_REFUNDED = 5;
+const BET_STATE_VOIDED = 6;
+const REQUEST_STATE_RECEIVED = 2;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -99,6 +118,8 @@ export interface SSOTSDK {
   bank: SSOTBankAPI;
   vault: SSOTLiquidityVaultAPI;
   vrfHub: SSOTVRFHubAPI;
+  referral: SSOTReferralAPI;
+  governance: SSOTGovernanceAPI;
 }
 
 export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
@@ -172,7 +193,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     LiquidityVaultAbi: VAULT_ABI,
     SettlementRouterAbi: ROUTER_ABI,
     VRFHubAbi: VRFHUB_ABI,
-    IGameModuleAbi: GAME_MODULE_ABI
+    IGameModuleAbi: GAME_MODULE_ABI,
+    PoolRegistryAbi: POOL_REGISTRY_ABI,
+    ReferralRegistryAbi: REFERRAL_REGISTRY_ABI
   } = getContractAbis();
   // Nested Bank reverts must decode during the final hub simulation as well as planning.
   const bankErrors = BANK_ABI.filter((item) => item.type === "error");
@@ -231,6 +254,52 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     };
   }
 
+  // GameHub constants: read once per client, retried after a failed read.
+  let voidDelays: Promise<{ voidDelay: bigint; publicVoidDelay: bigint }> | undefined;
+  function readVoidDelays() {
+    voidDelays ??= Promise.all([
+      publicClient.readContract({
+        address: gameHubAddress,
+        abi: GAME_HUB_ABI,
+        functionName: "VOID_DELAY"
+      }),
+      publicClient.readContract({
+        address: gameHubAddress,
+        abi: GAME_HUB_ABI,
+        functionName: "PUBLIC_VOID_DELAY"
+      })
+    ]).then(
+      ([voidDelay, publicVoidDelay]) => ({
+        voidDelay: BigInt(voidDelay as bigint),
+        publicVoidDelay: BigInt(publicVoidDelay as bigint)
+      }),
+      (error: unknown) => {
+        voidDelays = undefined;
+        throw error;
+      }
+    );
+    return voidDelays;
+  }
+
+  async function readPlayerOpenHolds(bankAddress: Address, player: Address, blockNumber?: bigint) {
+    const [open, max] = await Promise.all([
+      publicClient.readContract({
+        address: bankAddress,
+        abi: BANK_ABI,
+        functionName: "openHoldsOf",
+        args: [player],
+        blockNumber
+      }),
+      publicClient.readContract({
+        address: bankAddress,
+        abi: BANK_ABI,
+        functionName: "MAX_OPEN_HOLDS_PER_PLAYER",
+        blockNumber
+      })
+    ]);
+    return { open: BigInt(open as bigint), max: BigInt(max as bigint) };
+  }
+
   function terminalProofRanges(latestBlock: bigint) {
     const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
     const lookbackStart =
@@ -255,48 +324,37 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     return ranges;
   }
 
+  const TERMINAL_EVENT_NAMES = {
+    settled: "BetFinalized",
+    refunded: "BetRefunded",
+    voided: "BetVoided"
+  } as const satisfies Record<GameHubTerminalProof["kind"], string>;
+
+  /** Storage already names the terminal kind, so only that GameHub event is scanned. */
   async function readTerminalEventsInRange({
     betId,
+    kind,
     fromBlock,
     toBlock
   }: {
     betId: bigint;
+    kind: GameHubTerminalProof["kind"];
     fromBlock: bigint;
     toBlock: bigint;
   }) {
-    const eventBase = {
+    const events = await publicClient.getContractEvents({
       address: gameHubAddress,
       abi: GAME_HUB_ABI,
+      eventName: TERMINAL_EVENT_NAMES[kind],
       fromBlock,
       toBlock,
       args: { positionId: betId }
-    };
-
-    const [settled, refunded] = await Promise.all([
-      publicClient.getContractEvents({
-        ...eventBase,
-        eventName: "BetFinalized"
-      } as any),
-      publicClient.getContractEvents({
-        ...eventBase,
-        eventName: "BetRefunded"
-      } as any)
-    ]);
-
-    return [
-      ...settled.map((event: any) => ({
-        kind: "settled" as const,
-        event
-      })),
-      ...refunded.map((event: any) => ({
-        kind: "refunded" as const,
-        event
-      }))
-    ].sort((a, b) => {
-      const blockA = BigInt(a.event.blockNumber ?? 0n);
-      const blockB = BigInt(b.event.blockNumber ?? 0n);
+    } as any);
+    return [...(events as any[])].sort((a, b) => {
+      const blockA = BigInt(a.blockNumber ?? 0n);
+      const blockB = BigInt(b.blockNumber ?? 0n);
       if (blockA !== blockB) return blockA > blockB ? -1 : 1;
-      return Number(b.event.logIndex ?? 0) - Number(a.event.logIndex ?? 0);
+      return Number(b.logIndex ?? 0) - Number(a.logIndex ?? 0);
     });
   }
 
@@ -309,7 +367,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     })) as any;
 
     const state = Number(receipt.state);
-    if (state === 4) {
+    if (state === BET_STATE_SETTLED) {
       return {
         kind: "settled",
         settlement: {
@@ -322,9 +380,19 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       };
     }
 
-    if (state === 5) {
+    if (state === BET_STATE_REFUNDED) {
       return {
         kind: "refunded",
+        refund: {
+          refundAmount: BigInt(receipt.refundAmount)
+        }
+      };
+    }
+
+    // The terminal receipt books the stake as refundAmount with zero payouts (ADR-0037 §7.4).
+    if (state === BET_STATE_VOIDED) {
+      return {
+        kind: "voided",
         refund: {
           refundAmount: BigInt(receipt.refundAmount)
         }
@@ -340,6 +408,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   ): Promise<GameHubTerminalProof | null> {
     if (!proof) return null;
     const terminal = proof.kind === "settled" ? proof.settlement : proof.refund;
+    // A void's amount is its refundAmount, like a refund; the receipt shows how it was paid.
     const amount =
       proof.kind === "settled"
         ? proof.settlement.payoutNet != null && proof.settlement.refundAmount != null
@@ -387,7 +456,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     async getGameConfig(gameId, opts) {
       const blockNumber =
         opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
-      const [module, maxBetCount, callbackGasLimit, houseEdgeBps] = await Promise.all([
+      const [module, maxBetCount, callbackGasLimit, houseEdgeBps, disabled] = await Promise.all([
         publicClient.readContract({
           address: gameHubAddress,
           abi: GAME_HUB_ABI,
@@ -414,7 +483,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           abi: GAME_HUB_ABI,
           functionName: "defaultHouseEdgeBps",
           blockNumber
-        })
+        }),
+        gameHub.isGameDisabled(gameId, { blockNumber })
       ]);
       const normalizedModule = getAddress(module as Address);
       const released = release.games[gameId.toLowerCase()];
@@ -442,8 +512,20 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         module: normalizedModule,
         houseEdgeBps: Number(houseEdgeBps),
         maxBetCount: Number(maxBetCount),
-        callbackGasLimit: Number(callbackGasLimit)
+        callbackGasLimit: Number(callbackGasLimit),
+        disabled
       };
+    },
+    async isGameDisabled(gameId, opts) {
+      return Boolean(
+        await publicClient.readContract({
+          address: gameHubAddress,
+          abi: GAME_HUB_ABI,
+          functionName: "gameDisabled",
+          args: [gameId],
+          blockNumber: opts?.blockNumber
+        })
+      );
     },
     async quoteVRFFee(gameId, betCount, gasPriceBudget): Promise<bigint> {
       const blockNumber = await publicClient.getBlockNumber({ cacheTime: 0 });
@@ -511,6 +593,17 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
 
         const blockNumber = await publicClient.getBlockNumber({ cacheTime: 0 });
         const config = await gameHub.getGameConfig(input.gameId, { blockNumber });
+        // GameHub refuses both the quote and the bet for a disabled game (ADR-0037 §6).
+        if (config.disabled) {
+          return {
+            error: {
+              code: "GAME_DISABLED",
+              message: "This game is disabled for good and accepts no new bets.",
+              severity: "warning",
+              details: { gameId: input.gameId }
+            }
+          };
+        }
         if (input.betCount > config.maxBetCount)
           return {
             error: {
@@ -580,8 +673,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         // Decode stakeSpec early for maxPayout call
         const stakeSpecForSolvency = stakeSpecDecoded;
 
-        // Parallel reads: game module maxPayout + bank solvency state
-        const [requiredReserve, accounting, openHolds, maxOpenHolds, minBetAmount] =
+        // Parallel reads: game module maxPayout + bank solvency and capacity state
+        const [requiredReserve, accounting, openHolds, maxOpenHolds, minBetAmount, playerHolds] =
           await Promise.all([
             publicClient.readContract({
               address: getAddress(moduleAddress) as Address,
@@ -621,7 +714,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
               abi: BANK_ABI,
               blockNumber,
               functionName: "minBetAmount"
-            }) as Promise<bigint>
+            }) as Promise<bigint>,
+            readPlayerOpenHolds(bank, walletReq.account, blockNumber)
           ]);
         const riskAssets = BigInt(accounting.G);
         const totalReserved = BigInt(accounting.R);
@@ -650,6 +744,22 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
               message: "This pool is temporarily at capacity. Wait for a pending bet to finish.",
               severity: "warning",
               retryable: true
+            }
+          };
+        }
+        // Bank.holdBet checks the per-player cap after the Bank-wide one (ADR-0037 §5).
+        if (playerHolds.open >= playerHolds.max) {
+          return {
+            error: {
+              code: "PLAYER_OPEN_HOLD_LIMIT",
+              message: `This wallet already has ${playerHolds.open} of ${playerHolds.max} open bets in this pool. Try again after one settles.`,
+              severity: "warning",
+              retryable: true,
+              details: {
+                player: walletReq.account,
+                open: playerHolds.open.toString(),
+                max: playerHolds.max.toString()
+              }
             }
           };
         }
@@ -1042,31 +1152,114 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       });
     },
 
-    async bindReferrer(referrer: AddressT): Promise<TxResult> {
+    async getVoidStatus(betId: bigint, opts?: { blockNumber?: bigint }): Promise<VoidStatus> {
+      const blockNumber =
+        opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
+      const [block, rawBet, delays] = await Promise.all([
+        publicClient.getBlock({ blockNumber }),
+        publicClient.readContract({
+          address: gameHubAddress,
+          abi: GAME_HUB_ABI,
+          functionName: "getBet",
+          args: [betId],
+          blockNumber
+        }),
+        readVoidDelays()
+      ]);
+      const bet = rawBet as {
+        bank: Address;
+        player: Address;
+        requestId: bigint;
+        vrfRequestedAt: bigint | number;
+        state: number;
+      };
+      const bank = getAddress(bet.bank);
+      const [cohortEnd, rawRequest] = await Promise.all([
+        publicClient.readContract({
+          address: gameHubAddress,
+          abi: GAME_HUB_ABI,
+          functionName: "voidCohortEnd",
+          args: [bank],
+          blockNumber
+        }),
+        publicClient.readContract({
+          address: vrfHubAddress,
+          abi: VRFHUB_ABI,
+          functionName: "getRequest",
+          args: [bet.requestId],
+          blockNumber
+        })
+      ]);
+      const request = rawRequest as {
+        bank: Address;
+        hub: Address;
+        betId: bigint;
+        payer: Address;
+        state: number;
+      };
+      const resultReceived = Number(request.state) === REQUEST_STATE_RECEIVED;
+      // GameHub refuses a request bound to another bet with InvalidRandomReceipt; fail closed the same way.
+      if (
+        resultReceived &&
+        (BigInt(request.betId) !== betId ||
+          getAddress(request.hub) !== gameHubAddress ||
+          getAddress(request.bank) !== bank ||
+          getAddress(request.payer) !== getAddress(bet.player))
+      ) {
+        throw new Error("The VRF request bound to this bet differs from the bet.");
+      }
+      // Same rule as GameHub.voidBet (ADR-0037 §7.2).
+      const requestedAt = BigInt(bet.vrfRequestedAt);
+      const inWindow = requestedAt <= BigInt(cohortEnd as bigint | number);
+      const eligibleAt = requestedAt + (inWindow ? delays.voidDelay : delays.publicVoidDelay);
+      const state = Number(bet.state);
+      const open = state === BET_STATE_PENDING_VRF || state === BET_STATE_RANDOM_READY;
+      return {
+        betId,
+        voidable: open && resultReceived && block.timestamp >= eligibleAt,
+        eligibleAt: Number(eligibleAt),
+        inWindow,
+        resultReceived,
+        blockNumber,
+        blockTimestamp: Number(block.timestamp)
+      };
+    },
+
+    async voidBet(betId: bigint): Promise<VoidBetResult> {
       const walletReq = requireWallet();
       if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
-      return tx.simulateAndWrite({
+      // A fixed limit: the outcome must never depend on a wallet's estimate (ADR-0037 §7.2).
+      const result = await tx.simulateAndWrite({
         chainId: release.chainId,
         releaseDigest: release.releaseDigest,
-        action: "BIND_REFERRER",
+        action: "VOID_BET",
         publicClient,
         walletClient: walletReq.walletClient,
         account: walletReq.account,
         address: gameHubAddress,
-        abi: GAME_HUB_ABI,
-        functionName: "bindReferrer",
-        args: [referrer]
+        abi: CASINO_EXECUTION_ABI,
+        functionName: "voidBet",
+        args: [betId],
+        gas: VOID_BET_GAS_LIMIT
       });
-    },
-
-    async referrerOf(player: AddressT): Promise<AddressT> {
-      const referrer = (await publicClient.readContract({
-        address: gameHubAddress,
-        abi: GAME_HUB_ABI,
-        functionName: "referrerOf",
-        args: [player]
-      })) as Address;
-      return referrer as AddressT;
+      if (!result.ok) return result;
+      try {
+        const receipt = await publicClient.getTransactionReceipt({ hash: result.txHash });
+        const matches = (eventName: string) =>
+          tx
+            .extractEventArgs({
+              abi: GAME_HUB_ABI,
+              receiptLogs: receipt.logs as any,
+              eventName,
+              address: gameHubAddress
+            })
+            .some((args) => args.positionId != null && BigInt(args.positionId as bigint) === betId);
+        if (matches("BetVoided")) return { ...result, outcome: "voided" };
+        if (matches("BetFinalized")) return { ...result, outcome: "settled" };
+      } catch {
+        // The transaction is mined; without its receipt the outcome stays unreported.
+      }
+      return result;
     },
 
     async getBet(betId: bigint): Promise<DomainBet> {
@@ -1130,28 +1323,41 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       const terminal = await readTerminalReceipt(betId);
       if (!terminal) return null;
       // Terminal storage proves economics. Logs locate the transaction for delivery evidence.
-      let latest: Awaited<ReturnType<typeof readTerminalEventsInRange>>[number] | undefined;
+      let latest: any;
       try {
         const latestBlock = await publicClient.getBlockNumber();
         for (const range of terminalProofRanges(latestBlock)) {
-          const events = await readTerminalEventsInRange({ betId, ...range });
+          const events = await readTerminalEventsInRange({ betId, kind: terminal.kind, ...range });
           latest = events[0];
           if (latest) break;
         }
       } catch {
         return withPlayerPayment(betId, terminal);
       }
-      if (!latest || latest.kind !== terminal.kind) return withPlayerPayment(betId, terminal);
+      if (!latest) return withPlayerPayment(betId, terminal);
       const location = {
-        txHash: latest.event.transactionHash as Hex | undefined,
-        blockNumber: latest.event.blockNumber as bigint | undefined
+        txHash: latest.transactionHash as Hex | undefined,
+        blockNumber: latest.blockNumber as bigint | undefined
       };
-      return withPlayerPayment(
-        betId,
-        terminal.kind === "settled"
-          ? { kind: "settled", settlement: { ...terminal.settlement, ...location } }
-          : { kind: "refunded", refund: { ...terminal.refund, ...location } }
-      );
+      if (terminal.kind === "settled")
+        return withPlayerPayment(betId, {
+          kind: "settled",
+          settlement: { ...terminal.settlement, ...location }
+        });
+      if (terminal.kind === "refunded")
+        return withPlayerPayment(betId, {
+          kind: "refunded",
+          refund: { ...terminal.refund, ...location }
+        });
+      const prefix = latest.args?.settlementErrorPrefix as Hex | undefined;
+      return withPlayerPayment(betId, {
+        kind: "voided",
+        refund: {
+          ...terminal.refund,
+          ...location,
+          ...(prefix ? { settlementErrorPrefix: prefix } : {})
+        }
+      });
     }
   };
 
@@ -1215,7 +1421,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       await verifyVaultBinding(publicClient, pool, blockNumber);
       const read = (functionName: string) =>
         publicClient.readContract({ address: pool.bank, abi: BANK_ABI, functionName, blockNumber });
-      const [ssot, performance, lp, openHolds, maxOpenHolds, minBetAmount, unbooked] =
+      const [ssot, performance, lp, openHolds, maxOpenHolds, minBetAmount, unbooked, poolActive] =
         (await Promise.all([
           read("getSSOT"),
           read("getPerformance"),
@@ -1229,6 +1435,13 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
             functionName: "unbookedResultCount",
             args: [pool.bank],
             blockNumber
+          }),
+          publicClient.readContract({
+            address: getAddress(release.contracts.poolRegistry),
+            abi: POOL_REGISTRY_ABI,
+            functionName: "isPoolActive",
+            args: [BigInt(poolId)],
+            blockNumber
           })
         ])) as [
           any,
@@ -1237,7 +1450,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           bigint,
           bigint,
           bigint,
-          bigint
+          bigint,
+          boolean
         ];
       return {
         chainId: release.chainId,
@@ -1257,6 +1471,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         accountingValid: ssot.accountingValid,
         lpStatus: ssot.accountingValid ? decodeLPStatus(lp[2]) : "invalidAccounting",
         unbookedResultCount: BigInt(unbooked),
+        poolActive: Boolean(poolActive),
         openHolds,
         maxOpenHolds,
         minBetAmount,
@@ -1280,7 +1495,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         totalProtocolFeeAccrued: BigInt(performance[5]!),
         totalBetsHeld: BigInt(performance[6]!),
         totalBetsSettled: BigInt(performance[7]!),
-        totalBetsRefunded: BigInt(performance[8]!)
+        totalBetsRefunded: BigInt(performance[8]!),
+        totalBetsVoided: BigInt(performance[9]!),
+        totalVoided: BigInt(performance[10]!)
       };
     },
 
@@ -1292,6 +1509,13 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         functionName: "playerTurnover",
         args: [player]
       })) as bigint;
+    },
+
+    async getOpenHolds(poolId, player, opts) {
+      const pool = resolveBankPool(poolId);
+      const blockNumber =
+        opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
+      return readPlayerOpenHolds(pool.bank, getAddress(player), blockNumber);
     },
 
     async claimProtocolFees(
@@ -1445,7 +1669,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     async addDeposit(poolId, assets, owner) {
       const wallet = requireWallet();
       if ("error" in wallet) return { txHash: "0x0", ok: false, error: wallet.error };
-      const poolReq = getPool(poolId);
+      // LPs deposit while the pool is registered but not yet active (ADR-0037 §9 D1): the Vault
+      // checks only the Bank pause and its own status, never PoolRegistry activity.
+      const poolReq = getPool(poolId, true);
       if ("error" in poolReq) return { txHash: "0x0", ok: false, error: poolReq.error };
       try {
         if (assets <= 0n) throw new Error("Deposit assets must be positive.");
@@ -1456,6 +1682,17 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         )
           throw new Error("Invalid deposit owner.");
         const snapshot = await bank.getSnapshot(poolId);
+        // The Vault refuses deposits while the Bank is paused; withdrawals stay open (ADR-0037 §4).
+        if (snapshot.riskInPaused)
+          return {
+            txHash: "0x0",
+            ok: false,
+            error: {
+              code: "DEPOSITS_PAUSED",
+              message: "LP deposits are paused for this pool. Withdrawals stay open.",
+              severity: "warning"
+            }
+          };
         if (snapshot.lpStatus !== "ready" || !snapshot.accountingValid)
           throw new Error(`LP deposits unavailable: ${snapshot.lpStatus}.`);
         if (snapshot.G + assets > MAX_TREE_CAPITAL)
@@ -1675,14 +1912,70 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     }
   };
 
-  return { release, account, gameHub, bank, vault, vrfHub };
+  // ReferralRegistry.bind requires msg.sender == player and emits ReferrerBound (ADR-0037 §10).
+  const referral: SSOTReferralAPI = {
+    async bind(referrer: AddressT): Promise<TxResult> {
+      const walletReq = requireWallet();
+      if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
+      return tx.simulateAndWrite({
+        chainId: release.chainId,
+        releaseDigest: release.releaseDigest,
+        action: "BIND_REFERRER",
+        publicClient,
+        walletClient: walletReq.walletClient,
+        account: walletReq.account,
+        address: getAddress(release.contracts.refRegistry) as Address,
+        abi: REFERRAL_REGISTRY_ABI,
+        functionName: "bind",
+        args: [walletReq.account, referrer]
+      });
+    },
+
+    async referrerOf(player: AddressT): Promise<AddressT> {
+      return (await publicClient.readContract({
+        address: getAddress(release.contracts.refRegistry) as Address,
+        abi: REFERRAL_REGISTRY_ABI,
+        functionName: "referrerOf",
+        args: [player]
+      })) as AddressT;
+    }
+  };
+
+  const governance: SSOTGovernanceAPI = {
+    async getTimelock(opts) {
+      const blockNumber =
+        opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
+      const [registryGovernance, hubGovernance] = await Promise.all([
+        publicClient.readContract({
+          address: getAddress(release.contracts.poolRegistry) as Address,
+          abi: POOL_REGISTRY_ABI,
+          functionName: "governance",
+          blockNumber
+        }),
+        publicClient.readContract({
+          address: gameHubAddress,
+          abi: GAME_HUB_ABI,
+          functionName: "governance",
+          blockNumber
+        })
+      ]);
+      const timelock = getAddress(registryGovernance as Address);
+      if (timelock !== getAddress(hubGovernance as Address))
+        throw new Error("PoolRegistry and GameHub report different governance.");
+      return timelock as AddressT;
+    }
+  };
+
+  return { release, account, gameHub, bank, vault, vrfHub, referral, governance };
 }
 
 function mapBetState(state: number): DomainBet["state"] {
-  // SSOTTypes.BetState: None(0), Held(1), PendingVRF(2), RandomReady(3), Settled(4), Refunded(5)
-  if (state === 3) return "randomReady";
-  if (state === 4) return "finalized";
-  if (state === 5) return "refunded";
+  // SSOTTypes.BetState: None(0), Held(1), PendingVRF(2), RandomReady(3), Settled(4), Refunded(5),
+  // Voided(6)
+  if (state === BET_STATE_RANDOM_READY) return "randomReady";
+  if (state === BET_STATE_SETTLED) return "finalized";
+  if (state === BET_STATE_REFUNDED) return "refunded";
+  if (state === BET_STATE_VOIDED) return "voided";
   return "placed";
 }
 

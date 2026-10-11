@@ -14,7 +14,11 @@ import {
   keccak256,
   toHex,
   encodeEventTopics,
-  encodeAbiParameters
+  encodeAbiParameters,
+  encodeFunctionData,
+  getAddress,
+  zeroAddress,
+  zeroHash
 } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import { createKeeperRuntime } from "../dist/runtime.js";
@@ -144,6 +148,8 @@ const config = {
   chainId: 84532,
   gameHub: hub.address,
   vrfHub: vrf.address,
+  poolRegistry: registry.address,
+  releaseBanks: [bank.address],
   httpRpcUrl: rpc,
   wsRpcUrl: rpc.replace("http:", "ws:"),
   privateKey: toHex(keeper.getHdKey().privateKey),
@@ -163,7 +169,8 @@ const config = {
   vaultProviderLedgerPools: [
     { bank: bank.address, vault: vault.address, asset: token.address, poolId: 1, decimals: 6 }
   ],
-  vaultProviderLedgerScanIntervalMs: 1000
+  vaultProviderLedgerScanIntervalMs: 1000,
+  voidGasLimit: 11_000_000n
 };
 const events = [];
 const logger = {
@@ -181,7 +188,7 @@ writeFileSync(
   releasePath,
   JSON.stringify({
     chainId: 84532,
-    contracts: { gameHub: hub.address, vrfHub: vrf.address },
+    contracts: { gameHub: hub.address, vrfHub: vrf.address, poolRegistry: registry.address },
     pools: config.vaultProviderLedgerPools,
     meta: { blockNumber: Number(startBlock) }
   })
@@ -316,10 +323,12 @@ async function createWsRelay() {
   };
 }
 const expectedSubscriptions = [
-  ...["BetRandomReady", "BetPlaced", "BetFinalized", "BetRefunded"].map((eventName) => ({
-    address: hub.address.toLowerCase(),
-    topic: encodeEventTopics({ abi: hub.abi, eventName })[0]
-  })),
+  ...["BetRandomReady", "BetPlaced", "BetFinalized", "BetRefunded", "BetVoided"].map(
+    (eventName) => ({
+      address: hub.address.toLowerCase(),
+      topic: encodeEventTopics({ abi: hub.abi, eventName })[0]
+    })
+  ),
   ...["ResultReceived", "CallbackAttempt"].map((eventName) => ({
     address: vrf.address.toLowerCase(),
     topic: encodeEventTopics({ abi: vrf.abi, eventName })[0]
@@ -581,7 +590,7 @@ try {
       .finalizedTxHash,
     directCallback.transactionHash
   );
-  await until(hasAllSubscriptions, "six acknowledged WS event filters before interruption");
+  await until(hasAllSubscriptions, "seven acknowledged WS event filters before interruption");
   const subscriptionsBefore = wsRelay.subscriptions();
   wsRelay.disconnect();
   await until(() => wsRelay.subscriptions().length === 0, "all real WS sockets disconnected");
@@ -645,7 +654,7 @@ try {
   assert.equal(afterOutage.bankCash, afterOutage.PF + afterOutage.XP);
   assert.equal(afterOutage.vaultCash, afterOutage.L);
   wsRelay.resume();
-  await until(hasAllSubscriptions, "six newly acknowledged WS event filters after HTTP recovery");
+  await until(hasAllSubscriptions, "seven newly acknowledged WS event filters after HTTP recovery");
   const subscriptionsAfter = wsRelay.subscriptions();
   const missing = await place();
   await until(
@@ -737,6 +746,166 @@ try {
   assert(events.some((event) => event.name === "casino.finalize.broadcast"));
   console.log(
     "PASS: real keeper + Anvil + PostgreSQL restart, immutable L1/L2 referral snapshots, direct-only attribution, house-edge conservation, fixed deadlines, pause refund, refused-payment recovery and cash ownership"
+  );
+
+  // ADR-0037 §7: an issuer freeze of the Vault makes every settlement of this bet revert. The keeper
+  // waits for eligibility, then voids it: no Vault cash moves and the stake becomes a player payable.
+  await write(bank, "setRiskInPaused", [false]);
+  const frozenId = await place();
+  const frozenBet = await read(hub, "getBet", [frozenId]);
+  await write(token, "setBlocked", [vault.address, true]);
+  await write(wrapper, "deliver", [frozenBet.requestId, 1n]);
+  assert.equal((await read(hub, "getBet", [frozenId])).state, 3);
+  assert.equal(await read(vrf, "unbookedResultCount", [bank.address]), 1n);
+  const payableBeforeVoid = await read(bank, "playerPayable", [player]);
+  await until(
+    () =>
+      runtime.health
+        .snapshot()
+        .voids?.candidates.some(
+          (candidate) => candidate.betId === frozenId.toString() && !candidate.eligible
+        ),
+    "keeper lists the unbookable result as a void candidate before it is eligible"
+  );
+  assert(
+    !events.some((event) => event.name === "casino.void.broadcast"),
+    "no voidBet before eligibility"
+  );
+  const windowOpened = await write(hub, "openVoidWindow", [1n]);
+  await evm.increaseTime({ seconds: 86_400 });
+  await evm.mine({ blocks: 1 });
+  runtime.enqueue({ source: "manual", betId: frozenId, receivedAt: Date.now() });
+  await until(
+    async () => (await read(hub, "getBet", [frozenId])).state === 6,
+    "keeper voids the bet once the window makes it eligible"
+  );
+  const [voidedEvent] = await client.getContractEvents({
+    ...hub,
+    eventName: "BetVoided",
+    args: { positionId: frozenId },
+    fromBlock: windowOpened.blockNumber,
+    toBlock: "latest"
+  });
+  assert(voidedEvent, "GameHub BetVoided");
+  assert.equal(getAddress(voidedEvent.args.caller), getAddress(keeper.address));
+  assert.equal(voidedEvent.args.stake, frozenBet.stake);
+  assert.equal(
+    (await client.getTransaction({ hash: voidedEvent.transactionHash })).gas,
+    11_000_000n
+  );
+  assert.equal(await read(bank, "playerPayable", [player]), payableBeforeVoid + frozenBet.stake);
+  assert.equal(await read(vrf, "unbookedResultCount", [bank.address]), 0n);
+  await until(
+    async () =>
+      (await store.getBet({ chainId: 84532, gameHub: hub.address, betId: frozenId.toString() }))
+        ?.state === "voided",
+    "voided PostgreSQL row"
+  );
+  const voidedRow = await store.getBet({
+    chainId: 84532,
+    gameHub: hub.address,
+    betId: frozenId.toString()
+  });
+  assert.equal(voidedRow.refundAmount, frozenBet.stake.toString());
+  assert.equal(voidedRow.payout, "0");
+  assert.equal(voidedRow.voidedTxHash, voidedEvent.transactionHash);
+  assert.equal(voidedRow.voidCaller, keeper.address.toLowerCase());
+  await until(
+    () => runtime.health.snapshot().voids?.lastOutcome?.txHash === voidedEvent.transactionHash,
+    "void outcome in keeper health"
+  );
+  assert.equal(runtime.health.snapshot().voids.lastOutcome.outcome, "voided");
+  await until(
+    async () =>
+      (
+        await store.getGameHubOperatorEvents({
+          chainId: 84532,
+          gameHub: hub.address,
+          limit: 10,
+          eventName: "VoidWindowOpened"
+        })
+      ).some((event) => event.txHash === windowOpened.transactionHash),
+    "VoidWindowOpened indexed for the operations page"
+  );
+  await write(token, "setBlocked", [vault.address, false]);
+  console.log(
+    "PASS: unbookable result waits for eligibility, then one keeper voidBet with the configured gas books the stake as a player payable, PostgreSQL voided row and void window"
+  );
+
+  // ADR-0037 §2: hand PoolRegistry, GameHub and the Bank to a GovernanceTimelock through its own
+  // 72-hour queue. A restarted keeper verifies that all three report it and indexes the queue.
+  const timelock = await deploy("GovernanceTimelock", [
+    259_200n,
+    [owner],
+    [secondLevel],
+    [zeroAddress]
+  ]);
+  for (const governed of [registry, hub, bank])
+    await write(governed, "transferGovernance", [timelock.address]);
+  const accept = encodeFunctionData({ abi: hub.abi, functionName: "acceptGovernance" });
+  const handover = [
+    [registry.address, hub.address, bank.address],
+    [0n, 0n, 0n],
+    [accept, accept, accept],
+    zeroHash,
+    keccak256(toHex("keeper-integration-handover"))
+  ];
+  const scheduledHandover = await write(timelock, "scheduleBatch", [...handover, 259_200n]);
+  const handoverId = await read(timelock, "hashOperationBatch", handover);
+  const mint = encodeFunctionData({ abi: token.abi, functionName: "mint", args: [owner, 1n] });
+  await write(timelock, "schedule", [token.address, 0n, mint, zeroHash, zeroHash, 259_200n]);
+  const mintId = await read(timelock, "hashOperation", [
+    token.address,
+    0n,
+    mint,
+    zeroHash,
+    zeroHash
+  ]);
+  // The guardian cancels a queued call inside the window.
+  await write(timelock, "cancel", [mintId], secondLevel);
+  await evm.increaseTime({ seconds: 259_200 });
+  await evm.mine({ blocks: 1 });
+  // Anyone executes a ready operation.
+  const executed = await write(timelock, "executeBatch", handover, player);
+  for (const governed of [registry, hub, bank])
+    assert.equal(getAddress(await read(governed, "governance")), getAddress(timelock.address));
+  await evm.mine({ blocks: 128 });
+  assert((await client.getBlock({ blockTag: "finalized" })).number >= executed.blockNumber);
+  await runtime.stop();
+  runtime = createKeeperRuntime({ config: { ...liveConfig, scanMaxChunksPerPass: 50 }, logger });
+  await runtime.start();
+  const queued = () =>
+    store.getGovernanceTimelockOperations({ chainId: 84532, timelock: timelock.address });
+  await until(async () => (await queued()).length === 4, "keeper indexes the timelock queue");
+  const operations = await queued();
+  assert.deepEqual(
+    operations.map((operation) => [operation.operationId, operation.index, operation.state]),
+    [
+      [handoverId, 0, "executed"],
+      [handoverId, 1, "executed"],
+      [handoverId, 2, "executed"],
+      [mintId, 0, "cancelled"]
+    ]
+  );
+  const scheduledAt = (await client.getBlock({ blockNumber: scheduledHandover.blockNumber }))
+    .timestamp;
+  assert.equal(operations[0].salt, handover[4]);
+  assert.equal(operations[2].target, bank.address.toLowerCase());
+  assert.equal(operations[0].readyAt, (scheduledAt + 259_200n).toString());
+  assert.equal(operations[0].executedTxHash, executed.transactionHash);
+  assert.deepEqual(
+    (
+      await store.getGovernanceTimelockDelayChanges({ chainId: 84532, timelock: timelock.address })
+    ).map((change) => [change.oldDuration, change.newDuration]),
+    [["0", "259200"]]
+  );
+  await until(
+    () => runtime.health.snapshot().governance?.caughtUp === true,
+    "governance indexing caught up in keeper health"
+  );
+  assert.equal(runtime.health.snapshot().governance.timelock, getAddress(timelock.address));
+  console.log(
+    "PASS: PoolRegistry, GameHub and Bank governance verified as one timelock, its queued, executed and cancelled calls indexed in PostgreSQL"
   );
 } catch (error) {
   console.error(runtime?.health.snapshot().payables);

@@ -27,9 +27,11 @@ import {
   deriveGameRoomPricing
 } from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
+import { GameClosedState } from "../../../../features/casino/room/game-closed";
 import {
   useGameWalletBalance,
   useKenoStrobeSpots,
+  usePlayerOpenHolds,
   usePoolSnapshot
 } from "../../../../features/casino/room/hooks";
 import {
@@ -124,6 +126,16 @@ export function GamePageClient({ slug }: { slug: string }) {
   });
   const poolRead = usePoolSnapshot({ sdk, poolId: assetSelection.poolId });
   const poolSnapshot = poolRead.snapshot;
+  // ADR-0037 §5: at most two open bets per player and pool, checked before any wallet prompt.
+  const openHolds = usePlayerOpenHolds({
+    sdk,
+    poolId: assetSelection.poolId,
+    account: sdk?.account
+  });
+  const refreshOpenHolds = openHolds.refresh;
+  const poolAvailability =
+    poolRead.status === "ready" && openHolds.atLimit ? "playerLimit" : poolRead.status;
+  const openBets = openHolds.holds ? Number(openHolds.holds.open) : undefined;
   const referrerParam = searchParams.get("ref");
   const referralAffiliate = useReferralAffiliate({
     referrer: referrerParam,
@@ -138,9 +150,10 @@ export function GamePageClient({ slug }: { slug: string }) {
       setTerminalBet(bet);
       refreshWalletBalance();
       poolRead.refresh();
+      refreshOpenHolds();
       void refetchRecentBets?.();
     },
-    [refetchRecentBets, refreshWalletBalance, poolRead.refresh]
+    [refetchRecentBets, refreshWalletBalance, poolRead.refresh, refreshOpenHolds]
   );
   const clearStageRevealTimer = React.useCallback(() => {
     if (revealTimerRef.current) {
@@ -245,7 +258,8 @@ export function GamePageClient({ slug }: { slug: string }) {
   }, []);
 
   const casinoRound = useCasinoRound({
-    poolAvailability: poolRead.status,
+    poolAvailability,
+    openBets,
     sdk,
     release,
     game,
@@ -275,8 +289,14 @@ export function GamePageClient({ slug }: { slug: string }) {
   React.useEffect(() => {
     if (state.status === "mined" || state.status === "reconciled") {
       refreshWalletBalance();
+      refreshOpenHolds();
     }
-  }, [refreshWalletBalance, state.status]);
+  }, [refreshOpenHolds, refreshWalletBalance, state.status]);
+  // Another tab or room may have filled the cap since the last read.
+  const stepperErrorCode = state.error?.code;
+  React.useEffect(() => {
+    if (stepperErrorCode === "PLAYER_OPEN_HOLD_LIMIT") refreshOpenHolds();
+  }, [refreshOpenHolds, stepperErrorCode]);
 
   const { isBetPanelPending, isStagePending } = getCasinoRoomPendingStates({
     isLocalPending: isPending,
@@ -384,6 +404,13 @@ export function GamePageClient({ slug }: { slug: string }) {
         description={readOnlyReason ?? t("casino.room.empty.gameNotFound")}
       />
     );
+  // No bet panel for a disabled game: it takes no new bets, but accepted ones still settle.
+  if (casinoRound.gameDisabled)
+    return (
+      <PageTransition pageKey={`game-${slug}-closed`}>
+        <GameClosedState gameName={getLocalizedGameName(t, game)} />
+      </PageTransition>
+    );
 
   const { decimals: assetDecimals, symbol: assetSymbol } = casinoPoolAsset.asset;
 
@@ -438,8 +465,11 @@ export function GamePageClient({ slug }: { slug: string }) {
     isPending: isBetPanelPending,
     riskInDisabled: !isCasinoRiskInEnabledForChain(chainId),
     poolAvailability: casinoRound.availability,
+    openBets,
+    pendingSettlementBetIds: casinoRound.pendingSettlementBetIds,
     onRefreshPool: () => {
       poolRead.refresh();
+      refreshOpenHolds();
       casinoRound.refreshGame();
     },
     onCheckTransaction: casinoRound.checkTransaction,

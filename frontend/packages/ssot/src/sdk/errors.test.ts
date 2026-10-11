@@ -76,6 +76,107 @@ describe("toDomainError", () => {
     });
   });
 
+  describe("launch-candidate reverts decoded from real bytes", () => {
+    const abis = getContractAbis();
+    const errorsOf = (abi: typeof abis.BankAbi) => abi.filter((entry) => entry.type === "error");
+    // One table for every SDK write path: GameHub with Bank, Vault and PoolRegistry errors.
+    const combined = [
+      ...abis.GameHubAbi,
+      ...errorsOf(abis.BankAbi),
+      ...errorsOf(abis.LiquidityVaultAbi),
+      ...errorsOf(abis.PoolRegistryAbi)
+    ];
+    const PLAYER = "0x1111111111111111111111111111111111111111";
+    const BANK = "0x2222222222222222222222222222222222222222";
+    const GAME = `0x${"ab".repeat(32)}` as const;
+    it.each([
+      {
+        source: abis.BankAbi,
+        errorName: "PlayerOpenHoldLimit",
+        args: [PLAYER],
+        expected: {
+          code: "PLAYER_OPEN_HOLD_LIMIT",
+          severity: "warning",
+          retryable: true,
+          details: { player: PLAYER }
+        }
+      },
+      {
+        source: abis.GameHubAbi,
+        errorName: "GameIsDisabled",
+        args: [GAME],
+        expected: { code: "GAME_DISABLED", severity: "warning", details: { gameId: GAME } }
+      },
+      {
+        source: abis.GameHubAbi,
+        errorName: "VoidNotEligible",
+        args: [7n, 1_000n, 87_400n],
+        expected: {
+          code: "VOID_NOT_ELIGIBLE",
+          severity: "warning",
+          retryable: true,
+          details: { betId: 7n, nowTs: 1_000n, eligibleAt: 87_400n }
+        }
+      },
+      {
+        source: abis.GameHubAbi,
+        errorName: "VoidGasTooLow",
+        args: [10_000_000n, 10_605_000n],
+        expected: {
+          code: "VOID_GAS_TOO_LOW",
+          severity: "error",
+          details: { gasLeft: 10_000_000n, required: 10_605_000n }
+        }
+      },
+      {
+        source: abis.GameHubAbi,
+        errorName: "NoUnbookedResult",
+        args: [BANK],
+        expected: { code: "NO_UNBOOKED_RESULT", severity: "warning", details: { bank: BANK } }
+      },
+      {
+        source: abis.LiquidityVaultAbi,
+        errorName: "DepositsPaused",
+        args: [],
+        expected: { code: "DEPOSITS_PAUSED", severity: "warning" }
+      },
+      {
+        source: abis.PoolRegistryAbi,
+        errorName: "ForeignGovernance",
+        args: [BANK],
+        expected: { code: "FOREIGN_GOVERNANCE", severity: "error", details: { target: BANK } }
+      }
+    ])("maps $errorName to $expected.code", ({ source, errorName, args, expected }) => {
+      const data = encodeErrorResult({ abi: source, errorName, args });
+      expect(decodeErrorResult({ abi: combined, data }).errorName).toBe(errorName);
+      const reverted = new ContractFunctionRevertedError({
+        abi: combined,
+        data,
+        functionName: "f"
+      });
+      const domain = toDomainError(new BaseError("wrapped", { cause: reverted }));
+      expect(domain).toMatchObject(expected);
+      if (!("retryable" in expected)) expect(domain.retryable).toBeUndefined();
+    });
+
+    it("reports the pool for GameHub's pause revert and nothing for the Bank's", () => {
+      const hub = encodeErrorResult({
+        abi: abis.GameHubAbi,
+        errorName: "RiskInPaused",
+        args: [3n]
+      });
+      const bank = encodeErrorResult({ abi: abis.BankAbi, errorName: "RiskInPaused" });
+      const map = (data: `0x${string}`) =>
+        toDomainError(
+          new BaseError("wrapped", {
+            cause: new ContractFunctionRevertedError({ abi: combined, data, functionName: "f" })
+          })
+        );
+      expect(map(hub)).toMatchObject({ code: "RISK_IN_PAUSED", details: { poolId: 3n } });
+      expect(map(bank)).toMatchObject({ code: "RISK_IN_PAUSED", details: { poolId: undefined } });
+    });
+  });
+
   it("maps ContractFunctionRevertedError → mapRevert (UnknownGame)", () => {
     const err = makeBaseError("ContractFunctionRevertedError");
     (err as any).data = { errorName: "UnknownGame", args: ["0xGAME"] };

@@ -142,17 +142,24 @@ function StatusBadge({ status }: { status: EnrichedBetRow["status"] }) {
   const label =
     status === "won"
       ? t("portfolio.activity.status.won")
-      : status === "lost" || status === "refunded" || status === "failed"
-        ? t("portfolio.activity.status.closed")
-        : status === "settled"
-          ? t("portfolio.activity.status.settled")
-          : t("portfolio.activity.status.open");
+      : status === "refunded"
+        ? t("portfolio.activity.status.refunded")
+        : status === "voided"
+          ? t("portfolio.activity.status.voided")
+          : status === "lost" || status === "failed"
+            ? t("portfolio.activity.status.closed")
+            : status === "settled"
+              ? t("portfolio.activity.status.settled")
+              : t("portfolio.activity.status.open");
+  // A refund and a void both return the stake: neither is a loss.
   const className =
     status === "won"
       ? "border-success/30 bg-success-soft text-success"
-      : status === "lost" || status === "refunded" || status === "failed"
-        ? "border-danger/30 bg-danger-soft text-danger"
-        : "border-brand/30 bg-brand-soft text-brand";
+      : status === "refunded" || status === "voided"
+        ? "border-border bg-surface-2 text-fg-muted"
+        : status === "lost" || status === "failed"
+          ? "border-danger/30 bg-danger-soft text-danger"
+          : "border-brand/30 bg-brand-soft text-brand";
   return (
     <span
       className={`inline-flex rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${className}`}
@@ -164,7 +171,8 @@ function StatusBadge({ status }: { status: EnrichedBetRow["status"] }) {
 
 function getOutcomeClass(status: EnrichedBetRow["status"]) {
   if (status === "won") return "font-mono font-bold text-success";
-  if (status === "lost" || status === "refunded" || status === "failed") {
+  if (status === "refunded" || status === "voided") return "font-mono font-bold text-fg";
+  if (status === "lost" || status === "failed") {
     return "font-mono font-bold text-danger";
   }
   return "font-mono font-bold text-brand";

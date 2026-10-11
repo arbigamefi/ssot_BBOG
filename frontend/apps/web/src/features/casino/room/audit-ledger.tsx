@@ -50,7 +50,7 @@ export type GameAuditBet = {
 
 type AuditTab = "live" | "mine" | "leaderboard" | "analytics" | "info";
 const AUDIT_TABS: readonly AuditTab[] = ["live", "mine", "leaderboard", "analytics", "info"];
-type StateFilter = "all" | "pending" | "won" | "lost" | "refunded";
+type StateFilter = "all" | "pending" | "won" | "lost" | "refunded" | "voided";
 
 type GameInfoBet = {
   key: string;
@@ -570,7 +570,7 @@ function StateFilterStrip({
   onChange: (next: StateFilter) => void;
   t: Translate;
 }) {
-  const options: StateFilter[] = ["all", "pending", "won", "lost", "refunded"];
+  const options: StateFilter[] = ["all", "pending", "won", "lost", "refunded", "voided"];
   return (
     <div role="tablist" aria-label="state" className="flex flex-wrap gap-1.5">
       {options.map((opt) => {
@@ -1304,6 +1304,7 @@ function matchesStateFilter(row: GameAuditBet, filter: StateFilter): boolean {
   const mapped = mapBetState(row.state);
   if (filter === "pending") return mapped === "pending";
   if (filter === "refunded") return mapped === "cancelled";
+  if (filter === "voided") return mapped === "voided";
   // win/loss only meaningful once the bet has a terminal payout.
   if (mapped === "pending" || row.state !== "finalized") return false;
   if (filter === "won") return stake != null && payout != null && payout > stake;

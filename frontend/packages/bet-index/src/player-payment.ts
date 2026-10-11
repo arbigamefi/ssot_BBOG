@@ -10,11 +10,17 @@ export const PLAYER_PAYMENT_ABI = parseAbi([
   "event BetReserveReleased(uint256 indexed betId, address indexed player, uint256 reserved)",
   "event BetSettled(uint256 indexed betId, address indexed player, uint256 payoutGross, uint256 payoutNet, uint256 refundAmount, uint256 feeOnPayout, uint256 protocolFeeAccrual, uint256 xpAccrued, uint256 xpLocked, uint256 xpHoldback)",
   "event BetRefunded(uint256 indexed betId, address indexed player, uint256 refundAmount)",
+  // The Bank's event (ADR-0037 §7.4), not GameHub's BetVoided, which has another signature.
+  "event BetVoided(uint256 indexed betId, address indexed player, uint256 stake)",
   "event PlayerPayableCreated(uint256 indexed betId, address indexed player, uint256 amount)",
   "event Transfer(address indexed from, address indexed to, uint256 value)"
 ]);
 
-/** Use the complete, ordered logs of the successful terminal transaction. Missing evidence stays unknown. */
+/**
+ * Use the complete, ordered logs of the successful terminal transaction. Missing evidence stays unknown.
+ * A void books the whole stake as a player payable and never transfers it, so its only proof is that
+ * payable.
+ */
 export function extractPlayerPaymentProof({
   logs,
   bank,
@@ -56,7 +62,10 @@ export function extractPlayerPaymentProof({
   );
   const releases = matching.filter((event) => event.eventName === "BetReserveReleased");
   const terminals = matching.filter(
-    (event) => event.eventName === "BetSettled" || event.eventName === "BetRefunded"
+    (event) =>
+      event.eventName === "BetSettled" ||
+      event.eventName === "BetRefunded" ||
+      event.eventName === "BetVoided"
   );
   if (releases.length !== 1 || terminals.length !== 1) return unknown;
   const start = releases[0]!.index;
@@ -67,7 +76,9 @@ export function extractPlayerPaymentProof({
       ? terminal.args.payoutNet + terminal.args.refundAmount
       : terminal.eventName === "BetRefunded"
         ? terminal.args.refundAmount
-        : undefined;
+        : terminal.eventName === "BetVoided"
+          ? terminal.args.stake
+          : undefined;
   if (terminalAmount !== amount) return unknown;
   const inPayment = decoded.filter((event) => event.index > start && event.index < terminal.index);
   const payables = inPayment.filter(
@@ -85,6 +96,7 @@ export function extractPlayerPaymentProof({
       ? { ...unknown, status: "payable" }
       : unknown;
   }
+  if (terminal.eventName === "BetVoided") return unknown;
   const transfers = inPayment.filter(
     (event) =>
       event.eventName === "Transfer" &&

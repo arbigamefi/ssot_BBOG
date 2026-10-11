@@ -204,6 +204,64 @@ describe("casino receipt view model", () => {
     ).toThrow("not ready");
   });
 
+  it("reads a voided bet as its stake returned, never as a settled payout", () => {
+    const row = {
+      gameHub: "0x00000000000000000000000000000000000000a6",
+      lastEventName: "BetVoided",
+      lastTxHash: TX,
+      voidedTxHash: TX,
+      terminalTxHash: TX,
+      updatedAt: 1,
+      updatedBlock: 1,
+      id: "84532:42",
+      betId: "42",
+      chainId: 84532,
+      randomHash: RANDOM,
+      state: "voided",
+      stake: "200000",
+      payout: "0",
+      refundAmount: "200000"
+    } as BetRow;
+    const model = buildCasinoReceiptFromBetRow({
+      assetDecimals: 6,
+      assetSymbol: "USDC",
+      chainId: 84532,
+      gameLabel: "Dice",
+      row,
+      payment: { status: "payable", amount: "200000" }
+    });
+    expect(model).toMatchObject({
+      state: "voided",
+      payout: 200000n,
+      payoutValue: "0.2 USDC",
+      net: 0n,
+      tone: "neutral",
+      terminalTxHash: TX,
+      randomHash: RANDOM,
+      payment: { status: "payable", amount: "200000" }
+    });
+    expect(buildCasinoReceiptProofText({ lastTx: TX, model, status: "Voided" })).toContain(
+      "Stake returned as a player payable; the VRF fee is not refunded"
+    );
+
+    const fromResult = buildCasinoReceiptFromTerminalResult({
+      assetDecimals: 6,
+      assetSymbol: "USDC",
+      chainId: 84532,
+      gameLabel: "Dice",
+      result: {
+        kind: "voided",
+        betId: 42n,
+        player: PLAYER,
+        randomHash: RANDOM,
+        requestId: 77n,
+        stake: 200_000n,
+        refund: { refundAmount: 200_000n, txHash: TX }
+      }
+    });
+    expect(fromResult).toMatchObject({ state: "voided", payout: 200000n, tone: "neutral" });
+  });
+
   it("shows where a v1.6 bet's house edge went, keeping small 18-decimal shares visible", () => {
     const row: BetRow = {
       gameHub: "0x00000000000000000000000000000000000000a6",

@@ -1,5 +1,3 @@
-import type { DomainError } from "@ssot/ssot";
-
 import { getAppChain } from "../../../app-shell/chain-registry";
 import { formatUnits } from "../../betting/model/units";
 
@@ -28,13 +26,4 @@ export function formatTokenAmount(
   const fraction = fracPart.slice(0, maxFractionDigits).replace(/0+$/, "");
   const body = `${negative ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
   return symbol ? `${body} ${symbol}` : body;
-}
-
-export function serializeErrorDetails(error?: DomainError) {
-  if (!error?.details) return undefined;
-  return JSON.stringify(
-    error.details,
-    (_key, value) => (typeof value === "bigint" ? value.toString() : value),
-    2
-  );
 }

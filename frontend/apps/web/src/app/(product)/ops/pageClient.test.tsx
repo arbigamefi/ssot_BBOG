@@ -79,6 +79,11 @@ vi.mock("../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({ release: state.release })
 }));
 
+// The governance panel reads its own API route; it has its own tests.
+vi.mock("../../../features/ops/ops-governance-panel", () => ({
+  OpsGovernancePanel: () => null
+}));
+
 vi.mock("../../../features/ops/useIndexer", () => ({
   useIndexer: () => ({
     indexerStatus: state.indexerStatus,

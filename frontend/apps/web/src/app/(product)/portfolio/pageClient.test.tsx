@@ -13,7 +13,8 @@ const state = {
   readOnlyReason: null as string | null,
   chainId: 84532,
   sdk: null as any,
-  ready: false
+  ready: false,
+  flowError: undefined as any
 };
 
 vi.mock("next-intl", async () => {
@@ -80,10 +81,10 @@ vi.mock("../../../features/portfolio/overview/useTxJournal", () => ({
 
 vi.mock("../../../features/tx/useDirectTxAction", () => ({
   useDirectTxAction: () => ({
-    status: "idle",
+    status: state.flowError ? "failed" : "idle",
     steps: [],
-    hasActivity: false,
-    error: undefined,
+    hasActivity: Boolean(state.flowError),
+    error: state.flowError,
     txHash: undefined,
     journalEntry: undefined,
     busy: false,
@@ -140,6 +141,7 @@ describe("PortfolioPageClient", () => {
     state.chainId = 84532;
     state.sdk = null;
     state.ready = false;
+    state.flowError = undefined;
   });
 
   it("frames portfolio as a wallet profile and ledger console", () => {
@@ -242,4 +244,43 @@ describe("PortfolioPageClient", () => {
       }
     }
   );
+  it("shows failed reads and a failed refund claim as copy, never provider text", async () => {
+    const raw = "HTTP request failed. URL: https://rpc.example/key-123";
+    state.release = {
+      ...state.release,
+      pools: [
+        {
+          poolId: 1,
+          asset: "0x0000000000000000000000000000000000000001",
+          bank: "0x0000000000000000000000000000000000000101",
+          vault: "0x0000000000000000000000000000000000000201",
+          symbol: "USDC",
+          decimals: 6
+        }
+      ]
+    };
+    state.ready = true;
+    state.flowError = { code: "USER_REJECTED", message: raw, severity: "info" };
+    state.sdk = {
+      account: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
+      bank: { getAssetBalance: vi.fn().mockRejectedValue(new Error(raw)) },
+      vault: {
+        getAllowance: vi.fn().mockResolvedValue(0n),
+        getDeposits: vi.fn().mockResolvedValue({ nftCount: 0n, complete: true, items: [] })
+      },
+      vrfHub: { getRefundCredit: vi.fn().mockRejectedValue(new Error(raw)) }
+    };
+
+    renderWithQueryClient(<PortfolioPageClient />);
+
+    expect(await screen.findByText("Asset query failed")).toBeDefined();
+    expect(await screen.findByText("Refund query failed")).toBeDefined();
+    expect(
+      screen.getAllByText(
+        "This could not be read from the chain just now. It is not assumed to be zero; check again shortly."
+      )
+    ).toHaveLength(2);
+    expect(screen.getByText("You canceled the request in your wallet.")).toBeDefined();
+    expect(screen.queryByText(raw)).toBeNull();
+  });
 });

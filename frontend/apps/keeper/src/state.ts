@@ -1,22 +1,29 @@
 import type { BetStateName, RequestStateName } from "./types.js";
 
+const BET_STATES = [
+  "none",
+  "held",
+  "pendingVrf",
+  "randomReady",
+  "settled",
+  "refunded",
+  "voided"
+] as const satisfies readonly BetStateName[];
+
+const REQUEST_STATES = [
+  "none",
+  "awaiting",
+  "received",
+  "terminal",
+  "cancelled",
+  "voided"
+] as const satisfies readonly RequestStateName[];
+
+/** SSOTTypes.BetState. A value this keeper does not know means a contract it was not built for. */
 export function mapBetState(state: number): BetStateName {
-  switch (state) {
-    case 0:
-      return "none";
-    case 1:
-      return "held";
-    case 2:
-      return "pendingVrf";
-    case 3:
-      return "randomReady";
-    case 4:
-      return "settled";
-    case 5:
-      return "refunded";
-    default:
-      return "none";
-  }
+  const name = BET_STATES[state];
+  if (!name) throw new Error(`Unknown GameHub bet state ${state}`);
+  return name;
 }
 
 export function shouldFinalize(state: BetStateName) {
@@ -24,12 +31,11 @@ export function shouldFinalize(state: BetStateName) {
 }
 
 export function isTerminalState(state: BetStateName) {
-  return state === "settled" || state === "refunded";
+  return state === "settled" || state === "refunded" || state === "voided";
 }
 
 export function mapRequestState(state: number): RequestStateName {
-  const names = ["none", "awaiting", "received", "terminal", "cancelled"] as const;
-  const name = names[state];
+  const name = REQUEST_STATES[state];
   if (!name) throw new Error(`Unknown canonical VRF request state ${state}`);
   return name;
 }
