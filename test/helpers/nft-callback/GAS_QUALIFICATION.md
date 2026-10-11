@@ -6,11 +6,11 @@ This is sampled full-path evidence, not a worst-case gas proof or a release admi
 
 ## Reproduce
 
-Provide a Base Sepolia archive endpoint through `NFT_GAS_RPC_URL` in the local environment. Do not include credentials in command arguments, logs or committed files.
+Provide a Base Sepolia endpoint that serves the pinned block through `NFT_GAS_RPC_URL`. Do not include credentials in command arguments, logs or committed files. Operators use the Alchemy operator key through the redacting wrapper; the public `https://sepolia.base.org` also served the pinned block on 2026-10-11.
 
 ```sh
-python test/helpers/nft-callback/run_gas_matrix.py \
-  --output dist/nft-callback-gas-local
+script/tools/with-ops-rpc.sh alchemy base-sepolia bash -c \
+  'NFT_GAS_RPC_URL="$OPS_RPC_URL" python test/helpers/nft-callback/run_gas_matrix.py --output dist/nft-callback-gas-local'
 ```
 
 The checked-in case list is `gas-qualification-cases.json`. Each case starts a separate Forge invocation, including a separately committed `setUp` before its measured test transaction. An example that requires one observed case to fit:

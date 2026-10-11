@@ -45,6 +45,7 @@
 | 其余已接受的设计取舍 | 维持接受，残余清单补全并逐项披露（§9） |
 | Foundry 1.8.x | 放入本版，A7 在工作包 B 与证书 v5 之前完成 |
 | CI 的 fork RPC | A1 完成后改为公共 RPC；不另建 CI 专用 key |
+| RPC key 分配 | 仓库根 `.env` 的四个 key 按用途命名（只改名，值未变）：`INFURA_API_KEY_OPS` 用于本机部署广播、发布检查、`verify_governance` 回放、K0-4，以及主网上线后的备用 keeper（只走 HTTP）；`ALCHEMY_API_KEY_OPS` 用于 preflight、fork 演练与 gas 矩阵；`INFURA_API_KEY_PROD_KEEPER`、`ALCHEMY_API_KEY_PROD_KEEPER` 只在服务器上给生产 keeper 用（`KEEPER_RPC_HTTP`、`KEEPER_RPC_WS`）。实施方只经 `script/tools/with-ops-rpc.sh` 使用两个 OPS key，不得使用 `*_PROD_KEEPER`；浏览器与 web 服务端用 Base 公共 RPC |
 | 文档 | 一档过程记录直接删除，二档先迁移决策与状态再删除，作为第一项工作（C2） |
 
 ## 4. 清理记录（2026-10-11）
@@ -85,17 +86,17 @@
 
 | 编号 | 内容 | 来源 | 涉及文件 | 验收 |
 | --- | --- | --- | --- | --- |
-| A1 | 治理核验：日志分页不超过 200 块（可配置）；对 HTTP 429、5xx 与断连有界退避重试；在不泄露 URL 的前提下记录 HTTP 状态类别；**以已签名核验的区块为检查点做增量回放**，避免全历史回放随部署时长增长（主网一年约 23 万次 `eth_getLogs`） | Release Gate run 38103495700；公共 RPC 的 200 块上限（HTTP 413）；复核 M-14 | `script/release/verify_governance.py`（`CHUNK_SIZE = 500`，`Rpc` 无重试，`:86-105, 151-194`） | 伪 RPC 返回 413、429、5xx、断连时有界重试后仍失败；公共 RPC 上在 GitHub runner 连续 3 次通过；给出主网规模的页数与耗时估算；随后 secret 改为公共 RPC |
+| A1 | 治理核验：日志分页不超过 200 块（可配置）；对 HTTP 429、5xx 与断连有界退避重试；在不泄露 URL 的前提下记录 HTTP 状态类别；**以已签名核验的区块为检查点做增量回放**，避免全历史回放随部署时长增长（主网一年约 23 万次 `eth_getLogs`） | Release Gate run 38103495700；公共 RPC 的 200 块上限（HTTP 413）；复核 M-14 | `script/release/verify_governance.py`（`CHUNK_SIZE = 500`，`Rpc` 无重试，`:86-105, 151-194`） | 伪 RPC 返回 413、429、5xx、断连时有界重试后仍失败；公共 RPC 上在 GitHub runner 连续 3 次通过；给出主网规模的页数与耗时估算；随后删除 secret `FORK_RPC_URL_BASE_SEPOLIA` 或改为公共 RPC（Owner 在 GitHub 操作）。本机发布检查与回放经 `with-ops-rpc.sh infura` 用 `INFURA_API_KEY_OPS` |
 | A2 | 严格发布检查与镜像导入自行构建 `out/` 并断言产物来自当前检出；新增 push 触发的作业，用 `ReleaseImportFixture` 夹具包在全新检出上按工作流顺序跑 release-gate 离线步骤与镜像导入 | 复核 3 W-1 | `script/release/check_release.sh`、`script/release/prepare_image_release.sh`、`frontend/scripts/ssot-sync.mjs`、`.github/workflows/` | 新作业在 push 上通过；负对照：删掉构建步骤后新作业必须失败 |
 | A3 | 发布签名：先校验 keystore 密码能解出 `RELEASE_SIGNER` 再签（forge 1.5.1 交互输错密码只报 `vm.sign: no wallets available`）；修正版发布脚本收进仓库（提示直接写终端；只读步骤含打包可重试） | 2026-10-11 两次签名失败 | `Makefile:165`；归档中的 `release_v16.next.sh` → `script/release/` | 输错密码给出明确错误；重试不会导致重复签名 |
 | A4 | 打包不再原样带上可能过期的 Etherscan 验证脚本：按快照重新生成，或地址不符时拒绝 | 2026-10-11 发现 10-02 的旧脚本 | `script/release/package_release.sh:96-97`、`script/tools/gen_verify_helpers.py` | 放入错误地址的脚本时打包失败 |
-| A5 | 部署工具收进仓库：隔离副本部署（避开 forge 自动加载仓库根 `.env`）；广播前把关；一键 preflight（回读、模拟、逐笔核对、fork 演练、时间锁接管演练）；输出写入新目录，绝不覆盖已封印目录 | 本次部署；preflight P-1；复核 S-3 | 归档中的 `prepare_deploy_copy.sh`、`broadcast.sh`、`run_preflight.sh`、`read-chain.cjs`、`verify_dryrun_plan.py` → `script/release/` | 拒绝路径逐一有测试：EIP-7702 委托、nonce 不符、清单不符、副本或上级目录有 `.env`、未确认 |
+| A5 | 部署工具收进仓库：隔离副本部署（避开 forge 自动加载仓库根 `.env`）；广播前把关；一键 preflight（回读、模拟、逐笔核对、fork 演练、时间锁接管演练）；输出写入新目录，绝不覆盖已封印目录；RPC：preflight 与 fork 演练经 `with-ops-rpc.sh alchemy` 用 `ALCHEMY_API_KEY_OPS`，广播经 `with-ops-rpc.sh infura` 用 `INFURA_API_KEY_OPS` | 本次部署；preflight P-1；复核 S-3 | 归档中的 `prepare_deploy_copy.sh`、`broadcast.sh`、`run_preflight.sh`、`read-chain.cjs`、`verify_dryrun_plan.py` → `script/release/`；`script/tools/with-ops-rpc.sh`（已入库） | 拒绝路径逐一有测试：EIP-7702 委托、nonce 不符、清单不符、副本或上级目录有 `.env`、未确认；包装脚本只接受两个 OPS key（`test/ops/test_with_ops_rpc.py`） |
 | A6 | 发布线合入 `master` | 复核 3 R-3 | — | **已完成**（§4 第 2 项）；另用 GitHub environment（required reviewers）包住 `release-gate`（S-1） |
 | A7 | Foundry 升级到 1.8.x：全部工作流钉到同一确切补丁版本；anvil 显式钉到目标网络当时的硬分叉；预装 solc 后默认离线；工具链写入 v5 输入 | 冻结 v3；复核 §3.6 | 全部工作流、`test/ops`、`Makefile` | 在新版下复跑 ops 夹具、`DeployHarnessV16`、`run_gas_matrix.py`（1.8 有 30M 脚本帧上限）。**已完成**（2026-10-11）：v1.8.5（`51a52c59cf`）写入 `deps.lock`，`check_toolchain.py` 核对 8 处工作流与本机工具；solc 按 SHA-256 安装、离线编译；anvil 用 `--network base --hardfork azul --enable-tx-gas-limit`；`isolate` 默认关闭。PR 门槛、ops 119 项、SDK 集成通过；gas 矩阵两例与 v8 逐字段一致；isolate 下改按退款前毛 gas 计（准入日志 +45,404），由 `test/toolchain/IsolatedGasAccounting.t.sol` 钉住 |
 | A8 | 冻结规程与证据索引：运行后改冻结文件必须附 diff 或冻结时副本；仓库内维护带摘要的证据索引（含 §4 的删除记录与标签映射）；`dist/` 证据归档到持久存储；只改工作流的冻结 delta 写明由哪次运行验证 | 冻结签核 FZ-9；复核 S-11、W-1(3) | 证据索引（路径与格式在本项确定） | 写明 `shasum -c` 用法，做一次恢复演练 |
 | A9 | 测试整理：`_prepareLargeHistoricalProfit` 的 seed 写入病例文件；统一测试侧两份谓词参照；审计 PoC 并入 `test/` | 实施报告（C2 已删的 `preview-skip-first-callback-2026-10-07.md`，见 `b8a48425f` 中第 311–312 行）；审计 | `test/`；归档中的 `independent-audit-2026-10-10/tests/audit/` | 回归通过 |
 | A10 | 发布导入绑定加固：完整规范清单比对、池 ID 安全整数范围、ABI 清单逐项绑定与对应测试 | 2026-09-28 未合入的工作（归档 `worktrees/security-remediation.*`） | `script/release/validate_frontend_artifacts.py`、`script/release/GenerateFrontendManifestV16.s.sol`、`frontend/scripts/ssot-sync.mjs` | 归档中的 `test_release_artifact_binding.py` 思路落成仓库测试并通过 |
-| A11 | 时间锁模型的工具：DeployV16、`PrepareSafeAcceptanceV16`（改为生成接线与激活的 `scheduleBatch`，D1）、`V16Snapshot`、`verify_governance.py`、`ReleaseDigestV16`、K0-4 全部改到时间锁模型，核验项见 §10 | 复核 M-1、§3.3.3 | `script/DeployV16.s.sol`、`script/release/` | P6（预排队操作）、P2（guardian 否决）型负向用例 |
+| A11 | 时间锁模型的工具：DeployV16、`PrepareSafeAcceptanceV16`（改为生成接线与激活的 `scheduleBatch`，D1）、`V16Snapshot`、`verify_governance.py`、`ReleaseDigestV16`、K0-4 全部改到时间锁模型，核验项见 §10；本机 RPC 输入同 A1，CI 用公共 RPC | 复核 M-1、§3.3.3 | `script/DeployV16.s.sol`、`script/release/` | P6（预排队操作）、P2（guardian 否决）型负向用例 |
 | A12 | 恢复证书 v5 所需的复现工具（v4 依赖的 `h1-callback-cost-certificate-2026-10-04/`、`callback-cost-certificate-2026-10-04/`、`takeover-2026-10-07/`）纳入仓库或证据索引 | 复核 M-8 | 归档 `dist.tar.gz`、外审交付 r2 | 在新检出上能复现 v4 的关键数值 |
 
 ## 7. 工作包 B：合约（改字节码）
@@ -242,11 +243,11 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | --- | --- | --- |
 | C1 | 更正 `README.md:176`：tag 上 CI 跑的是非严格 `make release-check`；严格检查只在手动 dispatch 的 Release Gate 中执行 | 复核 3 I-6 |
 | C2 | 文档清理（第一项工作）。一档直接删除：`docs/audit/` 的 `contract-simplification-review-2026-10-04.md`、`h1-first-callback-review-2026-10-04.md`、`max-bet-and-compiler-review-2026-10-04.md`、`nft-tree-gas-reachability.md`、`prefix-threshold-validation-2026-10-05.md`、`tree-range-optimization-2026-10-04.md`，`docs/design/first-callback-settlement-qualification.md`，`docs/deploy/fresh-base-sepolia-preflight-2026-10-05.md`。二档先迁移再删除：`callback-and-lp-admission-review-2026-10-04.md`（排序取舍的接受记录迁入 ADR-0034）、`nft-core-integration-review.md`、`nft-consumer-integration-review.md`、`nft-callback-gas-qualification.md`、`preview-skip-first-callback-2026-10-07.md`（状态改为指向发布文档）。**已完成**（2026-10-11）：13 篇删除，排序取舍的接受记录迁入 ADR-0034 的 “Pre-inclusion ordering” 一节，状态引用改指发布说明，资格引用改指证书与测试 | Owner；验收：`git grep` 不再命中已归档目录（复核 S-4，18 个文件） |
-| C3 | 发布手册：隔离副本部署、EIP-7702 检查、从标签 dispatch 并核对 `head_sha` 与作业列表、RPC 选择；时间锁接管与解除暂停的时间表；更正 `v16-release.md:127` 的 “one person … cannot pass the gate alone”，写明 `V16_AUDITED_TREE` 是复核接受的树而非外审树；`docs/release/README.md` 与 `checklist.md` 更新到当前状态 | 复核 S-1 |
+| C3 | 发布手册：隔离副本部署、EIP-7702 检查、从标签 dispatch 并核对 `head_sha` 与作业列表、RPC 选择（§3 的 key 分配、包装脚本用法、本机绝不使用 `*_PROD_KEEPER`）；时间锁接管与解除暂停的时间表；更正 `v16-release.md:127` 的 “one person … cannot pass the gate alone”，写明 `V16_AUDITED_TREE` 是复核接受的树而非外审树；`docs/release/README.md` 与 `checklist.md` 更新到当前状态 | 复核 S-1 |
 | C4 | 条款与 LP 材料：作废规则（VRF 原生费不退）；准入时间锁与 LP 退出窗口；暂停不阻止提款；每玩家 2 个持仓；guardian 否决权；§9 全部残余 | §7、§9 |
 | C5 | 规范修订（宪法的修订需 Owner 明确批准并留记录）：`docs/constitution/SSOT.v1.6.md:125, 128-130, 137`；`ExecutableSSOT.v1.6.md:48-52, 243-249, 302`；`docs/adr/0006-vrf-callback-settlement.md:87-90, 197-204, 229`；`docs/adr/0034-nft-liquidity-deposits.md:30, 145`；`docs/architecture/overview.md:95, 116`；`docs/audit/v1.6-audit-scope.md:49, 172`；`docs/audit/threat-model.md:140`；`WHITEPAPER.zh-CN.md:18, 197, 201, 212, 215-216, 223, 229, 232-233`；`WHITEPAPER.product.zh-CN.md:109`；`docs/strategy/economic-design.md:104`；`docs/ops/runbooks/pause-config-drift.md:11, 18, 36-39`；`docs/ops/alerts.md:26`；`docs/ops/runbooks/governance-safe-setup.md:22-61` | 复核 M-6 |
 | C6 | ADR-0006 的两处改进（M4 范围限定、确认记录的位置）；本版外审交付按 FZ-6 清单打包 | 复核 S-8 |
-| C7 | legacy Bank 地址登记：18 个 Bank 的链、地址、是否暂停、余额、治理方、退役计划与 RPC key 轮换记录 | 复核 M-12 |
+| C7 | legacy Bank 地址登记：18 个 Bank 的链、地址、是否暂停、余额、治理方、退役计划与 RPC key 轮换记录（2026-10-11 四个 key 按用途改名；旧 Alchemy key 是否已重建、OPS 与 PROD_KEEPER 是否分属不同账户、服务器换 key 的时间，待 Owner 确认后写入） | 复核 M-12 |
 | C8 | 体育文档移出本版（随 B9），路线图保留体育作为未来能力 | Owner 选项 A |
 
 ## 12. 运营事项
@@ -254,8 +255,10 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | 事项 | 负责 | 备注 |
 | --- | --- | --- |
 | 通知外审方：r2 已被本候选版取代，`1e95d7fe…` 不会有外审；送 B0 设计预审；约定外审后修复回路 | 实施方准备，Owner 发送 | 复核 S-2 |
-| K0-4 配置漂移告警：Owner 参数、时间锁排队与 Ready 超期、`OpenHoldLimit`、作废事件；排队告警推送到 LP 可见的公开渠道 | 实施方，Owner 部署 | 分支 `k0-4/config-drift-alerts`；复核 S-9 |
-| legacy Bank 退役（14 个未暂停）与 RPC key 轮换 | Owner | C7 |
+| K0-4 配置漂移告警：Owner 参数、时间锁排队与 Ready 超期、`OpenHoldLimit`、作废事件；排队告警推送到 LP 可见的公开渠道 | 实施方，Owner 部署 | 分支 `k0-4/config-drift-alerts`；复核 S-9；RPC 用 `INFURA_API_KEY_OPS`（HTTP） |
+| legacy Bank 退役（14 个未暂停）与 RPC key 轮换 | Owner | C7；key 已于 2026-10-11 按用途改名 |
+| 生产 keeper 改用 `INFURA_API_KEY_PROD_KEEPER`（`KEEPER_RPC_HTTP`）与 `ALCHEMY_API_KEY_PROD_KEEPER`（`KEEPER_RPC_WS`）并重启；完成后更新 §2 与本表“keeper 与 CI 共用 Infura 额度”的说法 | Owner 在服务器上操作 | 实施方事后经公开健康端点核验 |
+| 主网备用 keeper 只配 `KEEPER_RPC_HTTP`（`INFURA_API_KEY_OPS`），不配 WS；`frontend/deploy/casino-keeper/backup.base-mainnet.env.example` 随 D 更新 | 实施方，Owner 部署 | 主网上线后 |
 | 原生安全扫描：排期，或写明由外审取代 | Owner | 复核 S-10 |
 | 生产服务器：保留至本候选版上线切换；其 keeper 与 CI 共用 Infura 额度 | Owner | A1 后 CI 不再用 Infura |
 
