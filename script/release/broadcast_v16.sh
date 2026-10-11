@@ -7,9 +7,10 @@ set -uo pipefail
 #   script/tools/with-ops-rpc.sh infura <base-sepolia|base> bash script/release/broadcast_v16.sh <preflight directory>
 #
 # Refuses, before it asks for the keystore password, unless:
-#   - the preflight passed (PREFLIGHT.txt) and was not broadcast yet, and its deploy copy (deploy-copy.txt, from
-#     prepare_deploy_copy.sh) is of the same commit, still holds the preflight's deploy-params.env, and neither it nor a
-#     directory above it holds a .env;
+#   - the preflight passed (PREFLIGHT.txt) with the chain's certified domain file and was not broadcast yet (a test
+#     domain override needs BROADCAST_TEST_DOMAIN_OVERRIDE=1, for rehearsals on a local fork only); its deploy copy
+#     (deploy-copy.txt, from prepare_deploy_copy.sh) is of the same commit, still holds the preflight's
+#     deploy-params.env, and neither it nor a directory above it holds a .env;
 #   - the RPC is on the preflight's chain; the deployer has no code (an EIP-7702 delegation would let other code act as
 #     the deployer), and its latest and pending nonces both equal the plan's first nonce;
 #   - a keyless simulation in the copy against the current chain produces exactly the preflight's plan;
@@ -37,6 +38,8 @@ lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 sha() { shasum -a 256 "$1" | cut -c1-64; }
 
 [[ "$(value result "$pre/PREFLIGHT.txt")" == PASS ]] || fail "no passed preflight in $pre"
+[[ "$(value domainOverride "$pre/PREFLIGHT.txt")" == no || "${BROADCAST_TEST_DOMAIN_OVERRIDE:-}" == 1 ]] ||
+  fail "the preflight used a test domain file (CALLBACK_DOMAIN_PATH); a deployment needs the certified one"
 [[ ! -e "$pre/broadcast" ]] || fail "$pre/broadcast exists; this preflight was broadcast already"
 [[ -f "$pre/deploy-copy.txt" ]] || fail "no deploy copy: run prepare_deploy_copy.sh first"
 copy=$(value copy "$pre/deploy-copy.txt")

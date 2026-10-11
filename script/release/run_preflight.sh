@@ -27,8 +27,8 @@ set -uo pipefail
 # parameters, the plan and the domain file.
 #
 # No keys and no signing. The RPC comes as OPS_RPC_URL (the wrapper) or RPC_URL. CALLBACK_DOMAIN_PATH replaces the
-# chain's certified domain file for a test run; PREFLIGHT.txt names the file used. The output directory must not exist
-# and is never overwritten.
+# chain's certified domain file for a test run; PREFLIGHT.txt names the file used and records domainOverride=yes, which
+# broadcast_v16.sh refuses. The output directory must not exist and is never overwritten.
 
 fail() {
   printf 'preflight: %s\n' "$*" >&2
@@ -208,9 +208,11 @@ domain=$(json "$out/chain/chain-readback.json" 'd["domainFile"]')
   echo "params_sha256=$(sha "$out/chain/deploy-params.env")"
   echo "plan_sha256=$(sha "$out/plan/DeployV16.s.sol/$chain/dry-run/run-latest.json")"
   if [[ -n "$domain_override" ]]; then
-    echo "domain=$domain_override (CALLBACK_DOMAIN_PATH override, for tests only)"
+    echo "domain=$domain_override"
+    echo "domainOverride=yes"
   else
     echo "domain=${domain#"$work"/}"
+    echo "domainOverride=no"
   fi
   echo "domain_sha256=$(sha "$domain")"
   echo "finishedAt=$(date -u +%Y-%m-%dT%H:%M:%SZ)"

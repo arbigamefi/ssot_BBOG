@@ -112,7 +112,7 @@ class DeployGateTests(unittest.TestCase):
         (self.pre / 'PREFLIGHT.txt').write_text(
             f'result=PASS\ncommit={self.commit}\nchainId=84532\ndeployer={DEPLOYER}\nfirstNonce=7\ntransactions=2\n'
             f'governanceTimelock=0x{1:040x}\nparams_sha256={sha(self.pre / "chain/deploy-params.env")}\n'
-            f'plan_sha256={sha(plan)}\ndomain=script/release/first-callback-domain-84532.json\n')
+            f'plan_sha256={sha(plan)}\ndomain=script/release/first-callback-domain-84532.json\ndomainOverride=no\n')
         stubs = self.base / 'stubs'
         stubs.mkdir()
         for name, body in (('cast', CAST), ('forge', FORGE)):
@@ -299,6 +299,17 @@ class DeployGateTests(unittest.TestCase):
         self.assert_refused(f'the keystore holds 0x{"ab" * 20}, not DEPLOYER',
                             env={'STUB_KEYSTORE_ADDRESS': '0x' + 'ab' * 20})
         self.assertEqual(list((self.base / 'tmp').iterdir()), [])
+
+    def test_refused_after_a_preflight_with_a_test_domain_file(self):
+        self.ready()
+        preflight = (self.pre / 'PREFLIGHT.txt').read_text()
+        (self.pre / 'PREFLIGHT.txt').write_text(preflight.replace('domainOverride=no', 'domainOverride=yes'))
+        self.assert_refused('the preflight used a test domain file (CALLBACK_DOMAIN_PATH)')
+        (self.pre / 'PREFLIGHT.txt').write_text(preflight.replace('domainOverride=no\n', ''))
+        self.assert_refused('the preflight used a test domain file (CALLBACK_DOMAIN_PATH)')
+        (self.pre / 'PREFLIGHT.txt').write_text(preflight.replace('domainOverride=no', 'domainOverride=yes'))
+        code, output, _ = self.broadcast('BROADCAST', PASSWORD, env={'BROADCAST_TEST_DOMAIN_OVERRIDE': '1'})
+        self.assertEqual(code, 0, output)
 
     def test_refused_when_the_plan_changed_after_the_preflight(self):
         self.ready()

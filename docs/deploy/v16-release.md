@@ -34,7 +34,8 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    ```
 
    It needs no signing key and sends nothing. It works in a `git archive` of the commit outside the repository and
-   stops at the first failure; `STAGES.tsv` lists the stages and `logs/` keeps their output with the RPC URL and key replaced.
+   stops at the first failure; `STAGES.tsv` lists the stages and `logs/` keeps their output with the RPC URL and key
+   replaced.
    - `read-chain` (`read_chain.py`) reads everything at one block. It fails unless the Safe is exactly the reviewed
      2-of-3 of the listed owners with no module or guard; the guardian is a multisig of at least two signers, none of
      them a Safe signer; the deployer, keeper and signer have no code (no EIP-7702 delegation); the deployer is funded
@@ -71,15 +72,16 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
 
    The copy is the preflight's commit with its `deploy-params.env`, in a directory outside the repository: forge loads
    a `.env` it finds in the project or above, and the repository's `.env` holds API keys, so neither the copy nor a
-   directory above it may hold one. `broadcast_v16.sh` asks for nothing until the preflight passed and was not
-   broadcast, the copy is of its commit and still holds its parameters, the RPC is on its chain, the deployer has no
-   code and its latest and pending nonces both equal the plan's first nonce, and a keyless simulation against the
-   current chain produces exactly the preflight's plan. The Owner then types `BROADCAST` and the keystore password,
-   which must unlock the deployer in `cast wallet address`; three wrong passwords end the run with nothing sent. The
-   broadcast files, `broadcast.log` and the snapshot are kept in the preflight directory; the snapshot also stays at
-   `deployments/latest-v16.json` in the copy, and the RPC that forge records there for each transaction has its key
-   replaced on exit. A broadcast is never resumed: if forge fails partway, inspect `broadcast.log` and the transactions
-   sent before anything else; a new preflight starts from the deployer's current nonce.
+   directory above it may hold one. `broadcast_v16.sh` asks for nothing until the preflight passed with the chain's
+   certified domain file (not a test override) and was not broadcast, the copy is of its commit and still holds its
+   parameters, the RPC is on its chain, the deployer has no code and its latest and pending nonces both equal the
+   plan's first nonce, and a keyless simulation against the current chain produces exactly the preflight's plan. The
+   Owner then types `BROADCAST` and the keystore password, which must unlock the deployer in `cast wallet address`;
+   three wrong passwords end the run with nothing sent. The broadcast files, `broadcast.log` and the snapshot are kept
+   in the preflight directory; the snapshot also stays at `deployments/latest-v16.json` in the copy, and the RPC that
+   forge records there for each transaction has its key replaced on exit. A broadcast is never resumed: if forge fails
+   partway, inspect `broadcast.log` and the transactions sent before anything else; a new preflight starts from the
+   deployer's current nonce.
    Verify the sources from the copy, which compiles the deployed commit:
    `SNAPSHOT_PATH=deployments/latest-v16.json make -C <copy directory> verify-v16`, with `ETHERSCAN_V2_API_KEY` set.
    It generates the verification helper from the snapshot using `script/tools/gen_verify_helpers.py`; the helper uses
