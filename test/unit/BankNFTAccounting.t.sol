@@ -305,14 +305,44 @@ contract BankNFTAccountingTest is Test {
     function test_grossCapitalAdmissionCountsPendingPrincipalAnd128SlotsOnlyReleaseOnTerminal() public {
         bank.setRiskReserveBps(0);
         _deposit(alice, 1_000e6);
+        // Two holds per player, so 64 addresses fill the Bank (residual R-4).
         for (uint256 id = 1; id <= bank.MAX_OPEN_HOLDS(); ++id) {
-            _open(id, 1, 1);
+            router.open(bank, id, address(uint160(0x10000 + (id + 1) / 2)), 1, 1, address(this));
         }
         vm.expectRevert(IBank.OpenHoldLimit.selector);
         _open(129, 1, 1);
         router.refund(bank, 1, 1);
         _open(129, 1, 1);
         assertEq(bank.openHolds(), 128);
+        _assertAccounting(0, 0);
+    }
+
+    /// ADR-0037 §5 (B2): at most two open holds per player in the Bank. Settlement and refund each release one,
+    /// and the settled turnover lives in the same slot.
+    function test_thirdOpenHoldOfOnePlayerIsRejectedUntilOneTerminates() public {
+        _deposit(alice, 1_000e6);
+        assertEq(bank.MAX_OPEN_HOLDS_PER_PLAYER(), 2);
+        _open(1, 1e6, 2e6);
+        _open(2, 1e6, 2e6);
+        assertEq(bank.openHoldsOf(player), 2);
+        vm.expectRevert(abi.encodeWithSelector(IBank.PlayerOpenHoldLimit.selector, player));
+        _open(3, 1e6, 2e6);
+        router.open(bank, 3, bob, 1e6, 2e6, address(this));
+        assertEq(bank.openHoldsOf(bob), 1);
+
+        _finish(1, 0, 0, 0, 0);
+        assertEq(bank.openHoldsOf(player), 1);
+        assertEq(bank.playerTurnover(player), 1e6);
+        _open(4, 1e6, 2e6);
+        vm.expectRevert(abi.encodeWithSelector(IBank.PlayerOpenHoldLimit.selector, player));
+        _open(5, 1e6, 2e6);
+
+        router.refund(bank, 2, 1e6);
+        assertEq(bank.openHoldsOf(player), 1);
+        assertEq(bank.playerTurnover(player), 1e6);
+        _open(5, 1e6, 2e6);
+        assertEq(bank.openHoldsOf(player), 2);
+        assertEq(bank.openHolds(), 3);
         _assertAccounting(0, 0);
     }
 

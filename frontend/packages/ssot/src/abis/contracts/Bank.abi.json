@@ -59,6 +59,19 @@
     },
     {
       "inputs": [],
+      "name": "MAX_OPEN_HOLDS_PER_PLAYER",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "acceptGovernance",
       "outputs": [],
       "stateMutability": "nonpayable",
@@ -550,6 +563,25 @@
     {
       "inputs": [],
       "name": "openHolds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "player",
+          "type": "address"
+        }
+      ],
+      "name": "openHoldsOf",
       "outputs": [
         {
           "internalType": "uint256",
@@ -1914,6 +1946,17 @@
     {
       "inputs": [],
       "name": "OptionalOutflowDomainViolation",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "player",
+          "type": "address"
+        }
+      ],
+      "name": "PlayerOpenHoldLimit",
       "type": "error"
     },
     {

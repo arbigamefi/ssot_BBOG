@@ -66,7 +66,7 @@
     "GameHub": {
       "artifact": "GameHub.sol:GameHub",
       "runtimeBytes": 20370,
-      "keccakWithImmutablesZeroed": "0xdae36dce674ed810b8527122a6698874c6617da70a741ea3f8d46161e4b8f8ff",
+      "keccakWithImmutablesZeroed": "0x9a61b57eecba578f958989b43f2506cb1ab3e6f6df2cf3d2beba0f0717372c5f",
       "immutables": [
         {
           "value": "settlementRouter",
@@ -117,7 +117,7 @@
     "SettlementRouter": {
       "artifact": "SettlementRouter.sol:SettlementRouter",
       "runtimeBytes": 4598,
-      "keccakWithImmutablesZeroed": "0x3291282aa1bf60cac87e39c64939ec47d28f618c3a20a1c571880086cd6575b8",
+      "keccakWithImmutablesZeroed": "0xf029d4818ca6c404146503e232e8a37d2c8b9e3caf35fa417619160578dcf86e",
       "immutables": [
         {
           "value": "poolRegistry",
@@ -131,7 +131,7 @@
     "PoolRegistry": {
       "artifact": "PoolRegistry.sol:PoolRegistry",
       "runtimeBytes": 3304,
-      "keccakWithImmutablesZeroed": "0x9ebfbe669d32950ef615fe6a01d5deef8cbd065954ad5c5363cf1c21bec8241e",
+      "keccakWithImmutablesZeroed": "0xfbe8b76076f5ded434931ddde047170a9101a4d9d4205e30738d598e48bbce37",
       "immutables": []
     },
     "ReferralRegistry": {
@@ -148,53 +148,53 @@
     },
     "Bank": {
       "artifact": "Bank.sol:Bank",
-      "runtimeBytes": 15641,
-      "keccakWithImmutablesZeroed": "0x923a1d25b801e5b366be8351162e751e1253c1e9d9ca2970f62da39a79a52b9d",
+      "runtimeBytes": 16052,
+      "keccakWithImmutablesZeroed": "0x928303496ad89687c596f54adc9e1cf9b37eafa513285721186aee4e69ea6102",
       "immutables": [
         {
           "value": "poolAsset",
           "offsets": [
-            3378,
-            9833
+            3545,
+            10165
           ]
         },
         {
           "value": "poolVault",
           "offsets": [
-            832,
-            5824,
-            7190,
-            13797
+            854,
+            6136,
+            7522,
+            14208
           ]
         },
         {
           "value": "poolAssetDecimals",
           "offsets": [
-            6055,
-            9038
+            6387,
+            9370
           ]
         },
         {
           "value": "poolAsset",
           "offsets": [
-            4685,
-            7098,
-            11770,
-            12606,
-            13461,
-            14070
+            4935,
+            7430,
+            12111,
+            13017,
+            13872,
+            14481
           ]
         },
         {
           "value": "poolVault",
           "offsets": [
-            4440,
-            7297,
-            7405,
-            8275,
-            11448,
-            12314,
-            13330
+            4690,
+            7629,
+            7737,
+            8607,
+            11789,
+            12655,
+            13741
           ]
         }
       ]

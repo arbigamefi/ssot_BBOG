@@ -15,11 +15,15 @@ interface IBank is ILiquidityVaultBank {
     function riskAssets() external view returns (uint256);
     function openHolds() external view returns (uint256);
     function MAX_OPEN_HOLDS() external view returns (uint256);
+    /// @notice Open holds one player may have in this Bank, whichever hub or caller opened them.
+    function MAX_OPEN_HOLDS_PER_PLAYER() external view returns (uint256);
+    function openHoldsOf(address player) external view returns (uint256);
     function setSettlementRouterOnce(address router) external;
     function setRandomnessConsumerOnce(address consumer) external;
 
     error BetAmountBelowMinimum(uint256 amount, uint256 minimum);
     error OpenHoldLimit();
+    error PlayerOpenHoldLimit(address player);
     error CapitalLimit();
     error AccountingFault();
 

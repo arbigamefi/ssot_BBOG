@@ -399,6 +399,45 @@ contract SettlementRouterTest is BankTestBase {
         router.getPosition(99);
     }
 
+    /// B2 (audit F-05, review C1, C2): the cap lives in the Bank, so a second hub shares the player's count
+    /// and a terminal position through either hub releases one.
+    function test_perPlayerOpenHoldCapIsSharedAcrossHubs() external {
+        vm.startPrank(gov);
+        registry.setHubRegistered(otherHub, true);
+        registry.setHubAllowedForPool(1, otherHub, true);
+        vm.stopPrank();
+
+        uint256 first = _open(10e6, 25e6);
+        _fundHubAs(otherHub, 10e6);
+        vm.prank(otherHub);
+        router.openPosition(1, player, 10e6, 25e6, SNAPSHOT, EDGE_BPS);
+        assertEq(bank.openHoldsOf(player), 2);
+
+        _fundHubAs(otherHub, 10e6);
+        vm.prank(otherHub);
+        vm.expectRevert(abi.encodeWithSelector(IBank.PlayerOpenHoldLimit.selector, player));
+        router.openPosition(1, player, 10e6, 25e6, SNAPSHOT, EDGE_BPS);
+        _fundHub(10e6);
+        vm.prank(hub);
+        vm.expectRevert(abi.encodeWithSelector(IBank.PlayerOpenHoldLimit.selector, player));
+        router.openPosition(1, player, 10e6, 25e6, SNAPSHOT, EDGE_BPS);
+
+        vm.prank(hub);
+        router.refundPosition(first, 10e6);
+        assertEq(bank.openHoldsOf(player), 1);
+        vm.prank(otherHub);
+        router.openPosition(1, player, 10e6, 25e6, SNAPSHOT, EDGE_BPS);
+        assertEq(bank.openHoldsOf(player), 2);
+        assertEq(bank.openHolds(), 2);
+    }
+
+    function _fundHubAs(address funded, uint256 stake) internal {
+        vm.prank(player);
+        usdc.transfer(funded, stake);
+        vm.prank(funded);
+        usdc.approve(address(bank), stake);
+    }
+
     function _open(uint256 stake, uint256 reserved) internal returns (uint256 positionId) {
         _fundHub(stake);
         vm.prank(hub);

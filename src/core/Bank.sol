@@ -33,6 +33,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     uint256 public override protocolFeesPayable;
     uint256 public override totalReserved;
     uint256 public constant override MAX_OPEN_HOLDS = 128;
+    uint256 public constant override MAX_OPEN_HOLDS_PER_PLAYER = 2;
     // Lifetime performance counters. These are single-asset counters scoped to this Bank.
     // totalRefunded spans settle-path partial refunds and refundBet full refunds; totalBetsRefunded
     // counts only refundBet calls, so the two values are intentionally not directly reconcilable.
@@ -63,8 +64,14 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
     mapping(address => HoldbackSchedule) internal _holdbackSchedules;
 
-    // player turnover gating for locked XP
-    mapping(address => uint256) internal _playerTurnover;
+    /// @dev One slot per player (ADR-0037 §5): settled turnover, which gates locked XP, and open holds. The slot
+    ///      is non-zero while the player holds a position, so a first settlement rewrites it instead of creating it.
+    struct PlayerAccount {
+        uint248 turnover;
+        uint8 openHolds;
+    }
+
+    mapping(address => PlayerAccount) internal _players;
 
     uint256 public override holdbackVestingSeconds;
     uint256 public override minPlayerTurnoverForUnlock;
@@ -259,7 +266,11 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     }
 
     function playerTurnover(address player) external view override returns (uint256) {
-        return _playerTurnover[player];
+        return _players[player].turnover;
+    }
+
+    function openHoldsOf(address player) external view override returns (uint256) {
+        return _players[player].openHolds;
     }
 
     function holdbackReleasable(address payee) external view override returns (uint256) {
@@ -380,7 +391,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     function unlockXPLocked(address payee, address sourcePlayer) external override returns (uint256 unlocked) {
         // permissionless; no pause gate; no transfers
         if (payee == address(0) || sourcePlayer == address(0)) return 0;
-        if (_playerTurnover[sourcePlayer] < minPlayerTurnoverForUnlock) return 0;
+        if (_players[sourcePlayer].turnover < minPlayerTurnoverForUnlock) return 0;
 
         uint256 amt = _xpLockedBySource[payee][sourcePlayer];
         if (amt == 0) return 0;
@@ -484,6 +495,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     ) external override onlySettlementRouter nonReentrant {
         if (paused()) revert RiskInPaused();
         if (openHolds() >= MAX_OPEN_HOLDS) revert OpenHoldLimit();
+        // Bank-level, so a direct Router caller and every hub share one count per player (audit F-05).
+        if (_players[player].openHolds >= MAX_OPEN_HOLDS_PER_PLAYER) revert PlayerOpenHoldLimit(player);
         // A hold has no round count; GameHub enforces the same minimum per amountPerRoll before funding.
         if (stake < minBetAmount) revert BetAmountBelowMinimum(stake, minBetAmount);
         if (player == address(0) || fundingHub == address(0)) revert Errors.ZeroAddress();
@@ -505,6 +518,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         pendingStakeTotal += stake;
         totalReserved = reservedAfter;
         totalBetsHeld += 1;
+        _players[player].openHolds += 1;
         holds[betId] = Hold(player, stake, reserved, cutoff, true);
         _vault.lockLiquidity((reserved - stake).toUint128());
         emit BetHeld(betId, player, stake, reserved, snapshotHash);
@@ -547,7 +561,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         // Update turnover (for permissionless locked unlock gating and Bank-level provider analytics).
         uint256 usedTurnover = stake - refundAmount;
         uint256 feeOnPayout = payoutGross - payoutNet;
-        _playerTurnover[h.player] += usedTurnover;
+        _players[h.player].turnover += usedTurnover.toUint248();
         totalTurnover += usedTurnover;
         totalPayoutGross += payoutGross;
         totalPayoutNet += payoutNet;
@@ -644,6 +658,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint128 capital =
             _vault.applySettlement(h.cutoff, (h.reserved - h.stake).toUint128(), h.stake.toUint128(), cost.toUint128());
         h.open = false;
+        _players[h.player].openHolds -= 1;
         pendingStakeTotal -= h.stake;
         totalReserved -= h.reserved;
         if (capital != 0) {

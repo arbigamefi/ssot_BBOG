@@ -278,6 +278,27 @@ contract GameHubE2E is Test {
         assertEq(bankA.openHolds(), 0);
     }
 
+    /// B2: the Bank refuses a player's third concurrent bet; the cap is per Bank and settlement frees a slot.
+    function test_thirdConcurrentBetOfOnePlayerIsRefusedPerBank() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        uint256 first = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0));
+        _place(alice, GAME_COIN, POOL_A, abi.encode(true), spec, address(0));
+        (uint256 fee,) = gameHub.quoteVRFFee(GAME_DICE, 1, tx.gasprice);
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(IBank.PlayerOpenHoldLimit.selector, alice));
+        gameHub.placeBet{value: fee}(GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0), 10_000);
+
+        _place(alice, GAME_DICE, POOL_B, abi.encode(true, uint8(50)), spec, address(0));
+        assertEq(bankB.openHoldsOf(alice), 1);
+
+        _fulfill(first, _findSeedDiceLose(first, 50));
+        assertEq(bankA.openHoldsOf(alice), 1);
+        assertEq(bankA.playerTurnover(alice), 10 ether);
+        _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0));
+        assertEq(bankA.openHoldsOf(alice), 2);
+    }
+
     function test_losingBetAccruesTurnoverLiabilitiesWithAnotherBetStillHeld() external {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
