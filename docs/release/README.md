@@ -2,7 +2,10 @@
 
 The project has not launched. The accepted target is immediate funding into per-deposit ERC721 NFTs,
 a fixed 24-hour withdrawal cooldown, original Azuro V3 tree allocation and liquidity-limited synchronous
-payment, plus same-callback VRF settlement. **Core contracts and application interfaces are implemented and locally verified; external audit and network acceptance are pending.**
+payment, plus same-callback VRF settlement. **The launch candidate is implemented and locally verified: authority
+through a 72-hour governance timelock, pause, per-player capacity and the void of unbookable results
+([ADR-0037](../adr/0037-launch-candidate-authority-pause-capacity-void.md)). The freeze, certificate v5, the reviews,
+the external audit and network acceptance are pending.**
 Follow the [detailed plan](../design/lp-accounting-and-callback-implementation.md) and
 [contract rules](../constitution/SSOT.v1.6.md).
 
@@ -18,7 +21,8 @@ in the [launch candidate](launch-candidate.zh-CN.md).
 - Deployment/build products remain generated artifacts, not parallel contract implementations.
 
 With no imported manifest the application exposes no contract writes. The [deployment workflow](../deploy/v16-release.md)
-and [checklist](checklist.md) require exact source, signer, wrapper, governance and chain evidence.
+(preflight, deploy copy, gated broadcast, the Safe's timelock operations, signing and the Release Gate) and the
+[checklist](checklist.md) require exact source, signer, wrapper, governance and chain evidence.
 Complete tree-inclusive callback gas qualification and the remaining external-LP release gates.
 The user accepted the current ordering tradeoff; verify its public disclosure against the
 [recorded decision](../adr/0034-nft-liquidity-deposits.md#pre-inclusion-ordering-owner-decision-2026-10-04).

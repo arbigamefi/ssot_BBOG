@@ -1,6 +1,8 @@
 # Release acceptance
 
-NFT-deposit/callback core and application interfaces are implemented and locally verified. Full gas qualification and this release checklist remain pending.
+The launch candidate ([ADR-0037](../adr/0037-launch-candidate-authority-pause-capacity-void.md)) is implemented and
+locally verified. The freeze, certificate v5, the independent review, the external audit and network acceptance are
+pending ([plan](launch-candidate.zh-CN.md)).
 Use the [detailed plan](../design/lp-accounting-and-callback-implementation.md) for scenario evidence.
 
 - Pin the original Azuro V3 tree/interface/math sources, provenance and license. Review every adapter
@@ -19,8 +21,12 @@ Use the [detailed plan](../design/lp-accounting-and-callback-implementation.md) 
   PF/XP outflow policy; K>0 prevents total capital withdrawal without a last-share rule.
 - Persist canonical randomness across whole-Hub failures; retry only that seed. Terminal state, both custody
   updates and acknowledgment are atomic. Known-unbooked results gate LP funding; internal settlement still works.
-- Measure cold/sparse tree, loss/profit fallback, failed payout and failure-return overhead. Unknown
-  errors cannot convert winners to refunds. A known normal gas failure is not a keeper operating model.
+- Measure cold/sparse tree, loss/profit fallback, failed payout and failure-return overhead. A settlement failure
+  never turns a winner into a refund by itself. The one exception is the void of ADR-0037 §7: anyone may void a
+  received result whose settlement still fails in the void transaction, 24 hours after its request if a void window
+  that the timelock, the sentinel or the Bank's guardian opened covers it, otherwise 7 days after its request; the
+  stake becomes a player payable and the VRF fee is not refunded. Disclose it. A known normal gas failure is not a
+  keeper operating model.
 - Preserve the mature NFT transfer/exit and empty-prefix entry ordering witnesses. The user accepted
   the existing rule; verify matching public disclosures. The 24-hour cooldown and atomic callback
   do not remove this risk, and its acceptance does not close gas, external audit or network gates.
@@ -30,15 +36,20 @@ Use the [detailed plan](../design/lp-accounting-and-callback-implementation.md) 
 - Remove obsolete source/tests/ABI/schema/tool fields. Regenerate one release format and exercise negative
   drift/signature tests. No migration or compatibility deployment is required.
 - Freeze actual source/tree, vendored sources, ABIs, dependencies and configuration after integration.
-- Deploy fresh contracts. Authenticate Safe, signer, wrapper/Router, Bank↔Vault/asset, both codehashes,
-  amount precision, limits and matching web/keeper images. Verify Vault source and Bank child creation.
-- Replay complete Hub/pool authorization sets from creation at the signed verification block;
-  unavailable history rejects the release.
+- Deploy fresh contracts through the gated path (preflight, deploy copy, `broadcast_v16.sh`). Authenticate Safe,
+  guardian, signer, wrapper/Router, Bank↔Vault/asset, both codehashes, amount precision, limits and matching web/keeper
+  images. Verify Vault source and Bank child creation.
+- Replay the timelock's roles, delay and operations and every authority event from before the timelock's creation to
+  the signed verification block; the signed checkpoint lets later checks replay from there. Unavailable history
+  rejects the release.
 - Explicitly confirm USDC minimum 0.01 per round and maximum 25 rounds (25 minimum-size rounds total
   0.25 USDC; no additional position-total minimum), one-hour refund default, risk/PF-XP
-  buffers, constant 86,400-second cooldown and all-open capacity. Business peak is still unselected.
-- Before outside LP funds, decide module/Hub admission governance and guardian custody; rehearse Safe
-  guardian replacement/unpause. Complete independent/external audit and fresh network acceptance.
+  buffers, constant 86,400-second cooldown and capacity of 128 open positions per Bank and 2 per player. Business
+  peak is still unselected.
+- Admissions and risk-increasing changes wait 72 hours in the governance timelock, and the guardian is an independent
+  multisig (ADR-0037). On the network, rehearse cancelling a queued operation, guardian replacement, pause and the
+  72-hour unpause, a game disable and a void window before outside LP funds. Complete the independent and external
+  audits and fresh network acceptance.
 - Apply the operational and service launch requirements in the [release guide](README.md).
 
 Wallet/Safe signatures and deployment execution are separate from local implementation tests.

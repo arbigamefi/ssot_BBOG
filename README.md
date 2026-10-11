@@ -172,9 +172,11 @@ Release artifacts (production discipline):
   signs the release lock `deployments/release-latest-v16.json` once (the keystore password must unlock the release
   signer first), writes notes, manifest, vectors and ABIs, verifies, and packages
   `dist/ssot-release-<tag>-<digestPrefix>.tar.gz`. A rerun keeps a valid signature and never rewrites an archive.
-- Strict gate (enforced on `v*` tags in CI): `STRICT=1 make release-check`
+- Strict gate: `STRICT=1 make release-check` runs only in the manually dispatched **Release Gate** workflow, on the
+  release tag and its uploaded bundle ([deployment runbook](docs/deploy/v16-release.md)). CI on a `v*` tag runs the
+  non-strict `make release-check`.
 
-CI runs on pushes to the default branch (main/master) and on pull requests. If you don’t see runs in GitHub, ensure Actions are enabled and that your default branch name matches the workflow trigger.
+CI runs on pushes to every branch, on `v*` tags and on pull requests.
 
 Typical fork test usage:
 

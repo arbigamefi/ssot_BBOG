@@ -183,6 +183,38 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    Browser RPC remains public. Casino and LP deposit feature flags default off on both supported
    chains until the appropriate acceptance stage; enable them only in the reviewed acceptance image. Contract pause and available capital remain independent admission checks.
 
+## RPC endpoints
+
+Every local operator step that reads or writes the chain gets its endpoint from `script/tools/with-ops-rpc.sh
+<infura|alchemy> <base-sepolia|base> <command>`, which builds it from the repository `.env`, hands it to the command
+as `OPS_RPC_URL` and replaces the key in every line the command prints. The wrapper cannot redact files, so the
+operator scripts replace the key in the logs and records they write themselves. No key is ever typed on a command
+line.
+
+| Key | Used for |
+| --- | --- |
+| `ALCHEMY_API_KEY_OPS` (`alchemy`) | preflight and its fork rehearsal, `make timelock-batches-v16`, the gas matrix |
+| `INFURA_API_KEY_OPS` (`infura`) | broadcast, release signing (`release_v16.sh`), governance replay, K0-4 on the operator's machine |
+| `INFURA_API_KEY_PROD_KEEPER`, `ALCHEMY_API_KEY_PROD_KEEPER` | the production keeper's HTTP and WebSocket endpoints, on the server only; the Owner writes them there with `script/ops/send-keeper-rpc.sh` ([production rebuild](../ops/runbooks/production-rebuild.md)), and no local step uses them |
+
+The browser and the web server use the Base public RPCs, and so does CI, with no key.
+
+## From deployment to betting
+
+The governance timelock sets the earliest dates; each operation waits at least 72 hours after the Safe schedules it.
+
+| When | Step | State afterwards |
+| --- | --- | --- |
+| day 0 | preflight again, broadcast (step 2); the Safe schedules the wiring and the operations file is published; K0-4 announces it | contracts exist, nothing wired |
+| day 3 at the earliest | anyone executes the wiring | pool registered and inactive: LPs can deposit, nobody can bet |
+| after the wiring | release signed and packaged (step 3, release mode), Release Gate `release-ready`, images built and imported (step 4), stack deployed (step 5) | |
+| after the release | the Safe schedules the activation, whose predecessor is the wiring; published and announced as before | |
+| day 6 at the earliest | anyone executes the activation | betting open; testnet acceptance follows the [checklist](v16-sepolia-acceptance.md) |
+
+Until an operation is ready, the Safe or the guardian can cancel it; once ready, anyone can execute it (ADR-0037 D5).
+The Safe, as sentinel, or the guardian pauses a Bank at once (`setRiskInPaused(true)`); unpausing is a timelock
+operation and waits another 72 hours.
+
 ## Network acceptance
 
 Verify addDeposit/addDepositFor and mature withdrawDeposit by NFT ID and 1e12 fraction. Asset
@@ -219,22 +251,40 @@ Keep the test logs and audit verdict bound to that same revision.
 `SOURCE_REVISION` and the Etherscan verification helper generated from the packaged snapshot; a local
 `deployments/verify-latest-v16.sh` that differs from it (left from another deployment) stops the package, and an
 existing archive of the same name is never rewritten. Deployment inputs remain ignored generated artifacts. After
-uploading that bundle to its GitHub release, run **Release Gate** manually with:
+uploading that bundle to its GitHub release, run **Release Gate** from the release tag, so that the gate which runs is
+the tagged commit's own `release.yml`, not whatever the default branch holds:
+
+```bash
+gh workflow run release.yml --ref <release_tag> -f release_tag=<release_tag> -f bundle_name=<asset> \
+  -f bundle_sha256=<approved sha256> -f audited_source_tree=<tree>
+gh run view <run id> --json headSha,event,jobs \
+  --jq '{headSha, event, jobs: [.jobs[] | {name, conclusion}]}'
+```
+
+The inputs:
 
 - `release_tag`: the tag for the source commit used to deploy and package;
 - `bundle_name`: the exact release asset filename;
 - `bundle_sha256`: the independently approved SHA-256 of that archive;
-- `audited_source_tree`: the git tree hash of the externally audited source (from the audit report and the
-  freeze commit record). It must equal the repository variable `V16_AUDITED_TREE`, which the Owner sets from the
-  same report, so one person typing a tree hash cannot pass the gate alone; every job refuses a tag whose tree
-  differs from either, and `release-ready` prints the value for the approver.
+- `audited_source_tree`: the git tree hash of the source the accepted audit covers. For the launch candidate that is
+  the tree the professional external audit accepted, after its fix review, as recorded in the freeze commit record.
+  It must equal the repository variable `V16_AUDITED_TREE`, which the Owner sets from that record, and every job
+  refuses a tag whose tree differs from either. Unset since the 2026-10-11 clean slate, the variable makes every
+  gate fail until the Owner records the accepted tree.
+
+Accept the run only when `headSha` is the tag's commit, `event` is `workflow_dispatch`, and the jobs are exactly
+`tree-equivalence-gate`, `proof-gates (unit)`, `proof-gates (diff)`, `proof-gates (invariants)`, `release-gate` and
+`release-ready`, all successful; judge the release on `release-ready`, which prints the tag, tree and bundle for the
+approver. The two tree values catch a wrong tag or a mistyped tree; they are not a two-person control. The repository
+has no environment, ruleset or branch protection, so whoever can set repository variables and dispatch workflows can
+pass the gate alone.
 
 The workflow downloads that exact asset, checks the digest, commit and file
 inventory, and rejects unsafe archive members before staging it. It then runs the
 strict snapshot/signature/manifest/ABI checks, proof gates and live governance/fork
-gate. Required repository signer and RPC settings remain mandatory. A tag push
-alone does not validate a release without its deployment bundle. Source audit
-packaging is not a replacement for these deployment checks.
+gate. The release signer comes from the repository variable `V16_RELEASE_SIGNER`; the governance replay and fork gate
+use the Base public RPCs and need no RPC secret. A tag push alone does not validate a release without its deployment
+bundle. Source audit packaging is not a replacement for these deployment checks.
 
 The ABI comparison reads `out/`, so the strict release check and the image import build it themselves
 (`forge build src`) and then run `script/release/check_current_build.py`: every artifact the ABIs are compared with
