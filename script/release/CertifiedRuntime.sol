@@ -16,7 +16,8 @@ interface IWrapperLink {
 /// @notice Compares the deployed core contracts of a release with the certified build recorded in the chain's
 ///         first-callback domain file (`coreRuntimes`, written by gen_certified_runtimes.py from the certified
 ///         artifacts). The first-callback certificate binds the exact bytecode of VRFHub, GameHub,
-///         SettlementRouter, Bank, LiquidityVault and the referral engine, not only the eight modules.
+///         SettlementRouter, Bank, LiquidityVault and the referral engine, not only the eight modules; the governance
+///         timelock is pinned with them (ADR-0037 §10).
 ///
 ///         For each contract the deployed code must have the certified length; every immutable slot must hold the
 ///         value the release snapshot assigns to it (so a constructor cannot wire a pinned runtime to a different
@@ -30,6 +31,7 @@ library CertifiedRuntime {
 
     function verify(string memory snap, string memory dom) internal view {
         string memory none = "";
+        _check(snap, dom, "GovernanceTimelock", snap.readAddress(".governanceTimelock"), none);
         _check(snap, dom, "VRFHub", snap.readAddress(".vrfHub"), none);
         _check(snap, dom, "GameHub", snap.readAddress(".gameHub"), none);
         _check(snap, dom, "SettlementRouter", snap.readAddress(".settlementRouter"), none);

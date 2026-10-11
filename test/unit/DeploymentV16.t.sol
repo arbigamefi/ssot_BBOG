@@ -3,194 +3,392 @@ pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
 import "forge-std/StdJson.sol";
-import {SafeGovernance} from "../../script/common/SafeGovernance.sol";
-import {DeployV16} from "../../script/DeployV16.s.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {V16Batches} from "../../script/release/V16Batches.sol";
+import {V16ReleaseDigest} from "../../script/release/V16ReleaseDigest.sol";
 import {V16Snapshot} from "../../script/release/V16Snapshot.sol";
-import {ReleaseDigestV16} from "../../script/release/ReleaseDigestV16.s.sol";
-import {VerifyReleaseV16} from "../../script/release/VerifyReleaseV16.s.sol";
 import {GenerateGoldenVectorsV16} from "../../script/release/GenerateGoldenVectorsV16.s.sol";
-import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
-import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
+import {GovernanceTimelock} from "../../src/access/GovernanceTimelock.sol";
 import {Governable} from "../../src/access/Governable.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
-import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
+import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
-import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
+import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
+import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
+import {ReferralRegistry} from "../../src/engines/referral/ReferralRegistry.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {Errors} from "../../src/libs/Errors.sol";
+import {ReleaseV16Fixture, SafeConfigMockV16, SnapshotVerifierV16} from "../utils/ReleaseV16Fixture.sol";
 
-// Configuration mock only: these tests do not claim to prove actual Safe quorum/signature execution.
-contract SafeConfigMockV16 {
-    uint256 public threshold = 2;
-    address public guard;
-
-    function setGuard(address value) external {
-        guard = value;
-    }
-
-    function getStorageAt(uint256 slot, uint256) external view returns (bytes memory) {
-        if (slot == 0) return abi.encode(address(this));
-        if (slot == uint256(keccak256("guard_manager.guard.address"))) return abi.encode(guard);
-        return abi.encode(address(0));
-    }
-    bool public moduleEnabled;
-
-    function getOwners() external pure returns (address[] memory owners) {
-        owners = new address[](3);
-        owners[0] = address(11);
-        owners[1] = address(12);
-        owners[2] = address(13);
-    }
-
-    function getThreshold() external view returns (uint256) {
-        return threshold;
-    }
-
-    function setThreshold(uint256 value) external {
-        threshold = value;
-    }
-
-    function setModule() external {
-        moduleEnabled = true;
-    }
-
-    function getModulesPaginated(address, uint256) external view returns (address[] memory modules, address next) {
-        modules = new address[](moduleEnabled ? 1 : 0);
-        if (moduleEnabled) modules[0] = address(99);
-        return (modules, address(1));
-    }
-}
-
-contract DeployHarnessV16 is DeployV16 {
-    string public snapshot;
-
-    function _shouldWriteArtifacts() internal pure override returns (bool) {
-        return true;
-    }
-    function _logDeployment(DeployConfig memory, PoolConfig[] memory, Deployed memory) internal pure override {}
-
-    function _writeArtifacts(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory deployed)
-        internal
-        override
-    {
-        snapshot = _snapshotJson(cfg, pools, deployed);
-    }
-}
-
-contract SnapshotVerifierV16 {
-    function verify(string memory snap, bool accepted) external view {
-        V16Snapshot.verify(snap, accepted);
-    }
-}
-
-contract DigestHarnessV16 is ReleaseDigestV16 {
-    using stdJson for string;
-
+contract DigestHarnessV16 {
     function digest(string memory snap) external pure returns (bytes32) {
-        return _digestPools(_digestStatic(snap), snap, snap.readUint(".numPools"));
+        return V16ReleaseDigest.snapshotDigest(snap);
     }
 }
 
-contract DeploymentV16Test is Test {
+/// @notice The deployment script and release checks under ADR-0037 decision D1: the timelock governs every contract
+///         from construction, the Safe's wiring batch leaves the pools inactive and open to deposits, activation is
+///         a second operation, and every check names the first deviation from the release.
+/// @dev Runs with --threads 1: the deployment reads process-wide environment variables (ReleaseV16Fixture).
+contract DeploymentV16Test is ReleaseV16Fixture {
     using stdJson for string;
-    DeployHarnessV16 deployer;
-    SafeConfigMockV16 safe;
-    SnapshotVerifierV16 verifier;
-    MockERC20 asset;
-    address bootstrap;
-    address guardian = address(77);
+
+    SnapshotVerifierV16 internal verifier;
+    address internal constant LP = address(0x1B);
 
     function setUp() public {
-        bootstrap = vm.addr(0xBEEF);
-        vm.deal(bootstrap, 100 ether);
-        safe = new SafeConfigMockV16();
-        asset = new MockERC20("Test USD", "TUSD", 6);
-        deployer = new DeployHarnessV16();
+        _setUpRelease();
         verifier = new SnapshotVerifierV16();
-        _configureEnv();
     }
 
-    // Foundry environment variables are process-wide, outside EVM snapshots.
-    // This deployment suite runs with --threads 1 and restores its inputs per case.
     modifier isolatedEnv() {
         _configureEnv();
         _;
         _configureEnv();
     }
 
-    function _configureEnv() internal {
-        vm.setEnv("DEPLOYER", vm.toString(bootstrap));
-        vm.setEnv("CHAIN_ID", vm.toString(block.chainid));
-        vm.setEnv("GOV", vm.toString(address(safe)));
-        vm.setEnv("GUARDIAN", vm.toString(guardian));
-        vm.setEnv("KEEPER_ADDRESS", vm.toString(address(78)));
-        vm.setEnv("RELEASE_SIGNER", vm.toString(address(79)));
-        vm.setEnv("SAFE_CODE_HASH", vm.toString(address(safe).codehash));
-        vm.setEnv(
-            "SAFE_CONTROL_HASH",
-            vm.toString(
-                keccak256(abi.encode(address(safe), address(safe).codehash, address(0), address(0), bytes32(0)))
+    function _registry(string memory snap) internal pure returns (PoolRegistry) {
+        return PoolRegistry(snap.readAddress(".poolRegistry"));
+    }
+
+    function _hub(string memory snap) internal pure returns (GameHub) {
+        return GameHub(snap.readAddress(".gameHub"));
+    }
+
+    function _bank(string memory snap, uint256 i) internal pure returns (Bank) {
+        return Bank(snap.readAddress(string.concat(".poolBank_", vm.toString(i))));
+    }
+
+    function _expectVerifyRevert(string memory snap, V16Snapshot.Mode mode, string memory reason) internal {
+        vm.expectRevert(bytes(reason));
+        verifier.verify(snap, mode);
+    }
+
+    // ---- D1: the deployment holds no power ----
+
+    function testTimelockGovernsFromConstructionAndTheDeployerHoldsNothing() public isolatedEnv {
+        string memory snap = _deploy();
+        GovernanceTimelock tl = _timelock(snap);
+        address[] memory list = V16Snapshot.targets(snap);
+        assertEq(list.length, 5);
+        for (uint256 i; i < list.length; ++i) {
+            assertEq(Governable(list[i]).governance(), address(tl));
+            assertEq(Governable(list[i]).pendingGovernance(), address(0));
+        }
+        assertEq(tl.getMinDelay(), 259_200);
+        assertEq(snap.readUint(".timelockMinDelay"), 259_200);
+        assertTrue(tl.hasRole(tl.PROPOSER_ROLE(), address(safe)));
+        assertTrue(tl.hasRole(tl.CANCELLER_ROLE(), address(safe)));
+        assertTrue(tl.hasRole(tl.CANCELLER_ROLE(), address(guardianSafe)));
+        assertFalse(tl.hasRole(tl.PROPOSER_ROLE(), address(guardianSafe)));
+        assertTrue(tl.hasRole(tl.EXECUTOR_ROLE(), address(0)));
+        assertTrue(tl.hasRole(tl.DEFAULT_ADMIN_ROLE(), address(tl)));
+        bytes32[4] memory roles = [tl.DEFAULT_ADMIN_ROLE(), tl.PROPOSER_ROLE(), tl.CANCELLER_ROLE(), tl.EXECUTOR_ROLE()];
+        for (uint256 i; i < roles.length; ++i) {
+            assertFalse(tl.hasRole(roles[i], deployerKey));
+        }
+        assertFalse(tl.hasRole(tl.DEFAULT_ADMIN_ROLE(), address(safe)));
+        assertFalse(tl.hasRole(tl.DEFAULT_ADMIN_ROLE(), address(guardianSafe)));
+
+        // Nothing the deployer sends has any authority.
+        vm.startPrank(deployerKey);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        _registry(snap).setSentinel(deployerKey);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        _hub(snap).setRefundTimeout(60);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        _bank(snap, 0).setGuardian(deployerKey);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        ReferralRegistry(snap.readAddress(".refRegistry")).setBinderOnce(deployerKey);
+        V16Batches.Batch memory w = V16Batches.wiring(snap);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, deployerKey, tl.PROPOSER_ROLE()
             )
         );
-        vm.setEnv("SAFE_OWNERS_HASH", vm.toString(keccak256(abi.encode(safe.getOwners(), uint256(2)))));
-        vm.setEnv("VRF_WRAPPER", vm.toString(address(new MockVRFV2PlusWrapper())));
-        string[8] memory games =
-            [string("DICE"), "COIN_TOSS", "ROULETTE", "KENO", "PLINKO", "SIC_BO", "SLOTS", "BACCARAT"];
-        for (uint256 i; i < games.length; ++i) {
-            vm.setEnv(string.concat("GAME_MAX_BET_COUNT_", games[i]), "25");
-            vm.setEnv(string.concat("GAME_CALLBACK_GAS_LIMIT_", games[i]), "2447746");
-        }
-        vm.setEnv("NUM_POOLS", "2");
-        vm.setEnv("BANK_MIN_BET_AMOUNT_0", "10000");
-        vm.setEnv("BANK_MIN_BET_AMOUNT_1", "10000");
-        vm.setEnv("POOL_ASSET_0", vm.toString(address(asset)));
-        vm.setEnv("POOL_ASSET_1", vm.toString(address(asset)));
-        vm.setEnv("POOL_ID_0", "1");
-        vm.setEnv("POOL_ID_1", "3");
-        vm.setEnv("DEFAULT_HOUSE_EDGE_BPS", "200");
-        vm.setEnv("REFUND_TIMEOUT_SECONDS", "3600");
-        vm.setEnv("WRITE_DRY_RUN_ARTIFACTS", "false");
+        tl.scheduleBatch(w.targets, w.values, w.payloads, w.predecessor, w.salt, 259_200);
+        vm.stopPrank();
+
+        // Nothing is wired before the timelock executes the batch.
+        assertEq(_registry(snap).poolCount(), 0);
+        assertEq(_bank(snap, 0).settlementRouter(), address(0));
+        assertEq(_registry(snap).sentinel(), address(0));
+        verifier.verify(snap, V16Snapshot.Mode.Deployed);
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "wiring not executed");
     }
 
-    function _deploy() internal returns (string memory snap, address[] memory targets) {
-        deployer.run();
-        snap = deployer.snapshot();
-        targets = V16Snapshot.targets(snap);
+    function testTheRehearsalBeforeBroadcastLeavesOnlyTheDeployment() public isolatedEnv {
+        uint256 before = block.timestamp;
+        string memory snap = _deploy();
+        GovernanceTimelock tl = _timelock(snap);
+        assertEq(block.timestamp, before);
+        assertEq(snap.readBytes32(".wiringOperationId"), V16Batches.id(V16Batches.wiring(snap)));
+        assertEq(snap.readBytes32(".activationOperationId"), V16Batches.id(V16Batches.activation(snap)));
+        assertEq(
+            uint8(tl.getOperationState(snap.readBytes32(".wiringOperationId"))),
+            uint8(TimelockController.OperationState.Unset)
+        );
+        assertEq(_registry(snap).poolCount(), 0);
+        assertEq(V16Batches.activation(snap).predecessor, snap.readBytes32(".wiringOperationId"));
     }
+
+    function testAWiringThatWouldRevertStopsTheDeployment() public isolatedEnv {
+        // GameHub refuses a callback gas below 200,000 only when the batch executes; the rehearsal finds it first.
+        vm.setEnv("GAME_CALLBACK_GAS_LIMIT_KENO", "199999");
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        deployer.run();
+    }
+
+    function testDuplicatePoolIdIsRefusedBeforeBroadcast() public isolatedEnv {
+        vm.setEnv("POOL_ID_1", "1");
+        vm.expectRevert("duplicate POOL_ID");
+        deployer.run();
+    }
+
+    // ---- The wiring batch and the activation ----
+
+    function testTheWiringLeavesEveryPoolInactiveAndOpenToDeposits() public isolatedEnv {
+        string memory snap = _deploy();
+        _wire(snap);
+        verifier.verify(snap, V16Snapshot.Mode.Release);
+        verifier.verify(snap, V16Snapshot.Mode.Live);
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Deployed, "wiring already executed");
+        PoolRegistry registry = _registry(snap);
+        assertEq(registry.poolCount(), 2);
+        assertFalse(registry.isPoolActive(1));
+        assertFalse(registry.isPoolActive(3));
+        assertEq(registry.sentinel(), address(safe));
+        assertEq(_hub(snap).sentinel(), address(safe));
+        Bank bank = _bank(snap, 0);
+        assertFalse(bank.paused());
+        assertEq(bank.sentinel(), address(safe));
+        assertEq(bank.guardian(), address(guardianSafe));
+        assertEq(ReferralRegistry(snap.readAddress(".refRegistry")).binder(), address(_hub(snap)));
+
+        LiquidityVault vault = LiquidityVault(bank.vault());
+        asset.mint(LP, 1_000e6);
+        vm.startPrank(LP);
+        asset.approve(address(vault), type(uint256).max);
+        vault.addDeposit(1_000e6);
+        vm.stopPrank();
+        assertEq(asset.balanceOf(address(vault)), 1_000e6);
+    }
+
+    function testActivationIsASecondOperationThatNeedsTheWiring() public isolatedEnv {
+        string memory snap = _deploy();
+        GovernanceTimelock tl = _timelock(snap);
+        V16Batches.Batch memory w = V16Batches.wiring(snap);
+        V16Batches.Batch memory a = V16Batches.activation(snap);
+        // Even scheduled together and both ready, the activation cannot run first.
+        _schedule(snap, w);
+        _schedule(snap, a);
+        vm.warp(block.timestamp + tl.getMinDelay());
+        vm.prank(executor);
+        vm.expectRevert(abi.encodeWithSelector(TimelockController.TimelockUnexecutedPredecessor.selector, V16Batches.id(w)));
+        tl.executeBatch(a.targets, a.values, a.payloads, a.predecessor, a.salt);
+        _execute(snap, w);
+        verifier.verify(snap, V16Snapshot.Mode.Release);
+        _execute(snap, a);
+        assertTrue(_registry(snap).isPoolActive(1));
+        assertTrue(_registry(snap).isPoolActive(3));
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "activation executed: the release state is pre-launch");
+        verifier.verify(snap, V16Snapshot.Mode.Live);
+    }
+
+    function testRiskReducingChangesFailTheReleaseStateButNotTheLiveCheck() public isolatedEnv {
+        string memory snap = _deploy();
+        _wire(snap);
+        vm.prank(address(guardianSafe));
+        _bank(snap, 0).setRiskInPaused(true);
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "Bank paused in the release state");
+        verifier.verify(snap, V16Snapshot.Mode.Live);
+        // Only the timelock unpauses.
+        vm.prank(address(guardianSafe));
+        vm.expectRevert(Errors.Unauthorized.selector);
+        _bank(snap, 0).setRiskInPaused(false);
+        _govCall(snap, address(_bank(snap, 0)), abi.encodeCall(Bank.setRiskInPaused, (false)), "unpause");
+        verifier.verify(snap, V16Snapshot.Mode.Release);
+
+        vm.prank(address(safe));
+        _hub(snap).disableGame(keccak256("DICE"));
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "game disabled in the release state");
+        verifier.verify(snap, V16Snapshot.Mode.Live);
+    }
+
+    function testADeregisteredHubFailsTheReleaseStateButNotTheLiveCheck() public isolatedEnv {
+        string memory snap = _deploy();
+        _wire(snap);
+        vm.prank(address(safe));
+        _registry(snap).setHubRegistered(address(_hub(snap)), false);
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "hub permission mismatch");
+        verifier.verify(snap, V16Snapshot.Mode.Live);
+    }
+
+    function testTheSentinelMayCloseAPoolAfterLaunch() public isolatedEnv {
+        string memory snap = _deploy();
+        _wire(snap);
+        _activate(snap);
+        vm.prank(address(safe));
+        _registry(snap).setPoolActive(1, false);
+        verifier.verify(snap, V16Snapshot.Mode.Live);
+    }
+
+    // ---- P2: the guardian's veto ----
+
+    function testTheGuardianCancelsAQueuedOperationAndCannotPropose() public isolatedEnv {
+        string memory snap = _deploy();
+        GovernanceTimelock tl = _timelock(snap);
+        V16Batches.Batch memory w = V16Batches.wiring(snap);
+        bytes32 id = V16Batches.id(w);
+        _schedule(snap, w);
+        vm.prank(address(guardianSafe));
+        tl.cancel(id);
+        assertEq(uint8(tl.getOperationState(id)), uint8(TimelockController.OperationState.Unset));
+        vm.warp(block.timestamp + tl.getMinDelay());
+        vm.prank(executor);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockController.TimelockUnexpectedOperationState.selector,
+                id,
+                bytes32(uint256(1) << uint8(TimelockController.OperationState.Ready))
+            )
+        );
+        tl.executeBatch(w.targets, w.values, w.payloads, w.predecessor, w.salt);
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "wiring not executed");
+
+        bytes32 proposer = tl.PROPOSER_ROLE();
+        uint256 delay = tl.getMinDelay();
+        vm.prank(address(guardianSafe));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, address(guardianSafe), proposer
+            )
+        );
+        tl.scheduleBatch(w.targets, w.values, w.payloads, w.predecessor, w.salt, delay);
+
+        // The Safe schedules the same batch again and the release proceeds.
+        _wire(snap);
+        verifier.verify(snap, V16Snapshot.Mode.Release);
+    }
+
+    // ---- P6: operations the release does not declare ----
+
+    function testAnUndeclaredActivationFailsBothChecks() public isolatedEnv {
+        string memory snap = _deploy();
+        _wire(snap);
+        _govCall(snap, address(_registry(snap)), abi.encodeCall(PoolRegistry.setPoolActive, (1, true)), "early");
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "pool active before the release activation");
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Live, "pool active without the release activation");
+    }
+
+    function testARoleGrantedToTheDeployerFailsVerification() public isolatedEnv {
+        string memory snap = _deploy();
+        GovernanceTimelock tl = _timelock(snap);
+        _wire(snap);
+        _govCall(
+            snap, address(tl), abi.encodeCall(IAccessControl.grantRole, (tl.PROPOSER_ROLE(), deployerKey)), "grant"
+        );
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "deployer holds a timelock role");
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Live, "deployer holds a timelock role");
+    }
+
+    function testParameterChangesThroughTheTimelockFailTheRelease() public isolatedEnv {
+        string memory snap = _deploy();
+        _wire(snap);
+        _govCall(snap, address(_bank(snap, 0)), abi.encodeCall(Bank.setWithdrawalBufferBps, (777)), "buffer");
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "bank risk configuration mismatch");
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Live, "bank risk configuration mismatch");
+    }
+
+    function testRefundTimeoutChangeFailsTheRelease() public isolatedEnv {
+        string memory snap = _deploy();
+        _wire(snap);
+        _govCall(
+            snap,
+            address(_hub(snap)),
+            abi.encodeCall(GameHub.setRefundTimeout, (snap.readUint(".refundTimeoutSeconds") + 1)),
+            "refund"
+        );
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "game configuration mismatch");
+    }
+
+    function testAQueuedEdgeChangeFailsTheReleaseUntilTheSentinelCancelsIt() public isolatedEnv {
+        string memory snap = _deploy();
+        _wire(snap);
+        _govCall(snap, address(_hub(snap)), abi.encodeCall(GameHub.queueEdgeChange, (300)), "edge");
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Release, "pending edge change is not part of the release");
+        vm.prank(address(safe));
+        _hub(snap).cancelEdgeChange();
+        verifier.verify(snap, V16Snapshot.Mode.Release);
+    }
+
+    function testTamperedOperationIdsFailVerification() public isolatedEnv {
+        string memory snap = _deploy();
+        vm.serializeJson("tampered-operations", snap);
+        string memory changed = vm.serializeBytes32("tampered-operations", "wiringOperationId", bytes32(uint256(1)));
+        _expectVerifyRevert(changed, V16Snapshot.Mode.Deployed, "timelock operations differ from the release");
+    }
+
+    // ---- Bank parameters ----
 
     function testDefaultDeploymentSeparatesRiskReserveFromOptionalOutflowBuffer() public isolatedEnv {
-        (string memory snap,) = _deploy();
+        string memory snap = _deploy();
+        _wire(snap);
         for (uint256 i; i < 2; ++i) {
             string memory suffix = vm.toString(i);
-            Bank bank = Bank(snap.readAddress(string.concat(".poolBank_", suffix)));
+            Bank bank = _bank(snap, i);
             assertEq(bank.riskReserveBps(), 6000);
             assertEq(bank.withdrawalBufferBps(), 1000);
+            assertEq(bank.holdbackVestingSeconds(), 86_400);
+            assertEq(bank.minPlayerTurnoverForUnlock(), 20e6);
             assertEq(snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix)), 6000);
             assertEq(snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix)), 1000);
         }
-        verifier.verify(snap, false);
+        verifier.verify(snap, V16Snapshot.Mode.Release);
     }
 
     function testExplicitPoolRiskAndOptionalOutflowOverridesRemainIndependent() public isolatedEnv {
-        // Use an extra pool so the process-wide override cannot contaminate default-pool tests.
         vm.setEnv("NUM_POOLS", "3");
-        vm.setEnv("POOL_ID_2", "4");
-        vm.setEnv("POOL_ASSET_2", vm.toString(address(asset)));
-        vm.setEnv("BANK_MIN_BET_AMOUNT_2", "10000");
         vm.setEnv("BANK_RISK_RESERVE_BPS_2", "1000");
         vm.setEnv("BANK_WITHDRAWAL_BUFFER_BPS_2", "2500");
-        (string memory snap,) = _deploy();
-        Bank bank = Bank(snap.readAddress(".poolBank_2"));
+        string memory snap = _deploy();
+        _wire(snap);
+        Bank bank = _bank(snap, 2);
         assertEq(bank.riskReserveBps(), 1000);
         assertEq(bank.withdrawalBufferBps(), 2500);
         assertEq(snap.readUint(".poolBankRiskReserveBps_2"), 1000);
         assertEq(snap.readUint(".poolBankWithdrawalBufferBps_2"), 2500);
-        verifier.verify(snap, false);
+        verifier.verify(snap, V16Snapshot.Mode.Release);
+    }
+
+    function testBankParametersAtTheirConstructorDefaultsStayOutOfTheWiring() public isolatedEnv {
+        vm.setEnv("NUM_POOLS", "3");
+        vm.setEnv("BANK_WITHDRAWAL_BUFFER_BPS_2", "6000");
+        vm.setEnv("BANK_MIN_TURNOVER_FOR_UNLOCK_2", "0");
+        vm.setEnv("BANK_HOLDBACK_VESTING_SECONDS_2", vm.toString(uint256(30 days)));
+        string memory snap = _deploy();
+        V16Batches.Batch memory w = V16Batches.wiring(snap);
+        assertEq(_callsTo(w, address(_bank(snap, 0))), 7);
+        assertEq(_callsTo(w, address(_bank(snap, 2))), 4);
+        _wire(snap);
+        Bank bank = _bank(snap, 2);
+        assertEq(bank.withdrawalBufferBps(), 6000);
+        assertEq(bank.minPlayerTurnoverForUnlock(), 0);
+        assertEq(bank.holdbackVestingSeconds(), 30 days);
+        verifier.verify(snap, V16Snapshot.Mode.Release);
+    }
+
+    function _callsTo(V16Batches.Batch memory b, address target) internal pure returns (uint256 n) {
+        for (uint256 i; i < b.targets.length; ++i) {
+            if (b.targets[i] == target) ++n;
+        }
     }
 
     function testGeneratedGoldenVectorsAreAcceptedByAllEightModules() public isolatedEnv {
-        (string memory snap,) = _deploy();
+        string memory snap = _deploy();
+        _wire(snap);
         string memory input = "deployments/test-golden-v16-snapshot.json";
         string memory output = "deployments/test-golden-v16-output.json";
         string memory previousInput = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v16.json"));
@@ -207,7 +405,7 @@ contract DeploymentV16Test is Test {
         vm.removeFile(output);
         vm.removeFile(input);
 
-        GameHub hub = GameHub(snap.readAddress(".gameHub"));
+        GameHub hub = _hub(snap);
         for (uint256 i; i < 8; ++i) {
             string memory key = string.concat(".vectors[", vm.toString(i), "]");
             bytes32 gameId = vectors.readBytes32(string.concat(key, ".gameId"));
@@ -224,89 +422,46 @@ contract DeploymentV16Test is Test {
         }
     }
 
-    function testNominationIsNotAcceptanceAndOldSignerLosesAuthority() public isolatedEnv {
-        (string memory snap, address[] memory list) = _deploy();
-        assertEq(list.length, 5);
-        assertEq(snap.readAddress(".gov"), address(safe));
-        assertEq(snap.readAddress(".bootstrapGovernance"), bootstrap);
-        verifier.verify(snap, false);
-        vm.expectRevert("governance not ready");
-        verifier.verify(snap, true);
-        for (uint256 i; i < list.length; ++i) {
-            assertEq(Governable(list[i]).governance(), bootstrap);
-            assertEq(Governable(list[i]).pendingGovernance(), address(safe));
-            vm.expectRevert(Errors.Unauthorized.selector);
-            Governable(list[i]).acceptGovernance();
-            vm.prank(address(safe));
-            Governable(list[i]).acceptGovernance();
-            vm.prank(bootstrap);
-            vm.expectRevert(Errors.Unauthorized.selector);
-            Governable(list[i]).transferGovernance(bootstrap);
-        }
-        verifier.verify(snap, true);
-        Bank bank = Bank(list[3]);
-        assertTrue(bank.paused());
-        assertEq(bank.guardian(), guardian);
-        vm.prank(guardian);
-        vm.expectRevert(Errors.Unauthorized.selector);
-        bank.setRiskInPaused(false);
-        vm.prank(address(safe));
-        bank.setRiskInPaused(false);
-        assertFalse(bank.paused());
-        vm.prank(guardian);
-        bank.setRiskInPaused(true);
-        verifier.verify(snap, true);
-    }
-
-    function testPartialSafeAcceptanceCanResumeButCannotRelease() public isolatedEnv {
-        (string memory snap, address[] memory list) = _deploy();
-        vm.prank(address(safe));
-        Governable(list[0]).acceptGovernance();
-        verifier.verify(snap, false);
-        vm.expectRevert("governance not ready");
-        verifier.verify(snap, true);
-        for (uint256 i = 1; i < list.length; ++i) {
-            vm.prank(address(safe));
-            Governable(list[i]).acceptGovernance();
-        }
-        verifier.verify(snap, true);
-    }
+    // ---- Runtime code and precision ----
 
     function testRuntimeMutationFailsEvenWithCorrectGovernance() public isolatedEnv {
-        (string memory snap, address[] memory list) = _deploy();
-        vm.etch(list[2], hex"60006000fd");
-        vm.expectRevert("runtime code mismatch");
-        verifier.verify(snap, false);
+        string memory snap = _deploy();
+        vm.etch(address(_hub(snap)), hex"60006000fd");
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Deployed, "runtime code mismatch");
     }
 
-    function testBootstrapCannotSilentlyChangeRefundTimeout() public isolatedEnv {
-        (string memory snap,) = _deploy();
-        vm.prank(bootstrap);
-        GameHub(snap.readAddress(".gameHub")).setRefundTimeout(snap.readUint(".refundTimeoutSeconds") + 1);
-        vm.expectRevert("game configuration mismatch");
-        verifier.verify(snap, false);
+    function testTimelockRuntimeMutationFails() public isolatedEnv {
+        string memory snap = _deploy();
+        address tl = address(_timelock(snap));
+        vm.etch(tl, bytes.concat(tl.code, hex"00"));
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Deployed, "runtime code mismatch");
+    }
+
+    function testBankRuntimeMutationFails() public isolatedEnv {
+        string memory snap = _deploy();
+        address bank = address(_bank(snap, 0));
+        // Keep getters accessible while changing bytecode, to exercise the explicit runtime binding.
+        vm.etch(bank, bytes.concat(bank.code, hex"00"));
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Deployed, "bank code mismatch");
     }
 
     function testSignedPrecisionMustMatchBankAndAsset() public isolatedEnv {
-        (string memory snap,) = _deploy();
-        verifier.verify(snap, false);
+        string memory snap = _deploy();
+        verifier.verify(snap, V16Snapshot.Mode.Deployed);
         vm.serializeJson("bad-precision", snap);
         string memory changed = vm.serializeUint("bad-precision", "poolAssetDecimals_0", 9);
-        vm.expectRevert("bank precision mismatch");
-        verifier.verify(changed, false);
+        _expectVerifyRevert(changed, V16Snapshot.Mode.Deployed, "bank precision mismatch");
         // Full uint comparison: values that truncate to the correct uint8 also fail.
         changed = vm.serializeUint("bad-precision", "poolAssetDecimals_0", 262);
-        vm.expectRevert("bank precision mismatch");
-        verifier.verify(changed, false);
+        _expectVerifyRevert(changed, V16Snapshot.Mode.Deployed, "bank precision mismatch");
         // Preserve all Bank state and the signed precision, changing only the
         // token's metadata response to exercise the independent asset check.
         vm.etch(address(asset), address(new MockERC20("Test USD", "TUSD", 9)).code);
-        vm.expectRevert("asset precision mismatch");
-        verifier.verify(snap, false);
+        _expectVerifyRevert(snap, V16Snapshot.Mode.Deployed, "asset precision mismatch");
     }
 
     function testSnapshotEmitsOnlyAuthenticatedPrecision() public isolatedEnv {
-        (string memory snap,) = _deploy();
+        string memory snap = _deploy();
         assertEq(snap.readUint(".poolAssetDecimals_0"), 6);
         DigestHarnessV16 digest = new DigestHarnessV16();
         bytes32 original = digest.digest(snap);
@@ -318,29 +473,49 @@ contract DeploymentV16Test is Test {
         assertNotEq(digest.digest(changed), original);
     }
 
-    function testBankRiskDriftBlocksAcceptancePreparation() public isolatedEnv {
-        (string memory snap, address[] memory list) = _deploy();
-        vm.prank(bootstrap);
-        Bank(list[3]).setWithdrawalBufferBps(777);
-        vm.expectRevert("bank risk configuration mismatch");
-        verifier.verify(snap, false);
+    function testReleaseDigestBindsAuthorityOperationsAndRuntime() public isolatedEnv {
+        string memory snap = _deploy();
+        DigestHarnessV16 digest = new DigestHarnessV16();
+        bytes32 original = digest.digest(snap);
+        string[6] memory addressKeys =
+            [string("governanceTimelock"), "gov", "guardian", "releaseSigner", "keeper", "deployer"];
+        for (uint256 i; i < addressKeys.length; ++i) {
+            vm.serializeJson("tampered-v16", snap);
+            assertNotEq(digest.digest(vm.serializeAddress("tampered-v16", addressKeys[i], address(100))), original);
+        }
+        string[7] memory wordKeys = [
+            string("guardianOwnersHash"),
+            "guardianCodeHash",
+            "guardianControlHash",
+            "wiringOperationId",
+            "activationOperationId",
+            "codeHash_governanceTimelock",
+            "codeHash_poolBank_0"
+        ];
+        for (uint256 i; i < wordKeys.length; ++i) {
+            vm.serializeJson("tampered-v16", snap);
+            assertNotEq(digest.digest(vm.serializeBytes32("tampered-v16", wordKeys[i], bytes32(uint256(1)))), original);
+        }
+        vm.serializeJson("tampered-v16", snap);
+        assertNotEq(digest.digest(vm.serializeUint("tampered-v16", "timelockMinDelay", 259_201)), original);
+        vm.serializeJson("tampered-v16", snap);
+        string memory changed = vm.serializeString("tampered-v16", "architectureVersion", "tampered-architecture");
+        vm.expectRevert("not a v1.6 snapshot");
+        digest.digest(changed);
     }
 
-    function testDisabledPoolCannotPassReleaseGate() public isolatedEnv {
-        (string memory snap,) = _deploy();
-        vm.prank(bootstrap);
-        PoolRegistry(snap.readAddress(".poolRegistry")).setPoolActive(1, false);
-        vm.expectRevert("pool status mismatch");
-        verifier.verify(snap, false);
+    function testGovernanceTargetsAreTheCasinoContracts() public isolatedEnv {
+        string memory snap = _deploy();
+        address[] memory list = V16Snapshot.targets(snap);
+        assertEq(list.length, 5);
+        assertEq(list[0], snap.readAddress(".poolRegistry"));
+        assertEq(list[1], snap.readAddress(".refRegistry"));
+        assertEq(list[2], snap.readAddress(".gameHub"));
+        assertEq(list[3], snap.readAddress(".poolBank_0"));
+        assertEq(list[4], snap.readAddress(".poolBank_1"));
     }
 
-    function testBankRuntimeMutationFails() public isolatedEnv {
-        (string memory snap, address[] memory list) = _deploy();
-        // Keep getters accessible while changing bytecode, to exercise the explicit runtime binding.
-        vm.etch(list[3], bytes.concat(list[3].code, hex"00"));
-        vm.expectRevert("bank code mismatch");
-        verifier.verify(snap, false);
-    }
+    // ---- Safe and guardian configuration, refused before anything is broadcast ----
 
     function testWrongChainFailsBeforeBroadcast() public isolatedEnv {
         vm.setEnv("CHAIN_ID", "8453");
@@ -355,10 +530,11 @@ contract DeploymentV16Test is Test {
     }
 
     function testThresholdAndOwnerConfigurationAreBound() public isolatedEnv {
-        safe.setThreshold(1);
+        address[] memory owners = safe.getOwners();
+        safe.setOwners(owners, 1);
         vm.expectRevert("2-of-3 Safe required");
         deployer.run();
-        safe.setThreshold(2);
+        safe.setOwners(owners, 2);
         vm.setEnv("SAFE_OWNERS_HASH", vm.toString(bytes32(uint256(1))));
         vm.expectRevert("Safe owners mismatch");
         deployer.run();
@@ -367,12 +543,6 @@ contract DeploymentV16Test is Test {
     function testModuleCannotBypassQuorumPolicy() public isolatedEnv {
         safe.setModule();
         vm.expectRevert("Safe modules not allowed");
-        deployer.run();
-    }
-
-    function testBpsInputCannotWrapIntoValidValue() public isolatedEnv {
-        vm.setEnv("DEFAULT_HOUSE_EDGE_BPS", "65536");
-        vm.expectRevert("DEFAULT_HOUSE_EDGE_BPS out of range");
         deployer.run();
     }
 
@@ -388,87 +558,42 @@ contract DeploymentV16Test is Test {
         deployer.run();
     }
 
-    function testReleaseDigestBindsAuthorityAndRuntime() public isolatedEnv {
-        (string memory snap,) = _deploy();
-        DigestHarnessV16 digest = new DigestHarnessV16();
-        bytes32 original = digest.digest(snap);
-        vm.serializeJson("tampered-v16", snap);
-        string memory changed = vm.serializeAddress("tampered-v16", "guardian", address(100));
-        assertNotEq(digest.digest(changed), original);
-        vm.serializeJson("tampered-v16", snap);
-        changed = vm.serializeAddress("tampered-v16", "releaseSigner", address(101));
-        assertNotEq(digest.digest(changed), original);
-        vm.serializeJson("tampered-v16", snap);
-        changed = vm.serializeBytes32("tampered-v16", "codeHash_poolBank_0", bytes32(uint256(1)));
-        assertNotEq(digest.digest(changed), original);
-        vm.serializeJson("tampered-v16", snap);
-        changed = vm.serializeString("tampered-v16", "architectureVersion", "tampered-architecture");
-        vm.expectRevert("not a v1.6 snapshot");
-        digest.digest(changed);
+    function testTheGuardianMustBeAnIndependentMultisig() public isolatedEnv {
+        vm.setEnv("GUARDIAN", vm.toString(address(77)));
+        vm.expectRevert("guardian code mismatch");
+        deployer.run();
+        vm.setEnv("GUARDIAN", vm.toString(address(safe)));
+        vm.expectRevert("guardian must be a multisig separate from the Safe");
+        deployer.run();
+        _configureEnv();
+
+        address[] memory owners = guardianSafe.getOwners();
+        guardianSafe.setOwners(owners, 1);
+        vm.setEnv("GUARDIAN_OWNERS_HASH", vm.toString(guardianSafe.ownersHash()));
+        vm.expectRevert("guardian must be a multisig");
+        deployer.run();
+
+        owners[0] = safe.getOwners()[1];
+        guardianSafe.setOwners(owners, 2);
+        vm.setEnv("GUARDIAN_OWNERS_HASH", vm.toString(guardianSafe.ownersHash()));
+        vm.expectRevert("guardian signer is a Safe signer");
+        deployer.run();
+
+        owners[0] = address(31);
+        guardianSafe.setOwners(owners, 2);
+        vm.expectRevert("guardian owners mismatch");
+        deployer.run();
+        vm.setEnv("GUARDIAN_OWNERS_HASH", vm.toString(guardianSafe.ownersHash()));
+
+        guardianSafe.setModule();
+        vm.expectRevert("guardian modules not allowed");
+        deployer.run();
     }
 
-    function testGovernanceTargetsAreTheCasinoContractsAndBanksRemainPaused() public isolatedEnv {
-        (string memory snap, address[] memory list) = _deploy();
-        assertEq(list.length, 5);
-        assertEq(list[0], snap.readAddress(".poolRegistry"));
-        assertEq(list[1], snap.readAddress(".refRegistry"));
-        assertEq(list[2], snap.readAddress(".gameHub"));
-        assertEq(list[3], snap.readAddress(".poolBank_0"));
-        assertEq(list[4], snap.readAddress(".poolBank_1"));
-        verifier.verify(snap, false);
-        for (uint256 i; i < list.length; ++i) {
-            vm.prank(address(safe));
-            Governable(list[i]).acceptGovernance();
-        }
-        verifier.verify(snap, true);
-    }
-
-    function _acceptAll(address[] memory list) internal {
-        for (uint256 i; i < list.length; ++i) {
-            vm.prank(address(safe));
-            Governable(list[i]).acceptGovernance();
-        }
-    }
-
-    // A change queued between the acceptance package and the Safe's acceptance keeps the current values intact,
-    // so only the check after acceptance can see it (audit finding F-01).
-    function _assertQueueInHandoffWindowBlocksRelease(uint16 bps) internal {
-        (string memory snap, address[] memory list) = _deploy();
-        GameHub hub = GameHub(snap.readAddress(".gameHub"));
-        verifier.verify(snap, false);
-        vm.prank(bootstrap);
-        hub.queueEdgeChange(bps);
-        _acceptAll(list);
-        assertEq(hub.defaultHouseEdgeBps(), snap.readUint(".defaultHouseEdgeBps"));
-        vm.expectRevert("pending edge change is not part of the release");
-        verifier.verify(snap, true);
-    }
-
-    function testBaseEdgeQueuedInHandoffWindowBlocksRelease() public isolatedEnv {
-        _assertQueueInHandoffWindowBlocksRelease(500);
-    }
-
-    function testQueuedEdgeChangeFailsTheAcceptancePackageCheck() public isolatedEnv {
-        (string memory snap,) = _deploy();
-        vm.prank(bootstrap);
-        GameHub(snap.readAddress(".gameHub")).queueEdgeChange(300);
-        vm.expectRevert("pending edge change is not part of the release");
-        verifier.verify(snap, false);
-    }
-
-    function testSafeCancellingInheritedQueuesUnblocksRelease() public isolatedEnv {
-        (string memory snap, address[] memory list) = _deploy();
-        GameHub hub = GameHub(snap.readAddress(".gameHub"));
-        vm.startPrank(bootstrap);
-        hub.queueEdgeChange(500);
-        vm.stopPrank();
-        _acceptAll(list);
-        vm.prank(address(safe));
-        hub.cancelEdgeChange();
-        verifier.verify(snap, true);
-        vm.prank(bootstrap);
-        vm.expectRevert(IGameHub.NoPendingEdgeChange.selector);
-        hub.activateEdgeChange();
+    function testBpsInputCannotWrapIntoValidValue() public isolatedEnv {
+        vm.setEnv("DEFAULT_HOUSE_EDGE_BPS", "65536");
+        vm.expectRevert("DEFAULT_HOUSE_EDGE_BPS out of range");
+        deployer.run();
     }
 
     function testRefundTimeoutAboveOneDayIsRefusedBeforeBroadcast() public isolatedEnv {

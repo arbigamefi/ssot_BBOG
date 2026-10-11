@@ -28,6 +28,9 @@ class NftForkGateTests(unittest.TestCase):
             '  return {"hash":"0x"+("b" if os.environ.get("REORG_AFTER_GOVERNANCE") else "a")*64}\n'
             'if __name__=="__main__":\n'
             ' if os.environ.get("REJECT_GOVERNANCE"): sys.exit(1)\n'
+            ' # The release state, replayed from the checkpoint the record signs.\n'
+            ' assert (os.environ["GOVERNANCE_VERIFY_MODE"], os.environ["GOVERNANCE_CHECKPOINT"],\n'
+            '         os.environ["GOVERNANCE_CHECKPOINT_SHA256"]) == ("release", "checkpoint.json", "0x"+"c"*64)\n'
             ' print(json.dumps({"status":"verified", "chainId":84532, "blockNumber":50000123, "blockHash":"0x"+"a"*64}))\n')
         forge = self.root / 'bin/forge'
         forge.write_text(f'#!{sys.executable}\n' +
@@ -45,7 +48,9 @@ class NftForkGateTests(unittest.TestCase):
                          'gameMaxBetCount_COIN_TOSS': 25, 'gameCallbackGasLimit_COIN_TOSS': 2400000}
         self.env = {k: v for k, v in os.environ.items() if not k.startswith(('FORK_', 'NFT_'))}
         self.env.update(PATH=str(self.root / 'bin') + os.pathsep + os.environ['PATH'],
-                        PYTHON=sys.executable, SNAPSHOT_PATH='snapshot.json', FORK_RPC_URL='https://rpc.invalid')
+                        PYTHON=sys.executable, SNAPSHOT_PATH='snapshot.json', FORK_RPC_URL='https://rpc.invalid',
+                        RELEASE_PATH='release.json', GOVERNANCE_CHECKPOINT_PATH='checkpoint.json')
+        (self.root / 'release.json').write_text(json.dumps({'checkpointSha256': '0x' + 'c' * 64}))
 
     def run_gate(self, **env):
         (self.root / 'snapshot.json').write_text(json.dumps(self.snapshot))

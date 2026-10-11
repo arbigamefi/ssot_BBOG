@@ -77,6 +77,7 @@ def main() -> int:
     )
 
     contracts: list[tuple[str, str, str]] = [
+        ("governanceTimelock", "src/access/GovernanceTimelock.sol:GovernanceTimelock", "ctorArgs_governanceTimelock"),
         ("vrfHub", "src/core/VRFHub.sol:VRFHub", "ctorArgs_vrfHub"),
         ("poolRegistry", "src/core/PoolRegistry.sol:PoolRegistry", "ctorArgs_poolRegistry"),
         ("settlementRouter", "src/core/SettlementRouter.sol:SettlementRouter", "ctorArgs_settlementRouter"),

@@ -141,7 +141,6 @@ function buildEmbeddedPools(manifest) {
     poolId: requireNumeric(pool.poolId, `pools[${index}].poolId`),
     domainId: requireNumeric(pool.domainId, `pools[${index}].domainId`),
     domain: String(pool.domain ?? ""),
-    active: Boolean(pool.active),
     asset: normalizeAddress(requireString(pool.asset, `pools[${index}].asset`)),
     bank: normalizeAddress(requireString(pool.bank, `pools[${index}].bank`)),
     vault: normalizeAddress(requireString(pool.vault, `pools[${index}].vault`)),
@@ -171,6 +170,7 @@ const { suffix } = RELEASE_LINE;
 const BUNDLE_FILES = [
   `deployments/latest-${suffix}.json`,
   `deployments/release-latest-${suffix}.json`,
+  `deployments/governance-checkpoint-latest-${suffix}.json`,
   `deployments/release-notes-latest-${suffix}.md`,
   `deployments/frontend-manifest-latest-${suffix}.json`,
   `deployments/golden-vectors-latest-${suffix}.json`,
@@ -223,6 +223,7 @@ async function main() {
   const manifestPath = path.join(deploymentsDir, `frontend-manifest-latest-${suffix}.json`);
   const vectorsPath = path.join(deploymentsDir, `golden-vectors-latest-${suffix}.json`);
   const releaseLockPath = path.join(deploymentsDir, `release-latest-${suffix}.json`);
+  const checkpointPath = path.join(deploymentsDir, `governance-checkpoint-latest-${suffix}.json`);
   const latestSnapshotPath = path.join(deploymentsDir, `latest-${suffix}.json`);
   const abiIndexPath = path.join(abisDir, "index.json");
 
@@ -264,10 +265,12 @@ async function main() {
   );
   await fs.copyFile(latestSnapshotPath, path.join(verificationDir, "snapshot.json"));
   await fs.copyFile(releaseLockPath, path.join(verificationDir, "release.json"));
+  await fs.copyFile(checkpointPath, path.join(verificationDir, "checkpoint.json"));
   const verificationEnv = {
     ...process.env,
     SNAPSHOT_PATH: path.join(verificationDir, "snapshot.json"),
-    RELEASE_PATH: path.join(verificationDir, "release.json")
+    RELEASE_PATH: path.join(verificationDir, "release.json"),
+    GOVERNANCE_CHECKPOINT_PATH: path.join(verificationDir, "checkpoint.json")
   };
   let verificationStage = "current build";
   try {
@@ -300,6 +303,8 @@ async function main() {
         releaseLockPath,
         "--snapshot",
         latestSnapshotPath,
+        "--checkpoint",
+        checkpointPath,
         "--notes",
         path.join(deploymentsDir, `release-notes-latest-${suffix}.md`),
         "--manifest",
@@ -322,10 +327,17 @@ async function main() {
       ],
       { cwd: repoRoot, env: verificationEnv }
     );
+    // A deployed release, launched or not, replayed from the checkpoint the record signs (ADR-0037 §9; the
+    // artifact validation above checked the checkpoint against the record).
     verificationStage = "live governance";
     await execFileAsync(process.env.PYTHON ?? "python3", ["script/release/verify_governance.py"], {
       cwd: repoRoot,
-      env: verificationEnv
+      env: {
+        ...verificationEnv,
+        GOVERNANCE_VERIFY_MODE: "live",
+        GOVERNANCE_CHECKPOINT: verificationEnv.GOVERNANCE_CHECKPOINT_PATH,
+        GOVERNANCE_CHECKPOINT_SHA256: String(releaseLock.checkpointSha256)
+      }
     });
   } catch (error) {
     // Preserve the rejecting stage without echoing commands or RPC credentials.
@@ -357,6 +369,7 @@ async function main() {
     refundTimeoutSeconds: requireNumeric(manifest.refundTimeoutSeconds, "refundTimeoutSeconds"),
     defaultHouseEdgeBps: requireNumeric(latestSnapshot.defaultHouseEdgeBps, "defaultHouseEdgeBps"),
     contracts: {
+      governanceTimelock: normalizeAddress(addresses.governanceTimelock),
       gameHub: normalizeAddress(addresses.gameHub),
       settlementRouter: normalizeAddress(addresses.settlementRouter),
       poolRegistry: normalizeAddress(addresses.poolRegistry),

@@ -3,10 +3,12 @@ pragma solidity 0.8.37;
 
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
-import {Governable} from "../src/access/Governable.sol";
 import {SafeGovernance} from "./common/SafeGovernance.sol";
+import {V16Batches} from "./release/V16Batches.sol";
+import {V16Snapshot} from "./release/V16Snapshot.sol";
 import {VmSafe} from "forge-std/Vm.sol";
 
+import {GovernanceTimelock} from "../src/access/GovernanceTimelock.sol";
 import {Bank} from "../src/core/Bank.sol";
 import {GameHub} from "../src/core/GameHub.sol";
 import {PoolRegistry} from "../src/core/PoolRegistry.sol";
@@ -32,18 +34,28 @@ interface IERC20MetadataLikeV16 {
     function decimals() external view returns (uint8);
 }
 
-/// @notice Deployment script for SSOT v1.6 Safe-governed router/pool topology.
+/// @notice Deploys SSOT v1.6 as ADR-0037 decision D1 prescribes. The GovernanceTimelock comes first; every governed
+///         contract is constructed with the timelock as its governance, so the deploying address holds no power at any
+///         time. Nothing is wired here: the Safe schedules the wiring batch afterwards (PrepareTimelockBatchesV16) and
+///         anyone executes it after 72 hours; activation is a second operation (script/release/V16Batches.sol).
+///
+///         Before anything is broadcast the script rehearses both operations against the simulated deployment and
+///         checks the result as release verification will (V16Snapshot), then restores the simulated state: a batch
+///         that would revert or wire something else stops the deployment instead of wasting 72 hours or a one-shot
+///         setter.
 ///
 /// Required env:
-///   DEPLOYER (bootstrap public address), GOV (final 2/3 Safe), CHAIN_ID, GUARDIAN, KEEPER_ADDRESS,
-///   RELEASE_SIGNER, SAFE_CODE_HASH, SAFE_OWNERS_HASH, SAFE_CONTROL_HASH,
-///   VRF_WRAPPER, NUM_POOLS, POOL_ASSET_0...
+///   DEPLOYER (the deploying address; it receives no role), GOV (the 2-of-3 Safe: timelock proposer and canceller,
+///   sentinel), SAFE_CODE_HASH, SAFE_OWNERS_HASH, SAFE_CONTROL_HASH,
+///   GUARDIAN (an independent multisig: timelock canceller, Bank guardian), GUARDIAN_CODE_HASH, GUARDIAN_OWNERS_HASH,
+///   GUARDIAN_CONTROL_HASH, CHAIN_ID, KEEPER_ADDRESS, RELEASE_SIGNER, VRF_WRAPPER, NUM_POOLS, POOL_ASSET_0...,
+///   GAME_MAX_BET_COUNT_<GAME> and GAME_CALLBACK_GAS_LIMIT_<GAME> for the eight games
 ///
 /// Per-pool env:
 ///   POOL_ID_i                         default i + 1
 ///   POOL_ASSET_i                      required
 ///   BANK_MIN_BET_AMOUNT_i             required, minimum per casino round in asset units
-///   BANK_RISK_RESERVE_BPS_i                default 6000
+///   BANK_RISK_RESERVE_BPS_i           default 6000
 ///   BANK_WITHDRAWAL_BUFFER_BPS_i      default 1000 (independent PF/XP outflow policy)
 ///   BANK_MIN_TURNOVER_FOR_UNLOCK_i    default 20 asset units
 ///   BANK_HOLDBACK_VESTING_SECONDS_i   default 86400
@@ -54,14 +66,8 @@ interface IERC20MetadataLikeV16 {
 /// Example:
 ///   forge script script/DeployV16.s.sol:DeployV16 --rpc-url $RPC_URL --broadcast -vvv
 contract DeployV16 is Script {
-    bytes32 internal constant GAME_DICE = keccak256("DICE");
-    bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
-    bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
-    bytes32 internal constant GAME_KENO = keccak256("KENO");
-    bytes32 internal constant GAME_PLINKO = keccak256("PLINKO");
-    bytes32 internal constant GAME_SIC_BO = keccak256("SIC_BO");
-    bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
-    bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
+    /// The release delay: GovernanceTimelock.MIN_DELAY, the floor its constructor and updateDelay enforce (D7).
+    uint256 internal constant TIMELOCK_DELAY = 259_200;
 
     /// @dev SSOT v1.6 referral schedule: rates are bps of the base turnover edge, l0 + l1 + l2 <= 3500.
     struct RefConfig {
@@ -71,22 +77,32 @@ contract DeployV16 is Script {
         uint16 holdbackBps;
     }
 
+    struct GameConfig {
+        uint32 maxBetCount;
+        uint32 callbackGasLimit;
+    }
+
     struct DeployConfig {
         address deployer;
-        address gov; // temporary bootstrap signer, preserved in constructor arguments
-        address finalGovernance;
-        address guardian;
-        address keeper;
-        address releaseSigner;
+        address safe;
         bytes32 safeOwnersHash;
         bytes32 safeCodeHash;
         bytes32 safeControlHash;
+        address guardian;
+        bytes32 guardianOwnersHash;
+        bytes32 guardianCodeHash;
+        bytes32 guardianControlHash;
+        address keeper;
+        address releaseSigner;
         address treasury;
         address vrfWrapper;
         uint256 refundTimeoutSeconds;
         uint16 defaultHouseEdgeBps;
         uint256 poolCount;
         RefConfig refConfig;
+        GameConfig[8] games;
+        uint256 originBlock;
+        uint256 originTimestamp;
     }
 
     struct PoolConfig {
@@ -103,6 +119,7 @@ contract DeployV16 is Script {
     }
 
     struct Deployed {
+        GovernanceTimelock timelock;
         VRFHub vrf;
         PoolRegistry poolRegistry;
         SettlementRouter router;
@@ -122,7 +139,10 @@ contract DeployV16 is Script {
     function run() external {
         DeployConfig memory cfg = _readDeployConfig();
         require(block.chainid == vm.envUint("CHAIN_ID"), "CHAIN_ID mismatch");
-        SafeGovernance.validate(cfg.finalGovernance, cfg.safeOwnersHash, cfg.safeCodeHash, cfg.safeControlHash);
+        SafeGovernance.validate(cfg.safe, cfg.safeOwnersHash, cfg.safeCodeHash, cfg.safeControlHash);
+        SafeGovernance.validateGuardian(
+            cfg.guardian, cfg.safe, cfg.guardianOwnersHash, cfg.guardianCodeHash, cfg.guardianControlHash
+        );
         require(cfg.vrfWrapper.code.length != 0, "VRF wrapper has no code");
         require(cfg.poolCount >= 1 && cfg.poolCount <= 32, "NUM_POOLS out of range");
 
@@ -131,16 +151,21 @@ contract DeployV16 is Script {
             pools[i] = _readPoolConfig(i);
             require(pools[i].riskReserveBps <= 10_000, "BANK_RISK_RESERVE_BPS_i out of range");
             require(pools[i].withdrawalBufferBps <= 10_000, "BANK_WITHDRAWAL_BUFFER_BPS_i out of range");
+            for (uint256 j; j < i; ++j) {
+                require(pools[i].poolId != pools[j].poolId, "duplicate POOL_ID");
+            }
         }
 
         vm.startBroadcast(cfg.deployer);
 
         Deployed memory d;
 
-        d.poolRegistry = new PoolRegistry(cfg.gov);
+        d.timelock = new GovernanceTimelock(TIMELOCK_DELAY, _list(cfg.safe), _list(cfg.guardian), _list(address(0)));
+        address gov = address(d.timelock);
+        d.poolRegistry = new PoolRegistry(gov);
         d.router = new SettlementRouter(address(d.poolRegistry));
         d.vrf = new VRFHub(cfg.vrfWrapper, address(d.router));
-        d.refRegistry = new ReferralRegistry(cfg.gov);
+        d.refRegistry = new ReferralRegistry(gov);
         d.refEngine = new DefaultReferralEngine();
 
         d.gameHub = new GameHub(
@@ -148,7 +173,7 @@ contract DeployV16 is Script {
             address(d.vrf),
             address(d.refRegistry),
             address(d.refEngine),
-            cfg.gov,
+            gov,
             cfg.refundTimeoutSeconds,
             cfg.defaultHouseEdgeBps,
             cfg.refConfig.l0Bps,
@@ -157,27 +182,10 @@ contract DeployV16 is Script {
             cfg.refConfig.holdbackBps
         );
 
-        d.refRegistry.setBinderOnce(address(d.gameHub));
-        d.poolRegistry.setHubRegistered(address(d.gameHub), true);
-
         for (uint256 i = 0; i < pools.length; ++i) {
-            Bank bank = new Bank(
-                pools[i].asset, cfg.gov, pools[i].riskReserveBps, pools[i].assetDecimals, pools[i].minBetAmount
+            pools[i].bank = address(
+                new Bank(pools[i].asset, gov, pools[i].riskReserveBps, pools[i].assetDecimals, pools[i].minBetAmount)
             );
-            pools[i].bank = address(bank);
-            bank.setRiskInPaused(true);
-            bank.setGuardian(cfg.guardian);
-
-            d.poolRegistry.registerPool(pools[i].poolId, pools[i].asset, pools[i].bank, pools[i].domain);
-            bank.setSettlementRouterOnce(address(d.router));
-            bank.setRandomnessConsumerOnce(address(d.vrf));
-            bank.setMinPlayerTurnoverForUnlock(pools[i].minTurnoverForUnlock);
-            bank.setHoldbackVestingSeconds(pools[i].holdbackVestingSeconds);
-            if (pools[i].withdrawalBufferBps != pools[i].riskReserveBps) {
-                bank.setWithdrawalBufferBps(pools[i].withdrawalBufferBps);
-            }
-
-            d.poolRegistry.setHubAllowedForPool(pools[i].poolId, address(d.gameHub), true);
         }
 
         d.dice = new DiceModule();
@@ -189,25 +197,40 @@ contract DeployV16 is Script {
         d.slots = new SlotsModule();
         d.baccarat = new BaccaratModule();
 
-        _registerGame(d.gameHub, GAME_DICE, address(d.dice), "DICE");
-        _registerGame(d.gameHub, GAME_COIN, address(d.coin), "COIN_TOSS");
-        _registerGame(d.gameHub, GAME_ROULETTE, address(d.roulette), "ROULETTE");
-        _registerGame(d.gameHub, GAME_KENO, address(d.keno), "KENO");
-        _registerGame(d.gameHub, GAME_PLINKO, address(d.plinko), "PLINKO");
-        _registerGame(d.gameHub, GAME_SIC_BO, address(d.sicBo), "SIC_BO");
-        _registerGame(d.gameHub, GAME_SLOTS, address(d.slots), "SLOTS");
-        _registerGame(d.gameHub, GAME_BACCARAT, address(d.baccarat), "BACCARAT");
-
-        _nominateGovernance(cfg, pools, d);
         vm.stopBroadcast();
 
-        _logDeployment(cfg, pools, d);
+        string memory snap = _snapshotJson(cfg, pools, d);
+        _rehearse(snap);
+        _logDeployment(cfg, pools, d, snap);
         if (_shouldWriteArtifacts()) {
-            _writeArtifacts(cfg, pools, d);
+            _writeArtifacts(snap);
         } else {
             console2.log("Skipping v1.6 deployment artifact writes during dry run.");
             console2.log("Set WRITE_DRY_RUN_ARTIFACTS=true to write simulated artifacts intentionally.");
         }
+    }
+
+    /// The Safe schedules the wiring, anyone executes it 72 hours later, then the same for the activation; each
+    /// result must pass release verification. The simulated chain is restored afterwards, so the snapshot and the
+    /// broadcast describe the deployment only.
+    function _rehearse(string memory snap) internal {
+        uint256 state = vm.snapshotState();
+        GovernanceTimelock timelock = GovernanceTimelock(payable(vm.parseJsonAddress(snap, ".governanceTimelock")));
+        address safe = vm.parseJsonAddress(snap, ".gov");
+        V16Snapshot.verify(snap, V16Snapshot.Mode.Deployed);
+        _scheduleAndExecute(timelock, safe, V16Batches.wiring(snap));
+        V16Snapshot.verify(snap, V16Snapshot.Mode.Release);
+        _scheduleAndExecute(timelock, safe, V16Batches.activation(snap));
+        V16Snapshot.verify(snap, V16Snapshot.Mode.Live);
+        require(vm.revertToStateAndDelete(state), "rehearsal state not restored");
+    }
+
+    function _scheduleAndExecute(GovernanceTimelock timelock, address safe, V16Batches.Batch memory b) internal {
+        uint256 delay = timelock.getMinDelay();
+        vm.prank(safe);
+        timelock.scheduleBatch(b.targets, b.values, b.payloads, b.predecessor, b.salt, delay);
+        vm.warp(block.timestamp + delay);
+        timelock.executeBatch(b.targets, b.values, b.payloads, b.predecessor, b.salt);
     }
 
     function _shouldWriteArtifacts() internal view virtual returns (bool) {
@@ -215,19 +238,25 @@ contract DeployV16 is Script {
     }
 
     function _readDeployConfig() internal view returns (DeployConfig memory cfg) {
+        cfg.originBlock = block.number;
+        cfg.originTimestamp = block.timestamp;
         cfg.deployer = vm.envAddress("DEPLOYER");
         require(cfg.deployer != address(0), "deployer required");
-        cfg.gov = cfg.deployer;
-        cfg.finalGovernance = vm.envAddress("GOV");
-        cfg.guardian = vm.envAddress("GUARDIAN"); // explicit zero disables the role
-        cfg.keeper = vm.envAddress("KEEPER_ADDRESS");
-        cfg.releaseSigner = vm.envAddress("RELEASE_SIGNER");
+        cfg.safe = vm.envAddress("GOV");
         cfg.safeOwnersHash = vm.envBytes32("SAFE_OWNERS_HASH");
         cfg.safeCodeHash = vm.envBytes32("SAFE_CODE_HASH");
         cfg.safeControlHash = vm.envBytes32("SAFE_CONTROL_HASH");
-        require(cfg.finalGovernance != cfg.deployer, "Safe must differ from deployer");
+        cfg.guardian = vm.envAddress("GUARDIAN");
+        cfg.guardianOwnersHash = vm.envBytes32("GUARDIAN_OWNERS_HASH");
+        cfg.guardianCodeHash = vm.envBytes32("GUARDIAN_CODE_HASH");
+        cfg.guardianControlHash = vm.envBytes32("GUARDIAN_CONTROL_HASH");
+        cfg.keeper = vm.envAddress("KEEPER_ADDRESS");
+        cfg.releaseSigner = vm.envAddress("RELEASE_SIGNER");
+        require(cfg.safe != cfg.deployer, "Safe must differ from deployer");
+        require(cfg.guardian != cfg.deployer, "guardian must differ from deployer");
         require(
-            cfg.keeper != address(0) && cfg.keeper != cfg.deployer && cfg.keeper != cfg.finalGovernance,
+            cfg.keeper != address(0) && cfg.keeper != cfg.deployer && cfg.keeper != cfg.safe
+                && cfg.keeper != cfg.guardian,
             "independent keeper required"
         );
         require(cfg.releaseSigner != address(0), "release signer required");
@@ -257,6 +286,14 @@ contract DeployV16 is Script {
             uint256(cfg.refConfig.l0Bps) + cfg.refConfig.l1Bps + cfg.refConfig.l2Bps <= HouseEdgeLib.MAX_REFERRAL_BPS,
             "REF_L0_BPS + REF_L1_BPS + REF_L2_BPS exceeds 3500"
         );
+
+        (string[8] memory names,) = V16Batches.games();
+        for (uint256 g; g < names.length; ++g) {
+            uint256 count = vm.envUint(string.concat("GAME_MAX_BET_COUNT_", names[g]));
+            uint256 gasLimit = vm.envUint(string.concat("GAME_CALLBACK_GAS_LIMIT_", names[g]));
+            require(count > 0 && count <= type(uint32).max && gasLimit <= type(uint32).max, "invalid game admission");
+            cfg.games[g] = GameConfig({maxBetCount: uint32(count), callbackGasLimit: uint32(gasLimit)});
+        }
     }
 
     function _readPoolConfig(uint256 i) internal view returns (PoolConfig memory cfg) {
@@ -281,26 +318,25 @@ contract DeployV16 is Script {
         cfg.assetDecimals = assetDecimals;
     }
 
-    function _registerGame(GameHub hub, bytes32 gameId, address module, string memory name) internal {
-        uint256 count = vm.envUint(string.concat("GAME_MAX_BET_COUNT_", name));
-        uint256 gasLimit = vm.envUint(string.concat("GAME_CALLBACK_GAS_LIMIT_", name));
-        require(count > 0 && count <= hub.MAX_BET_COUNT() && gasLimit <= type(uint32).max, "invalid game admission");
-        hub.registerGame(gameId, module, uint32(count), uint32(gasLimit));
-    }
-
     function _bps(string memory key, uint256 fallbackValue) internal view returns (uint16) {
         uint256 value = vm.envOr(key, fallbackValue);
         require(value <= 10_000, string.concat(key, " out of range"));
         return uint16(value);
     }
 
-    function _logDeployment(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d)
+    function _list(address a) internal pure returns (address[] memory list) {
+        list = new address[](1);
+        list[0] = a;
+    }
+
+    function _logDeployment(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d, string memory snap)
         internal
         pure
         virtual
     {
-        console2.log("BOOTSTRAP_GOV", cfg.gov);
-        console2.log("GOV", cfg.finalGovernance);
+        console2.log("GOV (Safe)", cfg.safe);
+        console2.log("GUARDIAN", cfg.guardian);
+        console2.log("governanceTimelock", address(d.timelock));
         console2.log("VRF_WRAPPER", cfg.vrfWrapper);
         console2.log("vrfHub", address(d.vrf));
         console2.log("poolRegistry", address(d.poolRegistry));
@@ -316,6 +352,9 @@ contract DeployV16 is Script {
             console2.log(string.concat("poolAsset_", suffix), pools[i].asset);
             console2.log(string.concat("poolBank_", suffix), pools[i].bank);
         }
+        console2.log("wiringOperationId", vm.toString(vm.parseJsonBytes32(snap, ".wiringOperationId")));
+        console2.log("activationOperationId", vm.toString(vm.parseJsonBytes32(snap, ".activationOperationId")));
+        console2.log("Next: the Safe schedules the wiring batch (make timelock-batches-v16).");
     }
 
     function _snapshotJson(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d)
@@ -327,20 +366,25 @@ contract DeployV16 is Script {
 
         json = vm.serializeString(obj, "architectureVersion", "v1.6-nft-liquidity");
         json = vm.serializeUint(obj, "chainId", block.chainid);
-        json = vm.serializeUint(obj, "blockNumber", block.number);
-        json = vm.serializeUint(obj, "timestamp", block.timestamp);
+        // The release history starts before the timelock exists, so a replay from here sees its constructor's
+        // RoleGranted and MinDelayChange events and every later authorization event of the governed contracts.
+        json = vm.serializeUint(obj, "blockNumber", cfg.originBlock);
+        json = vm.serializeUint(obj, "timestamp", cfg.originTimestamp);
         json = vm.serializeAddress(obj, "deployer", cfg.deployer);
-        json = vm.serializeAddress(obj, "gov", cfg.finalGovernance);
-        json = vm.serializeAddress(obj, "bootstrapGovernance", cfg.gov);
-        json = vm.serializeAddress(obj, "guardian", cfg.guardian);
-        json = vm.serializeAddress(obj, "keeper", cfg.keeper);
-        json = vm.serializeAddress(obj, "releaseSigner", cfg.releaseSigner);
+        json = vm.serializeAddress(obj, "gov", cfg.safe);
         json = vm.serializeBytes32(obj, "safeOwnersHash", cfg.safeOwnersHash);
         json = vm.serializeBytes32(obj, "safeCodeHash", cfg.safeCodeHash);
         json = vm.serializeBytes32(obj, "safeControlHash", cfg.safeControlHash);
-        json = vm.serializeString(obj, "bootstrapStatus", "pending-safe-acceptance");
-        json = vm.serializeBool(obj, "initialRiskInPaused", true);
+        json = vm.serializeAddress(obj, "guardian", cfg.guardian);
+        json = vm.serializeBytes32(obj, "guardianOwnersHash", cfg.guardianOwnersHash);
+        json = vm.serializeBytes32(obj, "guardianCodeHash", cfg.guardianCodeHash);
+        json = vm.serializeBytes32(obj, "guardianControlHash", cfg.guardianControlHash);
+        json = vm.serializeAddress(obj, "keeper", cfg.keeper);
+        json = vm.serializeAddress(obj, "releaseSigner", cfg.releaseSigner);
         json = vm.serializeAddress(obj, "treasury", cfg.treasury);
+
+        json = vm.serializeAddress(obj, "governanceTimelock", address(d.timelock));
+        json = vm.serializeUint(obj, "timelockMinDelay", d.timelock.getMinDelay());
 
         json = vm.serializeAddress(obj, "vrfWrapper", cfg.vrfWrapper);
         json = vm.serializeAddress(obj, "vrfHub", address(d.vrf));
@@ -360,6 +404,7 @@ contract DeployV16 is Script {
         json = vm.serializeAddress(obj, "moduleSlots", address(d.slots));
         json = vm.serializeAddress(obj, "moduleBaccarat", address(d.baccarat));
 
+        json = vm.serializeBytes32(obj, "codeHash_governanceTimelock", address(d.timelock).codehash);
         json = vm.serializeBytes32(obj, "codeHash_vrfHub", address(d.vrf).codehash);
         json = vm.serializeBytes32(obj, "codeHash_poolRegistry", address(d.poolRegistry).codehash);
         json = vm.serializeBytes32(obj, "codeHash_settlementRouter", address(d.router).codehash);
@@ -381,17 +426,21 @@ contract DeployV16 is Script {
         json = _writeCtorJson(obj, json, cfg, d);
         json = _writePoolJson(obj, json, cfg, pools, d);
 
+        // The two operations follow from everything above; the release digest signs their ids.
+        json = vm.serializeBytes32(obj, "wiringOperationId", V16Batches.id(V16Batches.wiring(json)));
+        json = vm.serializeBytes32(obj, "activationOperationId", V16Batches.id(V16Batches.activation(json)));
         return json;
     }
 
-    function _writeArtifacts(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d) internal virtual {
+    function _writeArtifacts(string memory snap) internal virtual {
         _safeCreateDir("deployments/snapshots");
-        string memory json = _snapshotJson(cfg, pools, d);
-        string memory tag = string.concat(vm.toString(block.chainid), "-", vm.toString(block.number), "-v16");
+        string memory tag = string.concat(
+            vm.toString(block.chainid), "-", vm.toString(vm.parseJsonUint(snap, ".blockNumber")), "-v16"
+        );
         string memory snapPath = string.concat("deployments/snapshots/deploy-", tag, ".json");
 
-        _safeWriteJson(json, snapPath);
-        _safeWriteJson(json, "deployments/latest-v16.json");
+        _safeWriteJson(snap, snapPath);
+        _safeWriteJson(snap, "deployments/latest-v16.json");
         console2.log("Wrote v1.6 deployment snapshot:", snapPath);
         console2.log("Wrote v1.6 deployment snapshot:", "deployments/latest-v16.json");
     }
@@ -407,6 +456,12 @@ contract DeployV16 is Script {
         json = vm.serializeUint(obj, "refL1Bps", cfg.refConfig.l1Bps);
         json = vm.serializeUint(obj, "refL2Bps", cfg.refConfig.l2Bps);
         json = vm.serializeUint(obj, "refHoldbackBps", cfg.refConfig.holdbackBps);
+        (string[8] memory names,) = V16Batches.games();
+        for (uint256 g; g < names.length; ++g) {
+            json = vm.serializeUint(obj, string.concat("gameMaxBetCount_", names[g]), cfg.games[g].maxBetCount);
+            json =
+                vm.serializeUint(obj, string.concat("gameCallbackGasLimit_", names[g]), cfg.games[g].callbackGasLimit);
+        }
         return json;
     }
 
@@ -414,10 +469,16 @@ contract DeployV16 is Script {
         internal
         returns (string memory)
     {
+        address gov = address(d.timelock);
+        json = vm.serializeString(
+            obj,
+            "ctorArgs_governanceTimelock",
+            vm.toString(abi.encode(d.timelock.getMinDelay(), _list(cfg.safe), _list(cfg.guardian), _list(address(0))))
+        );
         json = vm.serializeString(obj, "ctorArgs_vrfHub", vm.toString(abi.encode(cfg.vrfWrapper, address(d.router))));
-        json = vm.serializeString(obj, "ctorArgs_poolRegistry", vm.toString(abi.encode(cfg.gov)));
+        json = vm.serializeString(obj, "ctorArgs_poolRegistry", vm.toString(abi.encode(gov)));
         json = vm.serializeString(obj, "ctorArgs_settlementRouter", vm.toString(abi.encode(address(d.poolRegistry))));
-        json = vm.serializeString(obj, "ctorArgs_refRegistry", vm.toString(abi.encode(cfg.gov)));
+        json = vm.serializeString(obj, "ctorArgs_refRegistry", vm.toString(abi.encode(gov)));
         json = vm.serializeString(obj, "ctorArgs_refEngine", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleDice", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleCoinToss", "0x");
@@ -427,29 +488,18 @@ contract DeployV16 is Script {
         json = vm.serializeString(obj, "ctorArgs_moduleSicBo", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleSlots", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleBaccarat", "0x");
-        string memory gameHubCtorArgs = _gameHubCtorArgs(cfg, d);
-        json = vm.serializeString(obj, "ctorArgs_gameHub", gameHubCtorArgs);
+        json = vm.serializeString(obj, "ctorArgs_gameHub", _gameHubCtorArgs(cfg, d));
         return json;
     }
 
     function _writePoolJson(
         string memory obj,
         string memory json,
-        DeployConfig memory cfg,
+        DeployConfig memory,
         PoolConfig[] memory pools,
         Deployed memory d
     ) internal returns (string memory) {
         json = vm.serializeUint(obj, "numPools", pools.length);
-
-        string[8] memory games =
-            [string("DICE"), "COIN_TOSS", "ROULETTE", "KENO", "PLINKO", "SIC_BO", "SLOTS", "BACCARAT"];
-        for (uint256 g; g < games.length; ++g) {
-            bytes32 id = keccak256(bytes(games[g]));
-            json = vm.serializeUint(obj, string.concat("gameMaxBetCount_", games[g]), d.gameHub.gameMaxBetCount(id));
-            json = vm.serializeUint(
-                obj, string.concat("gameCallbackGasLimit_", games[g]), d.gameHub.gameCallbackGasLimit(id)
-            );
-        }
         for (uint256 i = 0; i < pools.length; ++i) {
             string memory suffix = vm.toString(i);
             (string memory assetSymbol, uint8 assetDecimals) = _tryAssetMetadata(pools[i].asset);
@@ -483,14 +533,17 @@ contract DeployV16 is Script {
                 obj, string.concat("poolBankHoldbackVestingSeconds_", suffix), pools[i].holdbackVestingSeconds
             );
             json = vm.serializeUint(obj, string.concat("poolAssetDecimals_", suffix), pools[i].assetDecimals);
-            json = vm.serializeUint(obj, string.concat("poolActive_", suffix), 1);
 
             json = vm.serializeString(
                 obj,
                 string.concat("ctorArgs_bank_", suffix),
                 vm.toString(
                     abi.encode(
-                        pools[i].asset, cfg.gov, pools[i].riskReserveBps, pools[i].assetDecimals, pools[i].minBetAmount
+                        pools[i].asset,
+                        address(d.timelock),
+                        pools[i].riskReserveBps,
+                        pools[i].assetDecimals,
+                        pools[i].minBetAmount
                     )
                 )
             );
@@ -505,7 +558,7 @@ contract DeployV16 is Script {
                 address(d.vrf),
                 address(d.refRegistry),
                 address(d.refEngine),
-                cfg.gov,
+                address(d.timelock),
                 cfg.refundTimeoutSeconds,
                 cfg.defaultHouseEdgeBps,
                 cfg.refConfig.l0Bps,
@@ -514,15 +567,6 @@ contract DeployV16 is Script {
                 cfg.refConfig.holdbackBps
             )
         );
-    }
-
-    function _nominateGovernance(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d) internal {
-        d.poolRegistry.transferGovernance(cfg.finalGovernance);
-        d.refRegistry.transferGovernance(cfg.finalGovernance);
-        d.gameHub.transferGovernance(cfg.finalGovernance);
-        for (uint256 i; i < pools.length; ++i) {
-            Bank(pools[i].bank).transferGovernance(cfg.finalGovernance);
-        }
     }
 
     function _safeCreateDir(string memory path) internal {

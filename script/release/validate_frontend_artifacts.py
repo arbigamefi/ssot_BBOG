@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from export_frontend_abis import REQUIRED_CONTRACTS, _find_artifact, _load_abi_from_artifact, pool_instances
+from verify_governance import VerificationError, load_checkpoint
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -86,7 +87,7 @@ def _as_address(v: Any, *, field: str, path: Path) -> str:
 
 
 EXECUTION_ADDRESSES = (
-    "gov", "gameHub", "settlementRouter", "poolRegistry", "vrfHub", "refRegistry", "refEngine",
+    "gov", "governanceTimelock", "gameHub", "settlementRouter", "poolRegistry", "vrfHub", "refRegistry", "refEngine",
     "moduleDice", "moduleCoinToss", "moduleRoulette", "moduleKeno",
     "modulePlinko", "moduleSicBo", "moduleSlots", "moduleBaccarat",
 )
@@ -197,9 +198,8 @@ def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manif
         domain = _as_int(snapshot.get(f"poolDomain_{suffix}"), field=f"poolDomain_{suffix}", path=snapshot_path)
         if domain != 1:
             raise SystemExit(f"{snapshot_path}: poolDomain_{suffix} is not the casino domain")
-        active = _as_int(snapshot.get(f"poolActive_{suffix}"), field=f"poolActive_{suffix}", path=snapshot_path) != 0
-        if type(pool.get("active")) is not bool or pool["active"] != active:
-            raise SystemExit(f"{manifest_path}: pool active status does not match snapshot")
+        # Whether a pool takes bets is chain state (PoolRegistry.isPoolActive), which the release's activation
+        # operation changes after signing; the frontend reads it live.
         if pool.get("domain") != "Casino":
             raise SystemExit(f"{manifest_path}: pool domain label does not match snapshot")
 
@@ -210,13 +210,12 @@ def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manif
             )
 
 
-def _first_active_casino_pool(snapshot: Dict[str, Any], *, snapshot_path: Path) -> Tuple[int, int]:
+def _first_casino_pool(snapshot: Dict[str, Any], *, snapshot_path: Path) -> Tuple[int, int]:
     num_pools = _as_int(snapshot.get("numPools"), field="numPools", path=snapshot_path)
     for i in range(num_pools):
         suffix = str(i)
         domain = _as_int(snapshot.get(f"poolDomain_{suffix}"), field=f"poolDomain_{suffix}", path=snapshot_path)
-        active = _as_int(snapshot.get(f"poolActive_{suffix}"), field=f"poolActive_{suffix}", path=snapshot_path)
-        if domain == 1 and active != 0:
+        if domain == 1:
             pool_id = _as_int(snapshot.get(f"poolId_{suffix}"), field=f"poolId_{suffix}", path=snapshot_path)
             decimals = _as_int(
                 snapshot.get(f"poolAssetDecimals_{suffix}"),
@@ -226,7 +225,7 @@ def _first_active_casino_pool(snapshot: Dict[str, Any], *, snapshot_path: Path) 
             if decimals < 0 or decimals > 36:
                 raise SystemExit(f"{snapshot_path}: poolAssetDecimals_{suffix} out of range: {decimals}")
             return pool_id, decimals
-    raise SystemExit(f"{snapshot_path}: no active casino pool")
+    raise SystemExit(f"{snapshot_path}: no casino pool")
 
 
 def _validate_vectors(vectors: Dict[str, Any], snapshot: Dict[str, Any], *, vectors_path: Path, snapshot_path: Path) -> None:
@@ -234,7 +233,7 @@ def _validate_vectors(vectors: Dict[str, Any], snapshot: Dict[str, Any], *, vect
     if not isinstance(rows, list) or not rows:
         raise SystemExit(f"{vectors_path}: vectors must be a non-empty array")
 
-    expected_pool_id, expected_decimals = _first_active_casino_pool(snapshot, snapshot_path=snapshot_path)
+    expected_pool_id, expected_decimals = _first_casino_pool(snapshot, snapshot_path=snapshot_path)
     expected_amount_per_roll = 10 ** expected_decimals
 
     for i, vector in enumerate(rows):
@@ -369,11 +368,32 @@ def _validate_canonical_manifest(manifest: Dict[str, Any], *, manifest_path: Pat
         raise SystemExit(f"{manifest_path}: {where} differs from the manifest generated from the authenticated snapshot")
 
 
+def _validate_checkpoint(rel: Dict[str, Any], snapshot: Dict[str, Any], *, checkpoint_path: Path,
+                         release_path: Path) -> None:
+    """The governance checkpoint the record signs: its canonical digest, block and release."""
+    _require_keys(rel, keys=("checkpointSha256", "checkpointBlockNumber", "checkpointBlockHash"), path=release_path)
+    try:
+        document = load_checkpoint(checkpoint_path, str(rel["checkpointSha256"]).lower())
+    except (OSError, ValueError, VerificationError) as error:
+        raise SystemExit(f"{checkpoint_path}: governance checkpoint rejected: {error}")
+    signed = (_as_int(rel["checkpointBlockNumber"], field="checkpointBlockNumber", path=release_path),
+              str(rel["checkpointBlockHash"]).lower())
+    if (document.get("blockNumber"), document.get("blockHash")) != signed:
+        raise SystemExit(f"{checkpoint_path}: governance checkpoint block differs from the release record")
+    release = (snapshot.get("chainId"), snapshot.get("blockNumber"),
+               *(str(snapshot.get(key, "")).lower() for key in ("governanceTimelock", "poolRegistry", "gameHub")))
+    found = (document.get("chainId"), document.get("historyStart"),
+             *(document.get(key) for key in ("governanceTimelock", "poolRegistry", "gameHub")))
+    if found != release:
+        raise SystemExit(f"{checkpoint_path}: governance checkpoint belongs to another release")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--strict", default="0")
     ap.add_argument("--release", required=True)
     ap.add_argument("--snapshot", required=True)
+    ap.add_argument("--checkpoint", required=True)
     ap.add_argument("--notes", required=True)
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--vectors", required=True)
@@ -390,8 +410,10 @@ def main() -> None:
     manifest_path = Path(args.manifest)
     vectors_path = Path(args.vectors)
 
+    checkpoint_path = Path(args.checkpoint)
+
     if strict:
-        for p in (release_path, snapshot_path, notes_path, manifest_path, vectors_path):
+        for p in (release_path, snapshot_path, checkpoint_path, notes_path, manifest_path, vectors_path):
             if not p.exists():
                 raise SystemExit(f"missing required file: {p}")
 
@@ -416,6 +438,7 @@ def main() -> None:
             raise SystemExit(f"{artifact_path}: release identity mismatch")
     _require_keys(manifest, keys=manifest_keys, path=manifest_path)
     _require_keys(vectors, keys=("schemaVersion", "chainId", "blockNumber", "vectors"), path=vectors_path)
+    _validate_checkpoint(rel, snapshot, checkpoint_path=checkpoint_path, release_path=release_path)
 
     # Authenticate routes before using them to validate the ABI inventory.
     _validate_execution(manifest, snapshot, manifest_path=manifest_path, snapshot_path=snapshot_path)

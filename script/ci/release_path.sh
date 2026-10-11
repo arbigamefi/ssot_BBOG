@@ -7,8 +7,9 @@ set -euo pipefail
 #   bash script/ci/release_path.sh <producer> <gate> <image>
 #
 # Three checkouts of one commit:
-#   producer  deploys test/fixtures/ReleaseImportFixture.s.sol to a local node with Base's rules (chain 84532) and
-#             archives the fixture release the way a release asset is laid out (SOURCE_REVISION, MANIFEST.sha256);
+#   producer  deploys test/fixtures/ReleaseImportFixture.s.sol to a local node with Base's rules (chain 84532), wires
+#             it through the timelock and signs it (test/fixtures/release-import-fixture.sh), and archives the fixture
+#             release the way a release asset is laid out (SOURCE_REVISION, MANIFEST.sha256);
 #   gate      runs the offline steps of the release-gate job in .github/workflows/release.yml, in its order;
 #   image     runs the import step of .github/workflows/frontend-docker-images.yml.
 # gate and image must never have been built: the release check and the import have to build out/ themselves.
@@ -58,9 +59,7 @@ key=0x$(printf '%064x' 48879) # 0xBEEF, the fixture's public test key
 cast rpc --rpc-url "$rpc" anvil_setBalance "$(cast wallet address --private-key "$key")" 0x56bc75e2d63100000 > /dev/null
 cast rpc --rpc-url "$rpc" evm_mine > /dev/null # the snapshot's start block needs an observable predecessor
 fixture=deployments/release-path-fixture       # Forge scripts may write below deployments/ only
-if ! RELEASE_IMPORT_FIXTURE_DIR=$fixture RELEASE_IMPORT_ACCEPT_GOVERNANCE=true \
-  forge script test/fixtures/ReleaseImportFixture.s.sol:ReleaseImportFixture --rpc-url "$rpc" --broadcast --slow \
-  --private-key "$key" --non-interactive > "$work/fixture.log" 2>&1; then
+if ! bash test/fixtures/release-import-fixture.sh "$rpc" "$fixture" > "$work/fixture.log" 2>&1; then
   tail -n 40 "$work/fixture.log"
   fail "fixture deployment failed"
 fi
@@ -121,6 +120,7 @@ bash script/ci/install_deps.sh
 # Release lock must be present and valid: the job sets RELEASE_SIGNER and the input paths, not RPC_URL
 RELEASE_SIGNER=$signer CALLBACK_DOMAIN_PATH=$domain \
   RELEASE_PATH=$input/deployments/release-latest-v16.json SNAPSHOT_PATH=$input/deployments/latest-v16.json \
+  GOVERNANCE_CHECKPOINT_PATH=$input/deployments/governance-checkpoint-latest-v16.json \
   NOTES_PATH=$input/deployments/release-notes-latest-v16.md \
   FRONTEND_MANIFEST_PATH=$input/deployments/frontend-manifest-latest-v16.json \
   GOLDEN_VECTORS_PATH=$input/deployments/golden-vectors-latest-v16.json ABI_INDEX_PATH=$input/abis/index.json \

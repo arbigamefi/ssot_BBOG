@@ -28,7 +28,7 @@ LINES = {8453: "SSOT_RELEASE_DIGEST_V16", 84532: "SSOT_RELEASE_DIGEST_V16"}
 def verify_snapshot():
     """A v1.6 snapshot with five contracts to verify; the zero-address ones are skipped by the helper."""
     row = {"chainId": 84532, "architectureVersion": "v1.6-nft-liquidity", "numPools": 1}
-    for key in ("vrfHub", "poolRegistry", "settlementRouter", "refRegistry", "refEngine",
+    for key in ("governanceTimelock", "vrfHub", "poolRegistry", "settlementRouter", "refRegistry", "refEngine",
                 "gameHub", "poolBank_0", "poolVault_0", "moduleDice", "moduleCoinToss",
                 "moduleRoulette", "moduleKeno", "modulePlinko", "moduleSicBo", "moduleSlots", "moduleBaccarat"):
         row[key] = "0x" + "0" * 40
@@ -137,7 +137,7 @@ class SyncGuardTests(unittest.TestCase):
                 (bundle / "abis").mkdir()
                 common = {"chainId": 8453, "blockNumber": 100, "architectureVersion": "v1.6-nft-liquidity"}
                 rows = {"frontend-manifest-latest-v16.json": dict(common), "latest-v16.json": dict(common),
-                        "golden-vectors-latest-v16.json": dict(common),
+                        "golden-vectors-latest-v16.json": dict(common), "governance-checkpoint-latest-v16.json": {},
                         "release-latest-v16.json": {**common, "schema": "SSOT_RELEASE_DIGEST_V16"}}
                 if failure == "unknown-schema":
                     rows["release-latest-v16.json"]["schema"] = "SSOT_RELEASE_DIGEST_OTHER"
@@ -164,7 +164,7 @@ class EmbeddedSchemaGuardTests(unittest.TestCase):
         release = {"chainId": 84532, "isPlaceholder": False,
                    "meta": {"schemaVersion": 2, "architectureVersion": "v1.6-nft-liquidity",
                             "releaseLock": {"schema": "SSOT_RELEASE_DIGEST_V16"}},
-                   "contracts": {key: address(i + 1) for i, key in enumerate(("gameHub", "settlementRouter",
+                   "contracts": {key: address(i + 1) for i, key in enumerate(("governanceTimelock", "gameHub", "settlementRouter",
                                   "poolRegistry", "vrfHub", "refRegistry", "refEngine"))},
                    "assets": [{"symbol": "USDC", "decimals": 6}], "games": {"fixture": address(20)},
                    "gamesMeta": [{"maxBetCount": 25, "callbackGasLimit": 2_447_746}],
@@ -185,6 +185,7 @@ class EmbeddedSchemaGuardTests(unittest.TestCase):
             changed = copy.deepcopy(release); changed['pools'][0]['vault'] = address(31); cases.append(changed)
             changed = copy.deepcopy(release); changed['meta']['architectureVersion'] = 'v1.6-house-edge-allocation'; cases.append(changed)
             changed = copy.deepcopy(release); changed['contracts']['adapter'] = address(40); cases.append(changed)
+            changed = copy.deepcopy(release); del changed['contracts']['governanceTimelock']; cases.append(changed)
             for field in ('maxBetCount', 'callbackGasLimit'):
                 changed = copy.deepcopy(release); del changed['gamesMeta'][0][field]; cases.append(changed)
             for changed in cases:
@@ -204,7 +205,8 @@ class PackageGuardTests(unittest.TestCase):
         (root / "abis/GameHub.abi.json").write_text("[]")
         (root / "abis/index.json").write_text("{}")
         (root / "snapshot.json").write_text(json.dumps(verify_snapshot()))
-        (root / "release.json").write_text(json.dumps({"chainId": 84532, "blockNumber": 7, "digest": "0x" + "ab" * 32}))
+        (root / "release.json").write_text(json.dumps({"chainId": 84532, "blockNumber": 7, "digest": "0x" + "ab" * 32,
+                                                       "checkpointSha256": "0x" + "cd" * 32}))
         (root / "artifact.json").write_text("{}")
         (root / ".gitignore").write_text("/deployments/\n/dist/\n")
         subprocess.run(["git", "init", "-q"], cwd=root, check=True)
@@ -215,7 +217,8 @@ class PackageGuardTests(unittest.TestCase):
                 "RELEASE_SIGNER": "0x" + "2" * 40, "RELEASE_PATH": str(root / "release.json"),
                 "SNAPSHOT_PATH": str(root / "snapshot.json"), "ABIS_DIR": str(root / "abis"),
                 "ABIS_INDEX_PATH": str(root / "abis/index.json"),
-                **{key: str(root / "artifact.json") for key in ["NOTES_PATH", "FRONTEND_MANIFEST_PATH", "GOLDEN_VECTORS_PATH"]}}
+                **{key: str(root / "artifact.json") for key in ["NOTES_PATH", "FRONTEND_MANIFEST_PATH", "GOLDEN_VECTORS_PATH",
+                                                                "GOVERNANCE_CHECKPOINT_PATH"]}}
 
     def package(self, root, env):
         return subprocess.run(["bash", str(ROOT / "script/release/package_release.sh")], cwd=root, env=env,
@@ -240,6 +243,20 @@ class PackageGuardTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("complete permission boundary", (root / "governance-call.txt").read_text())
             self.assertFalse((root / "dist").exists())
+
+    def test_the_package_replays_from_the_signed_checkpoint_and_ships_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            env = self.source(root, "import json, os\nfrom pathlib import Path\n"
+                                    "Path('governance-env.json').write_text(json.dumps({k: os.environ.get(k) for k in "
+                                    "('GOVERNANCE_VERIFY_MODE', 'GOVERNANCE_CHECKPOINT', 'GOVERNANCE_CHECKPOINT_SHA256')}))\n")
+            result = self.package(root, env)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads((root / "governance-env.json").read_text()),
+                             {"GOVERNANCE_VERIFY_MODE": "release", "GOVERNANCE_CHECKPOINT": str(root / "artifact.json"),
+                              "GOVERNANCE_CHECKPOINT_SHA256": "0x" + "cd" * 32})
+            with tarfile.open(root / "dist/ssot-release-v1-0xabababab.tar.gz") as archive:
+                self.assertEqual(archive.extractfile("./deployments/governance-checkpoint-latest-v16.json").read(), b"{}")
 
     def test_existing_archive_is_never_rewritten(self):
         with tempfile.TemporaryDirectory() as directory:

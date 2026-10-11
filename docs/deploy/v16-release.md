@@ -29,15 +29,31 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    cooldown, game limits, edge allocation and refund timeouts. LP free capital is L−K with no extra
    percentage withdrawal buffer. The official deployment defaults are `riskReserveBps=6000` (60% retained
    for new-risk admission) and independent `withdrawalBufferBps=1000` (10% PF/XP collection buffer).
-   Reject missing Vault metadata instead of falling back to Bank.
+   Reject missing Vault metadata instead of falling back to Bank. The guardian (`GUARDIAN`, with its code, owners
+   and control hashes) must be a multisig with at least two signers, none of them a Safe signer.
+   The deployment follows ADR-0037 decision D1: the `GovernanceTimelock` is deployed first (delay 259,200 s,
+   proposer the Safe, cancellers the Safe and the guardian, anyone executes) and every governed contract is
+   constructed with it as governance, so the deploying key holds no role at any time and the script wires nothing.
+   Before anything is broadcast the script rehearses the two release operations on the simulated deployment (the
+   Safe schedules, 72 hours pass, anyone executes), checks the results as release verification does and restores
+   the simulated state; a batch that would revert or wire something else stops the deployment.
 2. Run `make deploy-v16` with the approved keystore account. Set `SNAPSHOT_PATH` to the generated
    snapshot. The command generates the verification helper from that snapshot using
    `script/tools/gen_verify_helpers.py`. Set `ETHERSCAN_V2_API_KEY` for verification;
    the helper uses the Etherscan V2 endpoint for the snapshot's chain and the default
    compilation profile. Include LiquidityVault source/constructor verification and authenticate
-   Bank↔Vault/asset addresses and both codehashes in the signed snapshot. Review and execute `make safe-acceptance-v16` with the Safe owners.
-3. Run `make release-v16` and then `make verify-v16` with the configured signer and network. A release contains a
-   signed digest, manifest, ABIs and encoding vectors. `make release-v16` runs `script/release/release_v16.sh` from a
+   Bank↔Vault/asset addresses and both codehashes in the signed snapshot.
+   Then run `make timelock-batches-v16` (`script/release/PrepareTimelockBatchesV16.s.sol`): on a fork with the
+   deployed addresses it rehearses what is left of both operations and writes
+   `deployments/safe-schedule-wiring-v16.json` and `deployments/safe-schedule-activation-v16.json` (Safe Transaction
+   Builder files, one `scheduleBatch` call on the timelock each) and `deployments/timelock-operations-v16.json` (every
+   call with its contract and function, both operation ids and states, and the `executeBatch` calldata). The Safe
+   owners review the calls and schedule the wiring; publish the operations file for the 72-hour review. The wiring
+   binds the routers, randomness consumers, guardians and sentinels, sets the Bank parameters that differ from the
+   constructor defaults, registers the pool, the hub, its route and the eight certified games, and leaves every pool
+   inactive. Anyone executes it once ready; LPs can then deposit and nobody can bet.
+3. Once the wiring has executed, run `make release-v16` and then `make verify-v16` with the configured signer and
+   network. A release contains a signed digest, manifest, ABIs and encoding vectors. `make release-v16` runs `script/release/release_v16.sh` from a
    clean checkout through `script/tools/with-ops-rpc.sh infura <network>` (inputs in its header): the governance and
    callback-domain checks, then the only signing step, then notes, manifest, vectors, ABIs, verification and the
    package. The keystore password is read from the terminal and must unlock `RELEASE_SIGNER` in
@@ -48,9 +64,18 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    transport failure. Each step's log is kept in `RELEASE_LOG_DIR` (default `dist/release-run-<UTC time>`) with the
    RPC URL and key replaced.
    Governance verification requires an RPC with historical code and complete authorization logs.
-   The signed start block must precede Registry/GameHub creation. The verifier replays all Hub/pool
-   grants, rejects any hub or route the release does not declare and checks the same frozen block in
-   Forge. Provider or coverage failure rejects the release.
+   The signed start block must precede the timelock's creation. The verifier replays the timelock's roles, delay
+   and operations and every authority event of PoolRegistry, GameHub, ReferralRegistry and each Bank, rejects any
+   hub, route, game, role or governance transfer the release does not declare and checks the same frozen block in
+   Forge (`VerifyGovernanceV16`). Provider or coverage failure rejects the release. `GOVERNANCE_VERIFY_MODE=release`
+   (the default, used for signing and the Release Gate) requires the pre-launch release state: the wiring executed
+   and nothing else, the activation at most scheduled, every pool inactive, no pause, disabled game or void window.
+   `GOVERNANCE_VERIFY_MODE=live` (the frontend import) checks a deployed release at any later time: the authority
+   exactly as released, reductions (a pause, an inactive pool, a deregistered hub or route, a disabled game)
+   reported as notes, and an active pool only after the release's activation executed.
+   The release record signs the governance checkpoint of the signing run (`checkpointSha256`, block and block hash)
+   together with the snapshot digest; the package ships it as `deployments/governance-checkpoint-latest-v16.json`,
+   and the Release Gate, the image import and the drift monitor replay from that block.
    Logs are read in pages of `GOVERNANCE_LOG_PAGE_BLOCKS` blocks (default 200, the Base public RPC limit). Transient
    provider failures (HTTP 408, 425, 429 and 5xx, dropped connections) are retried with backoff (`RPC_MAX_ATTEMPTS`,
    default 6; `RPC_BACKOFF_SECONDS`, default 1); errors name the HTTP status or JSON-RPC code, never the URL. Each run

@@ -170,6 +170,7 @@ jobs:
           {
             echo "RELEASE_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/release-latest-v16.json"
             echo "SNAPSHOT_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/latest-v16.json"
+            echo "GOVERNANCE_CHECKPOINT_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/governance-checkpoint-latest-v16.json"
             echo "NOTES_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/release-notes-latest-v16.md"
             echo "FRONTEND_MANIFEST_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/frontend-manifest-latest-v16.json"
             echo "GOLDEN_VECTORS_PATH=$GITHUB_WORKSPACE/deployments/.release-input/deployments/golden-vectors-latest-v16.json"

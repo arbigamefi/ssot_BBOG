@@ -18,7 +18,7 @@ REVISION = 'a' * 40
 def archive(path, *, revision=REVISION, extra=None):
     files = {name: b'{}' for name in (
         'deployments/latest-v16.json', 'deployments/release-latest-v16.json',
-        'deployments/release-notes-latest-v16.md', 'deployments/frontend-manifest-latest-v16.json',
+        'deployments/governance-checkpoint-latest-v16.json', 'deployments/release-notes-latest-v16.md', 'deployments/frontend-manifest-latest-v16.json',
         'deployments/golden-vectors-latest-v16.json', 'abis/index.json')}
     files['SOURCE_REVISION'] = revision.encode() + b'\n'
     files['MANIFEST.sha256'] = ''.join(f'{hashlib.sha256(data).hexdigest()}  {name}\n' for name, data in files.items()).encode()

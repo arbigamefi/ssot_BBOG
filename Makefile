@@ -130,13 +130,16 @@ verify-helpers-v16:
 
 
 # The only supported deployment/release line.
-.PHONY: deploy-v16 deploy-dryrun verify-v16 verify-helpers-v16 release-v16 release-governance-check release-domain-check safe-acceptance-v16
+.PHONY: deploy-v16 deploy-dryrun verify-v16 verify-helpers-v16 release-v16 release-governance-check release-domain-check timelock-batches-v16
 
 deploy-dryrun:
 	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV16.s.sol:DeployV16 --rpc-url "$$RPC_URL" -vvv
 
-safe-acceptance-v16:
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/PrepareSafeAcceptanceV16.s.sol:PrepareSafeAcceptanceV16 --rpc-url "$$RPC_URL" -vvv
+# The Safe's two timelock operations (ADR-0037 §9): rehearsed on a fork of RPC_URL with the deployed addresses, then
+# written as Safe Transaction Builder files and one operations file to publish for the 72-hour review.
+timelock-batches-v16:
+	@test -n "$$SNAPSHOT_PATH" -a -n "$$RPC_URL" || { echo "Set chain-specific SNAPSHOT_PATH and RPC_URL"; exit 1; }
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/PrepareTimelockBatchesV16.s.sol:PrepareTimelockBatchesV16 --rpc-url "$$RPC_URL" -vvv
 
 release-governance-check:
 	@test -n "$$SNAPSHOT_PATH" -a -n "$$RPC_URL" || { echo "Set chain-specific SNAPSHOT_PATH and RPC_URL"; exit 1; }

@@ -4,188 +4,54 @@ pragma solidity 0.8.37;
 import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 import "forge-std/console2.sol";
+import {V16ReleaseDigest} from "./V16ReleaseDigest.sol";
 
-/// @notice Verifies a v1.6 release digest + signature against a router/pool snapshot.
+/// @notice Verifies a v1.6 release record against its snapshot and governance checkpoint: both digests, the
+///         signature and the trusted signer. The checkpoint file's SHA-256 over its canonical JSON is checked by the
+///         Python release tools that read it (validate_frontend_artifacts.py, verify_governance.py).
 contract VerifyReleaseV16 is Script {
     using stdJson for string;
-
-    bytes32 internal constant SCHEMA = keccak256("SSOT_RELEASE_DIGEST_V16");
 
     function run() external view {
         string memory releasePath = vm.envOr("RELEASE_PATH", string("deployments/release-latest-v16.json"));
         string memory rel = _readFileOrDie(releasePath);
 
-        string memory snapshotPathFromRel = rel.readString(".snapshotPath");
-        string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", snapshotPathFromRel);
+        string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", rel.readString(".snapshotPath"));
         string memory snap = _readFileOrDie(snapshotPath);
+        string memory checkpointPath = vm.envOr("GOVERNANCE_CHECKPOINT_PATH", rel.readString(".checkpointPath"));
 
-        bytes32 schemaHash = rel.readBytes32(".schemaHash");
-        require(schemaHash == SCHEMA, "schema mismatch");
+        require(rel.readBytes32(".schemaHash") == V16ReleaseDigest.SCHEMA, "schema mismatch");
+        V16ReleaseDigest.Checkpoint memory checkpoint = V16ReleaseDigest.readCheckpoint(
+            snap, _readFileOrDie(checkpointPath), rel.readBytes32(".checkpointSha256")
+        );
+        require(
+            checkpoint.blockNumber == rel.readUint(".checkpointBlockNumber")
+                && checkpoint.blockHash == rel.readBytes32(".checkpointBlockHash"),
+            "checkpoint differs from the release record"
+        );
 
-        bytes32 digestExpected = rel.readBytes32(".digest");
-        address signerExpected = rel.readAddress(".signer");
-        uint8 v = uint8(rel.readUint(".v"));
-        bytes32 r = rel.readBytes32(".r");
-        bytes32 s = rel.readBytes32(".s");
+        bytes32 snapshotDigest = V16ReleaseDigest.snapshotDigest(snap);
+        require(snapshotDigest == rel.readBytes32(".snapshotDigest"), "digest mismatch");
+        bytes32 digest = V16ReleaseDigest.digest(snapshotDigest, checkpoint);
+        require(digest == rel.readBytes32(".digest"), "digest mismatch");
 
-        uint256 numPools = snap.readUint(".numPools");
-        require(numPools >= 1 && numPools <= 32, "numPools out of range");
-
-        bytes32 digestActual = _digestStatic(snap);
-        digestActual = _digestPools(digestActual, snap, numPools);
-        require(digestActual == digestExpected, "digest mismatch");
-
-        address recovered = ecrecover(digestActual, v, r, s);
-        require(signerExpected != address(0), "zero signer");
-        require(recovered == signerExpected, "signature mismatch");
-        require(signerExpected == snap.readAddress(".releaseSigner"), "snapshot signer mismatch");
-        require(signerExpected == vm.envAddress("RELEASE_SIGNER"), "release signer not trusted");
+        address signer = rel.readAddress(".signer");
+        require(signer != address(0), "zero signer");
+        require(
+            ecrecover(digest, uint8(rel.readUint(".v")), rel.readBytes32(".r"), rel.readBytes32(".s")) == signer,
+            "signature mismatch"
+        );
+        require(signer == snap.readAddress(".releaseSigner"), "snapshot signer mismatch");
+        require(signer == vm.envAddress("RELEASE_SIGNER"), "release signer not trusted");
         require(rel.readUint(".chainId") == snap.readUint(".chainId"), "release chain mismatch");
         require(rel.readUint(".blockNumber") == snap.readUint(".blockNumber"), "release block mismatch");
 
         console2.log("OK v1.6 release artifact verified");
         console2.log("release:", releasePath);
         console2.log("snapshot:", snapshotPath);
-        console2.log("signer:", signerExpected);
-        console2.log("digest:", vm.toString(digestActual));
-    }
-
-    function _digestStatic(string memory snap) internal pure returns (bytes32 digest) {
-        require(
-            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.6-nft-liquidity"),
-            "not a v1.6 snapshot"
-        );
-        digest = keccak256(abi.encode(SCHEMA, keccak256(bytes(snap.readString(".architectureVersion")))));
-        digest = keccak256(
-            abi.encode(
-                digest,
-                snap.readAddress(".bootstrapGovernance"),
-                snap.readAddress(".guardian"),
-                snap.readAddress(".keeper"),
-                snap.readAddress(".releaseSigner"),
-                snap.readBytes32(".safeOwnersHash"),
-                snap.readBytes32(".safeCodeHash"),
-                snap.readBytes32(".safeControlHash"),
-                snap.readBool(".initialRiskInPaused"),
-                keccak256(bytes(snap.readString(".bootstrapStatus")))
-            )
-        );
-
-        string[14] memory codeKeys = [
-            string("vrfHub"),
-            "poolRegistry",
-            "settlementRouter",
-            "refRegistry",
-            "refEngine",
-            "gameHub",
-            "moduleDice",
-            "moduleCoinToss",
-            "moduleRoulette",
-            "moduleKeno",
-            "modulePlinko",
-            "moduleSicBo",
-            "moduleSlots",
-            "moduleBaccarat"
-        ];
-        for (uint256 i; i < codeKeys.length; ++i) {
-            digest = keccak256(abi.encode(digest, snap.readBytes32(string.concat(".codeHash_", codeKeys[i]))));
-        }
-        digest = keccak256(
-            abi.encode(
-                digest,
-                snap.readUint(".chainId"),
-                snap.readUint(".blockNumber"),
-                snap.readUint(".timestamp"),
-                snap.readAddress(".deployer"),
-                snap.readAddress(".gov"),
-                snap.readAddress(".treasury")
-            )
-        );
-
-        digest = keccak256(abi.encode(digest, snap.readAddress(".vrfWrapper"), snap.readAddress(".vrfHub")));
-
-        digest = keccak256(
-            abi.encode(
-                digest,
-                snap.readAddress(".poolRegistry"),
-                snap.readAddress(".settlementRouter"),
-                snap.readAddress(".refRegistry"),
-                snap.readAddress(".refEngine"),
-                snap.readAddress(".gameHub")
-            )
-        );
-
-        digest = keccak256(
-            abi.encode(
-                digest,
-                snap.readAddress(".moduleDice"),
-                snap.readAddress(".moduleCoinToss"),
-                snap.readAddress(".moduleRoulette"),
-                snap.readAddress(".moduleKeno"),
-                snap.readAddress(".modulePlinko"),
-                snap.readAddress(".moduleSicBo"),
-                snap.readAddress(".moduleSlots"),
-                snap.readAddress(".moduleBaccarat")
-            )
-        );
-
-        digest = keccak256(
-            abi.encode(
-                digest,
-                snap.readUint(".refundTimeoutSeconds"),
-                snap.readUint(".defaultHouseEdgeBps"),
-                snap.readUint(".lpShareBps"),
-                snap.readUint(".refL0Bps"),
-                snap.readUint(".refL1Bps"),
-                snap.readUint(".refL2Bps"),
-                snap.readUint(".refHoldbackBps"),
-                snap.readUint(".numPools")
-            )
-        );
-        string[8] memory games =
-            [string("DICE"), "COIN_TOSS", "ROULETTE", "KENO", "PLINKO", "SIC_BO", "SLOTS", "BACCARAT"];
-        for (uint256 g; g < games.length; ++g) {
-            digest = keccak256(
-                abi.encode(
-                    digest,
-                    snap.readUint(string.concat(".gameMaxBetCount_", games[g])),
-                    snap.readUint(string.concat(".gameCallbackGasLimit_", games[g]))
-                )
-            );
-        }
-    }
-
-    function _digestPools(bytes32 digest, string memory snap, uint256 numPools) internal pure returns (bytes32) {
-        for (uint256 i = 0; i < numPools; ++i) {
-            string memory suffix = vm.toString(i);
-            digest = keccak256(
-                abi.encode(
-                    digest,
-                    snap.readUint(string.concat(".poolId_", suffix)),
-                    snap.readUint(string.concat(".poolDomain_", suffix)),
-                    snap.readAddress(string.concat(".poolAsset_", suffix)),
-                    snap.readAddress(string.concat(".poolBank_", suffix)),
-                    snap.readBytes32(string.concat(".codeHash_poolBank_", suffix)),
-                    snap.readAddress(string.concat(".poolVault_", suffix)),
-                    snap.readBytes32(string.concat(".codeHash_poolVault_", suffix)),
-                    snap.readUint(string.concat(".poolActive_", suffix))
-                )
-            );
-
-            digest = keccak256(
-                abi.encode(
-                    digest,
-                    snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix)),
-                    snap.readUint(string.concat(".poolBankMinBetAmount_", suffix)),
-                    snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix)),
-                    snap.readUint(string.concat(".poolBankMinTurnoverForUnlock_", suffix)),
-                    snap.readUint(string.concat(".poolBankHoldbackVestingSeconds_", suffix)),
-                    snap.readUint(string.concat(".poolAssetDecimals_", suffix)),
-                    keccak256(bytes(snap.readString(string.concat(".poolAssetSymbol_", suffix))))
-                )
-            );
-        }
-        return digest;
+        console2.log("checkpoint:", checkpointPath);
+        console2.log("signer:", signer);
+        console2.log("digest:", vm.toString(digest));
     }
 
     function _readFileOrDie(string memory path) internal view returns (string memory) {

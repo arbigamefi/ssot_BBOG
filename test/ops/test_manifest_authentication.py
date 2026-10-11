@@ -20,6 +20,7 @@ ANVIL_ARGS = next(line.split('=', 1)[1] for line in (ROOT / 'deps.lock').read_te
 sys.path.insert(0, str(ROOT / 'script/release'))
 from export_frontend_abis import REQUIRED_CONTRACTS, pool_instances
 from validate_frontend_artifacts import EXECUTION_ADDRESSES, GAMES, _game_id, _validate_execution
+from verify_governance import CHECKPOINT_SCHEMA, checkpoint_digest
 
 
 # What GenerateFrontendManifestV16 writes for each game besides the snapshot values.
@@ -41,7 +42,7 @@ def fixture():
     addresses = {key: address(i + 1) for i, key in enumerate(EXECUTION_ADDRESSES)}
     snapshot = {**common, **addresses, 'refundTimeoutSeconds': 3600,
                 'numPools': 1, 'poolAssetSymbol_0': 'USDC', 'poolAssetDecimals_0': 6, 'poolId_0': 1, 'poolDomain_0': 1,
-                'poolAsset_0': address(21), 'poolBank_0': address(22), 'poolVault_0': address(23), 'poolActive_0': 1}
+                'poolAsset_0': address(21), 'poolBank_0': address(22), 'poolVault_0': address(23)}
     for name, _, _ in GAMES:
         snapshot[f'gameMaxBetCount_{name}'] = 25
         snapshot[f'gameCallbackGasLimit_{name}'] = 2_447_746
@@ -49,17 +50,22 @@ def fixture():
                 'games': [{'slug': slug, 'gameId': _game_id(name), 'label': GAME_TEXT[name][0], 'module': addresses[key],
                            'maxBetCount': 25, 'callbackGasLimit': 2_447_746, 'paramsEncoding': GAME_TEXT[name][1]}
                           for name, slug, key in GAMES],
-                'pools': [{'poolId': 1, 'domainId': 1, 'domain': 'Casino', 'active': True, 'asset': address(21),
+                'pools': [{'poolId': 1, 'domainId': 1, 'domain': 'Casino', 'asset': address(21),
                            'bank': address(22), 'vault': address(23), 'decimals': 6, 'symbol': 'USDC'}]}
     digest = '0x' + 'a' * 64
-    release = {**common, 'schema': 'SSOT_RELEASE_DIGEST_V16', 'digest': digest}
+    checkpoint = {'schema': CHECKPOINT_SCHEMA, 'chainId': 84532, 'historyStart': 10,
+                  'governanceTimelock': addresses['governanceTimelock'], 'poolRegistry': addresses['poolRegistry'],
+                  'gameHub': addresses['gameHub'], 'blockNumber': 40, 'blockHash': '0x' + 'b' * 64, 'state': {}}
+    release = {**common, 'schema': 'SSOT_RELEASE_DIGEST_V16', 'digest': digest,
+               'checkpointSha256': '0x' + checkpoint_digest(checkpoint), 'checkpointBlockNumber': 40,
+               'checkpointBlockHash': '0x' + 'b' * 64}
     vectors = {**common, 'schemaVersion': 2, 'vectors': [{'poolId': 1, 'stakeSpec': {'amountPerRoll': 1_000_000}}]}
-    return snapshot, manifest, release, vectors
+    return snapshot, manifest, release, vectors, checkpoint
 
 
 class ManifestAuthenticationTests(unittest.TestCase):
     def test_matching_snapshot_still_rejects_round_limit_above_contract_cap(self):
-        snapshot, manifest, _, _ = fixture()
+        snapshot, manifest, _, _, _ = fixture()
         game_name = GAMES[0][0]
         for count in (25, 26, 100):
             snapshot[f'gameMaxBetCount_{game_name}'] = count
@@ -74,8 +80,9 @@ class ManifestAuthenticationTests(unittest.TestCase):
     def test_actual_strict_entrypoint_rejects_every_execution_address_and_game_mismatch(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            snapshot, manifest, release, vectors = fixture()
-            for name, data in [('snapshot', snapshot), ('release', release), ('vectors', vectors)]:
+            snapshot, manifest, release, vectors, checkpoint = fixture()
+            for name, data in [('snapshot', snapshot), ('release', release), ('vectors', vectors),
+                               ('checkpoint', checkpoint)]:
                 (root / f'{name}.json').write_text(json.dumps(data))
             (root / 'notes.md').write_text(release['digest'])
             rows = []
@@ -93,7 +100,8 @@ class ManifestAuthenticationTests(unittest.TestCase):
             (root / 'index.json').write_text(json.dumps({'schemaVersion': 2, 'architectureVersion': 'v1.6-nft-liquidity',
                                                          'chainId': 84532, 'blockNumber': 10, 'contracts': rows}))
             cmd = [sys.executable, str(ROOT / 'script/release/validate_frontend_artifacts.py'), '--strict', '1', '--out', str(root / 'out')]
-            for key, filename in [('release', 'release.json'), ('snapshot', 'snapshot.json'), ('notes', 'notes.md'),
+            for key, filename in [('release', 'release.json'), ('snapshot', 'snapshot.json'),
+                                  ('checkpoint', 'checkpoint.json'), ('notes', 'notes.md'),
                                   ('manifest', 'manifest.json'), ('vectors', 'vectors.json'), ('abis-index', 'index.json')]:
                 cmd += ['--' + key, str(root / filename)]
             def run(data):
@@ -119,7 +127,8 @@ class ManifestAuthenticationTests(unittest.TestCase):
                 for value in (None, True, 0, 2_447_747):
                     changed = copy.deepcopy(manifest); changed['games'][0][field] = value; cases.append(changed)
             changed = copy.deepcopy(manifest); del changed['pools'][0]['vault']; cases.append(changed)
-            changed = copy.deepcopy(manifest); changed['pools'][0]['active'] = False; cases.append(changed)
+            # Whether a pool takes bets is chain state, not release metadata.
+            changed = copy.deepcopy(manifest); changed['pools'][0]['active'] = True; cases.append(changed)
             changed = copy.deepcopy(manifest); changed['pools'][0]['vault'] = '0x' + 'f' * 40; cases.append(changed)
             changed = copy.deepcopy(manifest); changed['refundTimeoutSeconds'] = 1; cases.append(changed)
             for changed in cases:
@@ -152,8 +161,9 @@ class ManifestAuthenticationTests(unittest.TestCase):
 class SignedImportIntegrationTests(unittest.TestCase):
     """Real generators, signature verification and live local governance; no passing-check mocks.
 
-    SafeConfigMockV16 models the Safe configuration only. The actual Governable
-    contracts accept it locally; this test does not prove Safe quorum execution.
+    SafeConfigMockV16 models the Safe configuration only; this test does not prove Safe quorum execution. Both
+    loopback nodes receive the same deployment, so its addresses are the same on both: on one the wiring executes and
+    the release is signed, on the other the wiring stays scheduled (ADR-0037 §9).
     """
 
     @classmethod
@@ -173,18 +183,11 @@ class SignedImportIntegrationTests(unittest.TestCase):
             cls.rpc(endpoint, 'anvil_setBalance', [bootstrap, hex(100 * 10**18)])
             cls.rpc(endpoint, 'evm_mine')  # Snapshot start has an observable empty predecessor block.
             directory = cls.fixture_root if state == 'accepted' else cls.fixture_root / 'pending'
-            directory.mkdir(exist_ok=True)
-            env = {**os.environ, 'RELEASE_IMPORT_FIXTURE_DIR': str(directory),
-                   'RELEASE_IMPORT_ACCEPT_GOVERNANCE': str(state == 'accepted').lower()}
-            # --slow broadcasts one transaction at a time and waits for its receipt. Concurrent broadcast can leave
-            # Anvil 1.5.1 holding the next nonce as "queued" with automine never including it (seen 2026-10-09).
-            cls.run_checked(['forge', 'script', 'test/fixtures/ReleaseImportFixture.s.sol:ReleaseImportFixture',
-                             '--rpc-url', endpoint, '--broadcast', '--slow', '--private-key', fixture_key,
-                             '--non-interactive'], cwd=ROOT, env=env)
+            cls.run_checked(['bash', 'test/fixtures/release-import-fixture.sh', endpoint, str(directory),
+                             'release' if state == 'accepted' else 'deploy'], cwd=ROOT)
         cls.bundle = cls.fixture_root / 'bundle'
-        cls.pending_bundle = cls.fixture_root / 'pending/bundle'
         cls.wrong_precision = cls.fixture_root / 'wrong-precision/bundle'
-        for bundle in (cls.bundle, cls.pending_bundle, cls.wrong_precision):
+        for bundle in (cls.bundle, cls.wrong_precision):
             cls.run_checked([sys.executable, str(ROOT / 'script/release/export_frontend_abis.py'),
                              '--manifest', str(bundle / 'deployments/frontend-manifest-latest-v16.json'),
                              '--dest', str(bundle / 'abis')], cwd=ROOT)
@@ -322,7 +325,8 @@ class SignedImportIntegrationTests(unittest.TestCase):
         # Inspect only this owned loopback test's verifier output. The importer
         # intentionally exposes a safe stage label rather than raw RPC stderr.
         env = {**self.env, 'SNAPSHOT_PATH': str(bundle / 'deployments/latest-v16.json'),
-               'RELEASE_PATH': str(bundle / 'deployments/release-latest-v16.json')}
+               'RELEASE_PATH': str(bundle / 'deployments/release-latest-v16.json'),
+               'GOVERNANCE_CHECKPOINT_PATH': str(bundle / 'deployments/governance-checkpoint-latest-v16.json')}
         cmd = ['forge', 'script', f'script/release/{script}.s.sol:{script}']
         if script == 'VerifyGovernanceV16':
             cmd += ['--rpc-url', endpoint or self.accepted_rpc]
@@ -336,7 +340,7 @@ class SignedImportIntegrationTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('Release chain differs', result.stderr)
         self.assertEqual(self.files(self.active), self.original)
-        result = self.sync(self.pending_bundle, endpoint=self.pending_rpc, only_chain=self.snapshot['chainId'])
+        result = self.sync(self.bundle, endpoint=self.pending_rpc, only_chain=self.snapshot['chainId'])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("live governance failed", result.stderr)
         self.assertEqual(self.files(self.active), self.original)
@@ -437,13 +441,13 @@ class SignedImportIntegrationTests(unittest.TestCase):
         self.assert_rejected(bundle, 'live governance')
         self.assert_verifier_reason(bundle, 'VerifyGovernanceV16', 'bank precision mismatch')
 
-    def test_unaccepted_governance_rejects_at_live_governance(self):
-        # Each independent deployment is verified against its own signed code identities.
-        # Crossing snapshots between chains can reject at bytecode identity before testing governance.
+    def test_a_release_whose_wiring_has_not_executed_rejects_at_live_governance(self):
+        # The same deployment, addresses and code, with the wiring still waiting in the timelock: the signed
+        # checkpoint's block is not on that chain, and the state check names the missing wiring.
         bundle = self.root / 'changed-bundle'
-        shutil.copytree(self.pending_bundle, bundle)
+        shutil.copytree(self.bundle, bundle)
         self.assert_rejected(bundle, 'live governance', endpoint=self.pending_rpc)
-        self.assert_verifier_reason(bundle, 'VerifyGovernanceV16', 'governance not ready', endpoint=self.pending_rpc)
+        self.assert_verifier_reason(bundle, 'VerifyGovernanceV16', 'wiring not executed', endpoint=self.pending_rpc)
 
     def assert_refused(self, bundle, message):
         result = self.sync(bundle)

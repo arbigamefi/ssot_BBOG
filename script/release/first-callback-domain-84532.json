@@ -32,6 +32,12 @@
     "moduleBaccarat": "0x06b8941f39ce25b6fdc92114fd6278ffc6461e1a32a53a5a932762d943f88253"
   },
   "coreRuntimes": {
+    "GovernanceTimelock": {
+      "artifact": "GovernanceTimelock.sol:GovernanceTimelock",
+      "runtimeBytes": 5565,
+      "keccakWithImmutablesZeroed": "0xcb9c773592883f73362aeccb0cf60c97d15550b4de3d0bb64fcae4c504427830",
+      "immutables": []
+    },
     "VRFHub": {
       "artifact": "VRFHub.sol:VRFHub",
       "runtimeBytes": 6439,

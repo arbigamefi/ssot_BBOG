@@ -45,6 +45,7 @@ def unpack(bundle: Path, expected_digest: str, destination: Path, revision: str)
     if listed != actual:
         raise ValueError('bundle inventory mismatch')
     required = {'deployments/latest-v16.json', 'deployments/release-latest-v16.json',
+                'deployments/governance-checkpoint-latest-v16.json',
                 'deployments/release-notes-latest-v16.md', 'deployments/frontend-manifest-latest-v16.json',
                 'deployments/golden-vectors-latest-v16.json', 'abis/index.json'}
     if not required.issubset(files):

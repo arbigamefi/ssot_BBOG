@@ -57,7 +57,14 @@ fi
 
 echo "[fork gate] network=$NETWORK chainId=$CHAIN_ID wrapper=$WRAPPER"
 
-GOVERNANCE_RESULT=$(SNAPSHOT_PATH="$SNAPSHOT_PATH" RPC_URL="$RPC_URL" "${PYTHON:-python3}" script/release/verify_governance.py)
+# The pre-launch release state, replayed from the checkpoint the release record signs (STRICT=1 make release-check
+# verified the record and the checkpoint's digest before this step).
+RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v16.json}"
+GOVERNANCE_CHECKPOINT_PATH="${GOVERNANCE_CHECKPOINT_PATH:-deployments/governance-checkpoint-latest-v16.json}"
+CHECKPOINT_SHA256=$(jq -er '.checkpointSha256' "$RELEASE_PATH")
+GOVERNANCE_RESULT=$(SNAPSHOT_PATH="$SNAPSHOT_PATH" RPC_URL="$RPC_URL" GOVERNANCE_VERIFY_MODE=release \
+  GOVERNANCE_CHECKPOINT="$GOVERNANCE_CHECKPOINT_PATH" GOVERNANCE_CHECKPOINT_SHA256="$CHECKPOINT_SHA256" \
+  "${PYTHON:-python3}" script/release/verify_governance.py)
 BLOCK_NUMBER=$(jq -er --argjson chain "$CHAIN_ID" \
   'select(.status == "verified" and .chainId == $chain and .blockNumber > 0) | .blockNumber' <<<"$GOVERNANCE_RESULT")
 

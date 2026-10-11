@@ -4,6 +4,7 @@ import path from "node:path";
 const STRICT = process.env.STRICT_RELEASE === "1";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const REQUIRED_CORE_CONTRACTS = [
+  "governanceTimelock",
   "gameHub",
   "settlementRouter",
   "poolRegistry",

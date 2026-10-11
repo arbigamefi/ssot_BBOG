@@ -7,6 +7,8 @@ PYTHON="${PYTHON:-python}"
 RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v16.json}"
 SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v16.json}"
 NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v16.md}"
+# The governance checkpoint the record signs (verify_governance.py output at signing).
+GOVERNANCE_CHECKPOINT_PATH="${GOVERNANCE_CHECKPOINT_PATH:-deployments/governance-checkpoint-latest-v16.json}"
 
 # "Latest" pointers (frontend consumes these)
 FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v16.json}"
@@ -17,6 +19,7 @@ if [[ "$STRICT" == "1" ]]; then
   [[ -f "$RELEASE_PATH" ]] || { echo "missing release artifact: $RELEASE_PATH"; exit 1; }
   [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing snapshot: $SNAPSHOT_PATH"; exit 1; }
   [[ -f "$NOTES_PATH" ]] || { echo "missing release notes: $NOTES_PATH"; exit 1; }
+  [[ -f "$GOVERNANCE_CHECKPOINT_PATH" ]] || { echo "missing governance checkpoint: $GOVERNANCE_CHECKPOINT_PATH"; exit 1; }
   [[ -f "$FRONTEND_MANIFEST_PATH" ]] || { echo "missing frontend manifest: $FRONTEND_MANIFEST_PATH"; exit 1; }
   [[ -f "$GOLDEN_VECTORS_PATH" ]] || { echo "missing golden vectors: $GOLDEN_VECTORS_PATH"; exit 1; }
   [[ -f "$ABI_INDEX_PATH" ]] || { echo "missing abis index: $ABI_INDEX_PATH (run: make release-abis)"; exit 1; }
@@ -42,13 +45,14 @@ FOUNDRY_PROFILE="${VERIFY_PROFILE:-default}" forge build src
   --strict "$STRICT" \
   --release "$RELEASE_PATH" \
   --snapshot "$SNAPSHOT_PATH" \
+  --checkpoint "$GOVERNANCE_CHECKPOINT_PATH" \
   --notes "$NOTES_PATH" \
   --manifest "$FRONTEND_MANIFEST_PATH" \
   --vectors "$GOLDEN_VECTORS_PATH" \
   --abis-index "$ABI_INDEX_PATH"
 
 # Verify digest + signature deterministically (no RPC needed).
-RELEASE_PATH="$RELEASE_PATH" SNAPSHOT_PATH="$SNAPSHOT_PATH" \
+RELEASE_PATH="$RELEASE_PATH" SNAPSHOT_PATH="$SNAPSHOT_PATH" GOVERNANCE_CHECKPOINT_PATH="$GOVERNANCE_CHECKPOINT_PATH" \
   forge script script/release/VerifyReleaseV16.s.sol:VerifyReleaseV16 -vvv
 
 # The snapshot must lie inside its chain's accepted first-callback certificate domain (no RPC needed).

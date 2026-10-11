@@ -50,4 +50,40 @@ library SafeGovernance {
         require(modules.length == 0 && next == address(1), "Safe modules not allowed");
         require(controlHash(safe) == expectedControls, "Safe controls mismatch");
     }
+
+    /// @notice The guardian (ADR-0037 §2): a multisig of its own, never an EOA, whose signers are not Safe signers, so
+    ///         the timelock's second canceller and every Bank's pause key stay independent of the proposer.
+    function validateGuardian(
+        address guardian,
+        address safe,
+        bytes32 ownersHash,
+        bytes32 codeHash,
+        bytes32 expectedControls
+    ) internal view {
+        require(guardian != address(0) && guardian != safe, "guardian must be a multisig separate from the Safe");
+        require(
+            guardian.code.length != 0 && codeHash != bytes32(0) && guardian.codehash == codeHash,
+            "guardian code mismatch"
+        );
+        address[] memory owners = ISafeGovernance(guardian).getOwners();
+        uint256 threshold = ISafeGovernance(guardian).getThreshold();
+        require(threshold >= 2 && owners.length >= threshold, "guardian must be a multisig");
+        address[] memory safeOwners = ISafeGovernance(safe).getOwners();
+        for (uint256 i; i < owners.length; ++i) {
+            require(
+                owners[i] != address(0) && owners[i] != address(1) && owners[i] != guardian && owners[i] != safe,
+                "invalid guardian owner"
+            );
+            for (uint256 j; j < i; ++j) {
+                require(owners[i] != owners[j], "duplicate guardian owner");
+            }
+            for (uint256 j; j < safeOwners.length; ++j) {
+                require(owners[i] != safeOwners[j], "guardian signer is a Safe signer");
+            }
+        }
+        require(ownersHash == keccak256(abi.encode(owners, threshold)), "guardian owners mismatch");
+        (address[] memory modules, address next) = ISafeGovernance(guardian).getModulesPaginated(address(1), 1);
+        require(modules.length == 0 && next == address(1), "guardian modules not allowed");
+        require(controlHash(guardian) == expectedControls, "guardian controls mismatch");
+    }
 }

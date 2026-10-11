@@ -267,13 +267,24 @@ deployer holds no power at any time.
 2. Replay the wiring batch on a fork with the actual addresses, then the Safe schedules it on T and publishes the calldata
    for the 72-hour review: `setBinderOnce`, `setSettlementRouterOnce`, `setRandomnessConsumerOnce`, `setGuardian`,
    `setSentinel` ×3, `setWithdrawalBufferBps`, `registerPool`, `setHubRegistered`, `setHubAllowedForPool`, eight
-   `registerGame`, then `setPoolActive(false)`.
+   `registerGame`, then `setPoolActive(false)`. Each Bank setter joins the batch only when the release value differs
+   from the constructor default (withdrawal buffer equal to the risk reserve, holdback vesting 30 days, no unlock
+   turnover), so the release values add `setMinPlayerTurnoverForUnlock` (20 USDC) and `setHoldbackVestingSeconds`
+   (one day) to the list (A11).
 3. Anyone executes it after 72 hours. Before that nothing can take risk: the Bank has no router and the registry has no
    pool. Afterwards LPs can deposit while the pool is inactive; activation is a second 72-hour operation.
 4. Release verification replays `RoleGranted` from T's creation block. The pre-launch release state becomes "pool
    inactive, Bank unpaused", so `script/release/V16Snapshot.sol:109, 127` change with A11.
 
 A batch that executes but is wrong consumes the one-shot setters and means a redeploy.
+
+Tooling (A11): `script/release/V16Batches.sol` derives both operations from the deployment snapshot (fixed salts; the
+activation names the wiring as its predecessor, so it cannot execute first even when both are scheduled together), and
+the snapshot records and the release digest signs both operation ids. `DeployV16` rehearses both operations on the
+simulated deployment before broadcasting; `PrepareTimelockBatchesV16` rehearses them on a fork with the deployed
+addresses and writes the Safe's files and the operations file for the review. Whether a pool takes bets is chain state
+after the activation, so the frontend manifest no longer carries a pool activity flag; the frontend reads
+`isPoolActive` live.
 
 Not used (plan §10 before this decision): the deployer wires the system, transfers governance and the Safe queues the four
 `acceptGovernance` calls. The deployer key then remains governance for at least 72 hours and the release must prove from

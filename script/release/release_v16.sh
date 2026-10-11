@@ -13,6 +13,11 @@ set -uo pipefail
 #   release-notes, release-frontend-manifest, release-golden-vectors, release-abis   local and deterministic
 #   release-verify, release-package                  read the chain; retried, but only after a transport failure
 #
+# The governance check verifies the pre-launch release state (verify_governance.py, release mode: the wiring executed,
+# the activation not yet) and writes its checkpoint. The record signs that checkpoint too: GOVERNANCE_CHECKPOINT_PATH
+# (default deployments/governance-checkpoint-latest-v16.json) receives it when a record is signed, and the package ships
+# it, so the Release Gate, the image import and the drift monitor replay from the signed block instead of deployment.
+#
 # Signing. The password is read from the terminal itself, so the prompt shows even though the wrapper's redacting
 # pipe holds output back until a line ends. It must unlock RELEASE_SIGNER in `cast wallet address` before anything is
 # signed: forge's own prompt reports a wrong password only as "vm.sign: no wallets available". Three wrong passwords
@@ -23,8 +28,9 @@ set -uo pipefail
 #
 # Inputs: SNAPSHOT_PATH; RELEASE_SIGNER; RELEASE_ACCOUNT (keystore name in ~/.foundry/keystores) or RELEASE_KEYSTORE
 # (keystore file); the RPC as OPS_RPC_URL (set by the wrapper; it wins) or RPC_URL. Optional: TAG_NAME, GIT_SHA (must be
-# HEAD), RELEASE_PATH (default deployments/release-latest-v16.json), RELEASE_LOG_DIR (default
-# dist/release-run-<UTC time>), RELEASE_STEP_ATTEMPTS (8), RELEASE_RETRY_SECONDS (3, times the attempt number).
+# HEAD), RELEASE_PATH (default deployments/release-latest-v16.json), GOVERNANCE_CHECKPOINT_PATH (see above),
+# RELEASE_LOG_DIR (default dist/release-run-<UTC time>), RELEASE_STEP_ATTEMPTS (8), RELEASE_RETRY_SECONDS (3, times the
+# attempt number).
 # Each step's output goes to its own log in RELEASE_LOG_DIR with the RPC URL and its key replaced; the directory must
 # be new or empty.
 
@@ -63,7 +69,9 @@ profile=${VERIFY_PROFILE:-default}
 
 # ReleaseDigestV16 writes RELEASE_OUTPUT_PATH; VerifyReleaseV16 and the package read RELEASE_PATH.
 RELEASE_PATH=${RELEASE_PATH:-deployments/release-latest-v16.json}
+GOVERNANCE_CHECKPOINT_PATH=${GOVERNANCE_CHECKPOINT_PATH:-deployments/governance-checkpoint-latest-v16.json}
 export SNAPSHOT_PATH RPC_URL RELEASE_SIGNER RELEASE_PATH RELEASE_OUTPUT_PATH="$RELEASE_PATH" GIT_SHA="$head_sha"
+export GOVERNANCE_CHECKPOINT_PATH GOVERNANCE_VERIFY_MODE=release
 
 log_dir=${RELEASE_LOG_DIR:-dist/release-run-$(date -u +%Y%m%dT%H%M%SZ)}
 [[ ! -e "$log_dir" || -z "$(ls -A "$log_dir" 2>/dev/null)" ]] ||
@@ -117,6 +125,7 @@ chain_step() { # make target that reads the chain
     log="$log_dir/$target.$k.log"
     if logged "$log" make "$target"; then
       echo "$target: pass (attempt $k)"
+      step_log=$log
       return 0
     fi
     grep -qiE "$transport" "$log" || { show_failure "$target" "$log"; return 1; }
@@ -133,8 +142,20 @@ local_step() { # make target that needs no chain access
   echo "$1: pass"
 }
 
+# The digest of the checkpoint the governance step of this run wrote, from its result line.
+checkpoint_sha() {
+  python3 -I -c '
+import json, re, sys
+for line in reversed(open(sys.argv[1]).read().splitlines()):
+    if line.startswith("{"):
+        result = json.loads(line)
+        if result.get("status") == "verified" and re.fullmatch(r"[0-9a-f]{64}", result.get("checkpointSha256", "")):
+            print(result["checkpointSha256"]); sys.exit(0)
+sys.exit(1)' "$1"
+}
+
 sign_once() {
-  local log="$log_dir/signing.log" check="$log_dir/signing-existing-record.log" k got status password reason
+  local log="$log_dir/signing.log" check="$log_dir/signing-existing-record.log" k got status password reason sha
   if [[ -e "$RELEASE_PATH" ]]; then
     if logged "$check" env FOUNDRY_PROFILE="$profile" \
       forge script script/release/VerifyReleaseV16.s.sol:VerifyReleaseV16; then
@@ -146,6 +167,9 @@ sign_once() {
     echo "signing: ${reason:-VerifyReleaseV16 failed} (log: $check)"
     return 1
   fi
+  # The record signs the checkpoint this run verified; a checkpoint left by an earlier unsigned attempt is replaced.
+  sha=$(checkpoint_sha "$governance_log") || { echo "signing: the governance check reported no checkpoint"; return 1; }
+  cp "$log_dir/governance-checkpoint.json" "$GOVERNANCE_CHECKPOINT_PATH" || return 1
   if ! { : < /dev/tty; } 2>/dev/null; then
     echo "signing: no terminal to read the keystore password from; nothing was signed"
     return 1
@@ -171,7 +195,8 @@ sign_once() {
     ((k < 3)) || { echo "signing: nothing was signed"; return 1; }
   done
   echo "signing: the keystore unlocks $RELEASE_SIGNER; signing once"
-  logged "$log" env FOUNDRY_PROFILE="$profile" forge script script/release/ReleaseDigestV16.s.sol:ReleaseDigestV16 \
+  logged "$log" env FOUNDRY_PROFILE="$profile" GOVERNANCE_CHECKPOINT_SHA256="0x$sha" \
+    forge script script/release/ReleaseDigestV16.s.sol:ReleaseDigestV16 \
     "${wallet[@]}" --password-file "$password_dir/password" -vvv
   status=$?
   rm -rf "$password_dir"
@@ -181,7 +206,10 @@ sign_once() {
 }
 
 echo "release-v16: commit $head_sha, snapshot $SNAPSHOT_PATH, logs in $log_dir"
+export GOVERNANCE_CHECKPOINT_OUT="$log_dir/governance-checkpoint.json"
 chain_step release-governance-check || exit 1
+unset GOVERNANCE_CHECKPOINT_OUT
+governance_log=$step_log
 chain_step release-domain-check || exit 1
 sign_once || exit 1
 for target in release-notes release-frontend-manifest release-golden-vectors release-abis; do

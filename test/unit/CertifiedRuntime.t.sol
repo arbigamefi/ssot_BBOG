@@ -4,8 +4,7 @@ pragma solidity 0.8.37;
 import "forge-std/Test.sol";
 import "forge-std/StdJson.sol";
 import {CertifiedRuntime} from "../../script/release/CertifiedRuntime.sol";
-import {DeployHarnessV16, SafeConfigMockV16} from "./DeploymentV16.t.sol";
-import {MockERC20} from "../../src/mocks/MockERC20.sol";
+import {ReleaseV16Fixture} from "../utils/ReleaseV16Fixture.sol";
 import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 
 contract CertifiedRuntimeHarness {
@@ -18,62 +17,20 @@ contract CertifiedRuntimeHarness {
 ///         every pinned contract passes with its immutable slots holding the release values, and a changed byte,
 ///         a changed immutable value or a different length is rejected. This also proves the immutable slot
 ///         mapping that gen_certified_runtimes.py derived from the artifacts' AST-id order.
-contract CertifiedRuntimeTest is Test {
+contract CertifiedRuntimeTest is ReleaseV16Fixture {
     using stdJson for string;
 
-    DeployHarnessV16 internal deployer;
-    SafeConfigMockV16 internal safe;
     CertifiedRuntimeHarness internal harness;
-    MockERC20 internal asset;
-    address internal bootstrap;
     string internal dom;
     string internal snap;
 
     function setUp() public {
-        bootstrap = vm.addr(0xBEEF);
-        vm.deal(bootstrap, 100 ether);
-        safe = new SafeConfigMockV16();
-        asset = new MockERC20("Test USD", "TUSD", 6);
-        deployer = new DeployHarnessV16();
+        _setUpRelease();
         harness = new CertifiedRuntimeHarness();
         dom = vm.readFile("script/release/first-callback-domain-84532.json");
-        _configureEnv();
-        deployer.run();
-        snap = deployer.snapshot();
-    }
-
-    function _configureEnv() internal {
-        vm.setEnv("DEPLOYER", vm.toString(bootstrap));
-        vm.setEnv("CHAIN_ID", vm.toString(block.chainid));
-        vm.setEnv("GOV", vm.toString(address(safe)));
-        vm.setEnv("GUARDIAN", vm.toString(address(77)));
-        vm.setEnv("KEEPER_ADDRESS", vm.toString(address(78)));
-        vm.setEnv("RELEASE_SIGNER", vm.toString(address(79)));
-        vm.setEnv("SAFE_CODE_HASH", vm.toString(address(safe).codehash));
-        vm.setEnv(
-            "SAFE_CONTROL_HASH",
-            vm.toString(
-                keccak256(abi.encode(address(safe), address(safe).codehash, address(0), address(0), bytes32(0)))
-            )
-        );
-        vm.setEnv("SAFE_OWNERS_HASH", vm.toString(keccak256(abi.encode(safe.getOwners(), uint256(2)))));
-        vm.setEnv("VRF_WRAPPER", vm.toString(address(new MockVRFV2PlusWrapper())));
-        string[8] memory games =
-            [string("DICE"), "COIN_TOSS", "ROULETTE", "KENO", "PLINKO", "SIC_BO", "SLOTS", "BACCARAT"];
-        for (uint256 i; i < games.length; ++i) {
-            vm.setEnv(string.concat("GAME_MAX_BET_COUNT_", games[i]), "25");
-            vm.setEnv(string.concat("GAME_CALLBACK_GAS_LIMIT_", games[i]), "2447746");
-        }
-        vm.setEnv("NUM_POOLS", "2");
-        vm.setEnv("BANK_MIN_BET_AMOUNT_0", "10000");
-        vm.setEnv("BANK_MIN_BET_AMOUNT_1", "10000");
-        vm.setEnv("POOL_ASSET_0", vm.toString(address(asset)));
-        vm.setEnv("POOL_ASSET_1", vm.toString(address(asset)));
-        vm.setEnv("POOL_ID_0", "1");
-        vm.setEnv("POOL_ID_1", "3");
-        vm.setEnv("DEFAULT_HOUSE_EDGE_BPS", "200");
-        vm.setEnv("REFUND_TIMEOUT_SECONDS", "3600");
-        vm.setEnv("WRITE_DRY_RUN_ARTIFACTS", "false");
+        snap = _deploy();
+        // The referral binder is part of the wiring batch.
+        _wire(snap);
     }
 
     function test_deploymentOfThisBuildMatchesTheCertifiedRuntimes() public view {
@@ -83,7 +40,8 @@ contract CertifiedRuntimeTest is Test {
     function test_everyPinnedImmutableSlotHoldsTheReleaseValue() public view {
         // Each pinned slot of each deployed core contract holds the value the release snapshot assigns to that
         // immutable, and every one of those values (the mock wrapper's LINK token included) is a nonzero word, so a
-        // wrong slot mapping cannot hide behind a zero placeholder.
+        // wrong slot mapping cannot hide behind a zero placeholder. The timelock has no immutables.
+        assertFalse(vm.keyExistsJson(dom, ".coreRuntimes.GovernanceTimelock.immutables[0]"));
         _slotsMatch("vrfHub", "VRFHub", "");
         _slotsMatch("gameHub", "GameHub", "");
         _slotsMatch("settlementRouter", "SettlementRouter", "");
@@ -162,6 +120,15 @@ contract CertifiedRuntimeTest is Test {
         address router = snap.readAddress(".settlementRouter");
         vm.etch(router, abi.encodePacked(router.code, hex"00"));
         vm.expectRevert(bytes("SettlementRouter runtime length differs from the certified build"));
+        harness.verify(snap, dom);
+    }
+
+    function test_rejectsAChangedTimelockRuntime() public {
+        address timelock = snap.readAddress(".governanceTimelock");
+        bytes memory code = timelock.code;
+        code[code.length - 1] = bytes1(uint8(code[code.length - 1]) ^ 0x01);
+        vm.etch(timelock, code);
+        vm.expectRevert(bytes("GovernanceTimelock runtime is not the certified code"));
         harness.verify(snap, dom);
     }
 

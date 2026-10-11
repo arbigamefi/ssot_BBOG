@@ -19,6 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 # contract: (snapshot key or pool key family, [expected value of each immutable slot, in AST-id order])
 CORE = {
+    'GovernanceTimelock': [],
     'VRFHub': ['wrapperLink', 'vrfWrapper', 'settlementRouter'],
     'GameHub': ['settlementRouter', 'vrfHub', 'refRegistry', 'refEngine'],
     'SettlementRouter': ['poolRegistry'],

@@ -242,14 +242,13 @@ contract GenerateGoldenVectorsV16 is Script {
         for (uint256 i = 0; i < numPools; i++) {
             string memory suffix = vm.toString(i);
             uint256 domainId = snap.readUint(string.concat(".poolDomain_", suffix));
-            uint256 activeRaw = snap.readUint(string.concat(".poolActive_", suffix));
-            if (domainId == DOMAIN_CASINO && activeRaw != 0) {
+            if (domainId == DOMAIN_CASINO) {
                 uint256 poolId = snap.readUint(string.concat(".poolId_", suffix));
                 require(poolId <= type(uint64).max, "poolId too large");
                 return uint64(poolId);
             }
         }
-        revert("no active casino pool");
+        revert("no casino pool");
     }
 
     function _readAssetDecimalsForPool(string memory snap, uint64 poolId) internal view returns (uint8 dec) {

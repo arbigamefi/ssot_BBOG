@@ -3,10 +3,11 @@ pragma solidity 0.8.37;
 
 import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
-import {SafeConfigMockV16, DeployHarnessV16} from "../unit/DeploymentV16.t.sol";
+import {DeployHarnessV16, ReleaseV16Env, SafeConfigMockV16} from "../utils/ReleaseV16Fixture.sol";
 import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
-import {Governable} from "../../src/access/Governable.sol";
+import {GovernanceTimelock} from "../../src/access/GovernanceTimelock.sol";
+import {V16Batches} from "../../script/release/V16Batches.sol";
 import {V16Snapshot} from "../../script/release/V16Snapshot.sol";
 import {ReleaseDigestV16} from "../../script/release/ReleaseDigestV16.s.sol";
 import {VerifyReleaseV16} from "../../script/release/VerifyReleaseV16.s.sol";
@@ -14,69 +15,31 @@ import {GenerateFrontendManifestV16} from "../../script/release/GenerateFrontend
 import {GenerateGoldenVectorsV16} from "../../script/release/GenerateGoldenVectorsV16.s.sol";
 import {GenerateReleaseNotesV16} from "../../script/release/GenerateReleaseNotesV16.s.sol";
 
-/// @dev Test-only acceptance transport, not a Safe quorum or custody implementation.
-contract ReleaseImportSafeMock is SafeConfigMockV16 {
-    function acceptTargets(address[] calldata targets) external {
-        for (uint256 i; i < targets.length; ++i) {
-            Governable(targets[i]).acceptGovernance();
-        }
-    }
-}
-
-/// @dev Local-only import fixture. It executes the real deployment and release scripts.
-/// SafeConfigMockV16 checks configuration; this does not exercise Safe quorum signatures.
+/// @dev Local-only release fixture. It executes the real deployment, the timelock wiring and the release scripts on a
+///      loopback node, in the phases test/fixtures/release-import-fixture.sh drives (the node's clock has to move 72
+///      hours between scheduling and execution, which a single script run cannot do):
+///
+///      deploy  mocks for the Safe, the guardian, the token and the VRF wrapper; the v1.6 deployment; the Safe
+///              schedules the wiring. Writes <dir>/snapshot.json.
+///      wire    anyone executes the wiring; the chain must then be in the pre-launch release state.
+///      bundle  signs the release record over the snapshot and the governance checkpoint the driver verified
+///              (GOVERNANCE_CHECKPOINT_PATH, GOVERNANCE_CHECKPOINT_SHA256) and writes the bundle, plus a correctly
+///              signed bundle with a wrong asset precision.
+///
+///      SafeConfigMockV16 checks configuration; this does not exercise Safe quorum signatures.
 contract ReleaseImportFixture is Script {
     using stdJson for string;
 
+    uint256 internal constant FIXTURE_KEY = 0xBEEF;
+    uint256 internal constant SIGNER_KEY = 0xA11CE;
+
     function run() external {
         string memory directory = vm.envString("RELEASE_IMPORT_FIXTURE_DIR");
-        address bootstrap = vm.addr(0xBEEF);
-        // Public test key, remembered only in this simulated local script process.
-        address signer = vm.rememberKey(0xA11CE);
-        // The Python test broadcasts these transactions to its own empty loopback
-        // Anvil, preserving creation blocks and authorization logs for the verifier.
-        vm.startBroadcast(bootstrap);
-        ReleaseImportSafeMock safe = new ReleaseImportSafeMock();
-        MockERC20 asset = new MockERC20("Test USD", "TUSD", 6);
-        MockVRFV2PlusWrapper wrapper = new MockVRFV2PlusWrapper();
-        vm.stopBroadcast();
-        vm.setEnv("DEPLOYER", vm.toString(bootstrap));
-        vm.setEnv("CHAIN_ID", vm.toString(block.chainid));
-        vm.setEnv("GOV", vm.toString(address(safe)));
-        vm.setEnv("GUARDIAN", vm.toString(address(77)));
-        vm.setEnv("KEEPER_ADDRESS", vm.toString(address(78)));
-        vm.setEnv("RELEASE_SIGNER", vm.toString(signer));
-        vm.setEnv("SAFE_CODE_HASH", vm.toString(address(safe).codehash));
-        vm.setEnv(
-            "SAFE_CONTROL_HASH",
-            vm.toString(
-                keccak256(abi.encode(address(safe), address(safe).codehash, address(0), address(0), bytes32(0)))
-            )
-        );
-        vm.setEnv("SAFE_OWNERS_HASH", vm.toString(keccak256(abi.encode(safe.getOwners(), uint256(2)))));
-        vm.setEnv("VRF_WRAPPER", vm.toString(address(wrapper)));
-        string[8] memory games =
-            [string("DICE"), "COIN_TOSS", "ROULETTE", "KENO", "PLINKO", "SIC_BO", "SLOTS", "BACCARAT"];
-        for (uint256 i; i < games.length; ++i) {
-            vm.setEnv(string.concat("GAME_MAX_BET_COUNT_", games[i]), "25");
-            vm.setEnv(string.concat("GAME_CALLBACK_GAS_LIMIT_", games[i]), "2447746");
-        }
-        vm.setEnv("NUM_POOLS", "1");
-        vm.setEnv("POOL_ASSET_0", vm.toString(address(asset)));
-        vm.setEnv("POOL_ID_0", "1");
-        vm.setEnv("BANK_MIN_BET_AMOUNT_0", "10000");
-        vm.setEnv("DEFAULT_HOUSE_EDGE_BPS", "200");
-        vm.setEnv("REFUND_TIMEOUT_SECONDS", "3600");
-        DeployHarnessV16 deployer = new DeployHarnessV16();
-        deployer.run();
-        string memory snap = deployer.snapshot();
-        V16Snapshot.verify(snap, false);
-        if (vm.envOr("RELEASE_IMPORT_ACCEPT_GOVERNANCE", true)) {
-            vm.startBroadcast(bootstrap);
-            safe.acceptTargets(V16Snapshot.targets(snap));
-            vm.stopBroadcast();
-            V16Snapshot.verify(snap, true);
-        }
+        bytes32 phase = keccak256(bytes(vm.envString("RELEASE_IMPORT_PHASE")));
+        if (phase == keccak256("deploy")) return _deploy(directory);
+        string memory snap = vm.readFile(string.concat(directory, "/snapshot.json"));
+        if (phase == keccak256("wire")) return _wire(snap);
+        require(phase == keccak256("bundle"), "RELEASE_IMPORT_PHASE must be deploy, wire or bundle");
         _writeBundle(directory, snap);
         // A correctly signed but incorrect scale tests live metadata verification,
         // separately from the old-signature digest mismatch control.
@@ -85,15 +48,59 @@ contract ReleaseImportFixture is Script {
         _writeBundle(string.concat(directory, "/wrong-precision"), wrong);
     }
 
+    function _deploy(string memory directory) internal {
+        address operator = vm.addr(FIXTURE_KEY);
+        // Public test key, remembered only in this simulated local script process.
+        address signer = vm.rememberKey(SIGNER_KEY);
+        // The driver broadcasts these transactions to its own empty loopback node, preserving creation blocks and
+        // authorization logs for the verifier.
+        vm.startBroadcast(operator);
+        SafeConfigMockV16 safe = new SafeConfigMockV16(11);
+        SafeConfigMockV16 guardian = new SafeConfigMockV16(21);
+        MockERC20 asset = new MockERC20("Test USD", "TUSD", 6);
+        MockVRFV2PlusWrapper wrapper = new MockVRFV2PlusWrapper();
+        vm.stopBroadcast();
+        ReleaseV16Env.configure(operator, safe, guardian, address(asset), address(wrapper), signer, 1);
+        DeployHarnessV16 deployer = new DeployHarnessV16();
+        deployer.run();
+        string memory snap = deployer.snapshot();
+        V16Snapshot.verify(snap, V16Snapshot.Mode.Deployed);
+        GovernanceTimelock timelock = GovernanceTimelock(payable(snap.readAddress(".governanceTimelock")));
+        V16Batches.Batch memory w = V16Batches.wiring(snap);
+        vm.startBroadcast(operator);
+        safe.exec(
+            address(timelock),
+            abi.encodeCall(
+                timelock.scheduleBatch, (w.targets, w.values, w.payloads, w.predecessor, w.salt, timelock.getMinDelay())
+            )
+        );
+        vm.stopBroadcast();
+        vm.writeFile(string.concat(directory, "/snapshot.json"), snap);
+    }
+
+    function _wire(string memory snap) internal {
+        GovernanceTimelock timelock = GovernanceTimelock(payable(snap.readAddress(".governanceTimelock")));
+        V16Batches.Batch memory w = V16Batches.wiring(snap);
+        vm.startBroadcast(vm.addr(FIXTURE_KEY));
+        timelock.executeBatch(w.targets, w.values, w.payloads, w.predecessor, w.salt);
+        vm.stopBroadcast();
+        V16Snapshot.verify(snap, V16Snapshot.Mode.Release);
+    }
+
     function _writeBundle(string memory directory, string memory snap) internal {
+        vm.rememberKey(SIGNER_KEY);
         string memory output = string.concat(directory, "/bundle/deployments/");
         vm.createDir(output, true);
         string memory snapshotPath = string.concat(output, "latest-v16.json");
         string memory releasePath = string.concat(output, "release-latest-v16.json");
+        string memory checkpointPath = string.concat(output, "governance-checkpoint-latest-v16.json");
         vm.writeFile(snapshotPath, snap);
+        vm.writeFile(checkpointPath, vm.readFile(vm.envString("GOVERNANCE_CHECKPOINT_PATH")));
         vm.setEnv("SNAPSHOT_PATH", snapshotPath);
         vm.setEnv("RELEASE_PATH", releasePath);
         vm.setEnv("RELEASE_OUTPUT_PATH", releasePath);
+        vm.setEnv("GOVERNANCE_CHECKPOINT_PATH", checkpointPath);
+        vm.setEnv("RELEASE_SIGNER", vm.toString(snap.readAddress(".releaseSigner")));
         vm.setEnv("FRONTEND_MANIFEST_OUTPUT_PATH", string.concat(output, "frontend-manifest-latest-v16.json"));
         vm.setEnv("VECTORS_OUTPUT_PATH", string.concat(output, "golden-vectors-latest-v16.json"));
         vm.setEnv("NOTES_OUTPUT_PATH", string.concat(output, "release-notes-latest-v16.md"));

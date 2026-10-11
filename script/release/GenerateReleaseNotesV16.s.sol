@@ -108,8 +108,22 @@ contract GenerateReleaseNotesV16 is Script {
     function _coreContracts(string memory snap) internal pure returns (string memory) {
         return string.concat(
             "## Core contracts\n\n",
-            "- GOV: `",
+            "- Governance timelock (governance of every governed contract, delay ",
+            vm.toString(snap.readUint(".timelockMinDelay")),
+            " s): `",
+            vm.toString(snap.readAddress(".governanceTimelock")),
+            "`\n",
+            "- Safe (timelock proposer and canceller, sentinel): `",
             vm.toString(snap.readAddress(".gov")),
+            "`\n",
+            "- Guardian (timelock canceller, Bank pause): `",
+            vm.toString(snap.readAddress(".guardian")),
+            "`\n",
+            "- Wiring operation: `",
+            vm.toString(snap.readBytes32(".wiringOperationId")),
+            "`\n",
+            "- Activation operation: `",
+            vm.toString(snap.readBytes32(".activationOperationId")),
             "`\n",
             "- Treasury: `",
             vm.toString(snap.readAddress(".treasury")),
@@ -212,8 +226,7 @@ contract GenerateReleaseNotesV16 is Script {
                 vm.toString(snap.readAddress(string.concat(".poolAsset_", suffix))),
                 "`, bank=`",
                 vm.toString(snap.readAddress(string.concat(".poolBank_", suffix))),
-                "`, active=",
-                snap.readUint(string.concat(".poolActive_", suffix)) == 0 ? "false" : "true"
+                "`"
             );
             md = string.concat(md, "\n");
         }

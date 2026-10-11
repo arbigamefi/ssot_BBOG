@@ -46,6 +46,10 @@ if [[ -f "$STUB_DIR/fail.$target" ]]; then
   echo "Error: $target found a mismatch"
   exit 2
 fi
+if [[ $target == release-governance-check && -z "${STUB_NO_CHECKPOINT:-}" ]]; then
+  echo "checkpoint of $(cat "$SNAPSHOT_PATH") in $GOVERNANCE_VERIFY_MODE mode" > "$GOVERNANCE_CHECKPOINT_OUT"
+  echo '{"status": "verified", "checkpointSha256": "'"$(printf 'c%.0s' $(seq 64))"'"}'
+fi
 if [[ $target == release-package ]]; then
   mkdir -p dist
   echo "archive of $GIT_SHA" > dist/ssot-release-test.tar.gz
@@ -57,7 +61,8 @@ FORGE = r'''#!/usr/bin/env bash
 echo "forge $*" >> "$STUB_LOG"
 case "$*" in
   *VerifyReleaseV16*)
-    [[ "$(cat "$RELEASE_PATH")" == "signed $(cat "$SNAPSHOT_PATH") by $RELEASE_SIGNER" ]] && exit 0
+    [[ "$(cat "$RELEASE_PATH")" == "signed $(cat "$SNAPSHOT_PATH") and $(cat "$GOVERNANCE_CHECKPOINT_PATH") by $RELEASE_SIGNER" ]] &&
+      exit 0
     echo "Error: script failed: digest mismatch"
     exit 1 ;;
   *ReleaseDigestV16*)
@@ -67,7 +72,8 @@ case "$*" in
                                       "directory", oct(os.stat(os.path.dirname(sys.argv[1])).st_mode & 0o777))' \
       "$2" >> "$STUB_LOG"
     [[ "$(cat "$2")" == "$STUB_PASSWORD" ]] || { echo "Error: script failed: vm.sign: no wallets available"; exit 1; }
-    echo "signed $(cat "$SNAPSHOT_PATH") by $RELEASE_SIGNER" > "$RELEASE_OUTPUT_PATH"
+    [[ "$GOVERNANCE_CHECKPOINT_SHA256" == 0x$(printf 'c%.0s' $(seq 64)) ]] || { echo "Error: wrong checkpoint"; exit 1; }
+    echo "signed $(cat "$SNAPSHOT_PATH") and $(cat "$GOVERNANCE_CHECKPOINT_PATH") by $RELEASE_SIGNER" > "$RELEASE_OUTPUT_PATH"
     echo "  digest: 0x1234"
     echo "  wrote: $RELEASE_OUTPUT_PATH" ;;
 esac
@@ -197,6 +203,22 @@ class ReleaseScriptTests(unittest.TestCase):
         self.assert_no_password_left()
         self.assertEqual(self.made(), STEPS)
         self.assertRegex(output, r'release-v16 complete: dist/ssot-release-test\.tar\.gz sha256 [0-9a-f]{64}\n')
+
+    def test_the_record_signs_the_checkpoint_this_run_verified(self):
+        code, output, _ = self.release(PASSWORD)
+        self.assertEqual(code, 0, output)
+        checkpoint = self.repo / 'deployments/governance-checkpoint-latest-v16.json'
+        self.assertEqual(checkpoint.read_text(), (self.repo / 'dist/run-1/governance-checkpoint.json').read_text())
+        self.assertEqual(checkpoint.read_text(), 'checkpoint of {"chainId": 84532} in release mode\n')
+        self.assertEqual((self.repo / 'deployments/release-latest-v16.json').read_text(),
+                         f'signed {{"chainId": 84532}} and {checkpoint.read_text().strip()} by {SIGNER.lower()}\n')
+
+    def test_a_governance_check_without_a_checkpoint_signs_nothing(self):
+        code, output, terminal = self.release(PASSWORD, env={'STUB_NO_CHECKPOINT': '1'})
+        self.assertEqual(code, 1, output)
+        self.assertIn('signing: the governance check reported no checkpoint', output)
+        self.assertNotIn(PROMPT, terminal)
+        self.assertNotIn('ReleaseDigestV16', self.log())
 
     def test_rerun_after_a_later_failure_keeps_the_signature(self):
         (self.base / 'fail.release-package').touch()

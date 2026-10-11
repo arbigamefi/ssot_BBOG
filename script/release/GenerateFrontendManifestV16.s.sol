@@ -78,6 +78,7 @@ contract GenerateFrontendManifestV16 is Script {
 
     function _buildAddressesJson(string memory snap) internal pure returns (string memory) {
         address gov = snap.readAddress(".gov");
+        address governanceTimelock = snap.readAddress(".governanceTimelock");
         address gameHub = snap.readAddress(".gameHub");
         address settlementRouter = snap.readAddress(".settlementRouter");
         address poolRegistry = snap.readAddress(".poolRegistry");
@@ -98,6 +99,9 @@ contract GenerateFrontendManifestV16 is Script {
             "{",
             "\"gov\":\"",
             vm.toString(gov),
+            "\",",
+            "\"governanceTimelock\":\"",
+            vm.toString(governanceTimelock),
             "\",",
             "\"gameHub\":\"",
             vm.toString(gameHub),
@@ -201,7 +205,6 @@ contract GenerateFrontendManifestV16 is Script {
     function _poolJson(string memory snap, uint256 i) internal view returns (string memory) {
         string memory suffix = vm.toString(i);
         uint256 domainId = snap.readUint(string.concat(".poolDomain_", suffix));
-        uint256 activeRaw = snap.readUint(string.concat(".poolActive_", suffix));
         (string memory sym, uint8 dec) = _readAssetMeta(snap, i);
 
         return string.concat(
@@ -215,9 +218,6 @@ contract GenerateFrontendManifestV16 is Script {
             "\"domain\":\"",
             _domainLabel(domainId),
             "\",",
-            "\"active\":",
-            activeRaw == 0 ? "false" : "true",
-            ",",
             "\"asset\":\"",
             vm.toString(snap.readAddress(string.concat(".poolAsset_", suffix))),
             "\",",
