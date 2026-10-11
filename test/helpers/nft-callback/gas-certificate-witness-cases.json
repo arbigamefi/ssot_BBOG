@@ -11,7 +11,8 @@
     "BLACKLIST": true,
     "AMOUNT_PROFILE": 1,
     "CUTOFF_RETAIN": 200500000,
-    "EXPECT_PREDICATE": 1
+    "EXPECT_PREDICATE": 1,
+    "PROFIT_SEED": 4
   },
   {
     "name": "witness-dp-argmax-covers-loss-newsource-pp",
@@ -61,7 +62,8 @@
     "BLACKLIST": true,
     "AMOUNT_PROFILE": 1,
     "CUTOFF_RETAIN": 200359308,
-    "EXPECT_PREDICATE": 2
+    "EXPECT_PREDICATE": 2,
+    "PROFIT_SEED": 4
   },
   {
     "name": "witness-dp-argmax-covers-loss-keno25-direct",
@@ -75,6 +77,7 @@
     "BLACKLIST": false,
     "AMOUNT_PROFILE": 1,
     "CUTOFF_RETAIN": 200500000,
-    "EXPECT_PREDICATE": 1
+    "EXPECT_PREDICATE": 1,
+    "PROFIT_SEED": 4
   }
 ]

@@ -99,8 +99,13 @@ threshold predicate walks all 40 levels and only then decides: `1` means it acce
 rejects it. With that assertion a pinned witness cannot silently stop being one. The pinned cases are
 `gas-concentrated-amount-cases.json`.
 
-The seed of the historical Coin profit is still searched in setup over 0..1023. The search is deterministic, but
-the resulting seed is not yet recorded in the case file.
+The seed of the historical Coin profit is part of the case: `NFT_GAS_PROFIT_SEED` (`PROFIT_SEED` in the case file)
+must settle that setup bet as a pool profit. If it is missing or no longer does, setup stops and names the first seed
+in 0..1023 that does, to be recorded. Every concentrated case pinned on 2026-10-11 records seed 4.
+
+`NFT_GAS_EXPECT_PREDICATE` walks the tree through `test/utils/PrefixPath.sol`, which reads the deployed vault's public
+`treeNode` view. The unit fuzz test of the prefix replay requires it to agree with the original internal helper kept
+verbatim in `test/utils/VaultPrefixReference.sol`.
 
 ## Setup history callbacks
 
@@ -137,6 +142,7 @@ The fixture rejects illegal combinations with `require`:
 | `NFT_GAS_PRIOR_NEW_SOURCE_HELD` | bool | not `PRIOR_HOLDBACK`, not `ELIGIBLE` |
 | `NFT_GAS_AMOUNT_PROFILE` | 0 or 1 | 1 requires `TREE=4`, no thin prefix, no prior holdback or new-source hold, and a target game other than Coin (3) |
 | `NFT_GAS_CUTOFF_RETAIN` | below `ONE` | nonzero only with `AMOUNT_PROFILE=1` |
+| `NFT_GAS_PROFIT_SEED` | a seed whose setup Coin result is a pool profit | required with `AMOUNT_PROFILE=1` |
 | `NFT_GAS_EXPECT_PREDICATE` | 0, 1 or 2 | nonzero only with a nonzero `CUTOFF_RETAIN` |
 | `NFT_GAS_BLACKLIST` | bool | the result must owe the player something |
 | `NFT_GAS_VARIANT2` | Dice: 0 or 1 (direction) | — |

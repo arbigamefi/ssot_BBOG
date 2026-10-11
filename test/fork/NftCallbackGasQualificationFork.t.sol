@@ -24,6 +24,7 @@ import {DiceModule} from "../../src/modules/dice/DiceModule.sol";
 import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
 import {SicBoModule} from "../../src/modules/sicbo/SicBoModule.sol";
 import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
+import {ITreeView, PrefixPath} from "../utils/PrefixPath.sol";
 
 interface INftGasWrapper {
     function s_vrfCoordinator() external view returns (address);
@@ -101,6 +102,7 @@ contract NftCallbackGasQualificationForkTest is Test {
     bool private eligible;
     bool private zeroPlayerBalance;
     uint256 private amountProfile;
+    uint256 private setupProfitSeed;
     uint256 private cutoffRetain;
     uint256 private expectPredicate;
     uint256 private lateLargeUsdc;
@@ -596,23 +598,17 @@ contract NftCallbackGasQualificationForkTest is Test {
         token.approve(address(hub), largeStake);
         uint256 prior = hub.placeBet{value: fee}(priorGame, 1, priorParams, priorSpec, address(0), 200);
         vm.stopPrank();
-        uint256 profitSeed;
-        uint256 priorNet;
         uint256 priorFee = largeStake * 200 / 10_000 / 2;
-        bool found;
-        for (; profitSeed < 1024; ++profitSeed) {
-            (uint256 gross, uint256 refund) = priorModule.resolve(priorParams, priorSpec, prior, _words(profitSeed));
-            priorNet = gross - gross * 200 / 10_000;
-            if (refund == 0 && priorNet + priorFee < largeStake) {
-                found = true;
-                break;
-            }
-        }
-        require(found, "fixture must find an actual pool-profit result");
+        // The setup result is part of the case: PROFIT_SEED, recorded in the case file, must leave the pool a profit.
+        if (!vm.envExists("NFT_GAS_PROFIT_SEED")) _recordProfitSeed(priorModule, priorParams, priorSpec, prior, priorFee);
+        setupProfitSeed = vm.envUint("NFT_GAS_PROFIT_SEED");
+        (bool profit, uint256 priorNet) =
+            _poolProfit(priorModule, priorParams, priorSpec, prior, priorFee, setupProfitSeed);
+        if (!profit) _recordProfitSeed(priorModule, priorParams, priorSpec, prior, priorFee);
         uint256 rootBefore = vault.getReserve();
         uint256 priorRequest = hub.getBet(prior).requestId;
         vm.prank(coordinator);
-        wrapper.rawFulfillRandomWords{gas: wrapperGas}(priorRequest, _words(profitSeed));
+        wrapper.rawFulfillRandomWords{gas: wrapperGas}(priorRequest, _words(setupProfitSeed));
         if (consumer.getRequest(priorRequest).state != IVRFHub.RequestState.Terminal) {
             ++setupCallbackFailures; // a setup history callback missed the same first-callback budget
             consumer.retry{gas: 12_000_000}(priorRequest);
@@ -632,34 +628,47 @@ contract NftCallbackGasQualificationForkTest is Test {
         assertEq(vault.nextNode(), denseLastUsed + 1, "real deposits end at the specified structural endpoint");
     }
 
+    /// @dev Whether `seed` settles the setup bet as a pool profit, and its net payout.
+    function _poolProfit(
+        IGameModule m,
+        bytes memory p,
+        SSOTTypes.StakeSpec memory s,
+        uint256 bet,
+        uint256 setupFee,
+        uint256 seed
+    ) private view returns (bool profit, uint256 net) {
+        (uint256 gross, uint256 refund) = m.resolve(p, s, bet, _words(seed));
+        net = gross - gross * 200 / 10_000;
+        profit = refund == 0 && net + setupFee < s.amountPerRoll;
+    }
+
+    /// @dev Stops the case and names the first seed that leaves the pool a profit, to be recorded as PROFIT_SEED.
+    function _recordProfitSeed(
+        IGameModule m,
+        bytes memory p,
+        SSOTTypes.StakeSpec memory s,
+        uint256 bet,
+        uint256 setupFee
+    ) private view {
+        for (uint256 seed; seed < 1024; ++seed) {
+            (bool profit,) = _poolProfit(m, p, s, bet, setupFee, seed);
+            if (profit) revert(string.concat("record PROFIT_SEED ", vm.toString(seed), " in the case file"));
+        }
+        revert("no seed below 1024 leaves the pool a profit on the setup bet");
+    }
+
     /// @dev Test-only projection of the production prefix predicate over the actual admitted tree: no interval
     ///      bound may decide before the cutoff leaf, so all 40 splits run, then the expected decision is checked.
     function _assertFullPredicate(bool covers) private view {
         (, uint256 stake, uint256 reserved,,) = bank.holds(betId);
         uint256 k = reserved - stake;
-        uint48 node = 1;
-        uint48 start = FIRST_LEAF;
-        uint48 end = 2 * FIRST_LEAF - 1;
-        (, uint128 root) = vault.treeNode(1);
-        uint256 amount = root;
-        uint256 capital;
-        uint256 steps;
-        while (end != targetCutoff) {
-            assertLt(capital, k, "lower bound must not exit early");
-            assertGe(capital + amount, k, "upper bound must not exit early");
-            uint48 mid = (start + end) / 2;
-            (, uint128 l) = vault.treeNode(node * 2);
-            (, uint128 r) = vault.treeNode(node * 2 + 1);
-            uint256 left = l == 0 ? 0 : amount * l / (uint256(l) + r);
-            if (targetCutoff <= mid) {
-                (node, end, amount) = (node * 2, mid, left);
-            } else {
-                capital += left;
-                (node, start, amount) = (node * 2 + 1, mid + 1, r == 0 ? 0 : amount - left);
-            }
-            ++steps;
+        (PrefixPath.Step[] memory steps, uint256 capital, uint256 amount) =
+            PrefixPath.walk(ITreeView(address(vault)), FIRST_LEAF, targetCutoff);
+        for (uint256 i; i < steps.length; ++i) {
+            assertLt(steps[i].capital, k, "lower bound must not exit early");
+            assertGe(steps[i].capital + steps[i].amount, k, "upper bound must not exit early");
         }
-        assertEq(steps, 40, "must exercise every predicate split");
+        assertEq(steps.length, 40, "must exercise every predicate split");
         if (covers) assertGe(capital + amount, k, "selected prefix can fund maximum loss");
         else assertLt(capital + amount, k, "full-depth prefix must reject maximum loss");
     }
@@ -708,6 +717,7 @@ contract NftCallbackGasQualificationForkTest is Test {
         emit log_named_uint("eligible player", eligible ? 1 : 0);
         emit log_named_uint("zero player balance before payout", zeroPlayerBalance ? 1 : 0);
         emit log_named_uint("amount profile (0 uniform, 1 concentrated loss witness)", amountProfile);
+        if (amountProfile == 1) emit log_named_uint("setup profit seed (case PROFIT_SEED)", setupProfitSeed);
         emit log_named_uint("cutoff NFT retained parts of 1e12", cutoffRetain);
         emit log_named_uint("expected full predicate (0 none, 1 covers, 2 rejects)", expectPredicate);
         emit log_named_uint("late large NFT USDC (concentrated profile)", amountProfile == 1 ? lateLargeUsdc : 0);

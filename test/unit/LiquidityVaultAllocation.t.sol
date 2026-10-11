@@ -3,6 +3,7 @@ pragma solidity 0.8.37;
 
 import "forge-std/Test.sol";
 import {VaultPrefixReference} from "../utils/VaultPrefixReference.sol";
+import {ITreeView, PrefixPath} from "../utils/PrefixPath.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {LiquidityVault} from "../../src/core/LiquidityVault.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
@@ -268,6 +269,8 @@ contract LiquidityVaultPrefixCapitalTest is Test {
         assertTrue(vm.revertToState(snap)); // keep the lazy state for later steps
         assertEq(view_, pushed, "replay differs from the pushed range sum");
         assertEq(view_, leaves, "replay differs from the prefix leaf balances");
+        // The fork qualification's walk over the public tree view is the same rule as the verbatim helper.
+        assertEq(PrefixPath.prefixCapital(ITreeView(address(h)), FIRST, cutoff), view_, "PrefixPath differs");
     }
 
     function _newHarness() internal {

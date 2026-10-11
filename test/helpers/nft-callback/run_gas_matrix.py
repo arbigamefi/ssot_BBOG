@@ -29,7 +29,8 @@ def source_manifest(cases_path: Path) -> str:
     paths = set()
     for directory in ("src", "lib/forge-std/src", "lib/openzeppelin-contracts/contracts", "lib/chainlink-brownie-contracts/contracts"):
         paths.update((ROOT / directory).rglob("*.sol"))
-    paths.update({ROOT / FIXTURE, Path(__file__), cases_path.resolve(), ROOT / "foundry.toml", ROOT / "deps.lock"})
+    paths.update({ROOT / FIXTURE, ROOT / "test/utils/PrefixPath.sol", Path(__file__), cases_path.resolve(),
+                  ROOT / "foundry.toml", ROOT / "deps.lock"})
     lines = []
     for path in sorted(paths):
         if path.is_file():
