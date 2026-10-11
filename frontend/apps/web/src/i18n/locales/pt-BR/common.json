@@ -589,6 +589,152 @@
       }
     }
   },
+  "legal": {
+    "navAria": "Páginas legais",
+    "keyPoints": "Pontos principais",
+    "nav": {
+      "terms": "Termos",
+      "privacy": "Privacidade",
+      "disclaimer": "Aviso de risco"
+    },
+    "pages": {
+      "terms": {
+        "eyebrow": "Jurídico",
+        "title": "Termos de Serviço",
+        "description": "Estes termos regem o acesso ao frontend da ArbiGameFi e resumem as regras on-chain que se aplicam a apostas e a depósitos nos pools. Os contratos aplicam essas regras; quando esta página e um contrato divergirem, prevalece o contrato.",
+        "highlights": {
+          "0": "O frontend é uma interface para sistemas públicos on-chain; os contratos decidem cada aposta e cada saque.",
+          "1": "Toda mudança em pools, jogos e parâmetros espera pelo menos 72 horas em um timelock de governança público e pode ser cancelada durante a espera.",
+          "2": "Uma pausa só impede novas apostas e novos depósitos. Liquidação, reembolsos, resgates e saques continuam.",
+          "3": "Uma aposta cujo resultado chega mas não pode ser liquidada pode ser anulada: o valor apostado é devolvido, a taxa de VRF não.",
+          "4": "O usuário continua responsável pela custódia da carteira, pela revisão das transações, pelo gas e pela conformidade local."
+        },
+        "sections": {
+          "0": {
+            "title": "Uso do frontend",
+            "body": "O frontend da ArbiGameFi oferece acesso nativo por carteira a salas de jogo on-chain e a páginas de pools. Acessar o frontend não dispensa revisar o conteúdo da transação, as taxas cotadas, as condições da rede e os contratos chamados antes de assinar."
+          },
+          "1": {
+            "title": "Carteiras e execução",
+            "body": "Os usuários mantêm a custódia de suas carteiras e chaves privadas. A ArbiGameFi não custodia carteiras, não pode recuperar chaves privadas e não pode reverter transações já confirmadas pela rede."
+          },
+          "2": {
+            "title": "Apostas e limites",
+            "body": "Uma aposta só é aceita enquanto o pool puder reservar o maior pagamento possível. No pool de USDC cada rodada aposta pelo menos 0,01 USDC, e uma aposta tem no máximo 25 rodadas. Um pool comporta no máximo 128 apostas em aberto e cada jogador no máximo 2 delas, então uma nova aposta pode ser recusada enquanto o pool estiver cheio ou enquanto duas apostas suas ainda estiverem em aberto. Ao ser aceita, a aposta fixa as regras do jogo, a vantagem da casa, os termos de indicação e o prazo de reembolso; mudanças posteriores valem apenas para novas apostas."
+          },
+          "3": {
+            "title": "Resultados, reembolsos e anulações",
+            "body": "Cada aposta solicita um valor aleatório ao Chainlink VRF e normalmente é liquidada na transação que o entrega. Se nenhum valor aleatório chegar até o prazo de reembolso da aposta (uma hora por padrão, nunca mais de um dia), qualquer pessoa pode reembolsá-la. Depois que um valor aleatório chega, ele nunca é sorteado de novo: a aposta é liquidada com ele, e qualquer pessoa pode repetir uma liquidação que falhou. Se a liquidação continuar falhando, qualquer pessoa pode anular a aposta 24 horas após o pedido, quando uma janela de anulação a cobre, ou 7 dias após o pedido sem janela. A anulação primeiro tenta liquidar a aposta mais uma vez; só se isso falhar o valor apostado é devolvido como saldo a resgatar. A taxa de VRF não é reembolsada, e uma aposta anulada não paga prêmio, mesmo que seu resultado fosse vencedor."
+          },
+          "4": {
+            "title": "Quem decide sobre anulações",
+            "body": "A janela de anulação de um pool pode ser aberta pelo timelock de governança, pelo Safe do operador ou pelo guardião do pool, e somente enquanto houver um resultado desse pool aguardando contabilização. Quem a abre escolhe o momento, depois que os valores aleatórios já são públicos; enquanto a falha durar, a ordem em que as apostas são anuladas decide quais terminam primeiro. O keeper do operador tenta cada aposta elegível na ordem dos pedidos e publica os resultados. Uma anulação precisa de cerca de 11 milhões de gas: algumas carteiras de contrato inteligente e bundlers não conseguem enviá-la, mas qualquer outra conta ou o keeper pode anular a aposta por você. A anulação também exige que a contabilidade do pool feche. Se o emissor do ativo congelar os tokens do pool, o valor devolvido é pago quando o congelamento terminar; se ele confiscar ou queimar os tokens, a contabilidade deixa de fechar e as apostas não podem ser anuladas."
+          },
+          "5": {
+            "title": "Pausas e jogos desativados",
+            "body": "O Safe do operador ou o guardião do pool pode pausar um pool imediatamente. Uma pausa só impede novas apostas e novos depósitos: liquidação, reembolsos, anulações, resgates e saques continuam. Retirar a pausa é uma mudança de governança e espera pelo menos 72 horas. O Safe também pode desativar um pool ou um jogo imediatamente; apostas já aceitas continuam sendo liquidadas, reembolsadas ou anuladas, e um jogo desativado nunca volta a ser ativado."
+          },
+          "6": {
+            "title": "Governança e mudanças",
+            "body": "Os contratos não podem ser atualizados. Toda mudança em pools, hubs, jogos e parâmetros é uma operação do timelock de governança: o Safe do operador a agenda, ela é publicada e espera pelo menos 72 horas, um prazo que pode ser aumentado mas nunca reduzido abaixo de 72 horas. Durante a espera, o Safe ou o guardião, um multisig independente cujos signatários não são signatários do Safe, pode cancelá-la; quando fica pronta, qualquer pessoa pode executá-la. Uma mudança na vantagem da casa espera ainda mais sete dias. A governança não pode tomar fundos de LP nem saldos de jogadores. Se o Safe for perdido ou abrir mão do seu papel, nenhuma regra poderá mudar de novo e os pools só poderão ser encerrados: liquidação, reembolsos, anulações após 7 dias e saques continuam, e uma pausa existente permanece."
+          },
+          "7": {
+            "title": "Fornecer liquidez",
+            "body": "Cada depósito cria seu próprio NFT com bloqueio de saque de 24 horas. Um pool pode receber depósitos antes de as apostas começarem: as apostas só começam depois que uma ativação separada espera 72 horas no timelock. Passado o bloqueio, o dono do NFT pode sacar até o capital livre do pool. O capital de LP é a contraparte de cada aposta, e depósitos anteriores e posteriores podem compartilhar resultados; o aviso de risco explica como."
+          },
+          "8": {
+            "title": "Risco de protocolo e das salas",
+            "body": "As salas ao vivo dependem de contratos inteligentes, provedores de aleatoriedade ou de oráculos, indexadores, infraestrutura de RPC e provedores de carteira de terceiros. A disponibilidade do serviço e a visibilidade dos resultados podem ser afetadas por qualquer uma dessas camadas."
+          },
+          "9": {
+            "title": "Disponibilidade não universal",
+            "body": "O frontend pode não estar disponível em todas as jurisdições, condições de rede, navegadores ou canais de lançamento. Cabe ao usuário verificar se o acesso ou a participação são permitidos onde ele está."
+          }
+        }
+      },
+      "privacy": {
+        "eyebrow": "Jurídico",
+        "title": "Política de Privacidade",
+        "description": "A ArbiGameFi é construída em torno da execução em blockchain pública. Esta política explica os dados limitados que o frontend pode tratar além dos dados de carteira e de transações já visíveis on-chain.",
+        "highlights": {
+          "0": "Endereços de carteira e hashes de transação podem ser exibidos quando já são públicos on-chain.",
+          "1": "Análises de produto e telemetria de desempenho podem ser usadas para melhorar a confiabilidade e a usabilidade.",
+          "2": "Conectores de carteira, provedores de RPC, indexadores e integrações de oráculos podem tratar metadados de requisições."
+        },
+        "sections": {
+          "0": {
+            "title": "Dados públicos da blockchain",
+            "body": "Endereços de carteira, hashes de transação, estados de apostas, resultados de liquidação e atividade dos pools podem aparecer nos feeds públicos das salas porque já são visíveis on-chain."
+          },
+          "1": {
+            "title": "Análises do frontend",
+            "body": "O frontend pode coletar análises de produto, métricas de desempenho e sinais de engajamento para melhorar o layout das salas, a integração de novos usuários, a visibilidade operacional e a qualidade dos lançamentos."
+          },
+          "2": {
+            "title": "Serviços de terceiros",
+            "body": "Conectores de carteira, provedores de RPC, indexadores, serviços de análise e integrações de oráculos podem tratar metadados de requisições como parte do funcionamento normal. Os termos e as regras de privacidade deles também se aplicam."
+          },
+          "3": {
+            "title": "Minimização de dados",
+            "body": "O produto deve evitar coletar chaves privadas, frases-semente, identificadores pessoais desnecessários ou atividade bruta de carteira que não seja necessária para a confiabilidade do produto, a prevenção de fraudes ou a conformidade legal."
+          }
+        }
+      },
+      "disclaimer": {
+        "eyebrow": "Riscos",
+        "title": "Aviso de Risco",
+        "description": "A ArbiGameFi oferece interfaces para jogos on-chain e depósitos em pools. Interagir com esses sistemas envolve riscos financeiros, jurídicos e técnicos. Esta página lista os riscos que o protocolo mantém por projeto.",
+        "highlights": {
+          "0": "Contratos inteligentes, provedores de aleatoriedade, indexadores, endpoints de RPC e clientes de carteira podem falhar ou atrasar.",
+          "1": "O capital de LP é a contraparte de cada aposta; depósitos anteriores e posteriores compartilham resultados, e as saídas seguem a ordem de chegada.",
+          "2": "Uma pausa nunca bloqueia saques, então também não pode conter um defeito no caminho de saque.",
+          "3": "Cabe ao usuário verificar se a participação é permitida na sua jurisdição."
+        },
+        "sections": {
+          "0": {
+            "title": "Risco de protocolo",
+            "body": "Falhas em contratos inteligentes, interrupções de oráculos, atraso de finalidade, defasagem de indexadores, falhas de clientes de carteira ou congestionamento da rede podem afetar a experiência do usuário ou a visibilidade temporária das salas."
+          },
+          "1": {
+            "title": "Liquidez e saques",
+            "body": "O capital de LP paga cada aposta vencedora. Um saque é limitado ao capital livre do pool, que diminui enquanto as apostas reservam seus maiores pagamentos possíveis, e nenhuma data de devolução integral é garantida. Enquanto um resultado aguarda contabilização, depósitos e saques ficam parados até que ele seja liquidado ou anulado; qualquer pessoa pode anulá-lo 7 dias após o pedido."
+          },
+          "2": {
+            "title": "Ordem das transações",
+            "body": "Um depósito com bloqueio vencido pode ser sacado antes de o resultado de uma aposta ser registrado on-chain, se o capital livre permitir. O capital que permanece, ou que chega depois, pode então compartilhar ganhos ou absorver perdas de apostas anteriores, dependendo de os depósitos anteriores ainda cobrirem a maior perda possível de cada aposta. O bloqueio de 24 horas não elimina essa vantagem de ordem, e não há promessa de ordem justa para o capital."
+          },
+          "3": {
+            "title": "Saídas durante um incidente",
+            "body": "Em um incidente, os saques seguem a ordem de chegada: um LP que sai cedo pode sacar tudo enquanto houver capital livre, e os depósitos restantes carregam todas as apostas em aberto. Uma pausa impede novas apostas e depósitos, mas nunca saques ou resgates de XP, então também não pode conter um defeito nesses caminhos. O timelock de 72 horas só permite que os LPs saiam antes de uma mudança entrar em vigor se o pool for desativado cedo o bastante e nenhum resultado estiver pendente; com apostas em andamento, um depósito grande pode não sair por inteiro."
+          },
+          "4": {
+            "title": "Governança e guardião",
+            "body": "As mudanças esperam 72 horas e podem ser canceladas, mas ainda dependem do Safe do operador e de alguém acompanhando a fila; mudanças agendadas são anunciadas publicamente. O guardião pode cancelar qualquer mudança agendada, inclusive a sua própria substituição e a retirada de uma pausa: um guardião desonesto pode manter um pool pausado, o que impede novas apostas e depósitos, mas não congela fundos. Se o Safe for perdido ou abrir mão do seu papel, a governança fica congelada para sempre e os pools só podem ser encerrados."
+          },
+          "5": {
+            "title": "Anulações",
+            "body": "Uma anulação devolve apenas o valor apostado: a taxa de VRF não é reembolsada, e uma aposta que seria vencedora não paga prêmio. Quem abre uma janela de anulação escolhe o momento, depois que os valores aleatórios já são públicos, e enquanto a falha durar a ordem de execução decide quais apostas são anuladas primeiro."
+          },
+          "6": {
+            "title": "Capacidade do pool",
+            "body": "Um pool comporta no máximo 128 apostas em aberto e cada jogador no máximo 2, então 64 endereços conseguem lotar um pool e impedir outros jogadores de apostar até que suas apostas terminem."
+          },
+          "7": {
+            "title": "Risco de resultado e liquidação",
+            "body": "As salas de cassino dependem do Chainlink VRF. A liquidação pode atrasar quando o provedor de aleatoriedade fica para trás ou a rede atrasa as transações; uma aposta cujo valor aleatório nunca chega é reembolsada após o prazo."
+          },
+          "8": {
+            "title": "Emissor do ativo",
+            "body": "O emissor do USDC pode congelar, confiscar ou queimar tokens mantidos pelos contratos do pool. Um congelamento atrasa os pagamentos até terminar. Um confisco deixa a contabilidade do pool desfalcada; depósitos, saques, liquidação e anulações podem então parar."
+          },
+          "9": {
+            "title": "Jurisdição e conformidade",
+            "body": "Cada usuário deve verificar por conta própria se o uso do frontend, a participação nas salas ou a atividade de LP são permitidos na sua jurisdição."
+          }
+        }
+      }
+    }
+  },
   "affiliate": {
     "hero": {
       "eyebrow": "Crescimento de afiliados",
@@ -858,6 +1004,17 @@
       "bankSurplus": "Excedente não alocado do Bank",
       "surplusDetail": "Transferências de tokens não previstas não integram o capital dos NFTs e não podem ser sacadas aqui.",
       "riskTerms": "Na liquidação, a faixa de depósitos anteriores recebe tanto lucros quanto perdas somente se seu capital atual cobrir a perda máxima original dos LPs nessa aposta. Caso contrário, ambos são distribuídos ao pool atual, incluindo depósitos posteriores. Apostas sem risco mantêm a regra para faixa vazia. Retorno esperado e risco acompanham essa distribuição, que pode variar com a ordem de liquidação. O capital sacado deixa de participar. Restrições do emissor podem impedir pagamentos. Sem capital de LPs, lucros posteriores vão para o capital do protocolo.",
+      "poolRules": {
+        "title": "Regras do pool",
+        "items": {
+          "0": "Mudanças neste pool esperam pelo menos 72 horas no timelock de governança, e o Safe do operador ou o guardião do pool pode cancelá-las durante a espera. Você pode sacar nessa janela se o seu depósito estiver desbloqueado e o capital livre permitir.",
+          "1": "Uma pausa só impede novas apostas e novos depósitos; saques e resgates continuam. Em um incidente, os saques seguem a ordem de chegada enquanto houver capital livre.",
+          "2": "Um resultado que não pode ser contabilizado paralisa depósitos e saques até ser liquidado ou anulado; qualquer pessoa pode anulá-lo 7 dias após o pedido.",
+          "3": "O guardião, um multisig independente, pode pausar o pool e cancelar qualquer mudança agendada, inclusive a sua própria substituição; ele não pode mover fundos.",
+          "4": "Se o Safe do operador for perdido, o pool só pode ser encerrado: liquidação, reembolsos, anulações e saques continuam."
+        },
+        "more": "Aviso de risco completo"
+      },
       "orderingRisk": "Após o fim do bloqueio, o capital disponível pode ser sacado antes de o resultado de uma aposta ser registrado na blockchain. O capital que permanece ou entra depois pode receber ganhos ou absorver perdas de apostas anteriores. O bloqueio de 24 horas não elimina o risco causado pela ordem das transações.",
       "depositTerms": "Cada depósito cria um NFT separado e inicia seu próprio bloqueio de saque de 24 horas. Durante esse período, o capital participa dos resultados dos jogos. Transferir um NFT mantém seu prazo original.",
       "depositsPaused": "Pool pausado: novos depósitos de LP estão indisponíveis. Os saques continuam abertos pelas regras habituais.",

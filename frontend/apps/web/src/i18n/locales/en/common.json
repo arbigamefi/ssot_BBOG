@@ -1982,6 +1982,17 @@
       "bankSurplus": "Unallocated Bank surplus",
       "surplusDetail": "Unexpected token transfers are not NFT capital and are not withdrawable here.",
       "riskTerms": "At settlement, an earlier deposit range keeps both profit and loss only if its current capital covers that bet’s original maximum LP loss. Otherwise both are shared by the current pool, including later deposits. Zero-risk bets retain the empty-range fallback. Expected returns and risks follow this allocation; settlement order can change it. Withdrawn capital no longer participates. Issuer restrictions may prevent payment. If no LP capital remains, later profit goes to protocol capital.",
+      "poolRules": {
+        "title": "Pool rules",
+        "items": {
+          "0": "Changes to this pool wait at least 72 hours in the governance timelock, and the operator's Safe or the pool's guardian can cancel them while they wait. You can withdraw in that window if your deposit is unlocked and free capital allows.",
+          "1": "A pause stops new bets and new deposits only; withdrawals and claims continue. In an incident, withdrawals are first come, first served while free capital lasts.",
+          "2": "A result that cannot be booked stops deposits and withdrawals until it is settled or voided; anyone can void it 7 days after its request.",
+          "3": "The guardian, an independent multisig, can pause the pool and cancel any queued change, including its own replacement; it cannot move funds.",
+          "4": "If the operator's Safe is lost, the pool can only wind down: settlement, refunds, voids and withdrawals continue."
+        },
+        "more": "Full risk disclaimer"
+      },
       "orderingRisk": "Once its lock expires, available capital may be withdrawn before a bet's result is recorded on-chain. Capital that remains or arrives later may share gains or absorb losses from earlier bets. The 24-hour lock does not remove this transaction-ordering risk.",
       "depositTerms": "Every deposit creates a separate NFT and starts its own 24-hour withdrawal lock. Capital participates in game results during this period. Transferring an NFT keeps its existing deadline.",
       "depositsPaused": "Pool paused: new LP deposits are unavailable. Withdrawals stay open under the usual rules.",
@@ -2547,11 +2558,13 @@
       "terms": {
         "eyebrow": "Legal",
         "title": "Terms of Service",
-        "description": "These terms govern access to the ArbiGameFi frontend and the wallet-native interfaces used to reach rooms, bankroll pages, referral surfaces, and operational proof views.",
+        "description": "These terms govern access to the ArbiGameFi frontend and summarize the on-chain rules that apply to bets and pool deposits. The contracts enforce these rules; where this page and a contract differ, the contract decides.",
         "highlights": {
-          "0": "The frontend is an interface for public on-chain systems.",
-          "1": "Users remain responsible for wallet custody, transaction review, gas, and local compliance.",
-          "2": "Availability can depend on RPC providers, indexers, oracle flows, wallets, and smart contracts."
+          "0": "The frontend is an interface for public on-chain systems; the contracts decide every bet and withdrawal.",
+          "1": "Every change to pools, games and parameters waits at least 72 hours in a public governance timelock and can be cancelled while it waits.",
+          "2": "A pause stops new bets and new deposits only. Settlement, refunds, claims and withdrawals continue.",
+          "3": "A bet whose result arrives but cannot be settled can be voided: the stake is returned, the VRF fee is not.",
+          "4": "Users remain responsible for wallet custody, transaction review, gas, and local compliance."
         },
         "sections": {
           "0": {
@@ -2563,10 +2576,34 @@
             "body": "Users retain custody of their wallets and private keys. ArbiGameFi does not take custody of wallets, cannot recover private keys, and cannot reverse transactions that have been confirmed by the relevant network."
           },
           "2": {
+            "title": "Bets and limits",
+            "body": "A bet is accepted only while the pool can reserve its largest possible payout. In the USDC pool every round stakes at least 0.01 USDC, and one bet has at most 25 rounds. A pool holds at most 128 open bets and each player at most 2 of them, so a new bet can be rejected while the pool is full or while two of your bets are still open. When a bet is accepted it fixes its game rules, house edge, referral terms and refund deadline; later changes apply only to new bets."
+          },
+          "3": {
+            "title": "Results, refunds and voids",
+            "body": "Each bet requests one random value from Chainlink VRF and normally settles in the transaction that delivers it. If no random value arrives by the bet's refund deadline (one hour by default, never more than one day), anyone can refund the bet. Once a random value has arrived it is never drawn again: the bet settles with it, and anyone can retry a settlement that failed. If settlement keeps failing, anyone can void the bet 24 hours after its request when a void window covers it, or 7 days after its request without one. A void first tries to settle the bet once more; only if that fails is the stake returned as a claimable balance. The VRF fee is not refunded, and a voided bet pays no winnings, even when its result would have won."
+          },
+          "4": {
+            "title": "Who decides about voids",
+            "body": "A void window for a pool can be opened by the governance timelock, the operator's Safe or the pool's guardian, and only while a result in that pool is waiting to be booked. Whoever opens it chooses when, after the random values are public; while a failure lasts, the order in which bets are voided decides which ones end first. The operator's keeper attempts every eligible bet in request order and publishes the results. A void needs about 11 million gas: some smart-contract wallets and bundlers cannot send it, but any other account or the keeper can void the bet for you. A void also needs the pool's accounting to balance. If the asset issuer freezes the pool's tokens, a returned stake is paid once the freeze ends; if the issuer seizes or burns them, the accounting no longer balances and bets cannot be voided."
+          },
+          "5": {
+            "title": "Pauses and stopped games",
+            "body": "The operator's Safe or the pool's guardian can pause a pool at once. A pause stops new bets and new deposits only: settlement, refunds, voids, claims and withdrawals continue. Unpausing is a governance change and waits at least 72 hours. The Safe can also deactivate a pool or disable a game at once; bets already accepted still settle, refund or void, and a disabled game is never enabled again."
+          },
+          "6": {
+            "title": "Governance and changes",
+            "body": "The contracts cannot be upgraded. Every change to pools, hubs, games and parameters is an operation of the governance timelock: the operator's Safe schedules it, it is published, and it waits at least 72 hours, a delay that can be raised but never set below 72 hours. While it waits, the Safe or the guardian, an independent multisig whose signers are not Safe signers, can cancel it; once it is ready, anyone can execute it. A house-edge change then waits seven more days. Governance cannot take LP funds or player balances. If the Safe is lost or gives up its role, no rule can change again and the pools can only wind down: settlement, refunds, 7-day voids and withdrawals continue, and an existing pause stays."
+          },
+          "7": {
+            "title": "Providing liquidity",
+            "body": "Each deposit creates its own NFT with a 24-hour withdrawal lock. A pool can take deposits before betting starts: betting begins only after a separate activation has waited 72 hours in the timelock. Once the lock has passed, the NFT's owner can withdraw up to the pool's free capital. LP capital takes the other side of every bet, and earlier and later deposits can share results; the risk disclaimer explains how."
+          },
+          "8": {
             "title": "Protocol and room risk",
             "body": "Live rooms depend on smart contracts, randomness or oracle providers, indexers, RPC infrastructure, and third-party wallet providers. Service availability and outcome visibility may be affected by any of these layers."
           },
-          "3": {
+          "9": {
             "title": "No universal availability",
             "body": "The frontend may not be available in every jurisdiction, network condition, browser environment, or release channel. Users are responsible for determining whether access or participation is permitted where they are located."
           }
@@ -2603,11 +2640,12 @@
       "disclaimer": {
         "eyebrow": "Risk notice",
         "title": "Risk Disclaimer",
-        "description": "ArbiGameFi presents interfaces for on-chain gaming and bankroll participation. Interacting with these systems involves financial, legal, and technical risks.",
+        "description": "ArbiGameFi presents interfaces for on-chain gaming and pool deposits. Interacting with these systems involves financial, legal and technical risks. This page lists the risks the protocol keeps by design.",
         "highlights": {
           "0": "Smart contracts, randomness providers, indexers, RPC endpoints, and wallet clients can fail or lag.",
-          "1": "Bankroll participation is subject to reserve usage, liability accounting, and protocol-specific exits.",
-          "2": "Users are responsible for determining whether participation is lawful in their jurisdiction."
+          "1": "LP capital takes the other side of every bet; earlier and later deposits share results, and exits are first come, first served.",
+          "2": "A pause never blocks withdrawals, so it cannot stop a defect in the withdrawal path either.",
+          "3": "Users are responsible for determining whether participation is lawful in their jurisdiction."
         },
         "sections": {
           "0": {
@@ -2615,14 +2653,38 @@
             "body": "Smart contract bugs, oracle disruptions, delayed finality, indexer lag, wallet client failures, or network congestion can affect the user experience or temporarily affect room visibility."
           },
           "1": {
-            "title": "Market and liquidity risk",
-            "body": "Bankroll participation is subject to reserve usage, liability accounting, and protocol-specific exit rules. Availability of deposits, withdrawals, and redemptions may change with room activity."
+            "title": "Liquidity and withdrawals",
+            "body": "LP capital pays every winning bet. A withdrawal is limited to the pool's free capital, which shrinks while bets reserve their largest possible payouts, and no date for full repayment is guaranteed. While a result is waiting to be booked, deposits and withdrawals stop until it is settled or voided; anyone can void it 7 days after its request."
           },
           "2": {
-            "title": "Outcome and settlement risk",
-            "body": "Casino rooms depend on randomness. Settlement may be delayed when the randomness provider lags or network conditions prevent timely transaction confirmation."
+            "title": "Transaction ordering",
+            "body": "A matured deposit can be withdrawn before a bet's result is recorded on-chain if free capital allows. Capital that stays, or arrives later, may then share gains or absorb losses from earlier bets, depending on whether the earlier deposits still cover each bet's largest possible loss. The 24-hour lock does not remove this ordering advantage, and fair ordering of capital is not promised."
           },
           "3": {
+            "title": "Exits during an incident",
+            "body": "In an incident, withdrawals are first come, first served: an early LP can withdraw in full while free capital lasts, and the remaining deposits carry every open bet. A pause stops new bets and deposits but never withdrawals or XP claims, so it cannot stop a defect in those paths either. The 72-hour timelock lets LPs leave before a change takes effect only if the pool is deactivated early enough and no result is waiting; while bets keep running, a large deposit may not exit in full."
+          },
+          "4": {
+            "title": "Governance and the guardian",
+            "body": "Changes wait 72 hours and can be cancelled, but they still depend on the operator's Safe and on someone watching the queue; queued changes are announced publicly. The guardian can cancel any queued change, including its own replacement and an unpause: a rogue guardian can keep a pool paused, which stops new bets and deposits but freezes no funds. If the Safe is lost or gives up its role, governance is frozen for good and the pools can only wind down."
+          },
+          "5": {
+            "title": "Voids",
+            "body": "A void returns only the stake: the VRF fee is not refunded, and a bet that would have won pays no winnings. Whoever opens a void window chooses when, after the random values are public, and while a failure lasts the order of execution decides which bets are voided first."
+          },
+          "6": {
+            "title": "Pool capacity",
+            "body": "A pool holds at most 128 open bets and each player at most 2, so 64 addresses can fill a pool and turn other players away until their bets end."
+          },
+          "7": {
+            "title": "Outcome and settlement risk",
+            "body": "Casino rooms depend on Chainlink VRF. Settlement may be delayed when the randomness provider lags or the network delays transactions; a bet whose random value never arrives is refunded after its deadline."
+          },
+          "8": {
+            "title": "Asset issuer",
+            "body": "The USDC issuer can freeze, seize or burn tokens held by the pool contracts. A freeze delays payments until it ends. A seizure leaves the pool's accounting short; deposits, withdrawals, settlement and voids can then stop."
+          },
+          "9": {
             "title": "Jurisdiction and compliance",
             "body": "Users must determine for themselves whether use of the frontend, room participation, or LP activity is lawful in their jurisdiction."
           }

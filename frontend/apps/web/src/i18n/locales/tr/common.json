@@ -589,6 +589,152 @@
       }
     }
   },
+  "legal": {
+    "navAria": "Yasal sayfalar",
+    "keyPoints": "Öne çıkanlar",
+    "nav": {
+      "terms": "Koşullar",
+      "privacy": "Gizlilik",
+      "disclaimer": "Risk bildirimi"
+    },
+    "pages": {
+      "terms": {
+        "eyebrow": "Yasal",
+        "title": "Hizmet Koşulları",
+        "description": "Bu koşullar ArbiGameFi arayüzüne erişimi düzenler ve bahislere ve havuz yatırımlarına uygulanan zincir üstü kuralları özetler. Bu kuralları sözleşmeler uygular; bu sayfa ile bir sözleşme farklıysa sözleşme geçerlidir.",
+        "highlights": {
+          "0": "Arayüz, herkese açık zincir üstü sistemlere erişim sağlar; her bahsi ve her çekimi sözleşmeler belirler.",
+          "1": "Havuzlarda, oyunlarda ve parametrelerde yapılan her değişiklik, herkese açık bir yönetişim zaman kilidinde en az 72 saat bekler ve beklerken iptal edilebilir.",
+          "2": "Duraklatma yalnızca yeni bahisleri ve yeni yatırımları durdurur. Sonuçlandırma, iadeler, talepler ve çekimler devam eder.",
+          "3": "Sonucu gelen ama sonuçlandırılamayan bir bahis geçersiz kılınabilir: bahis tutarı iade edilir, VRF ücreti edilmez.",
+          "4": "Cüzdan saklama, işlem kontrolü, gas ve yerel uyumluluk kullanıcının sorumluluğundadır."
+        },
+        "sections": {
+          "0": {
+            "title": "Arayüzün kullanımı",
+            "body": "ArbiGameFi arayüzü, zincir üstü oyun odalarına ve havuz sayfalarına cüzdanla erişim sağlar. Arayüze erişmek, imzalamadan önce işlem içeriğini, gösterilen ücretleri, ağ koşullarını ve çağrılan sözleşmeleri kontrol etme gerekliliğini ortadan kaldırmaz."
+          },
+          "1": {
+            "title": "Cüzdanlar ve yürütme",
+            "body": "Kullanıcılar cüzdanlarını ve özel anahtarlarını kendileri saklar. ArbiGameFi cüzdanları saklamaz, özel anahtarları kurtaramaz ve ağ tarafından onaylanmış işlemleri geri alamaz."
+          },
+          "2": {
+            "title": "Bahisler ve limitler",
+            "body": "Bir bahis, ancak havuz olası en yüksek ödemesini ayırabildiği sürece kabul edilir. USDC havuzunda her tur en az 0,01 USDC'dir ve bir bahis en fazla 25 turdan oluşur. Bir havuzda en fazla 128 açık bahis, her oyuncunun da en fazla 2 açık bahsi olabilir; bu yüzden havuz doluyken ya da iki bahsiniz hâlâ açıkken yeni bir bahis reddedilebilir. Bahis kabul edildiğinde oyun kuralları, kasa avantajı, referans koşulları ve iade süresi sabitlenir; sonraki değişiklikler yalnızca yeni bahisleri etkiler."
+          },
+          "3": {
+            "title": "Sonuçlar, iadeler ve geçersiz kılma",
+            "body": "Her bahis Chainlink VRF'ten bir rastgele değer ister ve normalde bu değeri getiren işlemde sonuçlandırılır. Bahsin iade süresine kadar (varsayılan bir saat, en fazla bir gün) rastgele değer gelmezse bahsi herkes iade edebilir. Gelen rastgele değer bir daha çekilmez: bahis onunla sonuçlandırılır ve başarısız olan bir sonuçlandırmayı herkes yeniden deneyebilir. Sonuçlandırma başarısız olmaya devam ederse, bir geçersiz kılma penceresi kapsıyorsa talepten 24 saat sonra, pencere yoksa talepten 7 gün sonra bahsi herkes geçersiz kılabilir. Geçersiz kılma önce bahsi bir kez daha sonuçlandırmayı dener; ancak bu da başarısız olursa bahis tutarı talep edilebilir bakiye olarak iade edilir. VRF ücreti iade edilmez ve geçersiz kılınan bir bahis, sonucu kazandıracak olsa bile kazanç ödemez."
+          },
+          "4": {
+            "title": "Geçersiz kılmaya kim karar verir",
+            "body": "Bir havuzun geçersiz kılma penceresini yönetişim zaman kilidi, operatörün Safe'i veya havuzun koruyucusu (guardian) açabilir; bu da yalnızca o havuzda kaydedilmeyi bekleyen bir sonuç varken mümkündür. Pencereyi açan, rastgele değerler herkese açık olduktan sonra zamanlamayı seçer; arıza sürdükçe bahislerin geçersiz kılınma sırası hangilerinin önce biteceğini belirler. Operatörün keeper'ı uygun her bahsi talep sırasıyla dener ve sonuçları yayımlar. Geçersiz kılma yaklaşık 11 milyon gas gerektirir: bazı akıllı sözleşme cüzdanları ve bundler'lar bu işlemi gönderemez, ancak başka herhangi bir hesap veya keeper bahsi sizin yerinize geçersiz kılabilir. Geçersiz kılma, havuzun muhasebesinin denk olmasını da gerektirir. Varlık ihraççısı havuzun tokenlarını dondurursa iade edilen tutar dondurma bitince ödenir; ihraççı tokenlara el koyar veya onları yakarsa muhasebe artık denk olmaz ve bahisler geçersiz kılınamaz."
+          },
+          "5": {
+            "title": "Duraklatmalar ve kapatılan oyunlar",
+            "body": "Operatörün Safe'i veya havuzun koruyucusu (guardian) bir havuzu hemen duraklatabilir. Duraklatma yalnızca yeni bahisleri ve yeni yatırımları durdurur: sonuçlandırma, iadeler, geçersiz kılmalar, talepler ve çekimler devam eder. Duraklatmayı kaldırmak bir yönetişim değişikliğidir ve en az 72 saat bekler. Safe ayrıca bir havuzu veya bir oyunu hemen kapatabilir; kabul edilmiş bahisler yine sonuçlandırılır, iade edilir veya geçersiz kılınır ve kapatılan bir oyun bir daha açılmaz."
+          },
+          "6": {
+            "title": "Yönetişim ve değişiklikler",
+            "body": "Sözleşmeler yükseltilemez. Havuzlarda, hub'larda, oyunlarda ve parametrelerde yapılan her değişiklik yönetişim zaman kilidinin bir işlemidir: operatörün Safe'i onu sıraya koyar, işlem yayımlanır ve en az 72 saat bekler; bu süre artırılabilir ama hiçbir zaman 72 saatin altına indirilemez. Beklerken Safe veya koruyucu (guardian) — imzacıları Safe imzacısı olmayan bağımsız bir multisig — işlemi iptal edebilir; işlem hazır olduğunda herkes yürütebilir. Kasa avantajı değişikliği bundan sonra yedi gün daha bekler. Yönetişim LP fonlarını veya oyuncu bakiyelerini alamaz. Safe kaybolur ya da rolünden vazgeçerse hiçbir kural bir daha değişemez ve havuzlar yalnızca tasfiye edilebilir: sonuçlandırma, iadeler, 7 günlük geçersiz kılmalar ve çekimler devam eder, mevcut bir duraklatma da sürer."
+          },
+          "7": {
+            "title": "Likidite sağlama",
+            "body": "Her yatırım, 24 saatlik çekim kilidi olan kendi NFT'sini oluşturur. Bir havuz bahisler başlamadan yatırım kabul edebilir: bahisler ancak ayrı bir etkinleştirme zaman kilidinde 72 saat bekledikten sonra başlar. Kilit süresi dolunca NFT sahibi havuzun serbest sermayesi kadar çekim yapabilir. LP sermayesi her bahsin karşı tarafıdır ve önceki ile sonraki yatırımlar sonuçları paylaşabilir; nasıl olduğunu risk bildirimi açıklar."
+          },
+          "8": {
+            "title": "Protokol ve oda riski",
+            "body": "Canlı odalar akıllı sözleşmelere, rastgelelik veya oracle sağlayıcılarına, indeksleyicilere, RPC altyapısına ve üçüncü taraf cüzdan sağlayıcılarına bağlıdır. Hizmetin erişilebilirliği ve sonuçların görünürlüğü bu katmanlardan herhangi birinden etkilenebilir."
+          },
+          "9": {
+            "title": "Her yerde erişilebilir değil",
+            "body": "Arayüz her yargı bölgesinde, ağ koşulunda, tarayıcıda veya sürüm kanalında erişilebilir olmayabilir. Bulunduğu yerde erişimin veya katılımın serbest olup olmadığını belirlemek kullanıcının sorumluluğundadır."
+          }
+        }
+      },
+      "privacy": {
+        "eyebrow": "Yasal",
+        "title": "Gizlilik Politikası",
+        "description": "ArbiGameFi herkese açık blokzincirde yürütme üzerine kuruludur. Bu politika, arayüzün zincir üstünde zaten görünen cüzdan ve işlem verilerine ek olarak işleyebileceği sınırlı verileri açıklar.",
+        "highlights": {
+          "0": "Cüzdan adresleri ve işlem hash'leri, zincir üstünde zaten herkese açık olduklarında gösterilebilir.",
+          "1": "Ürün analitiği ve performans telemetrisi, güvenilirliği ve kullanılabilirliği artırmak için kullanılabilir.",
+          "2": "Cüzdan bağlayıcıları, RPC sağlayıcıları, indeksleyiciler ve oracle entegrasyonları istek meta verilerini işleyebilir."
+        },
+        "sections": {
+          "0": {
+            "title": "Herkese açık blokzincir verileri",
+            "body": "Cüzdan adresleri, işlem hash'leri, bahis durumları, sonuçlandırma sonuçları ve havuz hareketleri zincir üstünde zaten görünür olduğu için odaların herkese açık akışlarında gösterilebilir."
+          },
+          "1": {
+            "title": "Arayüz analitiği",
+            "body": "Arayüz; oda düzenlerini, kullanıcıların sisteme alışmasını, operasyonel görünürlüğü ve sürüm kalitesini iyileştirmek için ürün analitiği, performans ölçümleri ve etkileşim sinyalleri toplayabilir."
+          },
+          "2": {
+            "title": "Üçüncü taraf hizmetler",
+            "body": "Cüzdan bağlayıcıları, RPC sağlayıcıları, indeksleyiciler, analitik hizmetleri ve oracle entegrasyonları olağan çalışmanın parçası olarak istek meta verilerini işleyebilir. Onların kendi koşulları ve gizlilik kuralları da geçerlidir."
+          },
+          "3": {
+            "title": "Veri en aza indirme",
+            "body": "Ürün; ürün güvenilirliği, dolandırıcılığın önlenmesi veya yasal uyumluluk için gerekli olmayan özel anahtarları, kurtarma ifadelerini, gereksiz kişisel tanımlayıcıları veya ham cüzdan hareketlerini toplamaktan kaçınmalıdır."
+          }
+        }
+      },
+      "disclaimer": {
+        "eyebrow": "Riskler",
+        "title": "Risk Bildirimi",
+        "description": "ArbiGameFi zincir üstü oyunlar ve havuz yatırımları için arayüzler sunar. Bu sistemlerle etkileşim finansal, hukuki ve teknik riskler içerir. Bu sayfa, protokolün tasarım gereği taşıdığı riskleri listeler.",
+        "highlights": {
+          "0": "Akıllı sözleşmeler, rastgelelik sağlayıcıları, indeksleyiciler, RPC uç noktaları ve cüzdan istemcileri arızalanabilir veya gecikebilir.",
+          "1": "LP sermayesi her bahsin karşı tarafıdır; önceki ve sonraki yatırımlar sonuçları paylaşır ve çıkışlar ilk gelen ilk alır usulüyle olur.",
+          "2": "Duraklatma çekimleri hiçbir zaman engellemez; bu yüzden çekim yolundaki bir kusuru da durduramaz.",
+          "3": "Katılımın kendi yargı bölgesinde yasal olup olmadığını belirlemek kullanıcının sorumluluğundadır."
+        },
+        "sections": {
+          "0": {
+            "title": "Protokol riski",
+            "body": "Akıllı sözleşme hataları, oracle kesintileri, geciken kesinlik, indeksleyici gecikmesi, cüzdan istemcisi arızaları veya ağ tıkanıklığı kullanıcı deneyimini ya da odaların görünürlüğünü geçici olarak etkileyebilir."
+          },
+          "1": {
+            "title": "Likidite ve çekimler",
+            "body": "LP sermayesi her kazanan bahsi öder. Bir çekim, havuzun serbest sermayesiyle sınırlıdır; bahisler olası en yüksek ödemelerini ayırdıkça bu sermaye azalır ve tam geri ödeme için bir tarih garanti edilmez. Bir sonuç kaydedilmeyi beklerken yatırımlar ve çekimler, sonuç sonuçlandırılana veya geçersiz kılınana kadar durur; talepten 7 gün sonra herkes onu geçersiz kılabilir."
+          },
+          "2": {
+            "title": "İşlem sırası",
+            "body": "Kilidi dolmuş bir yatırım, serbest sermaye yeterliyse bir bahsin sonucu zincire kaydedilmeden önce çekilebilir. Kalan veya sonradan gelen sermaye bu durumda önceki bahislerin kazancını paylaşabilir ya da zararını üstlenebilir; bu, önceki yatırımların her bahsin olası en büyük zararını hâlâ karşılayıp karşılamadığına bağlıdır. 24 saatlik kilit bu sıra avantajını ortadan kaldırmaz ve sermaye sırasında adalet vaat edilmez."
+          },
+          "3": {
+            "title": "Olay sırasında çıkışlar",
+            "body": "Bir olay sırasında çekimler ilk gelen ilk alır usulüyle yapılır: erken davranan bir LP, serbest sermaye yettiği sürece tamamını çekebilir ve kalan yatırımlar tüm açık bahisleri taşır. Duraklatma yeni bahisleri ve yatırımları durdurur ama çekimleri veya XP taleplerini hiçbir zaman durdurmaz; bu yüzden bu yollardaki bir kusuru da durduramaz. 72 saatlik zaman kilidi, LP'lerin bir değişiklik yürürlüğe girmeden ayrılmasına ancak havuz yeterince erken kapatılırsa ve bekleyen bir sonuç yoksa izin verir; bahisler sürerken büyük bir yatırım tamamen çıkamayabilir."
+          },
+          "4": {
+            "title": "Yönetişim ve koruyucu (guardian)",
+            "body": "Değişiklikler 72 saat bekler ve iptal edilebilir, ancak yine de operatörün Safe'ine ve kuyruğu izleyen birine bağlıdır; sıraya konan değişiklikler herkese açık duyurulur. Koruyucu (guardian), kendi değiştirilmesi ve bir duraklatmanın kaldırılması dahil, sıradaki her değişikliği iptal edebilir: kötü niyetli bir koruyucu bir havuzu duraklatılmış tutabilir; bu yeni bahisleri ve yatırımları durdurur ama hiçbir fonu dondurmaz. Safe kaybolur ya da rolünden vazgeçerse yönetişim kalıcı olarak donar ve havuzlar yalnızca tasfiye edilebilir."
+          },
+          "5": {
+            "title": "Geçersiz kılma",
+            "body": "Geçersiz kılma yalnızca bahis tutarını iade eder: VRF ücreti iade edilmez ve kazanacak olan bir bahis kazanç ödemez. Geçersiz kılma penceresini açan, rastgele değerler herkese açık olduktan sonra zamanlamayı seçer; arıza sürdükçe yürütme sırası hangi bahislerin önce geçersiz kılınacağını belirler."
+          },
+          "6": {
+            "title": "Havuz kapasitesi",
+            "body": "Bir havuzda en fazla 128 açık bahis, her oyuncunun da en fazla 2 açık bahsi olabilir; bu yüzden 64 adres bir havuzu doldurabilir ve bahisleri bitene kadar diğer oyuncuların bahis yapmasını engelleyebilir."
+          },
+          "7": {
+            "title": "Sonuç ve sonuçlandırma riski",
+            "body": "Kumarhane odaları Chainlink VRF'e bağlıdır. Rastgelelik sağlayıcısı geciktiğinde veya ağ işlemleri geciktirdiğinde sonuçlandırma gecikebilir; rastgele değeri hiç gelmeyen bir bahis, süresi dolduktan sonra iade edilir."
+          },
+          "8": {
+            "title": "Varlık ihraççısı",
+            "body": "USDC ihraççısı, havuz sözleşmelerinde tutulan tokenları dondurabilir, el koyabilir veya yakabilir. Dondurma, ödemeleri dondurma bitene kadar geciktirir. El koyma havuzun muhasebesinde açık bırakır; bu durumda yatırımlar, çekimler, sonuçlandırma ve geçersiz kılmalar durabilir."
+          },
+          "9": {
+            "title": "Yargı bölgesi ve uyumluluk",
+            "body": "Kullanıcılar, arayüzün kullanımının, odalara katılımın veya LP faaliyetinin kendi yargı bölgelerinde yasal olup olmadığını kendileri belirlemelidir."
+          }
+        }
+      }
+    }
+  },
   "affiliate": {
     "hero": {
       "eyebrow": "Ortak büyümesi",
@@ -858,6 +1004,17 @@
       "bankSurplus": "Dağıtılmamış Bank fazlası",
       "surplusDetail": "Beklenmedik token transferleri NFT sermayesine dahil edilmez ve buradan çekilemez.",
       "riskTerms": "Hesaplaşma sırasında önceki mevduat aralığı, yalnızca mevcut sermayesi bahsin başlangıçtaki azami LP zararını karşılıyorsa hem kârı hem zararı alır. Aksi hâlde iki sonuç da sonraki mevduatlar dâhil mevcut havuza dağıtılır. Risksiz bahislerde boş aralık kuralı korunur. Beklenen getiri ve risk bu dağılıma bağlıdır; hesaplaşma sırası dağılımı değiştirebilir. Çekilen sermaye artık katılmaz. İhraççı kısıtlamaları ödemeyi engelleyebilir. LP sermayesi kalmadığında sonraki kâr protokol sermayesine gider.",
+      "poolRules": {
+        "title": "Havuz kuralları",
+        "items": {
+          "0": "Bu havuzdaki değişiklikler yönetişim zaman kilidinde en az 72 saat bekler ve operatörün Safe'i veya havuzun koruyucusu (guardian) beklerken bunları iptal edebilir. Yatırımınızın kilidi açıksa ve serbest sermaye yeterliyse bu süre içinde çekim yapabilirsiniz.",
+          "1": "Duraklatma yalnızca yeni bahisleri ve yeni yatırımları durdurur; çekimler ve talepler devam eder. Bir olay sırasında, serbest sermaye yettiği sürece çekimler ilk gelen ilk alır usulüyle yapılır.",
+          "2": "Kaydedilemeyen bir sonuç, sonuçlandırılana veya geçersiz kılınana kadar yatırımları ve çekimleri durdurur; talepten 7 gün sonra herkes onu geçersiz kılabilir.",
+          "3": "Koruyucu (guardian) bağımsız bir multisig'dir: havuzu duraklatabilir ve kendi değiştirilmesi dahil sıradaki her değişikliği iptal edebilir; fonları hareket ettiremez.",
+          "4": "Operatörün Safe'i kaybolursa havuz yalnızca tasfiye edilebilir: sonuçlandırma, iadeler, geçersiz kılmalar ve çekimler devam eder."
+        },
+        "more": "Risk bildiriminin tamamı"
+      },
       "orderingRisk": "Kilidi dolmuş ve kullanılabilir sermaye, bir bahsin sonucu zincire kaydedilmeden önce çekilebilir. Havuzda kalan veya sonradan yatırılan sermaye, önceki bahislerin kazanç ya da kayıplarına katılabilir. 24 saatlik kilit, işlem sırasından doğan riski ortadan kaldırmaz.",
       "depositTerms": "Her para yatırma işlemi ayrı bir NFT oluşturur ve kendi 24 saatlik çekim kilidini başlatır. Sermaye bu süre boyunca oyun sonuçlarına katılır. NFT transferi mevcut kilit bitiş zamanını değiştirmez.",
       "depositsPaused": "Havuz duraklatıldı: yeni LP yatırımları kabul edilmiyor. Çekimler olağan kurallarla açık kalır.",

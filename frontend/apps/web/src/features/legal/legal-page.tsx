@@ -6,12 +6,19 @@ import { useTranslations } from "next-intl";
 
 import { cn } from "@ssot/ui";
 
-import { LEGAL_NAV, type LegalSlug } from "./content";
+import { LEGAL_LAYOUT, LEGAL_NAV, type LegalSlug } from "./content";
+
+function indices(count: number) {
+  return Array.from({ length: count }, (_, index) => index);
+}
 
 export function LegalPage({ slug }: { slug: LegalSlug }) {
   const t = useTranslations("legal");
-  const highlights = [0, 1, 2].map((index) => t(`pages.${slug}.highlights.${index}`));
-  const sections = [0, 1, 2, 3].map((index) => ({
+  const layout = LEGAL_LAYOUT[slug];
+  const highlights = indices(layout.highlights).map((index) =>
+    t(`pages.${slug}.highlights.${index}`)
+  );
+  const sections = indices(layout.sections).map((index) => ({
     title: t(`pages.${slug}.sections.${index}.title`),
     body: t(`pages.${slug}.sections.${index}.body`)
   }));
