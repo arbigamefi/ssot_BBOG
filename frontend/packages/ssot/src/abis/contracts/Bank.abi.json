@@ -1641,6 +1641,12 @@
           "internalType": "bool",
           "name": "paused",
           "type": "bool"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
         }
       ],
       "name": "RiskInPausedSet",

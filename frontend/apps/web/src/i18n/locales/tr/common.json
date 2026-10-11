@@ -839,6 +839,7 @@
       "riskTerms": "Hesaplaşma sırasında önceki mevduat aralığı, yalnızca mevcut sermayesi bahsin başlangıçtaki azami LP zararını karşılıyorsa hem kârı hem zararı alır. Aksi hâlde iki sonuç da sonraki mevduatlar dâhil mevcut havuza dağıtılır. Risksiz bahislerde boş aralık kuralı korunur. Beklenen getiri ve risk bu dağılıma bağlıdır; hesaplaşma sırası dağılımı değiştirebilir. Çekilen sermaye artık katılmaz. İhraççı kısıtlamaları ödemeyi engelleyebilir. LP sermayesi kalmadığında sonraki kâr protokol sermayesine gider.",
       "orderingRisk": "Kilidi dolmuş ve kullanılabilir sermaye, bir bahsin sonucu zincire kaydedilmeden önce çekilebilir. Havuzda kalan veya sonradan yatırılan sermaye, önceki bahislerin kazanç ya da kayıplarına katılabilir. 24 saatlik kilit, işlem sırasından doğan riski ortadan kaldırmaz.",
       "depositTerms": "Her para yatırma işlemi ayrı bir NFT oluşturur ve kendi 24 saatlik çekim kilidini başlatır. Sermaye bu süre boyunca oyun sonuçlarına katılır. NFT transferi mevcut kilit bitiş zamanını değiştirmez.",
+      "depositsPaused": "Havuz duraklatıldı: yeni LP yatırımları kabul edilmiyor. Çekimler olağan kurallarla açık kalır.",
       "withdrawTerms": "Bir likidite NFT’si ve güncel değerinin çekmek istediğiniz yüzdesini seçin. Başarılı bir çekim, ödemeyi NFT’nin mevcut sahibine anında yapar. Önceden çekim talebi göndermeniz veya sonradan ayrıca ödeme talep etmeniz gerekmez.",
       "partialRelock": "Kısmi çekim, kalan tutarı yeniden 24 saat kilitler. Tam çekim NFT’yi kapatır. Gösterilen tutar tahminidir; imzaladığınız işlem bir yüzde belirtir ve güncel zincir durumuna göre yeniden kontrol edilir.",
       "sharedLimit": "Tüm NFT’ler havuzun kullanılabilir sermayesini paylaşır. Bahisler veya başka çekimler gerçekleştikçe hesaplanan tutarlar değişebilir; ödemenin tamamının yapılacağı bir tarih garanti edilmez.",
@@ -879,7 +880,6 @@
       },
       "status": {
         "ready": "Hazır",
-        "paused": "Havuz duraklatıldı; LP para yatırma ve çekme işlemleri kullanılamıyor.",
         "busy": "Sonuçlandırma işlemi sürüyor. Birazdan yenileyin.",
         "unbookedResult": "Alınan bir oyun sonucu henüz muhasebeleştirilmedi. LP para yatırma ve çekme işlemleri geçici olarak kullanılamıyor.",
         "invalidAccounting": "Muhasebe kontrolleri kullanılamıyor veya tutarsız. LP işlemleri engellendi.",

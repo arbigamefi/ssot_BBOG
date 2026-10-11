@@ -372,16 +372,60 @@ contract LiquidityVaultAdversarialTest is Test {
         assertEq(vault.depositState(id).maxAssets, 95);
     }
 
-    function test_pauseBusyAndUnavailableReadsFailCashClosed() external {
+    function test_busyAndUnavailableReadsFailCashClosed() external {
         uint48 id = _deposit(ALICE, 100);
         _mature(id);
-        bank.setStatus(ILiquidityVaultBank.LPStatus.Paused);
-        _assertCashBlocked(id, ALICE, ILiquidityVaultBank.LPStatus.Paused);
         bank.setStatus(ILiquidityVaultBank.LPStatus.Busy);
         _assertCashBlocked(id, ALICE, ILiquidityVaultBank.LPStatus.Busy);
         bank.setStatus(ILiquidityVaultBank.LPStatus.Ready);
         bank.setReadFails(true);
         _assertCashBlocked(id, ALICE, ILiquidityVaultBank.LPStatus.Unavailable);
+    }
+
+    /// A pause closes new deposits only (ADR-0037 §4); a withdrawal keeps the fence, the cooldown and L - K.
+    function test_pauseClosesDepositsButNotWithdrawals() external {
+        uint48 id = _deposit(ALICE, 100);
+        vm.warp(block.timestamp + 12 hours);
+        uint48 fresh = _deposit(BOB, 50);
+        _mature(id);
+        bank.setPaused(true);
+
+        token.mint(CAROL, 1);
+        vm.startPrank(CAROL);
+        token.approve(address(vault), 1);
+        vm.expectRevert(LiquidityVault.DepositsPaused.selector);
+        vault.addDeposit(1);
+        vm.expectRevert(LiquidityVault.DepositsPaused.selector);
+        vault.addDepositFor(ALICE, 1);
+        vm.stopPrank();
+
+        LiquidityVault.DepositState memory state = vault.depositState(id);
+        assertEq(uint256(state.status), uint256(ILiquidityVaultBank.LPStatus.Ready));
+        assertEq(state.maxAssets, 100);
+        vm.prank(BOB);
+        vm.expectRevert(_unavailable(ILiquidityVaultBank.LPStatus.CoolingDown));
+        vault.withdrawDeposit(fresh, ONE);
+
+        bank.setStatus(ILiquidityVaultBank.LPStatus.UnbookedResult);
+        vm.prank(ALICE);
+        vm.expectRevert(_unavailable(ILiquidityVaultBank.LPStatus.UnbookedResult));
+        vault.withdrawDeposit(id, ONE);
+        bank.setStatus(ILiquidityVaultBank.LPStatus.Ready);
+
+        bank.hold(10, 120); // K = 110 of L = 150
+        vm.prank(ALICE);
+        vm.expectRevert(LiquidityVault.InsufficientFreeCapital.selector);
+        vault.withdrawDeposit(id, ONE);
+        state = vault.depositState(id);
+        assertEq(state.maxAssets, 40);
+        vm.prank(ALICE);
+        assertEq(vault.withdrawDeposit(id, state.maxPercent), 40);
+        assertEq(token.balanceOf(ALICE), 40);
+
+        bank.setPaused(false);
+        vm.prank(CAROL);
+        vault.addDeposit(1);
+        assertEq(vault.getReserve(), 111);
     }
 
     function test_cashDeficitAndReserveMismatchAreNotHealthyZeroQuotes() external {
@@ -402,7 +446,7 @@ contract LiquidityVaultAdversarialTest is Test {
         bank.settleToPayable(id, 10, 20, 15);
         assertEq(vault.getReserve(), 95);
         assertEq(token.balanceOf(address(bank)), 15);
-        bank.setStatus(ILiquidityVaultBank.LPStatus.Paused);
+        bank.setPaused(true);
         token.setBlocked(CAROL, true);
         vm.expectRevert();
         bank.payDebt(CAROL);

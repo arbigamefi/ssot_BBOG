@@ -1,6 +1,5 @@
 export type LPStatus =
   | "ready"
-  | "paused"
   | "busy"
   | "unbookedResult"
   | "invalidAccounting"

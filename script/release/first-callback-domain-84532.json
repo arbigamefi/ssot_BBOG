@@ -66,7 +66,7 @@
     "GameHub": {
       "artifact": "GameHub.sol:GameHub",
       "runtimeBytes": 19947,
-      "keccakWithImmutablesZeroed": "0x4416c30c3e2f16b3b9bb8e0801f0e2514f20491e145c9d553428c8a35d6cc400",
+      "keccakWithImmutablesZeroed": "0x5bff100d90971ff2bf9231a8fbcb8126cb23334abcfa1011f511bf5c7f241bec",
       "immutables": [
         {
           "value": "settlementRouter",
@@ -117,7 +117,7 @@
     "SettlementRouter": {
       "artifact": "SettlementRouter.sol:SettlementRouter",
       "runtimeBytes": 4598,
-      "keccakWithImmutablesZeroed": "0xec2702c204d43d1bc341cc29486d70770fc3eb43e79b5ffa98aa8e8de3a4e8dd",
+      "keccakWithImmutablesZeroed": "0x3291282aa1bf60cac87e39c64939ec47d28f618c3a20a1c571880086cd6575b8",
       "immutables": [
         {
           "value": "poolRegistry",
@@ -131,7 +131,7 @@
     "PoolRegistry": {
       "artifact": "PoolRegistry.sol:PoolRegistry",
       "runtimeBytes": 3304,
-      "keccakWithImmutablesZeroed": "0x9068211cd0187027b6d968ad091cf92beb7c8f654f7d8401493d831b71865390",
+      "keccakWithImmutablesZeroed": "0x9ebfbe669d32950ef615fe6a01d5deef8cbd065954ad5c5363cf1c21bec8241e",
       "immutables": []
     },
     "ReferralRegistry": {
@@ -148,61 +148,61 @@
     },
     "Bank": {
       "artifact": "Bank.sol:Bank",
-      "runtimeBytes": 15808,
-      "keccakWithImmutablesZeroed": "0x39f2a87d0a740de0bed0f49d396fbeb1446bc7774436c287b60ced6f8a6d1b87",
+      "runtimeBytes": 15641,
+      "keccakWithImmutablesZeroed": "0x923a1d25b801e5b366be8351162e751e1253c1e9d9ca2970f62da39a79a52b9d",
       "immutables": [
         {
           "value": "poolAsset",
           "offsets": [
             3378,
-            9938
+            9833
           ]
         },
         {
           "value": "poolVault",
           "offsets": [
             832,
-            5929,
-            7295,
-            13964
+            5824,
+            7190,
+            13797
           ]
         },
         {
           "value": "poolAssetDecimals",
           "offsets": [
-            6160,
-            9143
+            6055,
+            9038
           ]
         },
         {
           "value": "poolAsset",
           "offsets": [
-            4790,
-            7203,
-            11929,
-            12773,
-            13628,
-            14237
+            4685,
+            7098,
+            11770,
+            12606,
+            13461,
+            14070
           ]
         },
         {
           "value": "poolVault",
           "offsets": [
-            4545,
-            7402,
-            7510,
-            8380,
-            11581,
-            12481,
-            13497
+            4440,
+            7297,
+            7405,
+            8275,
+            11448,
+            12314,
+            13330
           ]
         }
       ]
     },
     "LiquidityVault": {
       "artifact": "LiquidityVault.sol:LiquidityVault",
-      "runtimeBytes": 15693,
-      "keccakWithImmutablesZeroed": "0x28ef0c481d2233195bdc28bbd7231d0d3027de1076b7ed7469fc3af31c24b98f",
+      "runtimeBytes": 15849,
+      "keccakWithImmutablesZeroed": "0x843d0ee274c9568ac1ec3b83fad7dd98d69172cd338137cb2f2373d97c91fc3a",
       "immutables": [
         {
           "value": "poolAsset",
@@ -210,8 +210,8 @@
             3382,
             7828,
             8234,
-            10219,
-            10853
+            10375,
+            11009
           ]
         },
         {
@@ -221,7 +221,8 @@
             2438,
             2893,
             7634,
-            10153
+            8945,
+            10309
           ]
         }
       ]

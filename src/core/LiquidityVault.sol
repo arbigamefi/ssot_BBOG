@@ -47,6 +47,7 @@ contract LiquidityVault is LiquidityTree, ERC721Enumerable, ReentrancyGuard {
     error InsufficientLockedCapital();
     error ZeroWithdrawal();
     error InvalidTerminalCost();
+    error DepositsPaused();
 
     event DepositAdded(
         address indexed payer, address indexed owner, uint48 indexed depositId, uint128 assets, uint64 withdrawAfter
@@ -91,6 +92,8 @@ contract LiquidityVault is LiquidityTree, ERC721Enumerable, ReentrancyGuard {
     function _addDeposit(address owner, uint256 amount) private returns (uint48 id) {
         if (owner == address(0) || owner == bank || owner == address(this)) revert InvalidDepositOwner();
         if (amount == 0) revert IncorrectAmount();
+        // A paused Bank takes no new capital; withdrawals ignore the pause.
+        if (ILiquidityVaultBank(bank).riskInPaused()) revert DepositsPaused();
         (uint256 pending, ILiquidityVaultBank.LPStatus status) = _lpState();
         if (status != ILiquidityVaultBank.LPStatus.Ready) revert LPUnavailable(status);
         if (amount > MAX_TREE_CAPITAL - getReserve() - pending) revert CapitalLimit();

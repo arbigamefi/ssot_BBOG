@@ -93,6 +93,10 @@ contract VaultPrefixAllocationRegressionTest is Test {
         return (0, LiquidityVault(msg.sender).lockedLiquidity(), ILiquidityVaultBank.LPStatus.Ready);
     }
 
+    function riskInPaused() external pure returns (bool) {
+        return false;
+    }
+
     function bindRandomnessConsumer(address) external {}
 
     function unbookedResultCount(address) external pure returns (uint256) {

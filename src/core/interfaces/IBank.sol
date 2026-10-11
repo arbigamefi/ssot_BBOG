@@ -29,10 +29,10 @@ interface IBank is ILiquidityVaultBank {
     function settlementRouter() external view returns (address);
 
     // -------- pause --------
-    function riskInPaused() external view returns (bool);
-    event RiskInPausedSet(bool paused);
+    // riskInPaused() is declared in ILiquidityVaultBank, which the Vault reads before a deposit.
+    event RiskInPausedSet(bool paused, address indexed caller);
 
-    /// @notice Address allowed to pause Risk-In but not to unpause it.
+    /// @notice Address allowed to pause new positions and deposits but not to unpause them.
     /// @dev Zero means the role is disabled and only governance can pause.
     function guardian() external view returns (address);
     event GuardianSet(address indexed guardian);
@@ -133,11 +133,12 @@ interface IBank is ILiquidityVaultBank {
     function refundBet(uint256 betId, uint256 refundAmount) external;
 
     // -------- XP optional outflow (claim) --------
-    /// @notice Claim accrued XP (optional outflow; may be blocked by riskInPaused or A4 safety domain)
+    /// @notice Claim accrued XP (optional outflow; held back only by the A4 safety domain, also while paused)
     function claimXPAccrued(uint256 amount, address receiver) external returns (uint256 claimed);
 
     // -------- Protocol fee optional outflow --------
-    /// @notice Claim accumulated protocol fees (optional outflow; governance only, A4-domain-checked).
+    /// @notice Claim accumulated protocol fees (optional outflow; governance only, A4-domain-checked, also while
+    ///         paused).
     function claimProtocolFees(uint256 amount, address receiver) external returns (uint256 claimed);
 
     // -------- XP bucket moves (permissionless; NOT optional outflow) --------

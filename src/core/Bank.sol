@@ -16,8 +16,9 @@ import {Governable} from "../access/Governable.sol";
 import {Errors} from "../libs/Errors.sol";
 
 /// @notice Player principal and fixed debts stay here; one immutable Vault holds NFT capital.
-///         Router alone creates/terminalizes holds. Pause blocks new risk and optional outflows,
-///         never legitimate settlement, refunds or player-debt payment.
+///         Router alone creates/terminalizes holds. A pause blocks only new positions and new LP deposits; it
+///         never blocks settlement, refunds, player-debt payment, XP unlocks or claims, protocol-fee claims or
+///         LP withdrawals (ADR-0037 §4).
 contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
@@ -122,7 +123,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         emit MinBetAmountSet(value);
     }
 
-    /// @notice Freeze Risk-In + Optional outflows, while keeping Debt-Out (settle/refund) live.
+    /// @notice Stop new positions and new LP deposits. Every outflow stays live: settlement, refunds, player
+    ///         payables, XP and protocol-fee claims and LP withdrawals.
     /// @dev Asymmetric by design: governance or the guardian may pause, only
     ///      governance may unpause. Pausing declines new risk and is safe to
     ///      make fast; unpausing re-admits risk and must stay behind the full
@@ -137,7 +139,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
             if (msg.sender != governance) revert Errors.Unauthorized();
             if (paused()) _unpause();
         }
-        emit RiskInPausedSet(paused_);
+        emit RiskInPausedSet(paused_, msg.sender);
     }
 
     /// @notice One-time wiring: set SettlementRouter address. Allowed only when unset.
@@ -183,9 +185,10 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         emit MinPlayerTurnoverForUnlockSet(turnover_);
     }
 
-    /// @notice Set the address allowed to pause Risk-In (zero disables the role).
+    /// @notice Set the address allowed to pause (zero disables the role).
     /// @dev The guardian cannot unpause, cannot move funds, and cannot change
-    ///      any other parameter. Its only power is to decline new risk.
+    ///      any other parameter. Its only power is to decline new positions and
+    ///      deposits, so a rogue guardian freezes no LP, player or referrer funds.
     function setGuardian(address guardian_) external onlyGov {
         guardian = guardian_;
         emit GuardianSet(guardian_);
@@ -207,7 +210,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
     // -------- protocol fee optional outflow --------
 
-    /// @notice Claim accumulated protocol fees. Governance only, pause-gated, A4-domain-checked.
+    /// @notice Claim accumulated protocol fees. Governance only and A4-domain-checked; a pause does not block it.
     /// @param amount Amount of protocol fees to claim (in asset units).
     /// @param receiver Address to receive the claimed fees.
     /// @return claimed The amount actually claimed.
@@ -217,7 +220,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         nonReentrant
         returns (uint256 claimed)
     {
-        if (paused()) revert RiskInPaused();
         if (receiver == address(0)) revert Errors.ZeroAddress();
 
         uint256 bal = protocolFeesPayable;
@@ -277,7 +279,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         pending = pendingStakeTotal;
         reserved = totalReserved;
         if (_reentrancyGuardEntered()) return (pending, reserved, LPStatus.Busy);
-        if (paused()) return (pending, reserved, LPStatus.Paused);
         try _assetToken.balanceOf(address(this)) returns (uint256 cash) {
             if (cash < pending + protocolFeesPayable + externalPayablesTotal() + playerPayableTotal) {
                 return (pending, reserved, LPStatus.InvalidAccounting);
@@ -359,7 +360,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     }
 
     function claimXPAccrued(uint256 amount, address receiver) external override nonReentrant returns (uint256 claimed) {
-        if (paused()) revert RiskInPaused();
         if (receiver == address(0)) revert Errors.ZeroAddress();
 
         uint256 bal = _xpAccrued[msg.sender];

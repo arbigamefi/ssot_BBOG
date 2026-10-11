@@ -188,7 +188,7 @@ describe("NFT liquidity SDK", () => {
   });
   it("blocks LP writes when a canonical result remains unbooked", async () => {
     const f = nftFixture();
-    f.state.status = 3;
+    f.state.status = 2;
     f.state.unbooked = 1n;
     f.state.maxPercent = 0n;
     f.state.maxAssets = 0n;

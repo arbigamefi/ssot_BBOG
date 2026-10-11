@@ -839,6 +839,7 @@
       "riskTerms": "Na liquidação, a faixa de depósitos anteriores recebe tanto lucros quanto perdas somente se seu capital atual cobrir a perda máxima original dos LPs nessa aposta. Caso contrário, ambos são distribuídos ao pool atual, incluindo depósitos posteriores. Apostas sem risco mantêm a regra para faixa vazia. Retorno esperado e risco acompanham essa distribuição, que pode variar com a ordem de liquidação. O capital sacado deixa de participar. Restrições do emissor podem impedir pagamentos. Sem capital de LPs, lucros posteriores vão para o capital do protocolo.",
       "orderingRisk": "Após o fim do bloqueio, o capital disponível pode ser sacado antes de o resultado de uma aposta ser registrado na blockchain. O capital que permanece ou entra depois pode receber ganhos ou absorver perdas de apostas anteriores. O bloqueio de 24 horas não elimina o risco causado pela ordem das transações.",
       "depositTerms": "Cada depósito cria um NFT separado e inicia seu próprio bloqueio de saque de 24 horas. Durante esse período, o capital participa dos resultados dos jogos. Transferir um NFT mantém seu prazo original.",
+      "depositsPaused": "Pool pausado: novos depósitos de LP estão indisponíveis. Os saques continuam abertos pelas regras habituais.",
       "withdrawTerms": "Selecione um NFT de depósito e uma porcentagem do seu valor atual. Um saque bem-sucedido paga imediatamente ao proprietário atual. Não é necessário fazer uma solicitação de saque nem resgatar o valor depois.",
       "partialRelock": "Um saque parcial bloqueia o depósito restante por mais 24 horas. Um saque total encerra o NFT. O valor é uma estimativa; sua transação assina uma porcentagem e passa por uma nova verificação do estado atual da rede.",
       "sharedLimit": "Todos os NFTs compartilham o capital disponível do pool. As cotações podem mudar quando apostas ou outros saques são executados; não há prazo garantido para pagamento integral.",
@@ -879,7 +880,6 @@
       },
       "status": {
         "ready": "Disponível",
-        "paused": "Pool pausado; depósitos e saques dos LPs estão indisponíveis.",
         "busy": "A liquidação está em andamento. Atualize em instantes.",
         "unbookedResult": "Um resultado de jogo já recebido aguarda contabilização. Depósitos e saques dos LPs estão temporariamente indisponíveis.",
         "invalidAccounting": "As verificações contábeis estão indisponíveis ou apresentam inconsistências. As operações dos LPs estão bloqueadas.",

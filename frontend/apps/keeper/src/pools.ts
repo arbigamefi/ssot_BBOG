@@ -4,6 +4,13 @@ import { describeError } from "./errors.js";
 import type { PoolHealth } from "./health.js";
 import type { VaultProviderLedgerPool } from "./vault-provider-ledger.js";
 
+// ILiquidityVaultBank.LPStatus: Ready, Busy, UnbookedResult, InvalidAccounting, Unavailable, CoolingDown,
+// NoLiquidity. A pause is not an LP status: it closes new deposits only.
+const LP_BUSY = 1;
+const LP_UNBOOKED_RESULT = 2;
+const LP_INVALID_ACCOUNTING = 3;
+const LP_UNAVAILABLE = 4;
+
 /** Observe both custodians at one block. NFT maturity requires no keeper write. */
 export async function readPoolHealth(
   pool: VaultProviderLedgerPool,
@@ -63,8 +70,13 @@ export async function readPoolHealth(
     result.paused = ssot.riskInPaused;
     result.lpStatus = Number(lp[2]);
     if (!ssot.accountingValid) result.error = "Bank/Vault accounting invariant failed";
-    else if (result.lpStatus === 3) result.error = "Canonical VRF result awaits accounting";
-    else if (result.lpStatus === 2 || result.lpStatus === 4 || result.lpStatus === 5)
+    else if (result.lpStatus === LP_UNBOOKED_RESULT)
+      result.error = "Canonical VRF result awaits accounting";
+    else if (
+      result.lpStatus === LP_BUSY ||
+      result.lpStatus === LP_INVALID_ACCOUNTING ||
+      result.lpStatus === LP_UNAVAILABLE
+    )
       result.error = `LP accounting unavailable (status ${result.lpStatus})`;
   } catch (error) {
     result.error = describeError(error);

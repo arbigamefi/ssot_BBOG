@@ -1872,6 +1872,7 @@
       "riskTerms": "At settlement, an earlier deposit range keeps both profit and loss only if its current capital covers that bet’s original maximum LP loss. Otherwise both are shared by the current pool, including later deposits. Zero-risk bets retain the empty-range fallback. Expected returns and risks follow this allocation; settlement order can change it. Withdrawn capital no longer participates. Issuer restrictions may prevent payment. If no LP capital remains, later profit goes to protocol capital.",
       "orderingRisk": "Once its lock expires, available capital may be withdrawn before a bet's result is recorded on-chain. Capital that remains or arrives later may share gains or absorb losses from earlier bets. The 24-hour lock does not remove this transaction-ordering risk.",
       "depositTerms": "Every deposit creates a separate NFT and starts its own 24-hour withdrawal lock. Capital participates in game results during this period. Transferring an NFT keeps its existing deadline.",
+      "depositsPaused": "Pool paused: new LP deposits are unavailable. Withdrawals stay open under the usual rules.",
       "withdrawTerms": "Select a deposit NFT and a percentage of its current value. A successful withdrawal pays its current owner immediately. No withdrawal request or later claim is required.",
       "partialRelock": "A partial withdrawal locks the remaining deposit for another 24 hours. A full withdrawal closes the NFT. The amount is an estimate; your transaction signs a percentage and is checked again against current chain state.",
       "sharedLimit": "All NFTs share the pool’s available capital. Quotes may change as bets or other withdrawals execute; no full-payment deadline is guaranteed.",
@@ -1912,7 +1913,6 @@
       },
       "status": {
         "ready": "Ready",
-        "paused": "Pool paused; LP deposits and withdrawals are unavailable.",
         "busy": "Settlement is in progress. Refresh shortly.",
         "unbookedResult": "A received game result is awaiting accounting. LP deposits and withdrawals are temporarily unavailable.",
         "invalidAccounting": "Accounting checks are unavailable or inconsistent. LP operations are blocked.",

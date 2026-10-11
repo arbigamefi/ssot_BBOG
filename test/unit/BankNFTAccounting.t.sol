@@ -353,6 +353,63 @@ contract BankNFTAccountingTest is Test {
         _assertAccounting(0, 0);
     }
 
+    /// ADR-0037 §4 (B3): a pause stops new positions and new deposits only. Settlement, XP unlocks and claims,
+    /// protocol-fee claims and mature NFT withdrawals continue, and the LP status does not report the pause.
+    function test_pauseStopsNewRiskAndDepositsButNoOutflow() public {
+        uint48 id = _deposit(alice, 1_000e6);
+        bank.setMinPlayerTurnoverForUnlock(60e6);
+        _open(1, 100e6, 300e6);
+        bank.setRiskInPaused(true);
+
+        (,, ILiquidityVaultBank.LPStatus status) = bank.lpAccounting();
+        assertEq(uint8(status), uint8(ILiquidityVaultBank.LPStatus.Ready));
+        vm.expectRevert(IBank.RiskInPaused.selector);
+        _open(2, 1e6, 2e6);
+        token.mint(bob, 1e6);
+        vm.startPrank(bob);
+        token.approve(address(vault), 1e6);
+        vm.expectRevert(LiquidityVault.DepositsPaused.selector);
+        vault.addDeposit(1e6);
+        vm.stopPrank();
+
+        SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](1);
+        awards[0] = SSOTTypes.XPAward(bob, player, 3e6, 5e6, 4e6, bytes32("referral"));
+        router.finish(bank, 1, 20e6, 20e6, 40e6, 2e6, awards);
+        assertEq(bank.unlockXPLocked(bob, player), 5e6);
+        vm.prank(bob);
+        assertEq(bank.claimXPAccrued(8e6, bob), 8e6);
+        assertEq(bank.claimProtocolFees(2e6, address(this)), 2e6);
+
+        vm.warp(block.timestamp + 1 days);
+        LiquidityVault.DepositState memory quote = vault.depositState(id);
+        assertEq(uint8(quote.status), uint8(ILiquidityVaultBank.LPStatus.Ready));
+        assertEq(quote.maxPercent, ONE);
+        vm.prank(alice);
+        assertEq(vault.withdrawDeposit(id, ONE), 1_026e6);
+        assertTrue(bank.riskInPaused());
+        _assertAccounting(0, 0);
+
+        bank.setRiskInPaused(false);
+        vm.prank(bob);
+        vault.addDeposit(1e6);
+    }
+
+    /// Without the pause check an optional outflow is still held back by the outflow domain (ADR-0037 D6 (a)).
+    function test_pausedClaimsStillRespectTheOutflowDomain() public {
+        _deposit(alice, 1_000e6);
+        bank.setRiskReserveBps(0);
+        _open(1, 100e6, 100e6);
+        _finish(1, 0, 0, 0, 5e6);
+        bank.setWithdrawalBufferBps(9_000);
+        _open(2, 100e6, 1_000e6);
+        bank.setRiskInPaused(true);
+        vm.expectRevert(IBank.OptionalOutflowDomainViolation.selector);
+        bank.claimProtocolFees(1e6, address(this));
+        _finish(2, 0, 0, 0, 0);
+        assertEq(bank.claimProtocolFees(1e6, address(this)), 1e6);
+        _assertAccounting(0, 0);
+    }
+
     function test_optionalBufferNeverReducesNFTWithdrawalLimitAndSelfFeePaymentIsSurplus() public {
         uint48 id = _deposit(alice, 1_000e6);
         bank.setRiskReserveBps(0);

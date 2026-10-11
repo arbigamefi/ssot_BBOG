@@ -76,6 +76,7 @@ contract ReviewBank is ILiquidityVaultBank {
     uint256 public protocolCapital;
     LPStatus public status;
     bool public readFails;
+    bool public riskInPaused;
 
     constructor(ReviewToken token_) {
         token = token_;
@@ -94,6 +95,10 @@ contract ReviewBank is ILiquidityVaultBank {
 
     function setReadFails(bool value) external {
         readFails = value;
+    }
+
+    function setPaused(bool value) external {
+        riskInPaused = value;
     }
 
     function setAccounting(uint256 p, uint256 r) external {

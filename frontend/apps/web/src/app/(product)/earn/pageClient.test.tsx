@@ -107,6 +107,7 @@ beforeEach(() => {
         G: 101_000_000n,
         lpFreeCapital: 99_000_000n,
         lpStatus: "ready",
+        riskInPaused: false,
         totalTurnover: 0n,
         totalPayoutGross: 0n,
         updatedAtBlock: 10n,
@@ -219,23 +220,49 @@ describe("NFT Earn console", () => {
     );
     expect(state.sdk.vault.withdrawDeposit).not.toHaveBeenCalled();
   });
-  it.each(["paused", "unbookedResult", "invalidAccounting"])(
-    "blocks deposits on %s",
-    async (lpStatus) => {
-      state.sdk.bank.getSnapshot.mockResolvedValue({
-        bank: BANK,
-        vault: VAULT,
-        L: 1n,
-        lpStatus,
-        updatedAtBlock: 10n
-      });
-      mount();
-      await screen.findByText(`earn.nft.status.${lpStatus}`);
-      fireEvent.change(screen.getByLabelText("earn.actions.amount"), { target: { value: "1" } });
-      expect(screen.getByRole("button", { name: "earn.actions.submit.deposit" })).toBeDisabled();
-      expect(state.sdk.vault.addDeposit).not.toHaveBeenCalled();
-    }
-  );
+  it.each(["unbookedResult", "invalidAccounting"])("blocks deposits on %s", async (lpStatus) => {
+    state.sdk.bank.getSnapshot.mockResolvedValue({
+      bank: BANK,
+      vault: VAULT,
+      L: 1n,
+      lpStatus,
+      riskInPaused: false,
+      updatedAtBlock: 10n
+    });
+    mount();
+    await screen.findByText(`earn.nft.status.${lpStatus}`);
+    fireEvent.change(screen.getByLabelText("earn.actions.amount"), { target: { value: "1" } });
+    expect(screen.getByRole("button", { name: "earn.actions.submit.deposit" })).toBeDisabled();
+    expect(state.sdk.vault.addDeposit).not.toHaveBeenCalled();
+  });
+  it("blocks deposits but keeps withdrawals open while the pool is paused", async () => {
+    state.sdk.bank.getSnapshot.mockResolvedValue({
+      bank: BANK,
+      vault: VAULT,
+      L: 100_000_000n,
+      lpStatus: "ready",
+      riskInPaused: true,
+      updatedAtBlock: 10n
+    });
+    mount();
+    await screen.findByText("earn.nft.depositsPaused");
+    fireEvent.change(screen.getByLabelText("earn.actions.amount"), { target: { value: "1" } });
+    expect(screen.getByRole("button", { name: "earn.actions.submit.deposit" })).toBeDisabled();
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "earn.actions.tabs.withdraw.label" })[0]!
+    );
+    const button = await screen.findByRole("button", { name: "earn.nft.withdraw" });
+    await waitFor(() => expect(button).not.toBeDisabled());
+    fireEvent.click(button);
+    await waitFor(() =>
+      expect(state.sdk.vault.withdrawDeposit).toHaveBeenCalledWith(
+        1,
+        1099511627776n,
+        1_000_000_000_000n
+      )
+    );
+    expect(state.sdk.vault.addDeposit).not.toHaveBeenCalled();
+  });
   it("treats a failed NFT read as unavailable instead of an empty wallet", async () => {
     state.sdk.vault.getDeposits.mockRejectedValue(new Error("RPC offline"));
     mount();
@@ -288,12 +315,13 @@ describe("NFT Earn console", () => {
     });
     expect(screen.queryByText("26 USDC")).toBeNull();
   });
-  it("keeps player debt claim separate and available while LP operations are paused", async () => {
+  it("keeps player debt claim separate and available while the pool is paused", async () => {
     state.sdk.bank.getSnapshot.mockResolvedValue({
       bank: BANK,
       vault: VAULT,
       L: 1n,
-      lpStatus: "paused",
+      lpStatus: "ready",
+      riskInPaused: true,
       updatedAtBlock: 10n
     });
     state.sdk.bank.getPlayerPayable.mockResolvedValue(2_000_000n);

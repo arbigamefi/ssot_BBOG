@@ -15,7 +15,7 @@ import {MockERC20} from "../../src/mocks/MockERC20.sol";
 ///      - AGF-07: `minPlayerTurnoverForUnlock` gains an upper bound.
 contract BankGuardianAndTurnoverBoundTest is BankTestBase {
     event GuardianSet(address indexed guardian);
-    event RiskInPausedSet(bool paused);
+    event RiskInPausedSet(bool paused, address indexed caller);
 
     address internal gov = address(0xA11CE);
     address internal guardian = address(0x6A12D);
@@ -66,8 +66,8 @@ contract BankGuardianAndTurnoverBoundTest is BankTestBase {
         vm.prank(gov);
         bank6.setGuardian(guardian);
 
-        vm.expectEmit(false, false, false, true, address(bank6));
-        emit RiskInPausedSet(true);
+        vm.expectEmit(true, false, false, true, address(bank6));
+        emit RiskInPausedSet(true, guardian);
         vm.prank(guardian);
         bank6.setRiskInPaused(true);
 
@@ -87,6 +87,8 @@ contract BankGuardianAndTurnoverBoundTest is BankTestBase {
 
         assertTrue(bank6.riskInPaused(), "guardian must not be able to unpause");
 
+        vm.expectEmit(true, false, false, true, address(bank6));
+        emit RiskInPausedSet(false, gov);
         vm.prank(gov);
         bank6.setRiskInPaused(false);
         assertFalse(bank6.riskInPaused());

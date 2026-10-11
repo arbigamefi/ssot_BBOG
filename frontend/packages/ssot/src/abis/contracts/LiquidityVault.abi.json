@@ -920,6 +920,11 @@
     },
     {
       "inputs": [],
+      "name": "DepositsPaused",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "ERC721EnumerableForbiddenBatchMint",
       "type": "error"
     },

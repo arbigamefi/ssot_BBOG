@@ -84,10 +84,10 @@ describe("NFT pool health", () => {
     const f = fixture();
     const original = f.readContract.getMockImplementation()!;
     f.readContract.mockImplementation(async (q) =>
-      q.functionName === "lpAccounting" ? [10n, 30n, 3] : original(q)
+      q.functionName === "lpAccounting" ? [10n, 30n, 2] : original(q)
     );
     expect(await readPoolHealth(pool, f.client)).toMatchObject({
-      lpStatus: 3,
+      lpStatus: 2,
       error: "Canonical VRF result awaits accounting"
     });
   });
@@ -95,11 +95,11 @@ describe("NFT pool health", () => {
     const f = fixture();
     const original = f.readContract.getMockImplementation()!;
     f.readContract.mockImplementation(async (q) =>
-      q.functionName === "lpAccounting" ? [10n, 30n, 5] : original(q)
+      q.functionName === "lpAccounting" ? [10n, 30n, 4] : original(q)
     );
     expect(await readPoolHealth(pool, f.client)).toMatchObject({
       L: "100",
-      lpStatus: 5,
+      lpStatus: 4,
       error: expect.stringContaining("unavailable")
     });
   });

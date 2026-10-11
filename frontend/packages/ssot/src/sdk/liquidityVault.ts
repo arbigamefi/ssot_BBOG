@@ -14,7 +14,6 @@ export { MAX_TREE_CAPITAL, NFT_WITHDRAWAL_ONE };
 const { BankAbi, LiquidityVaultAbi } = getContractAbis();
 const statuses: LPStatus[] = [
   "ready",
-  "paused",
   "busy",
   "unbookedResult",
   "invalidAccounting",

@@ -208,6 +208,7 @@ export function EarnPageClient() {
                 sdk.bank.getSnapshot(poolId),
                 sdk.bank.getAssetBalance(context.asset.address, account)
               ]);
+              if (fresh.riskInPaused) throw new Error(t("earn.nft.depositsPaused"));
               if (fresh.lpStatus !== "ready")
                 throw new Error(t(`earn.nft.status.${fresh.lpStatus}`));
               if (assets > balance) throw new Error(t("earn.errors.insufficientWalletBalance"));
@@ -304,7 +305,12 @@ export function EarnPageClient() {
               onAmountChange={setAmount}
               symbol={symbol}
               disabled={
-                !writable || !depositsEnabled || snapshot?.lpStatus !== "ready" || busy || !amount
+                !writable ||
+                !depositsEnabled ||
+                snapshot?.riskInPaused !== false ||
+                snapshot.lpStatus !== "ready" ||
+                busy ||
+                !amount
               }
               readOnly={readOnly}
               unsupportedAsset={!context}
@@ -326,7 +332,11 @@ export function EarnPageClient() {
               notice={
                 <div className="space-y-2 text-sm leading-6 text-fg-muted">
                   <p>{t("earn.nft.depositTerms")}</p>
-                  {snapshot?.lpStatus && snapshot.lpStatus !== "ready" ? (
+                  {snapshot?.riskInPaused ? (
+                    <p role="status" className="text-warn">
+                      {t("earn.nft.depositsPaused")}
+                    </p>
+                  ) : snapshot?.lpStatus && snapshot.lpStatus !== "ready" ? (
                     <p role="status" className="text-warn">
                       {t(`earn.nft.status.${snapshot.lpStatus}`)}
                     </p>
