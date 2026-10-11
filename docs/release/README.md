@@ -25,7 +25,8 @@ The user accepted the current ordering tradeoff; verify its public disclosure ag
 A timer does not prove safe ordering, and the old 100-round limit is not automatically valid.
 
 All known issues are resolved in one launch candidate before any real-money deployment; the plan is tracked in
-[launch candidate](launch-candidate.zh-CN.md).
+[launch candidate](launch-candidate.zh-CN.md). Release, audit and review evidence outside git, its digests and the
+freeze procedure are in the [evidence index](evidence.md).
 
 Launch also requires the existing operating-entity/jurisdiction decisions, server-side access requirements,
 player limits, terms and operational readiness. Local tests and testnet funding do not establish launch readiness.
