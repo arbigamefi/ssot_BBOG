@@ -101,7 +101,9 @@ const PERFORMANCE_FIELDS = [
   "protocolFeeAccrued",
   "betsHeld",
   "betsSettled",
-  "betsRefunded"
+  "betsRefunded",
+  "betsVoided",
+  "voided"
 ];
 
 let ok = true;
@@ -664,19 +666,25 @@ function validateBankPerformance(performance) {
     "betsRefunded",
     PERFORMANCE_FIELDS
   );
+  const betsVoided = requiredBigintField(
+    "Bank.getPerformance",
+    performance,
+    "betsVoided",
+    PERFORMANCE_FIELDS
+  );
 
   if (payoutGross !== payoutNet + feeOnPayout) {
     throw new Error(
       `payout identity failed: payoutGross=${payoutGross} payoutNet=${payoutNet} feeOnPayout=${feeOnPayout}`
     );
   }
-  if (betsSettled + betsRefunded > betsHeld) {
+  if (betsSettled + betsRefunded + betsVoided > betsHeld) {
     throw new Error(
-      `terminal bet counters exceed held: held=${betsHeld} settled=${betsSettled} refunded=${betsRefunded}`
+      `terminal bet counters exceed held: held=${betsHeld} settled=${betsSettled} refunded=${betsRefunded} voided=${betsVoided}`
     );
   }
 
-  return `turnover=${turnover} payoutGross=${payoutGross} protocolFee=${protocolFeeAccrued} bets=${betsHeld}/${betsSettled}/${betsRefunded}`;
+  return `turnover=${turnover} payoutGross=${payoutGross} protocolFee=${protocolFeeAccrued} bets=${betsHeld}/${betsSettled}/${betsRefunded}/${betsVoided}`;
 }
 
 function assertTupleShape(label, tuple, fields) {

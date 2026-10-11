@@ -22,108 +22,112 @@
     "withdrawalBufferBps": 1000
   },
   "moduleCodeHashes": {
-    "moduleDice": "0x749799482c6c44172dea996d0f2fd082642ad1df4b1cdc0e94ea72d478c7cb6b",
-    "moduleCoinToss": "0x8f2e7b126b883f9a419a5486abdafb37ffdaeebb02fc9ddb1eb9fad14194a7a0",
-    "moduleRoulette": "0x2741cb3cdbfbdcf01de6dea57a5198d4d4310a3b8d9039ed5e4c1c2d325070af",
-    "moduleKeno": "0xd9e9f23c2b12776bb2de865d2490cf81caad73c8a11aa017481657bbc17cd189",
-    "modulePlinko": "0x2986686ad6cc244c7629de0019e935fd7b0b8cd94eb44f2fbd55c8dea64b2242",
-    "moduleSicBo": "0x9fd908f827ef9162ee086a5ec2bbc7aff98e84470e98210609caf51f7a834da0",
-    "moduleSlots": "0xdf46412f3b9e9c23a9d29c04f7b8ef9fdf928aed9e108f22cae39a053cbe7cc7",
-    "moduleBaccarat": "0x717d531dc458024f3771032e03e3dd3d7d040eda0d0713103d33ea0da7645b30"
+    "moduleDice": "0x7e19d5b0eba1d2e85983db7bf1b15e75c8a1f3baf36ab5635d5294ddf427faaf",
+    "moduleCoinToss": "0x9f6989f2d429e0c2f86662ffbd06ec8ace44939a4142300a8a9f9db5139709e9",
+    "moduleRoulette": "0x74e06be19232986446857d14b9e5eeaafe49d07d388657ceb725919237e31ba8",
+    "moduleKeno": "0x281a94c9192f74cb16e2ed951e9cbf82bd14bf1291917844ab0500ea89a14537",
+    "modulePlinko": "0x8ec00972b5504a316aec25126462f253c563b7b3d1dc9d022834b2f818d03389",
+    "moduleSicBo": "0x6ff6b9907255fb3192bc6c4c65c5ad4225e10f77eca020322d39881cbce34aae",
+    "moduleSlots": "0x4176bf0a1a06e77cc3831c31c7424191006d65e93ed7926b99aa38f198528c6b",
+    "moduleBaccarat": "0xb2dcbb9fb024560ade4ae90cf3350f4db0751e8fe10999c6f14c83393aecf3f9"
   },
   "coreRuntimes": {
     "VRFHub": {
       "artifact": "VRFHub.sol:VRFHub",
-      "runtimeBytes": 5941,
-      "keccakWithImmutablesZeroed": "0x08abeaaa5ca4d5a427828cca76fc2623eed4cc168543f2e3718d003296555963",
+      "runtimeBytes": 6439,
+      "keccakWithImmutablesZeroed": "0x90c74dd5d28ae7c6ee7e30401594e6e95c53eab4585c15049101fb1365cf7dc4",
       "immutables": [
         {
           "value": "wrapperLink",
           "offsets": [
-            658
+            1209
           ]
         },
         {
           "value": "vrfWrapper",
           "offsets": [
-            381,
-            1169,
-            2586,
-            2983
+            943,
+            1700,
+            3052,
+            3449
           ]
         },
         {
           "value": "settlementRouter",
           "offsets": [
-            532,
-            1634,
-            2178,
-            2845
+            421,
+            1083,
+            2161,
+            2602,
+            3311
           ]
         }
       ]
     },
     "GameHub": {
       "artifact": "GameHub.sol:GameHub",
-      "runtimeBytes": 20610,
-      "keccakWithImmutablesZeroed": "0x819be3f232d739a6ee889ab487f8b4f8ce94e13380562ca12975490081810d00",
+      "runtimeBytes": 22299,
+      "keccakWithImmutablesZeroed": "0x7f60e4efc13515167d1784a203241df5e2de2fc831813779f982c5bf4c9d6cde",
       "immutables": [
         {
           "value": "settlementRouter",
           "offsets": [
-            665,
-            6144,
-            9182,
-            12741,
-            17879,
-            19388
+            753,
+            2932,
+            6771,
+            9849,
+            13378,
+            17487,
+            19568,
+            21060
           ]
         },
         {
           "value": "vrfHub",
           "offsets": [
-            3415,
-            4565,
-            5518,
-            5805,
-            10033,
-            13162,
-            18044,
-            20096
+            4022,
+            5211,
+            6145,
+            6432,
+            10693,
+            13799,
+            17578,
+            19733,
+            21753
           ]
         },
         {
           "value": "refRegistry",
           "offsets": [
-            1395,
-            3485,
-            8406,
-            11646,
-            11828,
-            11928,
-            11995,
-            14669
+            1521,
+            4124,
+            9073,
+            12283,
+            12465,
+            12565,
+            12632,
+            15274
           ]
         },
         {
           "value": "refEngine",
           "offsets": [
-            3345,
-            17578
+            3952,
+            19267
           ]
         }
       ]
     },
     "SettlementRouter": {
       "artifact": "SettlementRouter.sol:SettlementRouter",
-      "runtimeBytes": 4598,
-      "keccakWithImmutablesZeroed": "0xa2c3b2a6260dc1b7e9824c9ba061f5eca00bcea09d8fe03372d0e79f48b4d2a7",
+      "runtimeBytes": 4816,
+      "keccakWithImmutablesZeroed": "0xa1bc96866126d3a9beea71b81ed8d923366e7bb761f86be9b22abce5919e76e8",
       "immutables": [
         {
           "value": "poolRegistry",
           "offsets": [
-            871,
-            2611
+            1093,
+            2829
           ]
         }
       ]
@@ -131,7 +135,7 @@
     "PoolRegistry": {
       "artifact": "PoolRegistry.sol:PoolRegistry",
       "runtimeBytes": 3834,
-      "keccakWithImmutablesZeroed": "0x655a30e691ab00e968e17ef18e37ecd842b6de6269a2648a315d2a1fb486b6c1",
+      "keccakWithImmutablesZeroed": "0xa31b21499c89b9d31a51788db2538a17e046e4664888eb7f80e65bb0a0cbf7bf",
       "immutables": []
     },
     "ReferralRegistry": {
@@ -143,58 +147,58 @@
     "DefaultReferralEngine": {
       "artifact": "DefaultReferralEngine.sol:DefaultReferralEngine",
       "runtimeBytes": 2148,
-      "keccakWithImmutablesZeroed": "0xf8045293b627bf7b7de2186b3f0e7b494efe60c47bfb994e538639b150ff4299",
+      "keccakWithImmutablesZeroed": "0xeab61b4bbbb39cebd474d18e2d2c629a0145ba8440319295ef3f86c603535fb4",
       "immutables": []
     },
     "Bank": {
       "artifact": "Bank.sol:Bank",
-      "runtimeBytes": 16243,
-      "keccakWithImmutablesZeroed": "0xb1376dca0dd14296c448a6ab540e3f5463c88e88a633a1b59e2b03cff132260c",
+      "runtimeBytes": 16693,
+      "keccakWithImmutablesZeroed": "0xf2c548fa2254d4ff5bb4af1a4911b9da7153e808a39539c389d5be7c2ff357d4",
       "immutables": [
         {
           "value": "poolAsset",
           "offsets": [
-            3606,
-            10252
+            3638,
+            10659
           ]
         },
         {
           "value": "poolVault",
           "offsets": [
-            876,
-            6223,
-            7609,
-            14399
+            909,
+            6612,
+            7997,
+            14849
           ]
         },
         {
           "value": "poolAssetDecimals",
           "offsets": [
-            6474,
-            9457
+            6863,
+            9845
           ]
         },
         {
           "value": "poolAsset",
           "offsets": [
-            5022,
-            7517,
-            12303,
-            13209,
-            14063,
-            14672
+            5412,
+            7905,
+            12752,
+            13658,
+            14513,
+            15122
           ]
         },
         {
           "value": "poolVault",
           "offsets": [
-            4777,
-            7716,
-            7824,
-            8694,
-            11981,
-            12847,
-            13932
+            5167,
+            8104,
+            8212,
+            9082,
+            12430,
+            13296,
+            14382
           ]
         }
       ]

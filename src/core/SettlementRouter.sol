@@ -142,6 +142,16 @@ contract SettlementRouter is ISettlementRouter {
         emit PositionRefunded(positionId, msg.sender, pos.poolId, refundAmount);
     }
 
+    function voidPosition(uint256 positionId) external {
+        SSOTTypes.Position storage pos = _requireOwnerHeldPosition(positionId);
+
+        pos.state = SSOTTypes.PositionState.Voided;
+
+        IBank(pos.bank).voidBet(positionId);
+
+        emit PositionVoided(positionId, msg.sender, pos.poolId, pos.stake);
+    }
+
     function _allocationCap(SSOTTypes.Position storage pos, uint256 refundAmount) internal view returns (uint256) {
         return HouseEdgeLib.operatorShare(HouseEdgeLib.turnoverEdge(pos.stake - refundAmount, pos.edgeBps));
     }

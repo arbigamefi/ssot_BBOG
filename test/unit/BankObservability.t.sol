@@ -150,7 +150,9 @@ contract BankObservabilityTest is BankTestBase {
             uint256 protocolFeeAccrued,
             uint256 betsHeld,
             uint256 betsSettled,
-            uint256 betsRefunded
+            uint256 betsRefunded,
+            uint256 betsVoided,
+            uint256 voided
         ) = bank.getPerformance();
 
         assertEq(turnover, 80e6, "aggregate turnover");
@@ -162,6 +164,8 @@ contract BankObservabilityTest is BankTestBase {
         assertEq(betsHeld, 2, "aggregate held bets");
         assertEq(betsSettled, 1, "aggregate settled bets");
         assertEq(betsRefunded, 1, "aggregate refunded bets");
+        assertEq(betsVoided, 0, "aggregate voided bets");
+        assertEq(voided, 0, "aggregate voided stake");
     }
 
     function test_performanceCountersAreBankAndAssetScoped() external {

@@ -183,7 +183,9 @@ The Owner decided: "保留既定规则，明确接受并披露排序风险" (kee
 
 **Invalidation clause.** Any new path that books value into an empty root, writes tree storage directly, or writes a node after `nextNode-1` voids this optimization and the UNUSED_SUFFIX patch. Such a path must be re-argued before it ships.
 
-**Re-argued for B4 (2026-10-11).** The launch candidate's B4 removes the `maxLoss == 0` test from `_allocationLeaf`. `_allocate` is its only caller and settles k = 0 through the pinned `_addLimit` before reaching it, so every k>0 call selects the same leaf as before and no tree write changes. B4 adds no path of the three kinds above; P1–P4, invariant I, the theorem and UNUSED_SUFFIX stand ([ADR-0037](0037-launch-candidate-authority-pause-capacity-void.md) §8). B5 is re-argued when it lands.
+**Re-argued for B4 (2026-10-11).** The launch candidate's B4 removes the `maxLoss == 0` test from `_allocationLeaf`. `_allocate` is its only caller and settles k = 0 through the pinned `_addLimit` before reaching it, so every k>0 call selects the same leaf as before and no tree write changes. B4 adds no path of the three kinds above; P1–P4, invariant I, the theorem and UNUSED_SUFFIX stand ([ADR-0037](0037-launch-candidate-authority-pause-capacity-void.md) §8).
+
+**Re-argued for B5 (2026-10-11).** A void reaches the Vault only through `applySettlement` with `cost == stake`, where neither the loss nor the profit branch runs: it lowers `lockedLiquidity` by the position's released capital and calls no `_allocate`, writes no tree storage, books nothing into an empty root and writes no node after `nextNode-1`. B5 adds no path of the three kinds either, so the optimization and UNUSED_SUFFIX stand.
 
 **UNUSED_SUFFIX.** The skipped query is exactly 0 by P3 once the lazy range [LIQUIDITYNODES, r] is nonempty, which holds as soon as one leaf has been used. In that case it covers only non-root nodes that lie after the last used leaf.
 

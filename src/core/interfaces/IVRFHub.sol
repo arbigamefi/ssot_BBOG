@@ -7,7 +7,8 @@ interface IVRFHub {
         Awaiting,
         Received,
         Terminal,
-        Cancelled
+        Cancelled,
+        Voided
     }
 
     struct RequestInfo {
@@ -41,6 +42,8 @@ interface IVRFHub {
     function acknowledge(uint256 requestId) external;
     /// @notice Owning Hub calls after Router refund; only an unreceived request may be cancelled.
     function cancel(uint256 requestId) external;
+    /// @notice Owning Hub calls after the Router voided the position; excludes acknowledge (ADR-0037 §7.4).
+    function acknowledgeVoid(uint256 requestId) external;
 
     function refundCreditOf(address payer) external view returns (uint256);
     function totalRefundCredit() external view returns (uint256);
@@ -50,6 +53,7 @@ interface IVRFHub {
     event ResultReceived(uint256 indexed requestId, address indexed bank, uint256 seed);
     event ResultAcknowledged(uint256 indexed requestId, address indexed bank);
     event RequestCancelled(uint256 indexed requestId);
+    event ResultVoided(uint256 indexed requestId, address indexed bank);
     event ResponseIgnored(uint256 indexed requestId, RequestState state);
     /// @dev Failure data is limited to its first 32 bytes; delivered does not imply the Hub settled.
     event CallbackAttempt(uint256 indexed requestId, bool delivered, RequestState state, bytes32 failurePrefix);

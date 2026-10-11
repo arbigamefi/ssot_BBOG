@@ -158,6 +158,18 @@ contract VRFHub is IVRFHub, VRFV2PlusWrapperConsumerBase, ReentrancyGuard {
         emit RequestCancelled(requestId);
     }
 
+    /// @dev Owning Hub calls inside its void, after the Router voided the position. Excludes acknowledge: both need
+    ///      a Received request and each leaves it terminal.
+    function acknowledgeVoid(uint256 requestId) external override {
+        RequestInfo storage r = _requests[requestId];
+        if (msg.sender != r.hub) revert NotOwningHub();
+        if (r.state != RequestState.Received) revert InvalidRequestState(requestId, r.state);
+        _requireTerminalPosition(r, SSOTTypes.PositionState.Voided);
+        r.state = RequestState.Voided;
+        --unbookedResultCount[r.bank];
+        emit ResultVoided(requestId, r.bank);
+    }
+
     function _requireTerminalPosition(RequestInfo storage r, SSOTTypes.PositionState terminal) private view {
         SSOTTypes.Position memory pos = ISettlementRouter(settlementRouter).getPosition(r.betId);
         if (pos.state != terminal || pos.ownerHub != r.hub || pos.bank != r.bank || pos.player != r.payer) {

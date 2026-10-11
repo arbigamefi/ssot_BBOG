@@ -89,6 +89,19 @@
           "type": "uint256"
         }
       ],
+      "name": "acknowledgeVoid",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "requestId",
+          "type": "uint256"
+        }
+      ],
       "name": "cancel",
       "outputs": [],
       "stateMutability": "nonpayable",
@@ -534,6 +547,25 @@
         }
       ],
       "name": "ResultReceived",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "requestId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "bank",
+          "type": "address"
+        }
+      ],
+      "name": "ResultVoided",
       "type": "event"
     },
     {

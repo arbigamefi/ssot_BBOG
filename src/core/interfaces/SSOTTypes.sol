@@ -15,7 +15,8 @@ library SSOTTypes {
         None,
         Held,
         Settled,
-        Refunded
+        Refunded,
+        Voided
     }
 
     /// @notice Pool registry record. A pool is one risk/accounting domain.
@@ -86,7 +87,8 @@ library SSOTTypes {
         PendingVRF,
         RandomReady,
         Settled,
-        Refunded
+        Refunded,
+        Voided
     }
 
     /// @notice Casino hub-side canonical bet record (lifecycle SSOT).

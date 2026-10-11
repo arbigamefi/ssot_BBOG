@@ -88,8 +88,25 @@ interface IGameHub {
     function finalize(uint256 positionId) external;
     function refund(uint256 positionId) external;
 
+    // ---- void of results that can never be booked (ADR-0037 §7) ----
+    function VOID_DELAY() external view returns (uint256);
+    function PUBLIC_VOID_DELAY() external view returns (uint256);
+    function VOID_SETTLEMENT_GAS() external view returns (uint256);
+    function VOID_RESERVE_GAS() external view returns (uint256);
+    function VOID_CALL_OVERHEAD() external view returns (uint256);
+    /// @notice Latest void window of a Bank: bets requested at or before it may be voided 24 hours after request.
+    function voidCohortEnd(address bank) external view returns (uint64);
+    /// @notice Governance, the sentinel or the pool Bank's guardian opens a window while a result is unbooked.
+    function openVoidWindow(uint64 poolId) external;
+    /// @notice Anyone, once eligible: settles the bet if its settlement now succeeds, otherwise voids it.
+    function voidBet(uint256 positionId) external returns (bool voided);
+
     event GameRegistered(bytes32 indexed gameId, address indexed module, uint32 maxBetCount, uint32 callbackGasLimit);
     event GameDisabled(bytes32 indexed gameId, address indexed caller);
+    event VoidWindowOpened(uint64 indexed poolId, address indexed bank, uint64 cohortEnd, address indexed caller);
+    event BetVoided(
+        uint256 indexed positionId, address indexed caller, uint256 stake, bytes32 settlementErrorPrefix
+    );
     event ReferrerBound(address indexed player, address indexed referrer);
     event RefundTimeoutSet(uint256 seconds_);
 
@@ -156,6 +173,9 @@ interface IGameHub {
     error UnknownPool(uint64 poolId);
     error UnknownGame(bytes32 gameId);
     error GameIsDisabled(bytes32 gameId);
+    error NoUnbookedResult(address bank);
+    error VoidNotEligible(uint256 positionId, uint256 nowTs, uint256 eligibleAt);
+    error VoidGasTooLow(uint256 gasLeft, uint256 required);
     error BetNotFound(uint256 positionId);
     error BadState(uint256 positionId, SSOTTypes.BetState got, SSOTTypes.BetState want);
     error RefundNotReady(uint256 positionId, uint256 nowTs, uint256 readyAt);

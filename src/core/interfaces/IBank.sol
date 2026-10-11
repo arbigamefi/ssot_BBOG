@@ -76,6 +76,9 @@ interface IBank is ILiquidityVaultBank {
     /// @dev This is a count of refundBet calls only; settle-path partial refunds are reflected in totalRefunded
     ///      and netted out of totalTurnover.
     function totalBetsRefunded() external view returns (uint256);
+    function totalBetsVoided() external view returns (uint256);
+    /// @notice Stakes refunded as player payables by voids (ADR-0037 §7.4).
+    function totalVoided() external view returns (uint256);
 
     /// @notice Return lifetime, single-asset Bank performance counters.
     /// @dev Canonical gross GGR is `turnover - payoutGross + feeOnPayout`.
@@ -92,7 +95,9 @@ interface IBank is ILiquidityVaultBank {
             uint256 protocolFeeAccrued,
             uint256 betsHeld,
             uint256 betsSettled,
-            uint256 betsRefunded
+            uint256 betsRefunded,
+            uint256 betsVoided,
+            uint256 voided
         );
 
     // XP bucket breakdown
@@ -135,6 +140,9 @@ interface IBank is ILiquidityVaultBank {
     ) external;
 
     function refundBet(uint256 betId, uint256 refundAmount) external;
+    /// @notice Router only: a result that can never be booked refunds the stake as a player payable, with no
+    ///         transfer and no pause check; the tree, turnover, house edge, XP and protocol fees stay unchanged.
+    function voidBet(uint256 betId) external;
 
     // -------- XP optional outflow (claim) --------
     /// @notice Claim accrued XP (optional outflow; held back only by the A4 safety domain, also while paused)
@@ -177,6 +185,7 @@ interface IBank is ILiquidityVaultBank {
     );
 
     event BetRefunded(uint256 indexed betId, address indexed player, uint256 refundAmount);
+    event BetVoided(uint256 indexed betId, address indexed player, uint256 stake);
 
     event XPAwarded(
         uint256 indexed betId,

@@ -80,6 +80,7 @@ test-casino-admission:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --isolate --match-path test/toolchain/IsolatedGasAccounting.t.sol -vv
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --isolate --match-path test/unit/GameHubE2E.t.sol --match-test admission -vv
+	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --isolate --match-path test/unit/VoidBet.t.sol --match-test isolated -vv
 
 pr:
 	@$(MAKE) check-deps

@@ -45,6 +45,8 @@ interface ISettlementRouter {
     ) external;
 
     function refundPosition(uint256 positionId, uint256 refundAmount) external;
+    /// @notice Owner Hub only: the result can never be booked, so the Bank refunds the stake as a player payable.
+    function voidPosition(uint256 positionId) external;
 
     event PositionOpened(
         uint256 indexed positionId,
@@ -72,6 +74,7 @@ interface ISettlementRouter {
     event PositionRefunded(
         uint256 indexed positionId, address indexed ownerHub, uint64 indexed poolId, uint256 refundAmount
     );
+    event PositionVoided(uint256 indexed positionId, address indexed hub, uint64 indexed poolId, uint256 stake);
 
     error UnknownPosition(uint256 positionId);
     error BadPositionState(uint256 positionId, SSOTTypes.PositionState got, SSOTTypes.PositionState want);

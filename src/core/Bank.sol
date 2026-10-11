@@ -46,6 +46,8 @@ contract Bank is IBank, Sentinel, Pausable, ReentrancyGuard {
     uint256 public override totalBetsHeld;
     uint256 public override totalBetsSettled;
     uint256 public override totalBetsRefunded;
+    uint256 public override totalBetsVoided;
+    uint256 public override totalVoided;
 
     // XP buckets (external payables; E-class)
     uint256 public override xpAccruedTotal;
@@ -285,7 +287,7 @@ contract Bank is IBank, Sentinel, Pausable, ReentrancyGuard {
     }
 
     function openHolds() public view override returns (uint256) {
-        return totalBetsHeld - totalBetsSettled - totalBetsRefunded;
+        return totalBetsHeld - totalBetsSettled - totalBetsRefunded - totalBetsVoided;
     }
 
     /// @dev Called by the Vault while its own guard is held: do not ask it to admit its own entry.
@@ -357,7 +359,9 @@ contract Bank is IBank, Sentinel, Pausable, ReentrancyGuard {
             uint256 protocolFeeAccrued,
             uint256 betsHeld,
             uint256 betsSettled,
-            uint256 betsRefunded
+            uint256 betsRefunded,
+            uint256 betsVoided,
+            uint256 voided
         )
     {
         return (
@@ -369,7 +373,9 @@ contract Bank is IBank, Sentinel, Pausable, ReentrancyGuard {
             totalProtocolFeeAccrued,
             totalBetsHeld,
             totalBetsSettled,
-            totalBetsRefunded
+            totalBetsRefunded,
+            totalBetsVoided,
+            totalVoided
         );
     }
 
@@ -654,6 +660,23 @@ contract Bank is IBank, Sentinel, Pausable, ReentrancyGuard {
 
         _requireAccounting();
         emit BetRefunded(betId, h.player, refundAmount);
+    }
+
+    /// @dev ADR-0037 §7.4: cost == stake, so the Vault only releases the locked reserve and books nothing; the
+    ///      stake moves from pending principal to the player's payable, so Bank cash is unchanged.
+    function voidBet(uint256 betId) external override onlySettlementRouter nonReentrant {
+        Hold storage h = holds[betId];
+        if (!h.open) revert BetNotOpen(betId);
+        uint256 stake = h.stake;
+        address player = h.player;
+        _applyHold(h, betId, stake);
+        playerPayable[player] += stake;
+        playerPayableTotal += stake;
+        emit PlayerPayableCreated(betId, player, stake);
+        totalBetsVoided += 1;
+        totalVoided += stake;
+        _requireAccounting();
+        emit BetVoided(betId, player, stake);
     }
 
     function _applyHold(Hold storage h, uint256 betId, uint256 cost) internal {

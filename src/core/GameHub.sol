@@ -88,6 +88,15 @@ contract GameHub is IGameHub, Sentinel, ReentrancyGuard {
 
     uint256 private constant CALLBACK_COMPLETION_GAS = 25_000;
 
+    // ADR-0037 §7 and §10: a void becomes eligible 24 hours after the VRF request inside a window of its Bank, or
+    // after 7 days for anyone. The settlement attempt gets exactly VOID_SETTLEMENT_GAS (decision D3); the void
+    // branch runs on the reserve; the overhead bounds the work between the gas check and the call.
+    uint256 public constant override VOID_DELAY = 24 hours;
+    uint256 public constant override PUBLIC_VOID_DELAY = 7 days;
+    uint256 public constant override VOID_SETTLEMENT_GAS = 10_000_000;
+    uint256 public constant override VOID_RESERVE_GAS = 600_000;
+    uint256 public constant override VOID_CALL_OVERHEAD = 5_000;
+
     /// @dev Accepted amounts are bounded by Bank's 108-bit capital ceiling. Keep checked casts
     ///      at the write boundary; lifecycle state and gross-minus-net fee need no duplicate slots.
     struct StoredBetTerminal {
@@ -102,6 +111,7 @@ contract GameHub is IGameHub, Sentinel, ReentrancyGuard {
     mapping(uint256 => bytes) internal betParams;
     mapping(uint256 => ReferralPayees) internal betReferralPayees;
     mapping(bytes32 => bool) public override gameDisabled;
+    mapping(address => uint64) public override voidCohortEnd;
 
     constructor(
         address settlementRouter_,
@@ -271,6 +281,7 @@ contract GameHub is IGameHub, Sentinel, ReentrancyGuard {
         StoredBetTerminal storage terminal = betTerminals[betId];
         return SSOTTypes.BetTerminal({
             state: b.state == SSOTTypes.BetState.Settled || b.state == SSOTTypes.BetState.Refunded
+                    || b.state == SSOTTypes.BetState.Voided
                 ? b.state
                 : SSOTTypes.BetState.None,
             payoutGross: terminal.payoutGross,
@@ -293,9 +304,10 @@ contract GameHub is IGameHub, Sentinel, ReentrancyGuard {
         // During the request's native-refund callback, placeBet has not bound requestId yet.
         if (b.requestId == 0) return new uint256[](0);
         IVRFHub.RequestInfo memory request = _boundRequest(betId);
-        if (request.state != IVRFHub.RequestState.Received && request.state != IVRFHub.RequestState.Terminal) {
-            return new uint256[](0);
-        }
+        if (
+            request.state != IVRFHub.RequestState.Received && request.state != IVRFHub.RequestState.Terminal
+                && request.state != IVRFHub.RequestState.Voided
+        ) return new uint256[](0);
         uint256[] memory words = new uint256[](1);
         words[0] = request.seed;
         return words;
@@ -637,6 +649,71 @@ contract GameHub is IGameHub, Sentinel, ReentrancyGuard {
         IVRFHub(vrfHub).cancel(b.requestId);
 
         emit BetRefunded(betId, b.stake);
+    }
+
+    // ---------------------------------------------------------------------
+    // Void: a received result that can never be booked (ADR-0037 §7)
+    // ---------------------------------------------------------------------
+
+    /// @notice One decision per Bank, executed per bet: from now on any bet of the Bank requested at or before this
+    ///         block may be voided once it is 24 hours old and its settlement still fails in the void transaction.
+    function openVoidWindow(uint64 poolId) external override {
+        address bank_ = _pool(poolId).bank;
+        if (msg.sender != governance && msg.sender != sentinel && msg.sender != IBank(bank_).guardian()) {
+            revert Errors.Unauthorized();
+        }
+        if (ISettlementRouter(settlementRouter).unbookedResultCount(bank_) == 0) revert NoUnbookedResult(bank_);
+        uint64 cohortEnd = uint64(block.timestamp);
+        voidCohortEnd[bank_] = cohortEnd;
+        emit VoidWindowOpened(poolId, bank_, cohortEnd, msg.sender);
+    }
+
+    /// @notice Settles the bet when its settlement succeeds with exactly VOID_SETTLEMENT_GAS, otherwise refunds the
+    ///         stake as a player payable. The outcome cannot depend on the caller's gas limit: a call with too
+    ///         little gas reverts and never voids. The VRF fee is not refunded.
+    function voidBet(uint256 betId) external override nonReentrant returns (bool voided) {
+        SSOTTypes.Bet storage b = bets[betId];
+        if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
+        if (b.state != SSOTTypes.BetState.PendingVRF && b.state != SSOTTypes.BetState.RandomReady) {
+            revert BadState(betId, b.state, SSOTTypes.BetState.RandomReady);
+        }
+        IVRFHub.RequestInfo memory request = _receivedRequest(betId);
+        uint256 requestedAt = b.vrfRequestedAt;
+        uint256 eligibleAt = requestedAt + (requestedAt <= voidCohortEnd[b.bank] ? VOID_DELAY : PUBLIC_VOID_DELAY);
+        if (block.timestamp < eligibleAt) revert VoidNotEligible(betId, block.timestamp, eligibleAt);
+        _recordRandom(betId, b.requestId, request.seed);
+
+        bytes memory data = abi.encodeCall(this.finalizeFromCallback, (betId, request.seed));
+        uint256 g = gasleft();
+        // Without the second term EIP-150 would hand the child less than S whenever R < S / 63.
+        if (
+            g < VOID_SETTLEMENT_GAS + VOID_RESERVE_GAS + VOID_CALL_OVERHEAD
+                || g - g / 64 < VOID_SETTLEMENT_GAS + VOID_CALL_OVERHEAD
+        ) revert VoidGasTooLow(g, VOID_SETTLEMENT_GAS + VOID_RESERVE_GAS + VOID_CALL_OVERHEAD);
+        bool settled;
+        bytes32 errorPrefix;
+        assembly ("memory-safe") {
+            settled := call(VOID_SETTLEMENT_GAS, address(), 0, add(data, 32), mload(data), 0, 0)
+            if iszero(settled) {
+                let n := returndatasize()
+                if gt(n, 32) { n := 32 }
+                mstore(0, 0)
+                returndatacopy(0, 0, n)
+                errorPrefix := mload(0)
+            }
+        }
+        if (settled) return false;
+
+        // No module, engine, tree write or token transfer: the Bank books the stake as a player payable.
+        uint256 stake = b.stake;
+        b.resolvedAt = uint64(block.timestamp);
+        b.state = SSOTTypes.BetState.Voided;
+        betTerminals[betId] =
+            StoredBetTerminal({payoutGross: 0, payoutNet: 0, protocolFeeAccrual: 0, refundAmount: stake.toUint128()});
+        ISettlementRouter(settlementRouter).voidPosition(betId);
+        IVRFHub(vrfHub).acknowledgeVoid(b.requestId);
+        emit BetVoided(betId, msg.sender, stake, errorPrefix);
+        return true;
     }
 
     // ---------------------------------------------------------------------
