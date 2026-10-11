@@ -35,6 +35,10 @@ MAX_PAGE_BLOCKS = 10_000
 # Transient provider answers worth another attempt; every other failure is final at once.
 RETRY_HTTP = frozenset({408, 425, 429}) | frozenset(range(500, 600))
 RETRY_JSONRPC = frozenset({-32000, -32005, -32603})
+# Forge diagnostics that mean the fork's RPC connection failed, not the check.
+FORGE_TRANSPORT = re.compile('|'.join((
+    r'error sending request', r'tls handshake', r'client error \(connect\)', r'could not instantiate forked environment',
+    r'connection (reset|refused|closed)', r'operation timed out', r'HTTP error (429|5\d\d)')), re.I)
 CHECKPOINT_SCHEMA = 'ARBIGAMEFI_GOVERNANCE_CHECKPOINT_V1'
 
 
@@ -365,8 +369,11 @@ def main():
         result = subprocess.run(['forge', 'script', 'script/release/VerifyGovernanceV16.s.sol:VerifyGovernanceV16',
                                  '--rpc-url', rpc.url, '--fork-block-number', str(block)],
                                 capture_output=True, text=True, timeout=600)
-        # Raw Forge diagnostics can include RPC credentials. Importers only need the rejecting stage.
-        require(result.returncode == 0, 'frozen-block governance verification failed')
+        # Raw Forge diagnostics can include RPC credentials. Importers only need the rejecting stage, and the release
+        # script needs to know whether a retry can help.
+        transport = FORGE_TRANSPORT.search(result.stdout + result.stderr)
+        require(result.returncode == 0,
+                'frozen-block governance verification failed' + (' (RPC transport error)' if transport else ''))
 
     result = verify(snap, rpc, forge, checkpoint)
     if os.environ.get('GOVERNANCE_CHECKPOINT_OUT'):

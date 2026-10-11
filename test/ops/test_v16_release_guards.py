@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -196,6 +197,39 @@ class PackageGuardTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("complete permission boundary", (root / "governance-call.txt").read_text())
             self.assertFalse((root / "dist").exists())
+
+    def test_existing_archive_is_never_rewritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "script/release").mkdir(parents=True)
+            (root / "script/release/check_release.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+            (root / "script/release/verify_governance.py").write_text("")
+            (root / "abis").mkdir()
+            (root / "abis/GameHub.abi.json").write_text("[]")
+            (root / "abis/index.json").write_text("{}")
+            (root / "release.json").write_text(json.dumps({"chainId": 84532, "blockNumber": 7, "digest": "0x" + "ab" * 32}))
+            (root / "artifact.json").write_text("{}")
+            (root / ".gitignore").write_text("/dist/\n")
+            env = {**os.environ, "PYTHON": sys.executable, "TAG_NAME": "v1", "RPC_URL": "http://unused.invalid",
+                   "RELEASE_SIGNER": "0x" + "2" * 40, "RELEASE_PATH": str(root / "release.json"),
+                   "ABIS_DIR": str(root / "abis"), "ABIS_INDEX_PATH": str(root / "abis/index.json"),
+                   **{key: str(root / "artifact.json") for key in ["SNAPSHOT_PATH", "NOTES_PATH", "FRONTEND_MANIFEST_PATH", "GOLDEN_VECTORS_PATH"]}}
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "-c", "user.name=Local test", "-c", "user.email=test@invalid",
+                            "commit", "-qm", "source fixture"], cwd=root, check=True)
+            package = ["bash", str(ROOT / "script/release/package_release.sh")]
+            first = subprocess.run(package, cwd=root, env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            archive = root / "dist/ssot-release-v1-0xabababab.tar.gz"
+            self.assertIn(f"wrote: {archive.relative_to(root)}", first.stdout)
+            packaged = archive.read_bytes()
+            # A rerun would produce a different archive of the same name (new timestamps), so it must refuse.
+            second = subprocess.run(package, cwd=root, env=env, capture_output=True, text=True, timeout=30)
+            self.assertNotEqual(second.returncode, 0)
+            self.assertIn("already exists; a release archive is never rewritten", second.stderr)
+            self.assertEqual(archive.read_bytes(), packaged)
+            self.assertEqual(sorted(path.name for path in (root / "dist").iterdir()), [archive.name])
 
 
 class VerifyHelperGuardTests(unittest.TestCase):

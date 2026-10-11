@@ -36,7 +36,7 @@ NOTES_LATEST_NAME="${NOTES_LATEST_NAME:-release-notes-latest-v16.md}"
 FRONTEND_MANIFEST_LATEST_NAME="${FRONTEND_MANIFEST_LATEST_NAME:-frontend-manifest-latest-v16.json}"
 GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest-v16.json}"
 
-[[ -f "$RELEASE_PATH" ]] || { echo "missing $RELEASE_PATH (run: make release-digest)"; exit 1; }
+[[ -f "$RELEASE_PATH" ]] || { echo "missing $RELEASE_PATH (run: make release-v16)"; exit 1; }
 [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing $SNAPSHOT_PATH (run: make deploy)"; exit 1; }
 [[ -f "$NOTES_PATH" ]] || { echo "missing $NOTES_PATH (run: make release-notes)"; exit 1; }
 
@@ -75,6 +75,11 @@ fi
 mkdir -p dist
 
 ARCHIVE="dist/ssot-release-${TAG_NAME}-${DIGEST_PREFIX}.tar.gz"
+# Its SHA-256 may already be approved: a rerun must not replace it with a new archive of the same name.
+if [[ -e "$ARCHIVE" ]]; then
+  echo "$ARCHIVE already exists; a release archive is never rewritten" >&2
+  exit 1
+fi
 
 STAGE="$(mktemp -d)"
 export STAGE
@@ -115,5 +120,6 @@ for p in sorted(root.rglob("*")):
 PY
 
 # Integrity manifests cover payload files, not macOS AppleDouble/xattr metadata.
-COPYFILE_DISABLE=1 tar -czf "$ARCHIVE" -C "$STAGE" .
+COPYFILE_DISABLE=1 tar -czf "$ARCHIVE.partial" -C "$STAGE" .
+mv "$ARCHIVE.partial" "$ARCHIVE"
 echo "wrote: $ARCHIVE"

@@ -6,7 +6,7 @@ VERIFY_PROFILE ?= default
 FRONTEND_DIR ?= frontend
 PYTHON ?= python
 
-.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers release release-digest release-verify release-check release-notes release-frontend-manifest release-golden-vectors release-abis release-package audit-package frontend-check
+.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers release release-verify release-check release-notes release-frontend-manifest release-golden-vectors release-abis release-package audit-package frontend-check
 
 deps:
 	bash script/ci/install_deps.sh
@@ -132,8 +132,8 @@ sports-phase0-readiness:
 	@$(MAKE) sports-lifecycle-dry-run
 
 # --- Release artifacts (digest + signature) ---
-# 1) After a successful deploy that produced deployments/latest-v16.json:
-#      make release-digest
+# 1) After a successful deploy that produced deployments/latest-v16.json, sign and package it (the only signing path):
+#      make release-v16    (script/release/release_v16.sh; its header lists the inputs)
 # 2) Verify locally:
 #      make release-verify
 # 3) In CI for tag/release builds, enforce presence:
@@ -154,19 +154,10 @@ release-governance-check:
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) $(PYTHON) script/release/verify_governance.py
 
 release: release-v16
+# Runs the targets below in order and signs in between, once: the keystore password must unlock RELEASE_SIGNER first,
+# and a valid signature over the same snapshot is kept on a rerun.
 release-v16:
-	@$(MAKE) release-governance-check
-	@$(MAKE) release-domain-check
-	@$(MAKE) release-digest
-	@$(MAKE) release-notes
-	@$(MAKE) release-frontend-manifest
-	@$(MAKE) release-golden-vectors
-	@$(MAKE) release-abis
-	@$(MAKE) release-verify
-	@$(MAKE) release-package
-
-release-digest:
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/ReleaseDigestV16.s.sol:ReleaseDigestV16 --account "$${RELEASE_ACCOUNT:?Set the approved release signer keystore account}" -vvv
+	bash script/release/release_v16.sh
 
 # Fails before anything is signed when the snapshot lies outside its chain's accepted first-callback domain:
 # snapshot checks, the deployed core runtimes and wiring against the certified build (fork of RPC_URL), then the

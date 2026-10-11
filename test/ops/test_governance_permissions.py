@@ -287,6 +287,17 @@ class PermissionHistoryTests(unittest.TestCase):
                     patch.object(CHECK.subprocess, 'run', return_value=subprocess.CompletedProcess([], 1, '', 'secret')):
                 with self.assertRaisesRegex(CHECK.VerificationError, '^frozen-block governance verification failed$'):
                     CHECK.main()
+            # A dropped fork connection is named as such, still without the URL, so the release script may retry it.
+            for diagnostic in ('Error: could not instantiate forked environment with provider secret.invalid',
+                               'error sending request for url (https://secret.invalid/v3/key): tls handshake eof',
+                               'HTTP error 429 with body: secret'):
+                failed = subprocess.CompletedProcess([], 1, '', diagnostic)
+                with self.subTest(diagnostic=diagnostic), \
+                        patch.dict(CHECK.os.environ, SNAPSHOT_PATH=str(snapshot), RPC_URL=chain.url), \
+                        patch.object(CHECK, 'Rpc', return_value=chain), patch.object(CHECK.subprocess, 'run', return_value=failed):
+                    with self.assertRaisesRegex(CHECK.VerificationError,
+                                                r'^frozen-block governance verification failed \(RPC transport error\)$'):
+                        CHECK.main()
 
 
 def reply(result):

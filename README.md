@@ -171,11 +171,11 @@ Bank and callback gates. Earlier adapter-mode test results do not validate the d
 
 Release artifacts (production discipline):
 
-- Release lock (digest + signature): `make release-digest` (writes `deployments/release-latest-v16.json`)
-- Release notes (must include digest): `TAG_NAME=vX.Y.Z make release-notes`
+- Sign and package: `make release-v16` (`script/release/release_v16.sh`). It checks governance and the callback domain,
+  signs the release lock `deployments/release-latest-v16.json` once (the keystore password must unlock the release
+  signer first), writes notes, manifest, vectors and ABIs, verifies, and packages
+  `dist/ssot-release-<tag>-<digestPrefix>.tar.gz`. A rerun keeps a valid signature and never rewrites an archive.
 - Strict gate (enforced on `v*` tags in CI): `STRICT=1 make release-check`
-
-- Optional packaging: `make release-package` (writes `dist/ssot-<tag>-<digestPrefix>.tar.gz`)
 
 CI runs on pushes to the default branch (main/master) and on pull requests. If you don’t see runs in GitHub, ensure Actions are enabled and that your default branch name matches the workflow trigger.
 

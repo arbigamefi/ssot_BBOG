@@ -36,8 +36,17 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    the helper uses the Etherscan V2 endpoint for the snapshot's chain and the default
    compilation profile. Include LiquidityVault source/constructor verification and authenticate
    Bank↔Vault/asset addresses and both codehashes in the signed snapshot. Review and execute `make safe-acceptance-v16` with the Safe owners.
-3. Run `make release-governance-check`, `make release-v16` and `make verify-v16` with the configured
-   signer and network. A release contains a signed digest, manifest, ABIs and encoding vectors.
+3. Run `make release-v16` and then `make verify-v16` with the configured signer and network. A release contains a
+   signed digest, manifest, ABIs and encoding vectors. `make release-v16` runs `script/release/release_v16.sh` from a
+   clean checkout through `script/tools/with-ops-rpc.sh infura <network>` (inputs in its header): the governance and
+   callback-domain checks, then the only signing step, then notes, manifest, vectors, ABIs, verification and the
+   package. The keystore password is read from the terminal and must unlock `RELEASE_SIGNER` in
+   `cast wallet address` before anything is signed (Forge's own prompt reports a wrong password only as
+   `vm.sign: no wallets available`); three wrong passwords end the run unsigned. A rerun keeps a release lock that
+   already verifies for this snapshot and signer and does not ask for the password again; a lock that does not verify
+   is never overwritten, nor is an existing package archive. Steps that read the chain are retried only after a
+   transport failure. Each step's log is kept in `RELEASE_LOG_DIR` (default `dist/release-run-<UTC time>`) with the
+   RPC URL and key replaced.
    Governance verification requires an RPC with historical code and complete authorization logs.
    The signed start block must precede Registry/SportsHub creation. The verifier replays all Hub/pool
    and Sports role grants, rejects undeclared members and checks the same frozen block in Forge.
