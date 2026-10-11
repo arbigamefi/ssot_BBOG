@@ -5,6 +5,10 @@ const Address = z
   .string()
   .regex(/^0x[a-fA-F0-9]{40}$/)
   .transform((s) => s.toLowerCase());
+const NonZeroAddress = Address.refine(
+  (address) => address !== "0x0000000000000000000000000000000000000000",
+  "Address must be nonzero"
+);
 
 export const AssetSchema = z.object({
   symbol: z.string().min(1),
@@ -14,12 +18,12 @@ export const AssetSchema = z.object({
   vault: Address
 });
 
-// Every release pool is a casino pool (SSOTTypes.PoolDomain.Casino).
+// Every release pool is a casino pool (SSOTTypes.PoolDomain.Casino). Whether it takes bets is chain
+// state: the release is signed before activation (ADR-0037 §9 D1), so read PoolRegistry.isPoolActive.
 export const PoolSchema = z.object({
   poolId: z.number().int().positive(),
   domainId: z.literal(1),
   domain: z.literal("Casino"),
-  active: z.boolean(),
   asset: Address,
   bank: Address,
   vault: Address,
@@ -35,6 +39,8 @@ export const ReleaseSchema = z.object({
   refundTimeoutSeconds: z.number().int().positive().optional(),
   defaultHouseEdgeBps: z.number().int().min(0).max(10_000).optional(),
   contracts: z.object({
+    // Governs PoolRegistry, GameHub and every Bank from construction (ADR-0037 §2, §9 D1).
+    governanceTimelock: NonZeroAddress,
     gameHub: Address,
     settlementRouter: Address,
     poolRegistry: Address,

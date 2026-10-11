@@ -1834,7 +1834,8 @@
       "feedback": {
         "houseEdgeChanged": "A margem atual da casa excede a taxa que você aceitou. Atualize e confira a taxa antes de apostar novamente.",
         "playerLimit": "Você já tem o máximo de apostas abertas permitido neste pool. Faça a próxima depois que uma for liquidada.",
-        "gameClosed": "Este jogo está fechado e não aceita novas apostas. As apostas feitas antes do fechamento continuam sendo liquidadas."
+        "gameClosed": "Este jogo está fechado e não aceita novas apostas. As apostas feitas antes do fechamento continuam sendo liquidadas.",
+        "inactive": "Este pool não está aceitando novas apostas agora. As apostas já feitas ainda podem ser consultadas ou liquidadas."
       },
       "payment": {
         "payable": "A transferência não foi concluída nesta liquidação, então o valor fica reservado para a sua carteira. Ele é pago automaticamente quando a transferência puder ser feita; você também pode resgatá-lo na página Resgates."

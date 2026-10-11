@@ -14,7 +14,6 @@ const state = {
         poolId: 1,
         domainId: 1,
         domain: "Casino",
-        active: true,
         asset: usdcAddress,
         bank: "0x0000000000000000000000000000000000000002",
         symbol: "USDC",
@@ -148,7 +147,6 @@ describe("ClaimsPageClient", () => {
           poolId: 1,
           domainId: 1,
           domain: "Casino",
-          active: true,
           asset: usdcAddress,
           bank: "0x0000000000000000000000000000000000000002",
           symbol: "USDC",
@@ -187,7 +185,6 @@ describe("ClaimsPageClient", () => {
           poolId: 1,
           domainId: 1,
           domain: "Casino",
-          active: true,
           asset: usdtAddress,
           bank: "0x0000000000000000000000000000000000000002"
         }
@@ -221,7 +218,7 @@ describe("ClaimsPageClient", () => {
     expect(screen.getAllByText("1.25 USDT").length).toBeGreaterThan(0);
   });
 
-  it("lists what every pool owes the player, inactive pools included, and claims it", async () => {
+  it("lists what every release pool owes the player and claims it", async () => {
     const usdtBank = "0x0000000000000000000000000000000000000004";
     state.release = {
       assets: [
@@ -231,7 +228,6 @@ describe("ClaimsPageClient", () => {
       pools: [
         {
           poolId: 1,
-          active: true,
           asset: usdcAddress,
           bank: "0x0000000000000000000000000000000000000002",
           symbol: "USDC",
@@ -239,7 +235,6 @@ describe("ClaimsPageClient", () => {
         },
         {
           poolId: 2,
-          active: false,
           asset: usdtAddress,
           bank: usdtBank,
           symbol: "USDT",

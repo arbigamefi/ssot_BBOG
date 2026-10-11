@@ -7,12 +7,12 @@ import { DEFAULT_VOID_GAS_LIMIT, MAX_VOID_GAS_LIMIT } from "./void.js";
 type ReleaseLike = {
   chainId: number;
   contracts: {
+    governanceTimelock: Address;
     gameHub: Address;
     vrfHub: Address;
     poolRegistry: Address;
   };
   pools?: Array<{
-    active?: boolean;
     asset: Address;
     bank: Address;
     vault: Address;
@@ -106,19 +106,18 @@ function parseVoidGasLimit(value: string | undefined) {
   return parsed;
 }
 
+/** Every pool of the release: LPs deposit before a pool is activated (ADR-0037 §9 D1). */
 function resolveVaultProviderLedgerPools(release: ReleaseLike) {
-  return (release.pools ?? [])
-    .filter((pool) => pool.active !== false)
-    .map((pool) => ({
-      asset: getAddress(pool.asset),
-      bank: getAddress(pool.bank),
-      vault: getAddress(pool.vault),
-      decimals: pool.decimals ?? 6,
-      poolId: pool.poolId
-    }));
+  return (release.pools ?? []).map((pool) => ({
+    asset: getAddress(pool.asset),
+    bank: getAddress(pool.bank),
+    vault: getAddress(pool.vault),
+    decimals: pool.decimals ?? 6,
+    poolId: pool.poolId
+  }));
 }
 
-/** Inactive pools included: every Bank of the release is governed by the same timelock. */
+/** Every Bank of the release is governed by the release timelock. */
 function resolveReleaseBanks(release: ReleaseLike) {
   return [...new Set((release.pools ?? []).map((pool) => getAddress(pool.bank)))];
 }
@@ -127,6 +126,7 @@ export function loadRelease(path: string): ReleaseLike {
   const raw = JSON.parse(readFileSync(path, "utf8")) as ReleaseLike;
   if (
     !raw.chainId ||
+    !raw.contracts?.governanceTimelock ||
     !raw.contracts?.gameHub ||
     !raw.contracts?.vrfHub ||
     !raw.contracts?.poolRegistry
@@ -165,6 +165,7 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     gameHub: release.contracts.gameHub,
     vrfHub: release.contracts.vrfHub,
     poolRegistry: getAddress(release.contracts.poolRegistry),
+    governanceTimelock: getAddress(release.contracts.governanceTimelock),
     releaseBanks: resolveReleaseBanks(release),
     httpRpcUrl: requireEnv(env, "KEEPER_RPC_HTTP"),
     wsRpcUrl: env.KEEPER_RPC_WS?.trim() || undefined,

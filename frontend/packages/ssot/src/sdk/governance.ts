@@ -81,8 +81,9 @@ function functionBySelector(contract: KnownContract, selector: Hex) {
   return index.get(selector);
 }
 
-function identify(release: SSOTRelease, target: Address, timelock: Address): GovernanceContract {
-  if (target === getAddress(timelock)) return { name: "GovernanceTimelock" };
+function identify(release: SSOTRelease, target: Address): GovernanceContract {
+  if (target === getAddress(release.contracts.governanceTimelock))
+    return { name: "GovernanceTimelock" };
   if (target === getAddress(release.contracts.poolRegistry)) return { name: "PoolRegistry" };
   if (target === getAddress(release.contracts.gameHub)) return { name: "GameHub" };
   if (target === getAddress(release.contracts.refRegistry)) return { name: "ReferralRegistry" };
@@ -91,19 +92,17 @@ function identify(release: SSOTRelease, target: Address, timelock: Address): Gov
 }
 
 /**
- * Names the target of one timelock call (a CallScheduled target and data) and decodes it with the
- * generated ABI. Pure: the release manifest does not carry the timelock until A11, so the caller
- * passes it, for example from `sdk.governance.getTimelock()` or the emitter of the indexed event.
+ * Names the target of one timelock call (a CallScheduled target and data) against the release
+ * contracts, its governance timelock included, and decodes it with the generated ABI. Pure.
  */
 export function decodeGovernanceCall(
   release: SSOTRelease,
   target: Address,
-  data: Hex,
-  { timelock }: { timelock: Address }
+  data: Hex
 ): DecodedGovernanceCall {
   if (!isHex(data, { strict: true })) throw new TypeError("Governance call data must be hex.");
   const normalized = getAddress(target);
-  const contract = identify(release, normalized, timelock);
+  const contract = identify(release, normalized);
   if (size(data) < 4) return { target: normalized, contract };
   const selector = slice(data, 0, 4).toLowerCase() as Hex;
   if (contract.name === "unknown") return { target: normalized, contract, selector };

@@ -34,9 +34,14 @@ export type KeeperConfig = {
   chainId: number;
   gameHub: Address;
   vrfHub: Address;
-  /** The release PoolRegistry. Its governance is the timelock the keeper indexes. */
+  /** The release PoolRegistry; with governanceTimelock it enables governance indexing. */
   poolRegistry?: Address;
-  /** Every Bank of the release, active or not; each must share the PoolRegistry's governance. */
+  /**
+   * The release contracts.governanceTimelock, the queue the keeper indexes. PoolRegistry, GameHub and
+   * every release Bank must report it as their governance.
+   */
+  governanceTimelock?: Address;
+  /** Every Bank of the release; each must be governed by the release timelock. */
   releaseBanks?: Address[];
   httpRpcUrl: string;
   wsRpcUrl?: string;

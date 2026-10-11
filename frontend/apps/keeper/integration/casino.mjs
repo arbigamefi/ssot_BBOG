@@ -149,6 +149,8 @@ const config = {
   gameHub: hub.address,
   vrfHub: vrf.address,
   poolRegistry: registry.address,
+  // The deployer governs until the timelock handover at the end; the release then names the timelock.
+  governanceTimelock: owner,
   releaseBanks: [bank.address],
   httpRpcUrl: rpc,
   wsRpcUrl: rpc.replace("http:", "ws:"),
@@ -188,7 +190,12 @@ writeFileSync(
   releasePath,
   JSON.stringify({
     chainId: 84532,
-    contracts: { gameHub: hub.address, vrfHub: vrf.address, poolRegistry: registry.address },
+    contracts: {
+      governanceTimelock: config.governanceTimelock,
+      gameHub: hub.address,
+      vrfHub: vrf.address,
+      poolRegistry: registry.address
+    },
     pools: config.vaultProviderLedgerPools,
     meta: { blockNumber: Number(startBlock) }
   })
@@ -833,7 +840,8 @@ try {
   );
 
   // ADR-0037 §2: hand PoolRegistry, GameHub and the Bank to a GovernanceTimelock through its own
-  // 72-hour queue. A restarted keeper verifies that all three report it and indexes the queue.
+  // 72-hour queue. A keeper restarted with a release naming it verifies that all three report it and
+  // indexes the queue.
   const timelock = await deploy("GovernanceTimelock", [
     259_200n,
     [owner],
@@ -872,7 +880,10 @@ try {
   await evm.mine({ blocks: 128 });
   assert((await client.getBlock({ blockTag: "finalized" })).number >= executed.blockNumber);
   await runtime.stop();
-  runtime = createKeeperRuntime({ config: { ...liveConfig, scanMaxChunksPerPass: 50 }, logger });
+  runtime = createKeeperRuntime({
+    config: { ...liveConfig, governanceTimelock: timelock.address, scanMaxChunksPerPass: 50 },
+    logger
+  });
   await runtime.start();
   const queued = () =>
     store.getGovernanceTimelockOperations({ chainId: 84532, timelock: timelock.address });

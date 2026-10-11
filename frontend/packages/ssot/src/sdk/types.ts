@@ -319,6 +319,9 @@ export interface SSOTReferralAPI {
 }
 
 export interface SSOTGovernanceAPI {
-  /** PoolRegistry.governance(), verified equal to GameHub.governance() at the same block. */
+  /**
+   * The release contracts.governanceTimelock, once PoolRegistry.governance() and GameHub.governance()
+   * report it at the same block; rejects when either reports anything else.
+   */
   getTimelock(opts?: { blockNumber?: bigint }): Promise<Address>;
 }

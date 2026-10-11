@@ -30,6 +30,7 @@ const TEST_RELEASE: SSOTRelease = {
   releaseDigest: "0xdeadbeef",
   isPlaceholder: false,
   contracts: {
+    governanceTimelock: "0x7777777777777777777777777777777777777777",
     gameHub: "0x99c8c8b55803a566561b58188027fb9e46aca215",
     settlementRouter: "0xa6b00b5a7893045c7ce8443a3ced632e6dae9077",
     poolRegistry: "0x1f232208b4b6068d18b156f2914acfc8092942f3",
@@ -54,7 +55,6 @@ const TEST_RELEASE: SSOTRelease = {
       poolId: 1,
       domainId: 1,
       domain: "Casino",
-      active: true,
       asset: ASSET,
       bank: BANK,
       vault: VAULT,
@@ -709,6 +709,8 @@ describe("createSSOTSDK", () => {
   it("builds pool-aware placeBet plans", async () => {
     pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
       switch (functionName) {
+        case "isPoolActive":
+          return true;
         case "riskInPaused":
           return false;
         case "quoteVRFFee":
@@ -764,6 +766,8 @@ describe("createSSOTSDK", () => {
     // Existing free liquidity is 900_000, but Bank checks solvency after receiving stake.
     pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
       switch (functionName) {
+        case "isPoolActive":
+          return true;
         case "riskInPaused":
           return false;
         case "quoteVRFFee":
@@ -842,6 +846,8 @@ describe("createSSOTSDK", () => {
   it.each([127n, 128n])("preflights open position capacity at %s of 128", async (holds) => {
     pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
       switch (functionName) {
+        case "isPoolActive":
+          return true;
         case "riskInPaused":
           return false;
         case "quoteVRFFee":
@@ -880,6 +886,7 @@ describe("createSSOTSDK", () => {
     else {
       expect(result).not.toHaveProperty("error");
       for (const functionName of [
+        "isPoolActive",
         "riskInPaused",
         "quoteVRFFee",
         "allowance",
@@ -919,6 +926,8 @@ describe("createSSOTSDK", () => {
       pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
         if (functionName in overrides) return overrides[functionName];
         switch (functionName) {
+          case "isPoolActive":
+            return true;
           case "riskInPaused":
             return false;
           case "quoteVRFFee":
@@ -971,6 +980,52 @@ describe("createSSOTSDK", () => {
         )
       ).toBe(false);
       expect(wal.writeContract).not.toHaveBeenCalled();
+    });
+
+    it("refuses a pool PoolRegistry reports inactive at the planning block, before the quote", async () => {
+      // GameHub.riskInPaused is true for an inactive pool as well, so activity is named first.
+      planReads({ isPoolActive: false, riskInPaused: true });
+      expect(await sdk.gameHub.planPlaceBet(planInput)).toEqual({
+        error: {
+          code: "POOL_INACTIVE",
+          message: expect.any(String),
+          severity: "warning",
+          details: { poolId: 1 }
+        }
+      });
+      expect(pub.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: getAddress(TEST_RELEASE.contracts.poolRegistry),
+          functionName: "isPoolActive",
+          args: [1n],
+          blockNumber: 130n
+        })
+      );
+      expect(
+        pub.readContract.mock.calls.some(
+          ([call]: [{ functionName: string }]) => call.functionName === "quoteVRFFee"
+        )
+      ).toBe(false);
+      // An active pool whose Bank is paused keeps its own code.
+      planReads({ riskInPaused: true });
+      expect(await sdk.gameHub.planPlaceBet(planInput)).toMatchObject({
+        error: { code: "RISK_IN_PAUSED" }
+      });
+      expect(wal.writeContract).not.toHaveBeenCalled();
+    });
+
+    it("never refuses a claim or an XP unlock because the pool is inactive", async () => {
+      planReads({ isPoolActive: false });
+      for (const result of [
+        await sdk.bank.claimPlayerPayable(1),
+        await sdk.bank.claimProtocolFees(1, 1n, ACCOUNT),
+        await sdk.bank.claimXPAccrued(1, 1n, ACCOUNT),
+        await sdk.bank.unlockXPLocked(1, ACCOUNT, ACCOUNT)
+      ])
+        expect(result).toMatchObject({ ok: true });
+      expect(pub.readContract).not.toHaveBeenCalledWith(
+        expect.objectContaining({ functionName: "isPoolActive" })
+      );
     });
 
     it.each([1n, 2n])("plans a bet with %s of 2 open holds for this player", async (open) => {
@@ -1061,7 +1116,7 @@ describe("createSSOTSDK", () => {
   });
 
   describe("governance timelock", () => {
-    const TIMELOCK = "0x7777777777777777777777777777777777777777" as Address;
+    const TIMELOCK = getAddress(TEST_RELEASE.contracts.governanceTimelock);
     function governanceOf(registry: Address, hub: Address) {
       pub.readContract.mockImplementation(async ({ address }: { address: Address }) => {
         if (address === getAddress(TEST_RELEASE.contracts.poolRegistry)) return registry;
@@ -1070,9 +1125,9 @@ describe("createSSOTSDK", () => {
       });
     }
 
-    it("returns PoolRegistry.governance() when GameHub reports the same at that block", async () => {
+    it("returns the release timelock once PoolRegistry and GameHub report it at that block", async () => {
       governanceOf(TIMELOCK.toLowerCase() as Address, TIMELOCK);
-      expect(await sdk.governance.getTimelock()).toBe(getAddress(TIMELOCK));
+      expect(await sdk.governance.getTimelock()).toBe(TIMELOCK);
       for (const contract of ["poolRegistry", "gameHub"] as const)
         expect(pub.readContract).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -1083,9 +1138,18 @@ describe("createSSOTSDK", () => {
         );
     });
 
-    it("refuses a GameHub governed by anything else", async () => {
-      governanceOf(TIMELOCK, ACCOUNT);
-      await expect(sdk.governance.getTimelock()).rejects.toThrow("different governance");
-    });
+    it.each([
+      ["GameHub", TIMELOCK, ACCOUNT],
+      ["PoolRegistry", ACCOUNT, TIMELOCK],
+      ["PoolRegistry and GameHub", ACCOUNT, ACCOUNT]
+    ])(
+      "refuses when the governance of %s is not the release timelock",
+      async (_, registry, hub) => {
+        governanceOf(registry, hub);
+        await expect(sdk.governance.getTimelock()).rejects.toThrow(
+          "not governed by the release timelock"
+        );
+      }
+    );
   });
 });

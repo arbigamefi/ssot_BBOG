@@ -1,6 +1,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { getAddress } from "viem";
 import { describe, expect, it } from "vitest";
 
 import { loadKeeperConfig } from "./env.js";
@@ -15,6 +16,7 @@ function writeRelease() {
     JSON.stringify({
       chainId: 84532,
       contracts: {
+        governanceTimelock: "0x00000000000000000000000000000000000000ee",
         gameHub: "0x0000000000000000000000000000000000000001",
         vrfHub: "0x0000000000000000000000000000000000000002",
         poolRegistry: "0x0000000000000000000000000000000000000066"
@@ -117,13 +119,14 @@ describe("casino lifecycle recovery configuration", () => {
   });
 });
 
-it("only reconciles the active pools in the current release", () => {
+it("serves every pool of the release, one that takes no bets yet included", () => {
   const path = writeRelease();
   writeFileSync(
     path,
     JSON.stringify({
       chainId: 84532,
       contracts: {
+        governanceTimelock: "0x00000000000000000000000000000000000000ee",
         gameHub: "0x0000000000000000000000000000000000000001",
         vrfHub: "0x0000000000000000000000000000000000000002",
         poolRegistry: "0x0000000000000000000000000000000000000066"
@@ -133,37 +136,46 @@ it("only reconciles the active pools in the current release", () => {
           poolId: 7,
           asset: "0x0000000000000000000000000000000000000003",
           vault: "0x0000000000000000000000000000000000000008",
-          bank: "0x0000000000000000000000000000000000000004",
-          active: false
+          bank: "0x0000000000000000000000000000000000000004"
         }
       ],
       meta: { blockNumber: 123 }
     })
   );
   const config = loadKeeperConfig(baseEnv({ KEEPER_RELEASE_PATH: path }));
-  expect(config.vaultProviderLedgerPools).toEqual([]);
-  // Governance is checked on every Bank of the release, inactive pools included.
+  // LPs deposit before activation (ADR-0037 §9 D1), so the LP ledger, payables and pool health
+  // cover the pool whatever PoolRegistry.isPoolActive says.
+  expect(config.vaultProviderLedgerPools).toEqual([
+    {
+      poolId: 7,
+      asset: "0x0000000000000000000000000000000000000003",
+      vault: "0x0000000000000000000000000000000000000008",
+      bank: "0x0000000000000000000000000000000000000004",
+      decimals: 6
+    }
+  ]);
   expect(config.releaseBanks).toEqual(["0x0000000000000000000000000000000000000004"]);
   expect(config.poolRegistry).toBe("0x0000000000000000000000000000000000000066");
+  expect(config.governanceTimelock).toBe(getAddress("0x00000000000000000000000000000000000000ee"));
 });
 
-it("refuses a release without its PoolRegistry, whose governance is the timelock to index", () => {
-  const path = writeRelease();
-  writeFileSync(
-    path,
-    JSON.stringify({
-      chainId: 84532,
-      contracts: {
-        gameHub: "0x0000000000000000000000000000000000000001",
-        vrfHub: "0x0000000000000000000000000000000000000002"
-      },
-      meta: { blockNumber: 123 }
-    })
-  );
-  expect(() => loadKeeperConfig(baseEnv({ KEEPER_RELEASE_PATH: path }))).toThrow(
-    /Invalid keeper release file/
-  );
-});
+it.each(["poolRegistry", "governanceTimelock"])(
+  "refuses a release without its %s, which governance indexing needs",
+  (missing) => {
+    const contracts: Record<string, string> = {
+      governanceTimelock: "0x00000000000000000000000000000000000000ee",
+      gameHub: "0x0000000000000000000000000000000000000001",
+      vrfHub: "0x0000000000000000000000000000000000000002",
+      poolRegistry: "0x0000000000000000000000000000000000000066"
+    };
+    delete contracts[missing];
+    const path = writeRelease();
+    writeFileSync(path, JSON.stringify({ chainId: 84532, contracts, meta: { blockNumber: 123 } }));
+    expect(() => loadKeeperConfig(baseEnv({ KEEPER_RELEASE_PATH: path }))).toThrow(
+      /Invalid keeper release file/
+    );
+  }
+);
 
 describe("void gas limit", () => {
   it("defaults to 11,000,000", () => {

@@ -8,8 +8,9 @@ export function getBetErrorKind(error?: StepperDisplayError) {
   switch (error?.code) {
     case "RISK_IN_PAUSED":
     case "ENFORCED_PAUSE":
-    case "POOL_INACTIVE":
       return "paused";
+    case "POOL_INACTIVE":
+      return "inactive";
     case "USER_REJECTED":
       return "canceled";
     case "ALLOWANCE_NOT_CONFIRMED":

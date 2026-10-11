@@ -141,9 +141,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     return { walletClient, account };
   }
 
+  // Every release pool is served; whether it takes bets is read from PoolRegistry when a bet is planned.
   function getPool(
-    poolId: number,
-    allowInactive = false
+    poolId: number
   ): NonNullable<SSOTRelease["pools"]>[number] | { error: DomainError } {
     const pool = release.pools.find((item) => item.poolId === poolId);
     if (!pool) {
@@ -152,15 +152,6 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           code: "UNKNOWN_POOL",
           message: `No pool found for poolId ${poolId} in the current release configuration.`,
           severity: "error"
-        }
-      };
-    }
-    if (!pool.active && !allowInactive) {
-      return {
-        error: {
-          code: "POOL_INACTIVE",
-          message: `Pool ${poolId} is not active in the current release.`,
-          severity: "warning"
         }
       };
     }
@@ -176,15 +167,15 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     };
   }
 
-  // Disabling new deposits/bets must not hide existing holdings or prevent debt claims.
   function resolveBankPool(poolId: number) {
-    const pool = getPool(poolId, true);
+    const pool = getPool(poolId);
     if ("error" in pool) throw new Error(pool.error.message);
     return normalizePool(pool);
   }
 
   const gameHubAddress = getAddress(release.contracts.gameHub) as Address;
   const vrfHubAddress = getAddress(release.contracts.vrfHub) as Address;
+  const poolRegistryAddress = getAddress(release.contracts.poolRegistry) as Address;
 
   // Every deployment uses the current source ABI.
   const {
@@ -612,13 +603,34 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
               severity: "error"
             }
           };
-        const paused = (await publicClient.readContract({
-          address: gameHubAddress,
-          abi: GAME_HUB_ABI,
-          functionName: "riskInPaused",
-          blockNumber,
-          args: [BigInt(input.poolId)]
-        })) as boolean;
+        const [poolActive, paused] = (await Promise.all([
+          publicClient.readContract({
+            address: poolRegistryAddress,
+            abi: POOL_REGISTRY_ABI,
+            functionName: "isPoolActive",
+            blockNumber,
+            args: [BigInt(input.poolId)]
+          }),
+          publicClient.readContract({
+            address: gameHubAddress,
+            abi: GAME_HUB_ABI,
+            functionName: "riskInPaused",
+            blockNumber,
+            args: [BigInt(input.poolId)]
+          })
+        ])) as [boolean, boolean];
+        // The release is signed before any pool takes bets; activation is a later timelock operation
+        // (ADR-0037 §9 D1). GameHub's riskInPaused also covers inactivity, so activity is checked first.
+        if (!poolActive) {
+          return {
+            error: {
+              code: "POOL_INACTIVE",
+              message: "This pool takes no new bets: it is not active on chain.",
+              severity: "warning",
+              details: { poolId: input.poolId }
+            }
+          };
+        }
         if (paused) {
           return {
             error: {
@@ -1369,7 +1381,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   ): Promise<TxResult> {
     const wallet = requireWallet();
     if ("error" in wallet) return { txHash: "0x0", ok: false, error: wallet.error };
-    const poolReq = getPool(poolId, true);
+    const poolReq = getPool(poolId);
     if ("error" in poolReq) return { txHash: "0x0", ok: false, error: poolReq.error };
     const pool = normalizePool(poolReq);
     try {
@@ -1437,7 +1449,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
             blockNumber
           }),
           publicClient.readContract({
-            address: getAddress(release.contracts.poolRegistry),
+            address: poolRegistryAddress,
             abi: POOL_REGISTRY_ABI,
             functionName: "isPoolActive",
             args: [BigInt(poolId)],
@@ -1671,7 +1683,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       if ("error" in wallet) return { txHash: "0x0", ok: false, error: wallet.error };
       // LPs deposit while the pool is registered but not yet active (ADR-0037 §9 D1): the Vault
       // checks only the Bank pause and its own status, never PoolRegistry activity.
-      const poolReq = getPool(poolId, true);
+      const poolReq = getPool(poolId);
       if ("error" in poolReq) return { txHash: "0x0", ok: false, error: poolReq.error };
       try {
         if (assets <= 0n) throw new Error("Deposit assets must be positive.");
@@ -1943,11 +1955,12 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
 
   const governance: SSOTGovernanceAPI = {
     async getTimelock(opts) {
+      const timelock = getAddress(release.contracts.governanceTimelock) as Address;
       const blockNumber =
         opts?.blockNumber ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
-      const [registryGovernance, hubGovernance] = await Promise.all([
+      const reported = await Promise.all([
         publicClient.readContract({
-          address: getAddress(release.contracts.poolRegistry) as Address,
+          address: poolRegistryAddress,
           abi: POOL_REGISTRY_ABI,
           functionName: "governance",
           blockNumber
@@ -1959,9 +1972,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           blockNumber
         })
       ]);
-      const timelock = getAddress(registryGovernance as Address);
-      if (timelock !== getAddress(hubGovernance as Address))
-        throw new Error("PoolRegistry and GameHub report different governance.");
+      if (reported.some((governor) => getAddress(governor as Address) !== timelock))
+        throw new Error("PoolRegistry or GameHub is not governed by the release timelock.");
       return timelock as AddressT;
     }
   };

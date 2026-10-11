@@ -38,6 +38,7 @@ const config: KeeperConfig = {
   gameHub: hub,
   vrfHub: hub,
   poolRegistry: registry,
+  governanceTimelock: timelock,
   releaseBanks: [bank],
   httpRpcUrl: "http://unused.invalid",
   privateKey: `0x${"11".repeat(32)}`,
@@ -157,7 +158,7 @@ describe("governance timelock indexing", () => {
     vi.useRealTimers();
   });
 
-  it("indexes PoolRegistry.governance() through finalized blocks from the release origin, in bounded passes", async () => {
+  it("indexes the release timelock through finalized blocks from the release origin, in bounded passes", async () => {
     await start();
     expect(timelockQueries().map((query) => [query.fromBlock, query.toBlock])).toEqual([
       [100n, 109n],
@@ -223,6 +224,23 @@ describe("governance timelock indexing", () => {
     await vi.advanceTimersByTimeAsync(60_000);
     expect(timelockQueries()).toHaveLength(5);
     expect(runtime!.health.snapshot().degradedBy ?? []).not.toContain("governance");
+  });
+
+  it("indexes nothing when every contract agrees on a governance the release does not name", async () => {
+    for (const contract of [registry, hub, bank]) chain.governance.set(contract, deployer);
+    await start();
+    expect(timelockQueries()).toEqual([]);
+    expect(
+      vi
+        .mocked(mock.client.getLogs as (query: LogQuery) => unknown)
+        .mock.calls.some(([query]) => String(query.address).toLowerCase() === deployer)
+    ).toBe(false);
+    expect(runtime!.health.snapshot()).toMatchObject({
+      degradedBy: expect.arrayContaining(["governance"]),
+      lastError: expect.stringContaining(
+        `PoolRegistry ${getAddress(registry)} reports ${getAddress(deployer)}`
+      )
+    });
   });
 
   it("scans nothing past a lagging finalized read and resumes from its cursor after a restart", async () => {

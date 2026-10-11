@@ -241,25 +241,36 @@ describe("NFT liquidity SDK", () => {
     );
   });
   it("deposits into a registered pool before betting starts (ADR-0037 §9 D1)", async () => {
-    const f = nftFixture(undefined, { poolListedActive: false });
+    const f = nftFixture();
     f.state.poolActive = false;
     expect(await f.sdk.vault.addDeposit(1, 10n)).toMatchObject({ ok: true });
     expect(f.wallet.writeContract).toHaveBeenLastCalledWith(
       expect.objectContaining({ address: VAULT, functionName: "addDepositFor", args: [OWNER, 10n] })
     );
-    // Betting still waits for activation.
-    expect(
-      await f.sdk.gameHub.planPlaceBet({
-        chainId: 84532,
-        gameId: GAME,
-        poolId: 1,
-        betCount: 1,
-        stake: 10n,
-        params: "0x",
-        stakeSpec: encodeStakeSpec({ amountPerRoll: 10n, betCount: 1, stopGain: 0n, stopLoss: 0n }),
-        maxHouseEdgeBps: 200
-      })
-    ).toMatchObject({ error: { code: "POOL_INACTIVE" } });
+    const bet = {
+      chainId: 84532,
+      gameId: GAME,
+      poolId: 1,
+      betCount: 1,
+      stake: 10n,
+      params: "0x" as const,
+      stakeSpec: encodeStakeSpec({ amountPerRoll: 10n, betCount: 1, stopGain: 0n, stopLoss: 0n }),
+      maxHouseEdgeBps: 200
+    };
+    // Betting waits for activation, read live at the planning block, before any quote.
+    f.pub.readContract.mockClear();
+    expect(await f.sdk.gameHub.planPlaceBet(bet)).toMatchObject({
+      error: { code: "POOL_INACTIVE" }
+    });
+    expect(f.pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "isPoolActive", args: [1n], blockNumber: 42n })
+    );
+    expect(f.pub.readContract.mock.calls.some(([q]) => q.functionName === "quoteVRFFee")).toBe(
+      false
+    );
+    // Activation is a later timelock operation; the same release then plans the bet.
+    f.state.poolActive = true;
+    expect(await f.sdk.gameHub.planPlaceBet(bet)).not.toHaveProperty("error");
   });
   it("refuses deposits while the Bank is paused, before any approval", async () => {
     const f = nftFixture();

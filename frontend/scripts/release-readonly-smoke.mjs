@@ -14,6 +14,7 @@ const { createPublicClient, getAddress, http, parseAbi } = await import(
 const { baseSepolia } = await import(pathToFileURL(ssotRequire.resolve("viem/chains")).href);
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const REQUIRED_CORE_CONTRACTS = [
+  "governanceTimelock",
   "gameHub",
   "settlementRouter",
   "poolRegistry",
@@ -163,6 +164,26 @@ for (const [name, address] of Object.entries(release.contracts ?? {})) {
   await checkCode(`contract ${name}`, address);
 }
 
+// Every governed contract answers to the release's timelock (ADR-0037 §9 D1).
+await check("governance is the release timelock", async () => {
+  const timelock = getAddress(release.contracts.governanceTimelock);
+  const governed = [
+    ["PoolRegistry", release.contracts.poolRegistry, PoolRegistryAbi],
+    ["GameHub", release.contracts.gameHub, GameHubAbi],
+    ...(release.pools ?? []).map((pool) => [`Bank pool ${pool.poolId}`, pool.bank, BankAbi])
+  ];
+  for (const [name, address, abi] of governed) {
+    const governance = await rpcReadContract({
+      address: getAddress(address),
+      abi,
+      functionName: "governance",
+      args: []
+    });
+    if (getAddress(governance) !== timelock) throw new Error(`${name} governance=${governance}`);
+  }
+  return short(timelock);
+});
+
 for (const game of release.gamesMeta ?? []) {
   await check(`game ${game.slug} module mapping`, () => {
     const mapped = release.games?.[game.gameId];
@@ -251,16 +272,14 @@ for (const pool of release.pools ?? []) {
         args: [poolId]
       })
     ]);
-    if (Boolean(active) !== Boolean(pool.active)) {
-      throw new Error(`active mismatch release=${pool.active} chain=${active}`);
-    }
+    // Activity is chain state, not release metadata: the release is signed before the pool takes bets.
     if (String(asset).toLowerCase() !== pool.asset.toLowerCase()) {
       throw new Error(`asset mismatch release=${pool.asset} chain=${asset}`);
     }
     if (String(bank).toLowerCase() !== pool.bank.toLowerCase()) {
       throw new Error(`bank mismatch release=${pool.bank} chain=${bank}`);
     }
-    return `${pool.domain} ${short(pool.bank)}`;
+    return `${pool.domain} ${short(pool.bank)} ${active ? "active" : "inactive"}`;
   });
 
   await check(`pool ${pool.poolId} asset decimals`, async () => {

@@ -14,7 +14,7 @@ const state = {
   release: {
     releaseDigest: "0x7ad0f2cb0000000000000000000000000000000000000000000000000000e1349f",
     assets: [{ address: asset, symbol: "USDC", decimals: 6 }],
-    pools: [{ poolId: 1, asset, bank, symbol: "USDC", decimals: 6, active: true }],
+    pools: [{ poolId: 1, asset, bank, symbol: "USDC", decimals: 6 }],
     gamesMeta: [{ gameId, label: "Dice" }]
   } as any,
   localBet: null as any,

@@ -7,11 +7,11 @@ import { decodeGovernanceCall, TIMELOCK_ROLE_NAMES } from "./governance";
 
 const release = ReleaseSchema.parse(fixture);
 const abis = getContractAbis();
-const TIMELOCK = "0x00000000000000000000000000000000000000aa" as const;
+const TIMELOCK = release.contracts.governanceTimelock;
 const SAFE = "0x00000000000000000000000000000000000000bb" as const;
 const GAME = release.gamesMeta[0]!.gameId as `0x${string}`;
 const decode = (target: string, data: `0x${string}`) =>
-  decodeGovernanceCall(release, target as `0x${string}`, data, { timelock: TIMELOCK });
+  decodeGovernanceCall(release, target as `0x${string}`, data);
 
 describe("decodeGovernanceCall", () => {
   it.each([

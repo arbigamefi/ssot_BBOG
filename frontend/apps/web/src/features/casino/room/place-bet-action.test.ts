@@ -39,7 +39,6 @@ const release = {
       poolId: 1,
       domain: "Casino",
       domainId: 1,
-      active: true,
       asset: "0x3333333333333333333333333333333333333333",
       bank: "0x5555555555555555555555555555555555555555",
       symbol: "USDC",

@@ -8,13 +8,22 @@ import {
   type BetIndexStore
 } from "@ssot/bet-index";
 
+// The release names this run's timelock; it is set below, before any query.
+const releaseTimelock = vi.hoisted(() => ({ address: "" }));
 vi.mock("@ssot/ssot/release", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@ssot/ssot/release")>();
   const { default: fixture } =
     await import("../../../../../packages/ssot/src/fixtures/release-v16.fixture.json");
   return {
     ...actual,
-    loadEmbeddedRelease: (chainId: number) => ({ ok: true, release: { ...fixture, chainId } })
+    loadEmbeddedRelease: (chainId: number) => ({
+      ok: true,
+      release: {
+        ...fixture,
+        chainId,
+        contracts: { ...fixture.contracts, governanceTimelock: releaseTimelock.address }
+      }
+    })
   };
 });
 
@@ -34,6 +43,7 @@ const { PoolRegistryAbi, BankAbi, GovernanceTimelockAbi } = getContractAbis();
 const chainId = 84532;
 // A fresh timelock per run keeps rows apart from other suites sharing the database.
 const timelock = getAddress(`0x${randomBytes(20).toString("hex")}`);
+releaseTimelock.address = timelock;
 const gameHub = getAddress("0x0000000000000000000000000000000000000064");
 const registry = "0x0000000000000000000000000000000000000066";
 const bank = "0x0000000000000000000000000000000000000002";

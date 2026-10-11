@@ -40,6 +40,31 @@ describe("current release loading", () => {
     ).toBe(false);
   });
 
+  it("requires the governance timelock as a nonzero address", () => {
+    const { governanceTimelock, ...withoutTimelock } = fixture.contracts;
+    embeddedReleases[31337] = fixture;
+    const loaded = loadEmbeddedRelease(31337);
+    if (!loaded.ok) throw new Error(loaded.error);
+    expect(loaded.release.contracts.governanceTimelock).toBe(governanceTimelock);
+    for (const contracts of [
+      withoutTimelock,
+      { ...fixture.contracts, governanceTimelock: "0x0000000000000000000000000000000000000000" },
+      { ...fixture.contracts, governanceTimelock: "0x1234" }
+    ]) {
+      embeddedReleases[31337] = { ...fixture, contracts };
+      expect(loadEmbeddedRelease(31337).ok).toBe(false);
+    }
+  });
+
+  it("serves every listed pool: whether one takes bets is chain state, not release metadata", () => {
+    const parsed = ReleaseSchema.parse({
+      ...fixture,
+      pools: [{ ...fixture.pools[0], active: false }]
+    });
+    expect(parsed.pools).toHaveLength(1);
+    expect(parsed.pools[0]).not.toHaveProperty("active");
+  });
+
   it.each([
     [0, "Casino"],
     [1, "casino"],

@@ -89,15 +89,14 @@ export function loadBackfillConfig(env: NodeJS.ProcessEnv = process.env): Backfi
 
   const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
   return {
-    vaultProviderLedgerPools: (release.pools ?? [])
-      .filter((pool) => pool.active !== false)
-      .map((pool) => ({
-        asset: getAddress(pool.asset),
-        bank: getAddress(pool.bank),
-        vault: getAddress(pool.vault),
-        decimals: pool.decimals ?? 6,
-        poolId: pool.poolId
-      })),
+    // Every pool of the release, so the LP ledger of a pool not yet activated is indexed too.
+    vaultProviderLedgerPools: (release.pools ?? []).map((pool) => ({
+      asset: getAddress(pool.asset),
+      bank: getAddress(pool.bank),
+      vault: getAddress(pool.vault),
+      decimals: pool.decimals ?? 6,
+      poolId: pool.poolId
+    })),
     chainId,
     databaseSsl: parseBool(env.BET_INDEX_SSL),
     databaseUrl,

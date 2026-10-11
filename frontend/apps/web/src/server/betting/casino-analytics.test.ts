@@ -30,7 +30,6 @@ describe("casino analytics asset resolution", () => {
         gamesMeta: [],
         pools: [
           {
-            active: true,
             asset: "0x0000000000000000000000000000000000000002",
             domain: "Casino",
             poolId: 2
@@ -40,7 +39,7 @@ describe("casino analytics asset resolution", () => {
     });
   });
 
-  it("defaults analytics to the active casino pool asset", async () => {
+  it("defaults analytics to the release's casino pool asset", async () => {
     const { queryCasinoStats } = await import("./casino-analytics");
 
     const response = await queryCasinoStats({ chainId: 8453 });
@@ -53,7 +52,7 @@ describe("casino analytics asset resolution", () => {
     });
   });
 
-  it("rejects a release asset that is not backed by an active casino pool", async () => {
+  it("rejects a release asset that no casino pool of the release backs", async () => {
     const { queryCasinoStats, UnsupportedCasinoAnalyticsAssetError } =
       await import("./casino-analytics");
 

@@ -318,7 +318,6 @@ export function createKeeperRuntime({
   let waitingForStartupRecoveryLogged = false;
   let governance:
     | {
-        timelock: Address;
         verifiedAt: number;
         scannedThrough: bigint;
         head: HeadMonitor;
@@ -1167,16 +1166,18 @@ export function createKeeperRuntime({
   };
 
   /**
-   * Indexes the GovernanceTimelock that governs the release, through finalized blocks from the release
-   * origin, so LPs can read queued admissions during the delay.
+   * Indexes the release GovernanceTimelock through finalized blocks from the release origin, so LPs can
+   * read queued admissions during the delay. PoolRegistry, GameHub and every release Bank must report it
+   * as their governance; that is rechecked every GOVERNANCE_REVERIFY_MS.
    */
   const scanGovernanceTimelock = async (): Promise<GovernanceHealth | undefined> => {
-    if (!betIndexStore || !config.poolRegistry) return undefined;
+    if (!betIndexStore || !config.poolRegistry || !config.governanceTimelock) return undefined;
+    const timelock = getAddress(config.governanceTimelock);
     if (!governance || Date.now() - governance.verifiedAt >= GOVERNANCE_REVERIFY_MS) {
-      let timelock: Address;
       try {
-        timelock = await verifyGovernanceTimelock({
+        await verifyGovernanceTimelock({
           client: publicClient,
+          timelock,
           poolRegistry: config.poolRegistry,
           gameHub: config.gameHub,
           banks: config.releaseBanks ?? [...banks.values()].map((pool) => pool.bank)
@@ -1185,7 +1186,7 @@ export function createKeeperRuntime({
         governance = undefined;
         throw error;
       }
-      if (governance?.timelock === timelock) governance.verifiedAt = Date.now();
+      if (governance) governance.verifiedAt = Date.now();
       else {
         const cursor = await betIndexStore.getCursor(
           config.chainId,
@@ -1200,7 +1201,6 @@ export function createKeeperRuntime({
         });
         if (cursor != null) head.seed(cursor);
         governance = {
-          timelock,
           verifiedAt: Date.now(),
           scannedThrough: cursor != null && cursor > finalizedOrigin ? cursor : finalizedOrigin,
           head
@@ -1228,7 +1228,7 @@ export function createKeeperRuntime({
       const events = await fetchGovernanceTimelockEvents({
         client: publicClient,
         chainId: config.chainId,
-        timelock: state.timelock,
+        timelock,
         range
       });
       // Rows are persisted before the cursor advances; a failed range is retried whole.
@@ -1236,13 +1236,13 @@ export function createKeeperRuntime({
       await betIndexStore.setCursor({
         chainId: config.chainId,
         source: GOVERNANCE_TIMELOCK_CURSOR_SOURCE,
-        cursorKey: state.timelock,
+        cursorKey: timelock,
         blockNumber: range.toBlock
       });
       state.scannedThrough = range.toBlock;
     }
     return {
-      timelock: state.timelock,
+      timelock,
       scannedThrough: state.scannedThrough.toString(),
       finalizedBlock: head.target.toString(),
       ...(head.behindBy == null ? {} : { finalizedBehindBy: head.behindBy.toString() }),

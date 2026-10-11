@@ -119,6 +119,8 @@ Object.assign(fixture, {
   refundTimeoutSeconds: 3_600,
   contracts: {
     ...fixture.contracts,
+    // The deployer governs this isolated fixture.
+    governanceTimelock: owner,
     gameHub: hub.address,
     refRegistry: referrals.address,
     refEngine: engine.address,
@@ -132,7 +134,6 @@ Object.assign(fixture, {
       poolId: 1,
       domainId: 1,
       domain: "Casino",
-      active: true,
       asset: token.address,
       bank: bank.address,
       vault,

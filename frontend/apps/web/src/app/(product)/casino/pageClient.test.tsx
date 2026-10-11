@@ -205,7 +205,6 @@ describe("GamesListClient", () => {
       ],
       pools: [
         {
-          active: true,
           asset: "0x0000000000000000000000000000000000000002",
           bank: "0x0000000000000000000000000000000000000003",
           domain: "Casino",

@@ -334,7 +334,6 @@ const MOCK_RELEASE = {
   ],
   pools: [
     {
-      active: true,
       asset: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
       bank: "0x49b9dc94d98c3d78224ca37abf05ec09af7c50ff",
       decimals: 6,

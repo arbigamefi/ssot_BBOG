@@ -32,13 +32,14 @@ const release = {
   chainId: 84532,
   releaseDigest: "void-sdk-test",
   contracts: {
+    governanceTimelock: "0x7777777777777777777777777777777777777777",
     gameHub: HUB.toLowerCase(),
     vrfHub: VRF.toLowerCase(),
     settlementRouter: "0xa6b00b5a7893045c7ce8443a3ced632e6dae9077",
     poolRegistry: "0x1f232208b4b6068d18b156f2914acfc8092942f3",
     refRegistry: "0x52e0aac05f039f1be7fa42de7a2ccc5c8c722b15"
   },
-  pools: [{ poolId: 1, active: true, asset: ASSET, bank: BANK, vault: KEEPER, decimals: 6 }],
+  pools: [{ poolId: 1, asset: ASSET, bank: BANK, vault: KEEPER, decimals: 6 }],
   games: {},
   gamesMeta: [],
   meta: { blockNumber: 0 }

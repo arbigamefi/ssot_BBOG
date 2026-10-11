@@ -1834,7 +1834,8 @@
       "feedback": {
         "houseEdgeChanged": "Güncel kasa payı kabul ettiğiniz oranı aşıyor. Yeniden bahis yapmadan önce yenileyip oranı kontrol edin.",
         "playerLimit": "Bu havuzda izin verilen en fazla açık bahse zaten sahipsiniz. Biri sonuçlandıktan sonra yenisini yapın.",
-        "gameClosed": "Bu oyun kapandı ve yeni bahis almıyor. Kapanmadan önce yapılan bahisler yine sonuçlandırılır."
+        "gameClosed": "Bu oyun kapandı ve yeni bahis almıyor. Kapanmadan önce yapılan bahisler yine sonuçlandırılır.",
+        "inactive": "Bu havuz şu anda yeni bahis almıyor. Yapılmış bahisler yine kontrol edilebilir veya sonuçlandırılabilir."
       },
       "payment": {
         "payable": "Bu sonuçlandırmada transfer tamamlanamadı; tutar cüzdanınız için ayrıldı. Transfer mümkün olduğunda size otomatik olarak ödenir; isterseniz Talepler sayfasından kendiniz de alabilirsiniz."

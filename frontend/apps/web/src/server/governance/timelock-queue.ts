@@ -51,7 +51,10 @@ function createChainClient(chainId: number): PublicClient {
   }) as PublicClient;
 }
 
-/** PoolRegistry.governance(), checked against GameHub.governance() by the SDK (ADR-0037 §2). */
+/**
+ * The release timelock, once the SDK has read it as PoolRegistry.governance() and GameHub.governance()
+ * (ADR-0037 §2). A passed check is cached per release for TIMELOCK_TTL_MS.
+ */
 async function resolveTimelock(release: SSOTRelease, client: PublicClient, now: number) {
   const key = `${release.chainId}:${release.releaseDigest}`;
   const cached = timelockCache.get(key);
@@ -74,11 +77,10 @@ const ROLE_FUNCTIONS = new Set(["grantRole", "revokeRole", "renounceRole"]);
 
 export function describeGovernanceCall(
   release: SSOTRelease,
-  timelock: Address,
   target: Address,
   data: Hex
 ): GovernanceCallView {
-  const decoded = decodeGovernanceCall(release, target, data, { timelock });
+  const decoded = decodeGovernanceCall(release, target, data);
   const call: GovernanceCallView = {
     target: decoded.target,
     contract: decoded.contract,
@@ -104,7 +106,6 @@ export function describeGovernanceCall(
 
 function toOperationView(
   release: SSOTRelease,
-  timelock: Address,
   operation: GovernanceTimelockOperation
 ): GovernanceOperationView {
   return {
@@ -117,7 +118,7 @@ function toOperationView(
     ...(operation.executedTxHash ? { executedTxHash: operation.executedTxHash } : {}),
     ...(operation.cancelledTxHash ? { cancelledTxHash: operation.cancelledTxHash } : {}),
     value: operation.value,
-    call: describeGovernanceCall(release, timelock, getAddress(operation.target), operation.data)
+    call: describeGovernanceCall(release, getAddress(operation.target), operation.data)
   };
 }
 
@@ -192,7 +193,7 @@ async function readQueue({
       source: "postgres" as const,
       timelock,
       coverage,
-      operations: operations.map((operation) => toOperationView(release, timelock, operation))
+      operations: operations.map((operation) => toOperationView(release, operation))
     }
   };
 }

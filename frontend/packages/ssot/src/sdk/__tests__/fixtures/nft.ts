@@ -8,6 +8,7 @@ export const ASSET = "0x0000000000000000000000000000000000000033" as const;
 export const VAULT = "0x0000000000000000000000000000000000000044" as const;
 export const OTHER = "0x0000000000000000000000000000000000000055" as const;
 export const MODULE = "0x0000000000000000000000000000000000000066" as const;
+const TIMELOCK = "0x0000000000000000000000000000000000000077" as const;
 export const HASH = `0x${"a".repeat(64)}` as const;
 export const GAME = `0x${"b".repeat(64)}` as const;
 export const FIRST_ID = 1n << 40n;
@@ -15,8 +16,9 @@ export const ONE = 1_000_000_000_000n;
 export const release = {
   chainId: 84532,
   releaseDigest: "nft-sdk-test",
-  pools: [{ poolId: 1, active: true, asset: ASSET, bank: BANK, vault: VAULT, decimals: 6 }],
+  pools: [{ poolId: 1, asset: ASSET, bank: BANK, vault: VAULT, decimals: 6 }],
   contracts: {
+    governanceTimelock: TIMELOCK,
     gameHub: BANK,
     vrfHub: BANK,
     refRegistry: BANK,
@@ -27,10 +29,7 @@ export const release = {
   gamesMeta: [{ gameId: GAME, module: MODULE, maxBetCount: 25, callbackGasLimit: 2_447_746 }]
 } as unknown as SSOTRelease;
 
-export function nftFixture(
-  assertWalletContext?: () => void,
-  { poolListedActive = true }: { poolListedActive?: boolean } = {}
-) {
+export function nftFixture(assertWalletContext?: () => void) {
   const state = {
     allowance: 0n,
     nftCount: 2n,
@@ -165,9 +164,7 @@ export function nftFixture(
   };
   const wallet = { writeContract: vi.fn().mockResolvedValue(HASH) };
   const sdk = createSSOTSDK({
-    release: poolListedActive
-      ? release
-      : { ...release, pools: release.pools.map((pool) => ({ ...pool, active: false })) },
+    release,
     publicClient: pub as unknown as PublicClient,
     walletClient: wallet as unknown as WalletClient,
     account: OWNER,

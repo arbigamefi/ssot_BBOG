@@ -21,7 +21,7 @@ Set these environment variables before starting:
 
 | Variable                         | Purpose                                                                                     |
 | -------------------------------- | ------------------------------------------------------------------------------------------- |
-| `KEEPER_RELEASE_PATH`            | Current release JSON: GameHub, VRFHub and PoolRegistry, pools and deployment block          |
+| `KEEPER_RELEASE_PATH`            | Current release JSON: timelock, GameHub, VRFHub, PoolRegistry, pools and deployment block   |
 | `KEEPER_RPC_HTTP`                | HTTP RPC endpoint                                                                           |
 | `KEEPER_PRIVATE_KEY`             | Transaction signer key                                                                      |
 | `KEEPER_RPC_WS`                  | Optional websocket endpoint; HTTP recovery remains active                                   |
@@ -89,7 +89,7 @@ and submission. This setting is not proof of all-history tree gas sufficiency; f
 modules, assets, referral configurations and tree histories need their own qualification.
 `voidBet` uses `KEEPER_VOID_GAS_LIMIT` instead.
 
-Every active release pool must supply immutable Bank and Vault addresses. Read-only
+Every release pool must supply immutable Bank and Vault addresses. Read-only
 health checks verify their mutual binding, the asset, the two cash balances, L/P/R/K/G
 and PF/XP/PP buckets, `accountingValid`, `openHolds`, capacity and canonical LP status at
 one numbered block. NFT withdrawal maturity is enforced on chain. The keeper never
@@ -239,9 +239,9 @@ block timestamps and contract reads add RPC work.
 
 One `GovernanceTimelock` governs PoolRegistry, GameHub and every Bank, and admissions wait in it for
 72 hours (ADR-0037 §2), so LPs read its queue from the index. With the bet index enabled, the keeper
-takes `PoolRegistry.governance()` from the release `contracts.poolRegistry` and refuses to index unless
-GameHub and every Bank of the release, inactive pools included, report the same address. It rechecks
-this hourly; a mismatch degrades `governance`. In the lifecycle pass it indexes `CallScheduled`,
+takes the timelock from the release `contracts.governanceTimelock` and refuses to index unless
+PoolRegistry, GameHub and every Bank of the release report it as their governance. It rechecks this
+hourly; a mismatch degrades `governance`. In the lifecycle pass it indexes `CallScheduled`,
 `CallSalt`, `CallExecuted`, `Cancelled` and `MinDelayChange` through finalized blocks from the release
 origin, with the usual chunking, under `governance-timelock-finalized` keyed by the timelock.
 
@@ -332,7 +332,7 @@ player payable debt, later payment to that player after the transfer is allowed,
 It then freezes the Vault so a delivered result cannot be booked, checks that no `voidBet` is sent
 before eligibility, opens a void window, moves time 24 hours and requires one keeper `voidBet` with
 the configured gas, the stake as a player payable and a `voided` row. Finally it hands PoolRegistry,
-GameHub and the Bank to a `GovernanceTimelock` through its own queue and requires a restarted keeper
-to index the executed and cancelled operations.
+GameHub and the Bank to a `GovernanceTimelock` through its own queue and requires a keeper restarted
+with a release naming that timelock to index the executed and cancelled operations.
 These checks are not additional OS-process restart evidence. The script owns and removes
 its test processes/container and never uses deployment wallets or an existing database.

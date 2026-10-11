@@ -6,6 +6,7 @@
   "refundTimeoutSeconds": 600,
   "defaultHouseEdgeBps": 200,
   "contracts": {
+    "governanceTimelock": "0x00000000000000000000000000000000000000aa",
     "gameHub": "0x0000000000000000000000000000000000000064",
     "settlementRouter": "0x0000000000000000000000000000000000000065",
     "poolRegistry": "0x0000000000000000000000000000000000000066",
@@ -111,7 +112,6 @@
       "poolId": 1,
       "domainId": 1,
       "domain": "Casino",
-      "active": true,
       "asset": "0x0000000000000000000000000000000000000001",
       "bank": "0x0000000000000000000000000000000000000002",
       "symbol": "TEST",

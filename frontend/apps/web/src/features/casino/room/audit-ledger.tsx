@@ -146,7 +146,7 @@ export function GameRoomAuditLedger({
   assetAddress?: string;
   assetSymbol?: string;
   assetDecimals?: number;
-  /** Active casino pool assets on this release; used to format mixed-asset row feeds. */
+  /** Casino pool assets of this release; used to format mixed-asset row feeds. */
   assetContexts?: readonly PoolAssetContext[];
   /** Active chain — drives explorer links and the chain badge in the header. */
   chainId?: number;

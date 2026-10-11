@@ -7,7 +7,7 @@ import { join } from "node:path";
 
 import { loadBackfillConfig, resolveBackfillRange, runBetIndexBackfill } from "./backfill.js";
 
-function writeRelease() {
+function writeRelease(pools?: unknown[]) {
   const dir = mkdtempSync(join(tmpdir(), "keeper-backfill-"));
   const releasePath = join(dir, "chain-84532.json");
   writeFileSync(
@@ -15,10 +15,12 @@ function writeRelease() {
     JSON.stringify({
       chainId: 84532,
       contracts: {
+        governanceTimelock: "0x00000000000000000000000000000000000000ee",
         gameHub: "0x1111111111111111111111111111111111111111",
         vrfHub: "0x2222222222222222222222222222222222222222",
         poolRegistry: "0x0000000000000000000000000000000000000066"
       },
+      pools,
       meta: { blockNumber: 123 }
     })
   );
@@ -45,6 +47,22 @@ describe("loadBackfillConfig", () => {
         KEEPER_RPC_HTTP: "https://keeper.example"
       } as NodeJS.ProcessEnv).httpRpcUrl
     ).toBe("https://keeper.example");
+  });
+
+  it("backfills the LP ledger of every release pool, before activation too", () => {
+    const pool = {
+      poolId: 7,
+      asset: "0x0000000000000000000000000000000000000003",
+      bank: "0x0000000000000000000000000000000000000004",
+      vault: "0x0000000000000000000000000000000000000008"
+    };
+    expect(
+      loadBackfillConfig({
+        BET_INDEX_DRY_RUN: "true",
+        KEEPER_RELEASE_PATH: writeRelease([pool]),
+        KEEPER_RPC_HTTP: "https://keeper.example"
+      } as NodeJS.ProcessEnv).vaultProviderLedgerPools
+    ).toEqual([{ ...pool, decimals: 6 }]);
   });
 });
 

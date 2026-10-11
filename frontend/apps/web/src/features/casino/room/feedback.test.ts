@@ -24,7 +24,8 @@ describe("game room feedback", () => {
     "TX_TIMEOUT",
     "TX_REVERTED",
     "PLAYER_OPEN_HOLD_LIMIT",
-    "GAME_DISABLED"
+    "GAME_DISABLED",
+    "POOL_INACTIVE"
   ])("localizes %s without leaking provider data", (code) => {
     const message = getStepperErrorMessage(
       { code, message: "secret RPC URL calldata" },
@@ -44,6 +45,13 @@ describe("game room feedback", () => {
     expect(getBetErrorKind({ code: "GAME_DISABLED" })).toBe("gameClosed");
     expect(getStepperErrorMessage({ code: "PLAYER_OPEN_HOLD_LIMIT" }, undefined, t)).not.toBe(
       getStepperErrorMessage({ code: "OPEN_HOLD_LIMIT" }, undefined, t)
+    );
+  });
+  it("tells an inactive pool from a paused one (ADR-0037 §9)", () => {
+    expect(getBetErrorKind({ code: "POOL_INACTIVE" })).toBe("inactive");
+    expect(getStepperErrorMessage({ code: "POOL_INACTIVE" }, undefined, t)).not.toContain("暂停");
+    expect(getStepperErrorMessage({ code: "POOL_INACTIVE" }, undefined, t)).toContain(
+      "不接受新投注"
     );
   });
   it("prompts a new fee review after a governance change", () => {

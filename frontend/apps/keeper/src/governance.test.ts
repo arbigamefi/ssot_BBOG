@@ -26,7 +26,7 @@ function governedBy(governance: Record<string, Address>) {
 }
 
 describe("verifyGovernanceTimelock", () => {
-  it("returns PoolRegistry.governance() when GameHub and every release Bank agree", async () => {
+  it("passes when PoolRegistry, GameHub and every release Bank report the release timelock", async () => {
     const client = governedBy({
       [registry]: timelock,
       [hub]: timelock,
@@ -36,11 +36,13 @@ describe("verifyGovernanceTimelock", () => {
     await expect(
       verifyGovernanceTimelock({
         client,
+        timelock,
         poolRegistry: registry,
         gameHub: hub,
         banks: [bankA, bankB]
       })
-    ).resolves.toBe(getAddress(timelock));
+    ).resolves.toBeUndefined();
+    expect(client.readContract).toHaveBeenCalledTimes(4);
   });
 
   it("refuses a release whose Bank is still governed by someone else", async () => {
@@ -52,6 +54,7 @@ describe("verifyGovernanceTimelock", () => {
     });
     const verification = verifyGovernanceTimelock({
       client,
+      timelock,
       poolRegistry: registry,
       gameHub: hub,
       banks: [bankA, bankB]
@@ -65,8 +68,30 @@ describe("verifyGovernanceTimelock", () => {
   it("refuses a GameHub under another governance", async () => {
     const client = governedBy({ [registry]: timelock, [hub]: deployer });
     await expect(
-      verifyGovernanceTimelock({ client, poolRegistry: registry, gameHub: hub, banks: [] })
+      verifyGovernanceTimelock({
+        client,
+        timelock,
+        poolRegistry: registry,
+        gameHub: hub,
+        banks: []
+      })
     ).rejects.toThrow(/GameHub .* reports/);
+  });
+
+  it("refuses contracts that agree on a governance the release does not name", async () => {
+    const client = governedBy({ [registry]: deployer, [hub]: deployer, [bankA]: deployer });
+    await expect(
+      verifyGovernanceTimelock({
+        client,
+        timelock,
+        poolRegistry: registry,
+        gameHub: hub,
+        banks: [bankA]
+      })
+    ).rejects.toThrow(
+      `the release timelock is ${getAddress(timelock)}, but PoolRegistry ${getAddress(registry)} ` +
+        `reports ${getAddress(deployer)}`
+    );
   });
 });
 

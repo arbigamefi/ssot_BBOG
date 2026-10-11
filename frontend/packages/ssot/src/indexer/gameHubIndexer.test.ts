@@ -13,6 +13,7 @@ const MOCK_RELEASE: SSOTRelease = {
   releaseDigest: "0xdeadbeef",
   isPlaceholder: false,
   contracts: {
+    governanceTimelock: "0x7777777777777777777777777777777777777777",
     gameHub: "0x1111111111111111111111111111111111111111",
     settlementRouter: "0x2222222222222222222222222222222222222222",
     poolRegistry: "0x3333333333333333333333333333333333333333",
@@ -48,7 +49,6 @@ const MOCK_RELEASE: SSOTRelease = {
       poolId: 1,
       domainId: 1,
       domain: "Casino",
-      active: true,
       asset: "0x4444444444444444444444444444444444444444",
       vault: "0xcccccccccccccccccccccccccccccccccccccccc",
       bank: "0x5555555555555555555555555555555555555555",

@@ -2,7 +2,7 @@ import { decodeDiceParams, decodeStakeSpec } from "@ssot/ssot/encoding";
 import { describe, expect, it } from "vitest";
 
 import type { GameMeta } from "./model";
-import { buildGamePlaceBetInput, findCasinoPool } from "./place-bet";
+import { buildGamePlaceBetInput } from "./place-bet";
 
 const game: GameMeta = {
   gameId: "0x1111111111111111111111111111111111111111",
@@ -25,7 +25,6 @@ const release = {
       poolId: 1,
       domain: "Casino",
       domainId: 1,
-      active: true,
       asset: "0x3333333333333333333333333333333333333333",
       bank: "0x4444444444444444444444444444444444444444",
       symbol: "USDC",
@@ -35,10 +34,6 @@ const release = {
 };
 
 describe("game room place bet builder", () => {
-  it("finds the active casino pool", () => {
-    expect(findCasinoPool(release.pools)?.poolId).toBe(1);
-  });
-
   it("builds a typed PlaceBetInput with encoded params and stake spec", () => {
     const affiliate = "0x5555555555555555555555555555555555555555";
     const result = buildGamePlaceBetInput({
@@ -150,7 +145,6 @@ describe("game room place bet builder", () => {
           poolId: 9,
           domain: "Casino",
           domainId: 1,
-          active: true,
           asset: "0x6666666666666666666666666666666666666666",
           bank: "0x7777777777777777777777777777777777777777",
           symbol: "WETH",
@@ -198,7 +192,6 @@ describe("game room place bet builder", () => {
         poolId: 1,
         domain: "Casino",
         domainId: 1,
-        active: true,
         asset: "0x3333333333333333333333333333333333333333",
         bank: "0x4444444444444444444444444444444444444444",
         symbol: "USDC",
@@ -208,7 +201,6 @@ describe("game room place bet builder", () => {
         poolId: 9,
         domain: "Casino",
         domainId: 1,
-        active: true,
         asset: "0x6666666666666666666666666666666666666666",
         bank: "0x7777777777777777777777777777777777777777",
         symbol: "WETH",

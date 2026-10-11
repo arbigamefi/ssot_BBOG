@@ -14,7 +14,7 @@ import {
 const STORAGE_PREFIX = "arbigamefi.casinoAsset.v1";
 
 export type CasinoPoolAssetSelection = {
-  /** All active casino pool assets on the current chain, as selector options. */
+  /** Every casino pool asset of the current release, as selector options. */
   assetOptions: AssetOption[];
   /** Currently selected asset address; undefined when the chain has no casino pool. */
   selectedAsset?: `0x${string}`;
@@ -25,7 +25,7 @@ export type CasinoPoolAssetSelection = {
   poolId?: number;
   decimals?: number;
   symbol?: string;
-  /** True when the selected asset maps to an active pool (writes/bets allowed). */
+  /** True when the selected asset maps to a release pool; whether it takes bets is read live. */
   writesSupported: boolean;
   /** The full list of casino pool contexts (for callers needing more than options). */
   contexts: PoolAssetContext[];
@@ -40,7 +40,7 @@ function isSupported(options: AssetOption[], address?: string | null) {
 /**
  * Single source of truth for "which casino pool asset is the user acting on".
  *
- * Lists every active casino pool asset on the current chain, tracks the
+ * Lists every casino pool asset of the current release, tracks the
  * selection (persisted per chain), and resolves it to a pool id + decimals +
  * symbol. Shared by the earn console and the casino room so both present the
  * same set of assets and write to the same pool. Reads the release from

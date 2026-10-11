@@ -65,10 +65,6 @@ function toUnits(amount: string | number, decimals: number) {
   return parseDecimalToUnits(value || "0", decimals);
 }
 
-export function findCasinoPool(pools: readonly ReleasePoolLike[]) {
-  return pools.find((pool) => pool.active !== false);
-}
-
 export function buildGamePlaceBetInput({
   release,
   game,

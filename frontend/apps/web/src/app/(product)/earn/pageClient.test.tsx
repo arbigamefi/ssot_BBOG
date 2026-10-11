@@ -7,7 +7,7 @@ const ACCOUNT = "0x0000000000000000000000000000000000000007";
 const BANK = "0x0000000000000000000000000000000000000002";
 const VAULT = "0x0000000000000000000000000000000000000003";
 const ASSET = "0x0000000000000000000000000000000000000001";
-const state = { sdk: null as any, readOnly: false, poolListedActive: true };
+const state = { sdk: null as any, readOnly: false };
 const tx = { ok: true, txHash: "0x123" };
 vi.mock("next-intl", () => ({
   useLocale: () => "en",
@@ -24,7 +24,6 @@ vi.mock("../../../ssot/release/ReleaseProvider", () => ({
         {
           poolId: 1,
           domainId: 1,
-          active: state.poolListedActive,
           bank: BANK,
           vault: VAULT,
           asset: ASSET,
@@ -97,7 +96,6 @@ function mount() {
 }
 beforeEach(() => {
   state.readOnly = false;
-  state.poolListedActive = true;
   state.sdk = {
     account: ACCOUNT,
     bank: {
@@ -328,7 +326,6 @@ describe("NFT Earn console", () => {
     expect(screen.queryByRole("button", { name: "earn.nft.claimPlayer" })).toBeNull();
   });
   it("takes deposits before betting starts and says when betting starts (ADR-0037 D1)", async () => {
-    state.poolListedActive = false;
     state.sdk.bank.getSnapshot.mockResolvedValue({
       bank: BANK,
       vault: VAULT,

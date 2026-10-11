@@ -9,7 +9,6 @@ export type ReleaseAssetLike = {
 };
 
 export type ReleasePoolLike = {
-  active?: boolean;
   asset?: string;
   bank?: string;
   vault?: string;
@@ -65,9 +64,9 @@ export function getPoolAssetContext(
   };
 }
 
+/** Every release pool; whether one takes bets is read live (the bank snapshot's poolActive). */
 export function getCasinoPoolAssetContexts(release: PoolAssetReleaseLike) {
   return (release.pools ?? [])
-    .filter((pool) => pool.active !== false)
     .map((pool) => getPoolAssetContext(release, pool))
     .filter((item): item is PoolAssetContext => Boolean(item));
 }

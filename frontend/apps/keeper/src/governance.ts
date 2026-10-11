@@ -28,27 +28,29 @@ const GOVERNANCE_TIMELOCK_EVENT_ABI = GOVERNANCE_TIMELOCK_INDEX_EVENTS.map(
   (name) => getAbiItem({ abi: GOVERNANCE_TIMELOCK_KEEPER_ABI, name }) as AbiEvent
 );
 
-/** PoolRegistry, GameHub and a release Bank disagree about their governance. */
+/** PoolRegistry, GameHub or a release Bank is governed by something other than the release timelock. */
 export class GovernanceMismatchError extends Error {
   override name = "GovernanceMismatchError";
 }
 
 /**
- * ADR-0037 §2: one GovernanceTimelock governs PoolRegistry, GameHub and every Bank. The timelock is
- * PoolRegistry.governance(); indexing is refused unless GameHub and every release Bank report the same
- * address, so LPs never read the queue of a timelock that does not govern the release.
+ * ADR-0037 §2: one GovernanceTimelock, named by the release, governs PoolRegistry, GameHub and every
+ * Bank. Indexing is refused unless each of them reports it, so LPs never read the queue of a timelock
+ * that does not govern the release.
  */
 export async function verifyGovernanceTimelock({
   client,
+  timelock,
   poolRegistry,
   gameHub,
   banks
 }: {
   client: Pick<PublicClient, "readContract">;
+  timelock: Address;
   poolRegistry: Address;
   gameHub: Address;
   banks: readonly Address[];
-}): Promise<Address> {
+}): Promise<void> {
   const governed = [
     { name: "PoolRegistry", address: poolRegistry, abi: POOL_REGISTRY_KEEPER_ABI },
     { name: "GameHub", address: gameHub, abi: GAME_HUB_KEEPER_ABI },
@@ -62,14 +64,13 @@ export async function verifyGovernanceTimelock({
       return { name, address: getAddress(address), governance: getAddress(value) };
     })
   );
-  const timelock = reported[0]!.governance;
-  const foreign = reported.filter((item) => item.governance !== timelock);
+  const expected = getAddress(timelock);
+  const foreign = reported.filter((item) => item.governance !== expected);
   if (foreign.length > 0)
     throw new GovernanceMismatchError(
-      `Governance timelock indexing refused: PoolRegistry ${getAddress(poolRegistry)} reports ` +
-        `${timelock}, but ${foreign.map((item) => `${item.name} ${item.address} reports ${item.governance}`).join(", ")}`
+      `Governance timelock indexing refused: the release timelock is ${expected}, but ` +
+        foreign.map((item) => `${item.name} ${item.address} reports ${item.governance}`).join(", ")
     );
-  return timelock;
 }
 
 type TimelockLog = {

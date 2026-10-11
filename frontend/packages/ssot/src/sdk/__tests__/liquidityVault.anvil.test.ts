@@ -106,6 +106,8 @@ async function fixture(minBetAmount = 10_000n) {
     releaseDigest: "isolated-sdk-nft",
     isPlaceholder: true,
     contracts: {
+      // The deployer governs this isolated fixture.
+      governanceTimelock: owner,
       gameHub: bank.address,
       vrfHub: vrf.address,
       settlementRouter: router.address,
@@ -117,7 +119,6 @@ async function fixture(minBetAmount = 10_000n) {
         poolId: 1,
         domainId: 1,
         domain: "Casino",
-        active: true,
         asset: token.address,
         bank: bank.address,
         vault: vault.address,
@@ -227,6 +228,7 @@ async function fixture(minBetAmount = 10_000n) {
     wallet,
     evm,
     token,
+    registry,
     bank,
     vault,
     sdk,
@@ -434,6 +436,23 @@ describe.skipIf(!rpc)("NFT SDK on isolated Anvil", () => {
       ok: false,
       error: { code: "INVALID_CONFIG", details: { transactionSubmitted: false } }
     });
+  }, 60_000);
+
+  it("takes deposits while the pool is inactive and plans bets only while PoolRegistry reports it active", async () => {
+    const f = await fixture();
+    // Registered but inactive (ADR-0037 §9 D1): LPs deposit, nobody bets.
+    await f.write(f.registry, "setPoolActive", [1n, false]);
+    expect((await f.sdk.vault.addDeposit(1, 10_000_000n)).ok).toBe(true);
+    expect((await f.sdk.bank.getSnapshot(1)).poolActive).toBe(false);
+    await f.write(f.registry, "setPoolActive", [1n, true]);
+    const c = await f.casino(1_000_000n);
+    // GameHub.riskInPaused is also true for an inactive pool; planning names the inactivity.
+    await f.write(f.registry, "setPoolActive", [1n, false]);
+    expect(await c.planAnother()).toMatchObject({
+      error: { code: "POOL_INACTIVE", details: { poolId: 1 } }
+    });
+    await f.write(f.registry, "setPoolActive", [1n, true]);
+    expect(await c.planAnother()).not.toHaveProperty("error");
   }, 60_000);
 
   it("refuses deposits while paused and still lets a mature NFT exit", async () => {

@@ -24,6 +24,7 @@ import {
 } from "./timelock-queue";
 
 const { PoolRegistryAbi, BankAbi, GovernanceTimelockAbi } = getContractAbis();
+// The fixture release's contracts.governanceTimelock.
 const TIMELOCK = getAddress("0x00000000000000000000000000000000000000aa");
 const REGISTRY = "0x0000000000000000000000000000000000000066";
 const GAME_HUB = "0x0000000000000000000000000000000000000064";
@@ -216,16 +217,33 @@ describe("governance timelock queue", () => {
     ).toMatchObject({ source: "unavailable" });
   });
 
-  it("refuses a release whose PoolRegistry and GameHub name different governance", async () => {
-    const split = client();
-    (split.readContract as ReturnType<typeof vi.fn>).mockImplementation(
-      async ({ address }: { address: string }) =>
-        address.toLowerCase() === REGISTRY ? TIMELOCK : "0x00000000000000000000000000000000000000dd"
-    );
-    expect(
-      await queryGovernanceQueue({ chainId: 84532, client: split, store: store(), now: () => NOW })
-    ).toMatchObject({ source: "unavailable" });
-  });
+  it.each([
+    ["GameHub", TIMELOCK, "0x00000000000000000000000000000000000000dd"],
+    [
+      "PoolRegistry and GameHub",
+      "0x00000000000000000000000000000000000000dd",
+      "0x00000000000000000000000000000000000000dd"
+    ]
+  ])(
+    "reports unavailable when the governance of %s is not the release timelock",
+    async (_, registryGovernance, hubGovernance) => {
+      const foreign = client();
+      (foreign.readContract as ReturnType<typeof vi.fn>).mockImplementation(
+        async ({ address }: { address: string }) =>
+          address.toLowerCase() === REGISTRY ? registryGovernance : hubGovernance
+      );
+      const index = store();
+      expect(
+        await queryGovernanceQueue({
+          chainId: 84532,
+          client: foreign,
+          store: index,
+          now: () => NOW
+        })
+      ).toMatchObject({ source: "unavailable", timelock: null, operations: [] });
+      expect(index.getGovernanceTimelockOperations).not.toHaveBeenCalled();
+    }
+  );
 
   it("gives the Ops page every operation with void windows and disabled games", async () => {
     const executed = operation({
