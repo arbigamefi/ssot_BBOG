@@ -30,7 +30,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: v1.5.1 # Foundry pinned to the release candidate toolchain (freeze 2026-10-08); do not use a floating "stable"
+          version: v1.8.5 # FOUNDRY_VERSION in deps.lock; check_toolchain.py refuses any other pin
 
       - name: Show Forge version
         run: forge --version
@@ -52,7 +52,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: v1.5.1 # Foundry pinned to the release candidate toolchain (freeze 2026-10-08); do not use a floating "stable"
+          version: v1.8.5 # FOUNDRY_VERSION in deps.lock; check_toolchain.py refuses any other pin
 
       - name: Install pinned dependencies
         run: |

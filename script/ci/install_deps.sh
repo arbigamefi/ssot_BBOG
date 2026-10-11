@@ -14,6 +14,9 @@ if ! command -v forge >/dev/null 2>&1; then
   exit 1
 fi
 
+# The toolchain is pinned in deps.lock as well; refuse another one before touching lib/.
+python3 script/ci/check_toolchain.py
+
 lock_value() { # name -> value of `name=` in deps.lock, or fail
   local value
   value=$(sed -n "s/^$1=//p" deps.lock)
@@ -65,3 +68,6 @@ echo "  chainlink-brownie-contracts: $(lock_value CHAINLINK_BROWNIE_CONTRACTS) (
 expect_digest FORGE_STD lib/forge-std
 expect_digest OPENZEPPELIN_CONTRACTS lib/openzeppelin-contracts
 expect_digest CHAINLINK_BROWNIE_CONTRACTS lib/chainlink-brownie-contracts
+
+# foundry.toml compiles offline: install the pinned compiler by digest.
+bash script/ci/install_solc.sh

@@ -2,11 +2,21 @@
 #
 # Purpose: minimize supply-chain drift across environments and CI.
 #
-# Tooling
-FOUNDRY_CHANNEL=stable
+# Toolchain. Every workflow installs exactly FOUNDRY_VERSION; install_deps.sh refuses another Foundry pin in
+# .github/workflows or another installed forge, cast or anvil (check_toolchain.py). It also installs SOLC_VERSION from
+# binaries.soliditylang.org and refuses the binary unless its SHA-256 matches, because foundry.toml compiles offline.
+# Local nodes run anvil with ANVIL_ARGS: Base's hardfork at the target time, with the EIP-7825 transaction gas cap
+# that anvil leaves off unless asked.
+FOUNDRY_VERSION=v1.8.5
+FOUNDRY_COMMIT=51a52c59cffd940f76eddd0b4bb1791aa4b5ac7f
 SOLC_VERSION=0.8.37
+SOLC_LINUX_AMD64_BUILD=solc-linux-amd64-v0.8.37+commit.f401782d
+SOLC_LINUX_AMD64_SHA256=5de843c2c93563cc66425c99a4fb13fdbf32b4c4ae07469480faaf126e14404a
+SOLC_MACOSX_AMD64_BUILD=solc-macosx-amd64-v0.8.37+commit.f401782d
+SOLC_MACOSX_AMD64_SHA256=a27396e7732aa52e80ff89ad7bd8a2e46fec2a6dcc4ef20cd16e5e0c502d6821
 EVM_VERSION=cancun
 VIA_IR=true
+ANVIL_ARGS=--network base --hardfork azul --enable-tx-gas-limit
 
 # Solidity libraries. install_deps.sh installs each one at *_COMMIT (the commit the tag *_NAME pointed to when it
 # was pinned; the tag is kept for humans only, a tag can be moved) and then refuses the install unless the compiled

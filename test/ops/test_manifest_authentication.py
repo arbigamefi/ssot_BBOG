@@ -14,6 +14,9 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+# Local nodes run the network rules pinned in deps.lock (Base hardfork, EIP-7825 transaction gas cap).
+ANVIL_ARGS = next(line.split('=', 1)[1] for line in (ROOT / 'deps.lock').read_text().splitlines()
+                  if line.startswith('ANVIL_ARGS=')).split()
 sys.path.insert(0, str(ROOT / 'script/release'))
 from export_frontend_abis import REQUIRED_CONTRACTS, pool_instances
 from validate_frontend_artifacts import EXECUTION_ADDRESSES, GAMES, _game_id, _validate_execution
@@ -202,7 +205,7 @@ class SignedImportIntegrationTests(unittest.TestCase):
         endpoint = f'http://127.0.0.1:{port}'
         log = (cls.fixture_root / f'{state}-anvil.log').open('w+')
         cls.addClassCleanup(log.close)
-        process = subprocess.Popen(['anvil', '--host', '127.0.0.1', '--port', str(port), '--accounts', '0',
+        process = subprocess.Popen(['anvil', *ANVIL_ARGS, '--host', '127.0.0.1', '--port', str(port), '--accounts', '0',
                                     '--chain-id', str(cls.chain_id), '--silent'],
                                    stdout=log, stderr=subprocess.STDOUT)
         def stop():

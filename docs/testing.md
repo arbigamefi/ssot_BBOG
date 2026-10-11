@@ -9,15 +9,35 @@ new invariants, test replacement/deletion mapping and execution order. Existing 
 adapter results do not validate NFT deposits/tree withdrawals or the direct wrapper callback. The commands
 below are entrypoints, not a claim that the new tests have been written or run.
 
-## Dependencies (pinned)
+## Dependencies and toolchain (pinned)
 
-This repo pins its Foundry dependencies via `script/ci/install_deps.sh`: each library is installed at the commit
-recorded in `deps.lock` (the tag there is for humans), and the install is refused unless the compiled subtree has
-the recorded content digest (`*_SUBTREE`, `*_SHA256`; the digest command is in the `deps.lock` comment).
+`deps.lock` pins the Solidity libraries and the toolchain, and `script/ci/install_deps.sh` installs both:
+
+- It first refuses any Foundry other than `FOUNDRY_VERSION`, both in every `foundry-toolchain` step under
+  `.github/workflows` and in the `forge`, `cast` and `anvil` on `PATH` (`script/ci/check_toolchain.py`). Install that
+  release with `foundryup --install <FOUNDRY_VERSION>`.
+- Each library is installed at the commit recorded in `deps.lock` (the tag there is for humans), and the install is
+  refused unless the compiled subtree has the recorded content digest (`*_SUBTREE`, `*_SHA256`; the digest command is
+  in the `deps.lock` comment).
+- It then installs `SOLC_VERSION` from binaries.soliditylang.org and refuses the binary unless its SHA-256 matches
+  (`script/ci/install_solc.sh`). `foundry.toml` compiles offline, so Forge never downloads a compiler itself.
 
 ```bash
 bash script/ci/install_deps.sh
 ```
+
+Foundry 1.8 isolates every top-level test call into its own transaction by default. `foundry.toml` turns that off:
+the census, property and differential suites drive long call sequences inside one test transaction and exceed the 2^30
+test gas limit when isolated. Gates that need transaction-level gas accounting pass `--isolate` explicitly
+(`make test-casino-admission`). In isolated calls Foundry 1.8.5 reports `vm.lastCallGas().gasTotalUsed` with the
+21,000 intrinsic gas and before storage refunds, where 1.5.1 subtracted them; `test/toolchain/IsolatedGasAccounting.t.sol`
+runs first in that gate and fails if a toolchain change moves this. For the same bytecode the gate's logged finalize gas
+rose by 45,404 for every game against Foundry 1.5.1, consistent with a settlement's refunds no longer being subtracted,
+and the non-isolated figure fell by 96.
+
+Local nodes use `ANVIL_ARGS` from `deps.lock` (`--network base --hardfork azul --enable-tx-gas-limit`). Without the
+last flag anvil accepts transactions above Base's 16,777,216-gas cap; in Base mode every transaction also pays a
+simulated L1 data fee, so native-balance assertions must include it.
 
 ## Compiler identity
 

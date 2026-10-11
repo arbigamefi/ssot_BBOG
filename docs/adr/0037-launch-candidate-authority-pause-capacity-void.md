@@ -308,8 +308,9 @@ replays `SentinelSet`, `GuardianSet`, `GovernanceTransferStarted`, `GovernanceTr
 and `MinDelayChange`. K0-4 alerts on all of them.
 
 **Gas accounting.** Certificate v5 and the B2 and B5 acceptance use gross gas: storage refunds settle at the end of the
-transaction and never raise a frame's budget. Under `--isolate`, `vm.lastCallGas().gasTotalUsed` is net of refunds and
-includes the 21,000 base cost, so tests calibrate it as the review's `LastCallGasCalibration` does. The 2^24 margin is
+transaction and never raise a frame's budget. Under `--isolate`, the pinned Foundry 1.8.5 reports
+`vm.lastCallGas().gasTotalUsed` with the 21,000 base cost and before storage refunds (the review calibrated Foundry
+1.5.1, which subtracted them); `test/toolchain/IsolatedGasAccounting.t.sol` pins this ahead of every isolated gate. The 2^24 margin is
 computed explicitly or checked on an anvil pinned to the Osaka rules (A7). The v5 matrix adds a per-player count going
 from 1 to 0 with the first turnover write, one going from 2 to 1, and a game disabled after acceptance; v5 states that
 `VOID_SETTLEMENT_GAS` is at least the certified settlement requirement.

@@ -125,7 +125,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: v1.5.1 # aligned with the release candidate toolchain (freeze 2026-10-08)
+          version: v1.8.5 # FOUNDRY_VERSION in deps.lock; check_toolchain.py refuses any other pin
 
       - name: Setup Node for authenticated release import
         if: github.event_name == 'workflow_dispatch'

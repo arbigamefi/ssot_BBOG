@@ -74,8 +74,11 @@ tree-equivalence-release:
 	FOUNDRY_PROFILE=release forge test --match-path "$(TREE_EQUIVALENCE_SUITES)" -vv
 
 .PHONY: test-casino-admission
+# Gates with transaction-level gas accounting run isolated (foundry.toml keeps isolate off). The toolchain test first
+# pins how the Foundry release in deps.lock reports an isolated call.
 test-casino-admission:
 	@$(MAKE) check-deps
+	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --isolate --match-path test/toolchain/IsolatedGasAccounting.t.sol -vv
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --isolate --match-path test/unit/GameHubE2E.t.sol --match-test admission -vv
 
 pr:

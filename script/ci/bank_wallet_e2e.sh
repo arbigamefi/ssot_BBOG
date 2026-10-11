@@ -3,6 +3,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 forge build src
 RUN_DIR=$(mktemp -d)
+# Local nodes run the network rules pinned in deps.lock (Base hardfork, EIP-7825 transaction gas cap).
+read -r -a ANVIL_ARGS <<<"$(sed -n 's/^ANVIL_ARGS=//p' deps.lock)"
 EMBEDDED=frontend/packages/ssot/src/release/embedded/index.ts
 cp "$EMBEDDED" "$RUN_DIR/embedded.ts"
 NODE_PID=""; WEB_PID=""
@@ -20,7 +22,7 @@ trap cleanup EXIT
 export BANK_ANVIL_RPC="http://127.0.0.1:${BANK_TEST_PORT:-18559}"
 export BANK_E2E_STATE="$RUN_DIR/state.json"
 export PLAYWRIGHT_BASE_URL="http://127.0.0.1:${BANK_WEB_PORT:-3159}"
-anvil --host 127.0.0.1 --port "${BANK_TEST_PORT:-18559}" --chain-id 84532 --silent >"$RUN_DIR/anvil.log" 2>&1 &
+anvil "${ANVIL_ARGS[@]}" --host 127.0.0.1 --port "${BANK_TEST_PORT:-18559}" --chain-id 84532 --silent >"$RUN_DIR/anvil.log" 2>&1 &
 NODE_PID=$!
 for attempt in {1..50}; do
   kill -0 "$NODE_PID" || { cat "$RUN_DIR/anvil.log"; exit 1; }

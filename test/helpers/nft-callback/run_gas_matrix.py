@@ -71,7 +71,9 @@ def main() -> int:
     if cfg.returncode:
         parser.error("cannot read effective Forge configuration; endpoint-bearing diagnostics withheld")
     full_cfg = json.loads(cfg.stdout)
-    expected = {"solc": "0.8.37", "evm_version": "cancun", "via_ir": True, "optimizer": True, "optimizer_runs": 500}
+    # isolate=False: the fixture measures inside one test transaction, as the qualified matrix did (foundry.toml).
+    expected = {"solc": "0.8.37", "evm_version": "cancun", "via_ir": True, "optimizer": True, "optimizer_runs": 500,
+                "isolate": False}
     effective = {key: full_cfg.get(key) for key in expected}
     effective["profile"] = "default"
     effective["forgeVersion"] = subprocess.check_output([forge, "--version"], text=True, env=base).strip()

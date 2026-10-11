@@ -4,9 +4,11 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 forge build src src/mocks/MockERC20.sol test/mocks/BlacklistToken.sol
 PORT="${BANK_TEST_PORT:-18549}"
+# Local nodes run the network rules pinned in deps.lock (Base hardfork, EIP-7825 transaction gas cap).
+read -r -a ANVIL_ARGS <<<"$(sed -n 's/^ANVIL_ARGS=//p' deps.lock)"
 LOG=$(mktemp)
 ARTIFACTS=$(mktemp -d)
-anvil --host 127.0.0.1 --port "$PORT" --chain-id 84532 --silent >"$LOG" 2>&1 &
+anvil "${ANVIL_ARGS[@]}" --host 127.0.0.1 --port "$PORT" --chain-id 84532 --silent >"$LOG" 2>&1 &
 NODE_PID=$!
 cleanup() { kill "$NODE_PID" 2>/dev/null || true; wait "$NODE_PID" 2>/dev/null || true; rm -f "$LOG"; rm -rf "$ARTIFACTS"; }
 trap cleanup EXIT

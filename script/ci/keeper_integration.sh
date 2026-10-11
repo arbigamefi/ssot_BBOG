@@ -4,6 +4,8 @@ cd "$(dirname "$0")/../.."
 forge build src test/mocks/BlacklistToken.sol test/helpers/nft-callback/ExactGasWrapperFixture.sol
 pnpm -C frontend/apps/keeper build
 PORT="${KEEPER_TEST_PORT:-18569}"
+# Local nodes run the network rules pinned in deps.lock (Base hardfork, EIP-7825 transaction gas cap).
+read -r -a ANVIL_ARGS <<<"$(sed -n 's/^ANVIL_ARGS=//p' deps.lock)"
 CONTAINER="agf-keeper-test-$(uuidgen | tr '[:upper:]' '[:lower:]')"
 NODE_PID=""
 cleanup() {
@@ -21,7 +23,7 @@ DB_PORT=$(docker port "$CONTAINER" 5432/tcp | cut -d: -f2)
 echo "OWNED_POSTGRES=$CONTAINER PORT=$DB_PORT"
 export KEEPER_TEST_POSTGRES_URL="postgres://postgres:$DB_PASSWORD@127.0.0.1:$DB_PORT/keeper_test"
 export KEEPER_TEST_ANVIL_RPC="http://127.0.0.1:$PORT"
-RUST_LOG=error anvil --host 127.0.0.1 --port "$PORT" --chain-id 84532 --silent >/dev/null 2>&1 &
+RUST_LOG=error anvil "${ANVIL_ARGS[@]}" --host 127.0.0.1 --port "$PORT" --chain-id 84532 --silent >/dev/null 2>&1 &
 NODE_PID=$!
 echo "OWNED_ANVIL_PID=$NODE_PID PORT=$PORT"
 for attempt in {1..50}; do

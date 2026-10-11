@@ -10,6 +10,12 @@ optimizer = true
 optimizer_runs = 500
 via_ir = true
 evm_version = "cancun"
+# The compiler comes from script/ci/install_solc.sh (pinned by SHA-256 in deps.lock); never download one.
+offline = true
+# Foundry 1.8 isolates every top-level test call into its own transaction by default. The census, property and
+# differential suites drive long call sequences inside one test transaction and exceed the 2^30 test gas limit when
+# isolated; gates that need transaction-level gas accounting pass --isolate explicitly (make test-casino-admission).
+isolate = false
 
 # Filesystem permissions for scripts.
 #
