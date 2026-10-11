@@ -152,6 +152,14 @@ gate. Required repository signer and RPC settings remain mandatory. A tag push
 alone does not validate a release without its deployment bundle. Source audit
 packaging is not a replacement for these deployment checks.
 
+The ABI comparison reads `out/`, so the strict release check and the image import build it themselves
+(`forge build src`) and then run `script/release/check_current_build.py`: every artifact the ABIs are compared with
+must name its contract as compilation target, come from the solc build pinned in `deps.lock` and record the
+keccak256 of each of its source files as they are in the checkout. No workflow step has to build first. The
+**Release Path** workflow runs the release gate's offline steps and the image import on fresh checkouts, in workflow
+order, with a release of the locally deployed `ReleaseImportFixture`, on every push that touches the release path
+(`script/ci/release_path.sh`).
+
 The fork gate explicitly enables `NftDirectWrapperFork.t.sol` and requires all four tests to
 execute and pass. It uses the authenticated snapshot's wrapper, USDC and CoinToss gas limit at the
 fresh block returned by governance verification. Historical block/wrapper overrides are rejected.
