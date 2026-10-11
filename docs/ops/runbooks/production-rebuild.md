@@ -70,11 +70,13 @@ generated on the host and written into the three files that use it, without bein
 ```bash
 cd /opt/arbigamefi/frontend/deploy/docker/env
 python3 -c '
-import secrets
+import secrets, sys
+names = ("postgres.env", "web.production.env", "keeper.primary.env")
+texts = {name: open(name).read() for name in names}
+if any(text.count("REPLACE_WITH_LONG_RANDOM_PASSWORD") != 1 for text in texts.values()):
+    sys.exit("each file must hold the password placeholder exactly once; nothing was written")
 password = secrets.token_hex(32)
-for name in ("postgres.env", "web.production.env", "keeper.primary.env"):
-    text = open(name).read()
-    assert text.count("REPLACE_WITH_LONG_RANDOM_PASSWORD") == 1, name
+for name, text in texts.items():
     open(name, "w").write(text.replace("REPLACE_WITH_LONG_RANDOM_PASSWORD", password))
 '
 ```
