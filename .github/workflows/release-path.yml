@@ -1,0 +1,65 @@
+name: Release Path
+
+# The release check and the image import on fresh checkouts, in the order the Release Gate and Frontend Docker Images
+# workflows run them, with a release of the locally deployed ReleaseImportFixture (launch candidate A2, fix review 3
+# W-1). Neither checkout is built beforehand: both steps must build out/ themselves and prove it is the checkout's
+# build. See script/ci/release_path.sh.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "script/release/**"
+      - "script/ci/release_path.sh"
+      - "script/ci/install_deps.sh"
+      - "script/ci/install_solc.sh"
+      - "script/ci/check_toolchain.py"
+      - "test/fixtures/ReleaseImportFixture.s.sol"
+      - "frontend/scripts/ssot-sync.mjs"
+      - "frontend/scripts/check-release.mjs"
+      - "Makefile"
+      - "foundry.toml"
+      - "deps.lock"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/frontend-docker-images.yml"
+      - ".github/workflows/release-path.yml"
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-path:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout for the fixture release
+        uses: actions/checkout@v4
+        with:
+          path: producer
+
+      - name: Checkout for the release gate
+        uses: actions/checkout@v4
+        with:
+          path: gate
+
+      - name: Checkout for the image import
+        uses: actions/checkout@v4
+        with:
+          path: image
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.5 # FOUNDRY_VERSION in deps.lock; check_toolchain.py refuses any other pin
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: image/.node-version
+
+      - name: Release gate and image import on fresh checkouts
+        run: |
+          bash producer/script/ci/release_path.sh producer gate image

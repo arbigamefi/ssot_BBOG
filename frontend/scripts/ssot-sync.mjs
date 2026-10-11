@@ -290,8 +290,27 @@ async function main() {
     SNAPSHOT_PATH: path.join(verificationDir, "snapshot.json"),
     RELEASE_PATH: path.join(verificationDir, "release.json")
   };
-  let verificationStage = "artifact validation";
+  let verificationStage = "current build";
   try {
+    // The ABI comparison reads out/: build it from this checkout and prove it is this checkout's build, so no caller
+    // can leave out the step or hand over a stale out/ (fix review 3 W-1).
+    await execFileAsync("forge", ["build", "src"], {
+      cwd: repoRoot,
+      env: { ...verificationEnv, FOUNDRY_PROFILE: process.env.VERIFY_PROFILE ?? "default" },
+      maxBuffer: 64 * 1024 * 1024
+    });
+    await execFileAsync(
+      process.env.PYTHON ?? "python3",
+      [
+        "script/release/check_current_build.py",
+        "--root",
+        repoRoot,
+        "--out",
+        path.join(repoRoot, "out")
+      ],
+      { cwd: repoRoot, env: verificationEnv }
+    );
+    verificationStage = "artifact validation";
     await execFileAsync(
       process.env.PYTHON ?? "python3",
       [
@@ -331,8 +350,9 @@ async function main() {
     });
   } catch (error) {
     // Preserve the rejecting stage without echoing commands or RPC credentials.
-    const detail =
-      verificationStage === "artifact validation" ? ` ${String(error.stderr ?? "").trim()}` : "";
+    const detail = ["current build", "artifact validation"].includes(verificationStage)
+      ? ` ${String(error.stderr ?? "").trim()}`
+      : "";
     throw new Error(
       `${RELEASE_LINE.name} ${verificationStage} failed; active release was not changed.${detail}`
     );

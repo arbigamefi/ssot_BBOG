@@ -32,6 +32,11 @@ else
   fi
 fi
 
+# The ABI comparison below reads out/: build it here and prove it is this checkout's build, so no caller can leave out
+# the step or hand over a stale out/ (fix review 3 W-1).
+FOUNDRY_PROFILE="${VERIFY_PROFILE:-default}" forge build src
+"$PYTHON" script/release/check_current_build.py --root .
+
 # Validate frontend artifacts deterministically (no RPC). This is a hard gate in STRICT=1.
 "$PYTHON" script/release/validate_frontend_artifacts.py \
   --strict "$STRICT" \

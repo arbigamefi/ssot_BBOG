@@ -173,13 +173,16 @@ class SignedImportIntegrationTests(unittest.TestCase):
         cls.active = cls.frontend / 'packages/ssot/src/release/embedded'
         cls.deployments = cls.root / 'deployments'
         cls.deployments.mkdir()
+        # Copies, not symlinks: Forge names a source reached through a link out of the project by its absolute
+        # path, and the importer accepts only this checkout's own build (check_current_build.py).
         for name in ('src', 'script', 'lib', 'test'):
-            (cls.root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / name, cls.root / name)
         # Verification may update Foundry's cache for the isolated project; do
         # not evict the caller's existing build or fixture compilation cache.
         for name in ('out', 'cache'):
             shutil.copytree(ROOT / name, cls.root / name)
         shutil.copy(ROOT / 'foundry.toml', cls.root / 'foundry.toml')
+        shutil.copy(ROOT / 'deps.lock', cls.root / 'deps.lock')
         cls.env = {**os.environ, 'RELEASE_SIGNER': cls.snapshot['releaseSigner'], 'RPC_URL': cls.accepted_rpc}
 
     @classmethod

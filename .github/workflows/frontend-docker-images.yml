@@ -155,8 +155,8 @@ jobs:
             *) exit 1 ;;
           esac
           bash script/ci/install_deps.sh
-          # ssot-sync validates the bundle's ABIs against the compiled artifacts in out/ (same command as `make release-abis`).
-          FOUNDRY_PROFILE=default forge build src
+          # ssot-sync builds out/ itself and proves it is this checkout's build before comparing ABIs; the Release
+          # Path workflow runs this import on a fresh checkout on every push that touches it.
           RELEASE_BUNDLE="$RUNNER_TEMP/release-download/$BUNDLE_NAME" bash script/release/prepare_image_release.sh
 
       - name: Set up Docker Buildx

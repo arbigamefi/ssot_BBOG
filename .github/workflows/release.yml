@@ -188,13 +188,8 @@ jobs:
         run: |
           bash script/ci/install_deps.sh
 
-      # check_release.sh compares the bundle's ABIs with the compiled artifacts in out/. Until the proof suites moved
-      # to their own jobs (freeze v4) they built out/ here as a side effect; build it explicitly (same command as
-      # `make release-abis`).
-      - name: Build current artifacts
-        run: |
-          FOUNDRY_PROFILE=default forge build src
-
+      # check_release.sh builds out/ itself and proves it is this checkout's build before comparing ABIs. The
+      # Release Path workflow runs these steps on a fresh checkout on every push that touches them.
       - name: Release lock must be present and valid
         run: |
           STRICT=1 make release-check

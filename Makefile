@@ -185,6 +185,7 @@ release-golden-vectors:
 
 release-abis:
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build src
+	$(PYTHON) script/release/check_current_build.py --root .
 	$(PYTHON) script/release/export_frontend_abis.py --manifest deployments/frontend-manifest-latest-v16.json --dest deployments/abis-v16
 
 release-package:
