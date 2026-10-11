@@ -7,6 +7,7 @@ Reference: https://docs.etherscan.io/contract-verification/verify-with-foundry
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -47,7 +48,11 @@ def _verify_line(addr: str, contract_id: str, ctor_args: str) -> str:
 
 
 def main() -> int:
-    in_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("deployments/latest-v16.json")
+    parser = argparse.ArgumentParser(description="Generate the verification helper from a v1.6 deployment snapshot.")
+    parser.add_argument("snapshot", nargs="?", default="deployments/latest-v16.json")
+    parser.add_argument("--out", default="deployments/verify-latest-v16.sh", help="helper to write")
+    args = parser.parse_args()
+    in_path = Path(args.snapshot)
     if not in_path.exists():
         print(f"error: {in_path} not found", file=sys.stderr)
         return 2
@@ -58,10 +63,6 @@ def main() -> int:
     if architecture_version != "v1.6-nft-liquidity":
         print(f"error: expected a v1.6 snapshot, got architectureVersion={architecture_version!r}", file=sys.stderr)
         return 2
-    release_version = "v16"
-
-    out_dir = Path("deployments")
-    out_dir.mkdir(parents=True, exist_ok=True)
 
     default_verifier_url = f"https://api.etherscan.io/v2/api?chainid={chain_id}"
 
@@ -116,11 +117,11 @@ def main() -> int:
         ctor_args = _must(data, ctor_key)
         script += _verify_line(addr, contract_id, ctor_args)
 
-    # Outputs
-    out_latest = out_dir / f"verify-latest-{release_version}.sh"
-    out_latest.write_text(script)
-    out_latest.chmod(0o755)
-    print(f"Wrote verify helper: {out_latest}")
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(script)
+    out.chmod(0o755)
+    print(f"Wrote verify helper: {out}")
     return 0
 
 

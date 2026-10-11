@@ -132,7 +132,9 @@ export. It needs no deployment or signing key and does not assert that tests pas
 Keep the test logs and audit verdict bound to that same revision.
 
 `make release-package` also requires a clean commit. Its archive includes
-`SOURCE_REVISION`; deployment inputs remain ignored generated artifacts. After
+`SOURCE_REVISION` and the Etherscan verification helper generated from the packaged snapshot; a local
+`deployments/verify-latest-v16.sh` that differs from it (left from another deployment) stops the package, and an
+existing archive of the same name is never rewritten. Deployment inputs remain ignored generated artifacts. After
 uploading that bundle to its GitHub release, run **Release Gate** manually with:
 
 - `release_tag`: the tag for the source commit used to deploy and package;

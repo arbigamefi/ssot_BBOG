@@ -44,6 +44,22 @@ GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest-
 [[ -f "$GOLDEN_VECTORS_PATH" ]] || { echo "missing $GOLDEN_VECTORS_PATH (run: make release-golden-vectors)"; exit 1; }
 [[ -f "$ABIS_INDEX_PATH" ]] || { echo "missing $ABIS_INDEX_PATH (run: make release-abis)"; exit 1; }
 
+STAGE="$(mktemp -d)"
+export STAGE
+cleanup() { rm -rf "$STAGE"; }
+trap cleanup EXIT
+mkdir -p "$STAGE/deployments" "$STAGE/abis"
+
+# The Etherscan verification helper is generated from the snapshot being packaged, never copied as found: one left
+# from another deployment would verify the wrong addresses, so a local helper that differs stops the package.
+"$PYTHON" script/tools/gen_verify_helpers.py "$SNAPSHOT_PATH" \
+  --out "$STAGE/deployments/verify-latest-v16.sh" > /dev/null
+if [[ -f deployments/verify-latest-v16.sh ]] &&
+  ! cmp -s deployments/verify-latest-v16.sh "$STAGE/deployments/verify-latest-v16.sh"; then
+  echo "deployments/verify-latest-v16.sh does not match $SNAPSHOT_PATH; regenerate it (make verify-helpers-v16)" >&2
+  exit 1
+fi
+
 # Direct invocation has the same gates as Make; never emit a publishable archive
 # from a nominated-but-unaccepted deployment or unsigned/mismatched artifacts.
 : "${RPC_URL:?Set the target-chain RPC_URL}"
@@ -81,13 +97,6 @@ if [[ -e "$ARCHIVE" ]]; then
   exit 1
 fi
 
-STAGE="$(mktemp -d)"
-export STAGE
-cleanup() { rm -rf "$STAGE"; }
-trap cleanup EXIT
-
-mkdir -p "$STAGE/deployments" "$STAGE/abis"
-
 printf '%s\n' "$SOURCE_REVISION" > "$STAGE/SOURCE_REVISION"
 
 # Core release artifacts
@@ -96,11 +105,6 @@ cp "$RELEASE_PATH" "$STAGE/deployments/$RELEASE_LATEST_NAME"
 cp "$NOTES_PATH" "$STAGE/deployments/$NOTES_LATEST_NAME"
 cp "$FRONTEND_MANIFEST_PATH" "$STAGE/deployments/$FRONTEND_MANIFEST_LATEST_NAME"
 cp "$GOLDEN_VECTORS_PATH" "$STAGE/deployments/$GOLDEN_VECTORS_LATEST_NAME"
-
-# Current verification helper (optional).
-if [[ -f deployments/verify-latest-v16.sh ]]; then
-  cp deployments/verify-latest-v16.sh "$STAGE/deployments/verify-latest-v16.sh"
-fi
 
 # Frontend-only ABIs
 cp "$ABIS_DIR"/*.abi.json "$STAGE/abis/"

@@ -1,11 +1,14 @@
 """Exercise v1.6 release boundaries with real entrypoints and synthetic artifacts."""
 import importlib.util
 import copy
+import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -20,6 +23,20 @@ REAL_CHECK_OUTPUT = subprocess.check_output
 
 
 LINES = {8453: "SSOT_RELEASE_DIGEST_V16", 84532: "SSOT_RELEASE_DIGEST_V16"}
+
+
+def verify_snapshot():
+    """A v1.6 snapshot with five contracts to verify; the zero-address ones are skipped by the helper."""
+    row = {"chainId": 84532, "architectureVersion": "v1.6-nft-liquidity", "numPools": 1}
+    for key in ("vrfHub", "poolRegistry", "settlementRouter", "refRegistry", "refEngine",
+                "gameHub", "sportsRiskEngine", "sportsHub", "poolBank_0", "poolVault_0", "moduleDice", "moduleCoinToss",
+                "moduleRoulette", "moduleKeno", "modulePlinko", "moduleSicBo", "moduleSlots", "moduleBaccarat"):
+        row[key] = "0x" + "0" * 40
+    for i, (key, ctor_key) in enumerate((("vrfHub", "ctorArgs_vrfHub"), ("gameHub", "ctorArgs_gameHub"),
+                                        ("poolBank_0", "ctorArgs_bank_0"), ("poolVault_0", "ctorArgs_vault_0"), ("moduleDice", "ctorArgs_moduleDice")), 1):
+        row[key] = "0x" + str(i) * 40
+        row[ctor_key] = "0x" if key == "moduleDice" else "0x" + str(i) * 64
+    return row
 
 
 def manifest(chain):
@@ -175,25 +192,50 @@ class EmbeddedSchemaGuardTests(unittest.TestCase):
 
 
 class PackageGuardTests(unittest.TestCase):
+    def source(self, root, governance=""):
+        """A committed source tree with every release input; static checks pass, `governance` is the live check."""
+        (root / "script/release").mkdir(parents=True)
+        (root / "script/tools").mkdir(parents=True)
+        shutil.copy(ROOT / "script/tools/gen_verify_helpers.py", root / "script/tools/gen_verify_helpers.py")
+        (root / "script/release/check_release.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+        (root / "script/release/verify_governance.py").write_text(governance)
+        (root / "abis").mkdir()
+        (root / "abis/GameHub.abi.json").write_text("[]")
+        (root / "abis/index.json").write_text("{}")
+        (root / "snapshot.json").write_text(json.dumps(verify_snapshot()))
+        (root / "release.json").write_text(json.dumps({"chainId": 84532, "blockNumber": 7, "digest": "0x" + "ab" * 32}))
+        (root / "artifact.json").write_text("{}")
+        (root / ".gitignore").write_text("/deployments/\n/dist/\n")
+        subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+        subprocess.run(["git", "add", "."], cwd=root, check=True)
+        subprocess.run(["git", "-c", "user.name=Local test", "-c", "user.email=test@invalid",
+                        "commit", "-qm", "source fixture"], cwd=root, check=True)
+        return {**os.environ, "PYTHON": sys.executable, "TAG_NAME": "v1", "RPC_URL": "http://unused.invalid",
+                "RELEASE_SIGNER": "0x" + "2" * 40, "RELEASE_PATH": str(root / "release.json"),
+                "SNAPSHOT_PATH": str(root / "snapshot.json"), "ABIS_DIR": str(root / "abis"),
+                "ABIS_INDEX_PATH": str(root / "abis/index.json"),
+                **{key: str(root / "artifact.json") for key in ["NOTES_PATH", "FRONTEND_MANIFEST_PATH", "GOLDEN_VECTORS_PATH"]}}
+
+    def package(self, root, env):
+        return subprocess.run(["bash", str(ROOT / "script/release/package_release.sh")], cwd=root, env=env,
+                              capture_output=True, text=True, timeout=30)
+
+    def helper(self, row):
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot = Path(directory) / "snapshot.json"
+            snapshot.write_text(json.dumps(row))
+            subprocess.run([sys.executable, str(ROOT / "script/tools/gen_verify_helpers.py"), str(snapshot),
+                            "--out", f"{directory}/helper.sh"], check=True, capture_output=True)
+            return (Path(directory) / "helper.sh").read_bytes()
+
     def test_direct_packager_cannot_emit_archive_when_live_governance_fails(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "script/release").mkdir(parents=True)
-            (root / "bin").mkdir()
             # Static artifact validation succeeds; only the live governance boundary fails.
-            (root / "script/release/check_release.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
-            (root / "script/release/verify_governance.py").write_text(
-                "from pathlib import Path\nPath('governance-call.txt').write_text('complete permission boundary')\nraise SystemExit(1)\n")
-            artifact = root / "artifact.json"
-            artifact.write_text('{}')
-            env = {**os.environ, "PATH": str(root / "bin") + os.pathsep + os.environ["PATH"],
-                   "RPC_URL": "http://unused.invalid", "RELEASE_SIGNER": "0x" + "2" * 40,
-                   **{key: str(artifact) for key in ["RELEASE_PATH", "SNAPSHOT_PATH", "NOTES_PATH", "FRONTEND_MANIFEST_PATH", "GOLDEN_VECTORS_PATH", "ABIS_INDEX_PATH"]}}
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            subprocess.run(["git", "add", "."], cwd=root, check=True)
-            subprocess.run(["git", "-c", "user.name=Local test", "-c", "user.email=test@invalid",
-                            "commit", "-qm", "source fixture"], cwd=root, check=True)
-            result = subprocess.run(["bash", str(ROOT / "script/release/package_release.sh")], cwd=root, env=env, capture_output=True, timeout=10)
+            env = self.source(root, "from pathlib import Path\n"
+                                    "Path('governance-call.txt').write_text('complete permission boundary')\n"
+                                    "raise SystemExit(1)\n")
+            result = self.package(root, env)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("complete permission boundary", (root / "governance-call.txt").read_text())
             self.assertFalse((root / "dist").exists())
@@ -201,49 +243,54 @@ class PackageGuardTests(unittest.TestCase):
     def test_existing_archive_is_never_rewritten(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "script/release").mkdir(parents=True)
-            (root / "script/release/check_release.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
-            (root / "script/release/verify_governance.py").write_text("")
-            (root / "abis").mkdir()
-            (root / "abis/GameHub.abi.json").write_text("[]")
-            (root / "abis/index.json").write_text("{}")
-            (root / "release.json").write_text(json.dumps({"chainId": 84532, "blockNumber": 7, "digest": "0x" + "ab" * 32}))
-            (root / "artifact.json").write_text("{}")
-            (root / ".gitignore").write_text("/dist/\n")
-            env = {**os.environ, "PYTHON": sys.executable, "TAG_NAME": "v1", "RPC_URL": "http://unused.invalid",
-                   "RELEASE_SIGNER": "0x" + "2" * 40, "RELEASE_PATH": str(root / "release.json"),
-                   "ABIS_DIR": str(root / "abis"), "ABIS_INDEX_PATH": str(root / "abis/index.json"),
-                   **{key: str(root / "artifact.json") for key in ["SNAPSHOT_PATH", "NOTES_PATH", "FRONTEND_MANIFEST_PATH", "GOLDEN_VECTORS_PATH"]}}
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            subprocess.run(["git", "add", "."], cwd=root, check=True)
-            subprocess.run(["git", "-c", "user.name=Local test", "-c", "user.email=test@invalid",
-                            "commit", "-qm", "source fixture"], cwd=root, check=True)
-            package = ["bash", str(ROOT / "script/release/package_release.sh")]
-            first = subprocess.run(package, cwd=root, env=env, capture_output=True, text=True, timeout=30)
+            env = self.source(root)
+            first = self.package(root, env)
             self.assertEqual(first.returncode, 0, first.stderr)
             archive = root / "dist/ssot-release-v1-0xabababab.tar.gz"
             self.assertIn(f"wrote: {archive.relative_to(root)}", first.stdout)
             packaged = archive.read_bytes()
             # A rerun would produce a different archive of the same name (new timestamps), so it must refuse.
-            second = subprocess.run(package, cwd=root, env=env, capture_output=True, text=True, timeout=30)
+            second = self.package(root, env)
             self.assertNotEqual(second.returncode, 0)
             self.assertIn("already exists; a release archive is never rewritten", second.stderr)
             self.assertEqual(archive.read_bytes(), packaged)
             self.assertEqual(sorted(path.name for path in (root / "dist").iterdir()), [archive.name])
 
+    def test_packaged_verify_helper_is_generated_from_the_snapshot(self):
+        for local in (False, True):
+            with self.subTest(local_helper=local), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                env = self.source(root)
+                expected = self.helper(verify_snapshot())
+                if local:
+                    (root / "deployments").mkdir()
+                    (root / "deployments/verify-latest-v16.sh").write_bytes(expected)
+                result = self.package(root, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                with tarfile.open(root / "dist/ssot-release-v1-0xabababab.tar.gz") as archive:
+                    self.assertEqual(archive.extractfile("./deployments/verify-latest-v16.sh").read(), expected)
+                    manifest = archive.extractfile("./MANIFEST.sha256").read().decode()
+                self.assertIn(f"{hashlib.sha256(expected).hexdigest()}  deployments/verify-latest-v16.sh", manifest)
+
+    def test_stale_verify_helper_stops_the_package(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            env = self.source(root, "from pathlib import Path\nPath('governance-call.txt').write_text('called')\n")
+            other = verify_snapshot()
+            other["vrfHub"] = "0x" + "9" * 40
+            (root / "deployments").mkdir()
+            (root / "deployments/verify-latest-v16.sh").write_bytes(self.helper(other))
+            result = self.package(root, env)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("deployments/verify-latest-v16.sh does not match", result.stderr)
+            self.assertFalse((root / "dist").exists())
+            # Refused before any chain access.
+            self.assertFalse((root / "governance-call.txt").exists())
+
 
 class VerifyHelperGuardTests(unittest.TestCase):
     def snapshot(self):
-        row = {"chainId": 84532, "architectureVersion": "v1.6-nft-liquidity", "numPools": 1}
-        for key in ("vrfHub", "poolRegistry", "settlementRouter", "refRegistry", "refEngine",
-                    "gameHub", "sportsRiskEngine", "sportsHub", "poolBank_0", "poolVault_0", "moduleDice", "moduleCoinToss",
-                    "moduleRoulette", "moduleKeno", "modulePlinko", "moduleSicBo", "moduleSlots", "moduleBaccarat"):
-            row[key] = "0x" + "0" * 40
-        for i, (key, ctor_key) in enumerate((("vrfHub", "ctorArgs_vrfHub"), ("gameHub", "ctorArgs_gameHub"),
-                                            ("poolBank_0", "ctorArgs_bank_0"), ("poolVault_0", "ctorArgs_vault_0"), ("moduleDice", "ctorArgs_moduleDice")), 1):
-            row[key] = "0x" + str(i) * 40
-            row[ctor_key] = "0x" if key == "moduleDice" else "0x" + str(i) * 64
-        return row
+        return verify_snapshot()
 
     def generate(self, root, row):
         snapshot = root / "snapshot.json"
