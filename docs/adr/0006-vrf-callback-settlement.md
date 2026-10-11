@@ -177,7 +177,8 @@ action:
   values inside the checked ranges cannot move the bound).
 
 The governance runbook lists these triggers. Configuration-drift alerts (K0-4) are required before any network
-that carries real funds.
+that carries real funds. They are implemented by the [configuration drift monitor](../ops/runbooks/config-drift-alerts.md);
+each network still has to install and test it before relying on it.
 
 ### Margin policy (Owner decision D2, 2026-10-08)
 

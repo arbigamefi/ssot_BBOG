@@ -26,6 +26,20 @@ network behavior; no old LP epoch monitor remains. Emergency pause blocks LP pay
 valid callback/retry/settlement/refund/player-debt paths available. Complete result receipt and bookkeeping
 are distinct from successful cash delivery.
 
+## Implemented configuration drift monitor (K0-4)
+
+[config-drift-alert.sh](../../script/ops/config-drift-alert.sh) runs
+[config-drift-monitor.py](../../script/ops/config-drift-monitor.py) every 5 minutes, on the operator's machine under
+launchd or on a host under systemd. It announces each governance timelock operation when it is scheduled, 12 hours
+before it becomes ready and while it is ready but unexecuted, and reviews every scheduled call against the certified
+Bank, Vault, asset, hub and modules (ADR-0037 decisions D4 and D5). It also pushes recertification triggers, settlement
+anomalies (callback failures, k = 0 settlements, voids, issuer freezes), the unbooked-result and void alerts of
+ADR-0037 §7.3 rule 4, governance changes, failures of the live release verification, deviations from the certified
+first-callback domain, and Banks near their open-position limit. It uses the health notifier's channels, but its state
+advances only after every configured channel accepts the message. Timelock operations, admission reviews, void windows
+and bets settled after a void on the same path also go to a public channel. See the
+[runbook](runbooks/config-drift-alerts.md).
+
 ## Implemented health notifier
 
 [healthz-alert.sh](../../script/ops/healthz-alert.sh) invokes the local

@@ -571,18 +571,10 @@ def load_checkpoint(path, expected_sha256):
     return document
 
 
-def verify_permissions(rpc, snap, block, checkpoint=None, mode='release'):
-    """Return (state, launched, notes) at `block`, replayed from the deployment or from `checkpoint`."""
-    require(mode in MODES, 'GOVERNANCE_VERIFY_MODE must be release or live')
-    release = Release(snap)
+def replay(rpc, release, block, checkpoint=None):
+    """The authority state at `block`, replayed from the deployment or from `checkpoint`."""
     require(quantity(rpc('eth_chainId', [])) == release.chain, 'chain mismatch')
     require(release.start <= block, 'invalid authorization history start')
-    for bank, vault in release.vaults.items():
-        asset = next(cfg[0] for cfg in release.pools.values() if cfg[1] == bank)
-        require(call(rpc, bank, 'vault()', [], block) == int(vault, 16), 'Bank Vault binding differs from release')
-        require(call(rpc, bank, 'asset()', [], block) == int(asset, 16), 'Bank asset differs from release')
-        require(call(rpc, vault, 'bank()', [], block) == int(bank, 16), 'Vault Bank binding differs from release')
-        require(call(rpc, vault, 'asset()', [], block) == int(asset, 16), 'Vault asset differs from release')
     targets = [release.timelock] + release.governed
     if checkpoint is None:
         state, first = empty_state(), release.start
@@ -590,7 +582,7 @@ def verify_permissions(rpc, snap, block, checkpoint=None, mode='release'):
             require(rpc('eth_getCode', [target, hex(release.start - 1)]) == '0x',
                     'authorization history starts after contract creation')
     else:
-        # The signed checkpoint carries the history up to its block; the chain must still contain that block.
+        # The checkpoint carries the history up to its block; the chain must still contain that block.
         require(checkpoint.get('schema') == CHECKPOINT_SCHEMA and checkpoint.get('chainId') == release.chain
                 and checkpoint.get('historyStart') == release.start
                 and checkpoint.get('governanceTimelock') == release.timelock
@@ -607,6 +599,20 @@ def verify_permissions(rpc, snap, block, checkpoint=None, mode='release'):
         require(isinstance(code, str) and re.fullmatch(r'0x(?:[0-9a-fA-F]{2})+', code), 'authorization target has no code')
     for target, name, row in events(rpc, release.watch(), first, block):
         apply(release, state, target, name, row)
+    return state
+
+
+def verify_permissions(rpc, snap, block, checkpoint=None, mode='release'):
+    """Return (state, launched, notes) at `block`, replayed from the deployment or from `checkpoint`."""
+    require(mode in MODES, 'GOVERNANCE_VERIFY_MODE must be release or live')
+    release = Release(snap)
+    state = replay(rpc, release, block, checkpoint)
+    for bank, vault in release.vaults.items():
+        asset = next(cfg[0] for cfg in release.pools.values() if cfg[1] == bank)
+        require(call(rpc, bank, 'vault()', [], block) == int(vault, 16), 'Bank Vault binding differs from release')
+        require(call(rpc, bank, 'asset()', [], block) == int(asset, 16), 'Bank asset differs from release')
+        require(call(rpc, vault, 'bank()', [], block) == int(bank, 16), 'Vault Bank binding differs from release')
+        require(call(rpc, vault, 'asset()', [], block) == int(asset, 16), 'Vault asset differs from release')
     launched, notes = judge(rpc, release, state, block, mode)
     return state, launched, notes
 

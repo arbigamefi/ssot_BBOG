@@ -12,12 +12,15 @@ never substitute a fixture address for a live authority.
    configuration. Review modules, guard and fallback handler as part of its effective authority.
 3. Exercise the intended approval and recovery signing paths on a test network before the Safe
    controls assets. Retain transaction receipts and authority readbacks.
-4. Run the deployment dry run and inspect its wiring. The deployment script bootstraps the new
-   contracts and stages governance for the Safe. Generate the acceptance transactions with
-   `make safe-acceptance-v16`; the Safe owners review and execute them.
+4. Run the deployment dry run. Every governed contract is constructed with the governance timelock as its
+   governance, so the deploying key holds no role; the script rehearses the wiring batch and the activation and
+   refuses to broadcast if either would fail. After deployment, `make timelock-batches-v16` rehearses both
+   operations on a fork with the deployed addresses and writes the Safe Transaction Builder file that schedules
+   the wiring, the one for the activation, and the operations file to publish for the 72-hour review. The Safe
+   owners review the calls and schedule the wiring; anyone executes it once ready.
 5. Run `make release-governance-check` and the release verification steps before importing the
-   application release. A configured Safe address or generated acceptance payload does not prove
-   that each target has accepted that governance.
+   application release. A scheduled operation proves nothing until it has executed and the verifier has replayed
+   it.
 
 For a configuration change, review the target, selector, arguments and affected outstanding
 positions before signing. After execution, check the receipt and read the resulting state at a
@@ -47,8 +50,8 @@ governance can leave it afterwards. Recertify **before** signing any of these ch
 
 Release verification replays every `GameRegistered` event and checks the live USDC implementation and VRF
 provider parameters. After release, however, only this runbook and alerting stand between governance and an
-uncertified configuration. The configuration-drift alerts recommended by the architecture decision (K0-4) are not
-implemented yet.
+uncertified configuration. The [configuration drift monitor](config-drift-alerts.md) (K0-4) reports every trigger
+above, reviews each scheduled timelock operation and alerts on any live deviation from the certified domain.
 
 The certificate also lapses when the USDC implementation is upgraded, when the VRF wrapper or coordinator
 parameters change, or when a network fork changes gas pricing. Those changes happen outside governance,

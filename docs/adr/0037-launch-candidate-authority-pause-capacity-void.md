@@ -103,6 +103,12 @@ module codehash with no proxy, `DELEGATECALL`, `CALLCODE` or `SELFDESTRUCT` and 
 reads no storage. A11 runs these checks on each queued operation and alerts publicly within the 72 hours. There is no
 on-chain bytecode scan.
 
+The review (K0-4, `script/ops/config-drift-monitor.py`) also fails every queued `transferGovernance` and
+`acceptGovernance`: the first hands governance to an address that then acts without the delay, the second adopts a
+contract whose earlier configuration nobody reviewed (a hub with its own games, a Bank with its own router). A new Bank
+must be bound to no SettlementRouter or to the release's, and a hub other than the release's must carry the release's
+house edge, referral schedule and refund timeout. A call the monitor cannot decode fails the review.
+
 ## 4. Pause (B3)
 
 A pause blocks only new positions (`holdBet`, `placeBet`) and new LP deposits. It does not block settlement, timeout

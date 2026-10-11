@@ -1,0 +1,8 @@
+[Unit]
+Description=ArbiGameFi K0-4 configuration drift monitor (timelock operations, admission review, release and domain checks)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/arbigamefi/ops/config-drift-alert.sh

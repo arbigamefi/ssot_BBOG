@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  K0-4 configuration drift monitor on the operator's macOS machine, every 5 minutes (docs/ops/runbooks/config-drift-alerts.md).
+
+  A template: replace before installing it into ~/Library/LaunchAgents/
+    __HOME__     the user's home directory, for example /Users/owner
+    __REPO__     the repository checkout whose script/tools/with-ops-rpc.sh reads INFURA_API_KEY_OPS from its .env
+    __NETWORK__  base-sepolia or base
+  The monitor, its wrapper and alert configuration live in
+  __HOME__/Library/Application Support/arbigamefi/config-drift/; the alert configuration sets DRIFT_STATE_FILE in the
+  same directory and no RPC_URL: with-ops-rpc.sh passes the endpoint as OPS_RPC_URL and redacts the key from the output.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.arbigamefi.config-drift</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__REPO__/script/tools/with-ops-rpc.sh</string>
+    <string>infura</string>
+    <string>__NETWORK__</string>
+    <string>__HOME__/Library/Application Support/arbigamefi/config-drift/config-drift-alert.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>ALERT_CONFIG_FILE</key>
+    <string>__HOME__/Library/Application Support/arbigamefi/config-drift/alert.env</string>
+    <key>PATH</key>
+    <string>__HOME__/.foundry/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>StartInterval</key>
+  <integer>300</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>Umask</key>
+  <integer>63</integer>
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/arbigamefi-config-drift.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/arbigamefi-config-drift.log</string>
+</dict>
+</plist>
