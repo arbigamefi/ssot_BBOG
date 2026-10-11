@@ -47,15 +47,6 @@ const OUT_EMBEDDED = path.resolve(ROOT, "packages/ssot/src/release/embedded");
 const isTar = (p) => p.endsWith(".tar.gz") || p.endsWith(".tgz");
 const isAppleJunk = (name) => name.startsWith("._") || name === ".DS_Store";
 
-async function pathExists(p) {
-  try {
-    await fs.access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function ensureDir(p) {
   await fs.mkdir(p, { recursive: true });
 }
@@ -197,9 +188,9 @@ async function writeEmbeddedIndex(jsonFiles) {
   const indexPath = path.join(OUT_EMBEDDED, "index.ts");
   const imports = [];
   const entries = [];
-  for (const f of jsonFiles) {
+  for (const f of jsonFiles.filter((name) => /^chain-\d+\.json$/.test(name))) {
     const varName = "r" + f.replace(/[^a-zA-Z0-9]/g, "_");
-    imports.push(`import ${varName} from "./${f}";`);
+    imports.push(`import ${varName} from ${JSON.stringify(`./${f}`)};`);
     // Use computed keys to allow numeric chainId at runtime.
     entries.push(`  [${varName}.chainId]: ${varName},`);
   }
@@ -208,44 +199,66 @@ async function writeEmbeddedIndex(jsonFiles) {
 }
 
 let extractedDirectory = null;
+let stagedDirectory = null;
+
+const { suffix } = RELEASE_LINE;
+const BUNDLE_FILES = [
+  `deployments/latest-${suffix}.json`,
+  `deployments/release-latest-${suffix}.json`,
+  `deployments/release-notes-latest-${suffix}.md`,
+  `deployments/frontend-manifest-latest-${suffix}.json`,
+  `deployments/golden-vectors-latest-${suffix}.json`,
+  "abis/index.json"
+];
+
+// Copy the bundle once into a private directory before anything reads it, so validation and activation see the same
+// bytes however the source changes meanwhile. Only regular files in real directories are taken: a link could point
+// outside the bundle.
+async function stageBundle(source) {
+  for (const directory of ["deployments", "abis"]) {
+    const info = await fs.lstat(path.join(source, directory)).catch(() => null);
+    if (!info?.isDirectory()) {
+      throw new Error(`Release bundle ${directory}/ is missing or not a directory: ${source}`);
+    }
+  }
+  const abiFiles = (await fs.readdir(path.join(source, "abis")))
+    .filter((name) => name.endsWith(".abi.json"))
+    .map((name) => `abis/${name}`);
+  stagedDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "ssot-release-input-"));
+  for (const directory of ["deployments", "abis"]) {
+    await fs.mkdir(path.join(stagedDirectory, directory));
+  }
+  for (const relative of [...BUNDLE_FILES, ...abiFiles]) {
+    const info = await fs.lstat(path.join(source, relative)).catch(() => null);
+    if (!info?.isFile()) {
+      throw new Error(`Release bundle ${relative} is missing or not a regular file.`);
+    }
+    await fs.copyFile(path.join(source, relative), path.join(stagedDirectory, relative));
+  }
+  return stagedDirectory;
+}
 
 async function main() {
-  let bundleRoot = FROM_INPUT;
+  let sourceRoot = FROM_INPUT;
 
-  if (isTar(bundleRoot)) {
-    console.log("\n[ssot:sync] extracting tar:", bundleRoot);
+  if (isTar(sourceRoot)) {
+    console.log("\n[ssot:sync] extracting tar:", sourceRoot);
     extractedDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "ssot-release-"));
-    await execFileAsync("tar", ["-xzf", bundleRoot, "-C", extractedDirectory]);
-    bundleRoot = extractedDirectory;
+    await execFileAsync("tar", ["-xzf", sourceRoot, "-C", extractedDirectory]);
+    sourceRoot = extractedDirectory;
   }
 
-  console.log("\n[ssot:sync] bundle root:", bundleRoot);
+  console.log("\n[ssot:sync] bundle root:", sourceRoot);
+  const bundleRoot = await stageBundle(sourceRoot);
 
   const deploymentsDir = path.join(bundleRoot, "deployments");
   const abisDir = path.join(bundleRoot, "abis");
 
-  const { suffix } = RELEASE_LINE;
   const manifestPath = path.join(deploymentsDir, `frontend-manifest-latest-${suffix}.json`);
   const vectorsPath = path.join(deploymentsDir, `golden-vectors-latest-${suffix}.json`);
   const releaseLockPath = path.join(deploymentsDir, `release-latest-${suffix}.json`);
   const latestSnapshotPath = path.join(deploymentsDir, `latest-${suffix}.json`);
   const abiIndexPath = path.join(abisDir, "index.json");
-
-  for (const p of [
-    deploymentsDir,
-    abisDir,
-    manifestPath,
-    vectorsPath,
-    releaseLockPath,
-    latestSnapshotPath,
-    abiIndexPath
-  ]) {
-    if (!(await pathExists(p))) {
-      throw new Error(
-        `Missing required path: ${p}; expected current release bundle with deployments/ and abis/.`
-      );
-    }
-  }
 
   const manifest = await readJson(manifestPath);
   const vectors = await readJson(vectorsPath);
@@ -434,4 +447,5 @@ await main()
   })
   .finally(async () => {
     if (extractedDirectory) await fs.rm(extractedDirectory, { recursive: true, force: true });
+    if (stagedDirectory) await fs.rm(stagedDirectory, { recursive: true, force: true });
   });

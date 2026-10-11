@@ -92,6 +92,11 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    revision, artifact consistency, signature and live governance, then imports only the selected chain.
    Amount precision and symbols come from the signed snapshot; a failed verification cannot replace
    active metadata. Ordinary PR/push image builds do not publish deployment images.
+   The importer first copies the bundle's files once into a private directory, taking regular files only (a link is
+   refused), and validates and activates those same bytes. Its manifest must be exactly what
+   `GenerateFrontendManifestV16` writes for the signed snapshot, apart from `gitSha` and `generatedAt` and the case
+   of hex strings, so no field reaches the frontend unchecked; the strict release check applies the same comparison.
+   JSON with a repeated key and pool IDs above 2^53 − 1 (the largest exact JavaScript integer) are rejected.
 5. Configure a fresh PostgreSQL database and one keeper using Infura HTTP plus Alchemy WebSocket.
    The keeper initializes the current schema and replays the selected Hub from its release block.
    Use [Docker deployment instructions](../../frontend/deploy/docker/README.md) to pin both immutable

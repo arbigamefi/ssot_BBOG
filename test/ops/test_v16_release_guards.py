@@ -147,6 +147,7 @@ class SyncGuardTests(unittest.TestCase):
                     rows["golden-vectors-latest-v16.json"]["chainId"] = 84532
                 for name, row in rows.items():
                     (bundle / "deployments" / name).write_text(json.dumps(row))
+                (bundle / "deployments/release-notes-latest-v16.md").write_text("release notes\n")
                 (bundle / "abis/index.json").write_text(json.dumps(common))
                 env = {k: v for k, v in os.environ.items() if k not in ("RELEASE_SIGNER", "RPC_URL")}
                 result = subprocess.run(["node", str(ROOT / "frontend/scripts/ssot-sync.mjs"), "--from", str(bundle)], cwd=frontend, env=env, capture_output=True, timeout=10)

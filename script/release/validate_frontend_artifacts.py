@@ -13,22 +13,44 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
+import shutil
 import subprocess
+import tempfile
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from export_frontend_abis import REQUIRED_CONTRACTS, _find_artifact, _load_abi_from_artifact, pool_instances
+
+
+ROOT = Path(__file__).resolve().parents[2]
+# Pool IDs reach the frontend as JavaScript numbers; PoolRegistry rejects 0.
+MAX_SAFE_POOL_ID = 2**53 - 1
+
+
+def _unique_keys(pairs):
+    # A repeated key would let two readers of one file see different values.
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate key {key!r}")
+        result[key] = value
+    return result
+
+
+def _reject_constant(name):
+    raise ValueError(f"{name} is not JSON")
 
 
 def _load_json(path: Path) -> Dict[str, Any]:
     try:
         with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+            return json.load(f, object_pairs_hook=_unique_keys, parse_constant=_reject_constant)
     except FileNotFoundError:
         raise SystemExit(f"missing json: {path}")
-    except json.JSONDecodeError as e:
+    except ValueError as e:
         raise SystemExit(f"invalid json: {path}: {e}")
 
 
@@ -144,8 +166,11 @@ def _validate_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, manif
         if expected_decimals < 0 or expected_decimals > 36:
             raise SystemExit(f"{snapshot_path}: poolAssetDecimals_{suffix} out of range: {expected_decimals}")
 
+        pool_id = _as_int(snapshot.get(f"poolId_{suffix}"), field=f"poolId_{suffix}", path=snapshot_path)
+        if not 1 <= pool_id <= MAX_SAFE_POOL_ID:
+            raise SystemExit(f"{snapshot_path}: poolId_{suffix}={pool_id} is outside the frontend's safe integer range")
         checks = (
-            ("poolId", _as_int(snapshot.get(f"poolId_{suffix}"), field=f"poolId_{suffix}", path=snapshot_path)),
+            ("poolId", pool_id),
             ("domainId", _as_int(snapshot.get(f"poolDomain_{suffix}"), field=f"poolDomain_{suffix}", path=snapshot_path)),
             ("decimals", expected_decimals),
         )
@@ -331,8 +356,8 @@ def _validate_abis(index: Dict[str, Any], path: Path, manifest: Dict[str, Any], 
         if entry.get("abiFile") != filename:
             raise SystemExit(f"{path}: invalid ABI filename for {name}")
         bundle_file = path.parent / filename
-        if not bundle_file.is_file():
-            raise SystemExit(f"missing ABI: {bundle_file}")
+        if bundle_file.is_symlink() or not bundle_file.is_file():
+            raise SystemExit(f"missing ABI or not a regular file: {bundle_file}")
         if entry.get("abiSha256") != hashlib.sha256(bundle_file.read_bytes()).hexdigest():
             raise SystemExit(f"{path}: ABI digest mismatch for {name}")
         try:
@@ -345,6 +370,63 @@ def _validate_abis(index: Dict[str, Any], path: Path, manifest: Dict[str, Any], 
         raise SystemExit(f"{path}: missing current ABIs: {sorted(set(expected) - seen)}")
     if seen_instances != set(expected_instances):
         raise SystemExit(f"{path}: missing Bank/Vault instances")
+
+
+def _comparable(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _comparable(child) for key, child in value.items()}
+    if isinstance(value, list):
+        return [_comparable(child) for child in value]
+    if isinstance(value, str) and re.fullmatch(r"0x[0-9a-fA-F]*", value):
+        return value.lower()
+    return value
+
+
+def _first_difference(expected: Any, actual: Any, where: str) -> Optional[str]:
+    if type(expected) is not type(actual):
+        return where
+    if isinstance(expected, dict):
+        for key in sorted(set(expected) | set(actual)):
+            if key not in expected or key not in actual:
+                return f"{where}.{key}"
+            found = _first_difference(expected[key], actual[key], f"{where}.{key}")
+            if found:
+                return found
+        return None
+    if isinstance(expected, list):
+        if len(expected) != len(actual):
+            return f"{where} (length)"
+        for i, (child, other) in enumerate(zip(expected, actual)):
+            found = _first_difference(child, other, f"{where}[{i}]")
+            if found:
+                return found
+        return None
+    return None if expected == actual else where
+
+
+def _validate_canonical_manifest(manifest: Dict[str, Any], *, manifest_path: Path, snapshot_path: Path) -> None:
+    """The whole manifest must be what GenerateFrontendManifestV16 writes for the snapshot, so a field the checks above
+    do not name (a label, a parameter encoding, an extra alias) cannot reach the frontend either. Only the build
+    metadata `gitSha` and `generatedAt` may differ, and hex strings compare without case."""
+    # Forge scripts read only inside the project and write only below deployments/; no RPC is used.
+    (ROOT / "deployments").mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".canonical-manifest-", dir=ROOT / "deployments") as temporary:
+        directory = Path(temporary)
+        shutil.copyfile(snapshot_path, directory / "snapshot.json")
+        env = {**os.environ, "SNAPSHOT_PATH": str(directory / "snapshot.json"),
+               "FRONTEND_MANIFEST_OUTPUT_PATH": str(directory / "manifest.json")}
+        result = subprocess.run(
+            ["forge", "script", "script/release/GenerateFrontendManifestV16.s.sol:GenerateFrontendManifestV16"],
+            cwd=ROOT, env=env, capture_output=True, text=True)
+        if result.returncode:
+            raise SystemExit(f"canonical manifest generation failed:\n{(result.stdout + result.stderr)[-2000:]}")
+        expected = _load_json(directory / "manifest.json")
+    metadata = ("gitSha", "generatedAt")
+    expected = _comparable({key: value for key, value in expected.items() if key not in metadata})
+    actual = _comparable({key: value for key, value in manifest.items() if key not in metadata})
+    where = _first_difference(expected, actual, "manifest")
+    if where:
+        raise SystemExit(f"{manifest_path}: {where} differs from the manifest generated from the authenticated snapshot")
 
 
 def main() -> None:
@@ -427,6 +509,9 @@ def main() -> None:
         raise SystemExit(f"{manifest_path}: schemaVersion must be 2")
     if _as_int(vectors["schemaVersion"], field="schemaVersion", path=vectors_path) != 2:
         raise SystemExit(f"{vectors_path}: schemaVersion must be 2")
+
+    # Last, so the checks above name the first mismatch they know about.
+    _validate_canonical_manifest(manifest, manifest_path=manifest_path, snapshot_path=snapshot_path)
 
     # Notes must reference digest in strict mode.
     if strict:

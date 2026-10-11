@@ -22,6 +22,19 @@ from export_frontend_abis import REQUIRED_CONTRACTS, pool_instances
 from validate_frontend_artifacts import EXECUTION_ADDRESSES, GAMES, _game_id, _validate_execution
 
 
+# What GenerateFrontendManifestV16 writes for each game besides the snapshot values.
+GAME_TEXT = {
+    'DICE': ('Dice', 'abi.encode(bool isOver, uint8 target)'),
+    'COIN_TOSS': ('Coin Toss', 'abi.encode(bool isTails)'),
+    'ROULETTE': ('Roulette', 'abi.encode(uint8 kind, uint40 payload)'),
+    'KENO': ('Keno', 'abi.encode(uint40 numbersPacked)'),
+    'PLINKO': ('Plinko', 'abi.encode(uint8 risk)'),
+    'SIC_BO': ('Sic Bo', 'abi.encode(uint8 kind, uint8 value)'),
+    'SLOTS': ('Slots', 'abi.encode(uint8 profile)'),
+    'BACCARAT': ('Baccarat', 'abi.encode(uint8 side)'),
+}
+
+
 def fixture():
     address = lambda n: '0x' + format(n, '040x')
     common = {'architectureVersion': 'v1.6-nft-liquidity', 'chainId': 84532, 'blockNumber': 10}
@@ -43,7 +56,8 @@ def fixture():
         snapshot['sports' + key[0].upper() + key[1:]] = sports[key]
     manifest = {**common, 'schemaVersion': 2, 'addresses': addresses, 'sports': sports,
                 'refundTimeoutSeconds': 3600,
-                'games': [{'slug': slug, 'gameId': _game_id(name), 'label': name, 'module': addresses[key], 'maxBetCount': 25, 'callbackGasLimit': 2_447_746}
+                'games': [{'slug': slug, 'gameId': _game_id(name), 'label': GAME_TEXT[name][0], 'module': addresses[key],
+                           'maxBetCount': 25, 'callbackGasLimit': 2_447_746, 'paramsEncoding': GAME_TEXT[name][1]}
                           for name, slug, key in GAMES],
                 'pools': [{'poolId': 1, 'domainId': 1, 'domain': 'Casino', 'active': True, 'asset': address(21),
                            'bank': address(22), 'vault': address(23), 'decimals': 6, 'symbol': 'USDC', 'sportsRisk': None}]}
@@ -94,7 +108,8 @@ class ManifestAuthenticationTests(unittest.TestCase):
                 cmd += ['--' + key, str(root / filename)]
             def run(data):
                 (root / 'manifest.json').write_text(json.dumps(data))
-                return subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+                # The canonical comparison runs GenerateFrontendManifestV16, which compiles on first use.
+                return subprocess.run(cmd, capture_output=True, text=True, timeout=600)
             control = run(manifest)
             self.assertEqual(control.returncode, 0, control.stderr)
             for key in EXECUTION_ADDRESSES:
@@ -121,6 +136,27 @@ class ManifestAuthenticationTests(unittest.TestCase):
             for changed in cases:
                 with self.subTest(changed=changed):
                     self.assertNotEqual(run(changed).returncode, 0)
+            # Fields no named check covers still have to be the generator's projection of the snapshot.
+            unnamed = []
+            for field in ('label', 'paramsEncoding'):
+                changed = copy.deepcopy(manifest); changed['games'][0][field] = 'abi.encode(address recipient)'
+                unnamed.append((f'manifest.games[0].{field}', changed))
+            changed = copy.deepcopy(manifest); changed['assets'] = [{'symbol': 'USDC', 'address': '0x' + 'f' * 40}]
+            unnamed.append(('manifest.assets', changed))
+            changed = copy.deepcopy(manifest); changed['pools'][0]['displayDecimals'] = 18
+            unnamed.append(('manifest.pools[0].displayDecimals', changed))
+            for where, changed in unnamed:
+                with self.subTest(where=where):
+                    result = run(changed)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(f'{where} differs from the manifest generated from the authenticated snapshot',
+                                  result.stderr)
+            # Build metadata and hex case are not part of the projection.
+            changed = copy.deepcopy(manifest)
+            changed.update(gitSha='another build', generatedAt=1)
+            changed['addresses'] = {key: value.upper().replace('0X', '0x') for key, value in changed['addresses'].items()}
+            result = run(changed)
+            self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads((root / 'snapshot.json').read_text()), snapshot)
             self.assertEqual(json.loads((root / 'release.json').read_text()), release)
 
@@ -246,8 +282,8 @@ class SignedImportIntegrationTests(unittest.TestCase):
     def files(root):
         return {str(path.relative_to(root)): path.read_bytes() for path in root.rglob('*') if path.is_file()}
 
-    def sync(self, bundle, endpoint=None, only_chain=None):
-        env = {**self.env, 'RPC_URL': endpoint or self.accepted_rpc}
+    def sync(self, bundle, endpoint=None, only_chain=None, env=None):
+        env = {**self.env, 'RPC_URL': endpoint or self.accepted_rpc, **(env or {})}
         return subprocess.run(['node', str(ROOT / 'frontend/scripts/ssot-sync.mjs'), '--from', str(bundle)] +
                               (['--only-chain', str(only_chain)] if only_chain is not None else []),
                               cwd=self.frontend, env=env, capture_output=True, text=True, timeout=300)
@@ -419,6 +455,82 @@ class SignedImportIntegrationTests(unittest.TestCase):
         shutil.copytree(self.pending_bundle, bundle)
         self.assert_rejected(bundle, 'live governance', endpoint=self.pending_rpc)
         self.assert_verifier_reason(bundle, 'VerifyGovernanceV16', 'governance not ready', endpoint=self.pending_rpc)
+
+    def assert_refused(self, bundle, message):
+        result = self.sync(bundle)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn(message, result.stderr)
+        self.assertEqual(self.files(self.active), self.original)
+        self.assertEqual(list(self.deployments.iterdir()), [])
+
+    def test_fields_outside_the_named_checks_must_be_the_generated_projection(self):
+        cases = (('games[0].label', lambda data: data['games'][0].update(label='Free Dice')),
+                 ('games[0].paramsEncoding', lambda data: data['games'][0].update(paramsEncoding='abi.encode(address to)')),
+                 ('assets', lambda data: data.update(assets=[{'symbol': 'USDC', 'address': '0x' + 'f' * 40}])))
+        for where, update in cases:
+            with self.subTest(where=where):
+                bundle = self.changed_bundle()
+                self.change(bundle, 'frontend-manifest-latest', update)
+                self.assert_rejected(bundle, 'artifact validation',
+                                     f'manifest.{where} differs from the manifest generated from the authenticated snapshot')
+                shutil.rmtree(bundle)
+        # Build metadata is not part of the projection.
+        bundle = self.changed_bundle()
+        self.change(bundle, 'frontend-manifest-latest', lambda data: data.update(gitSha='rebuilt', generatedAt=1))
+        self.assert_success(bundle)
+
+    def test_duplicate_json_keys_are_rejected(self):
+        bundle = self.changed_bundle()
+        path = bundle / 'deployments/frontend-manifest-latest-v16.json'
+        text = path.read_text()
+        self.assertEqual(text.count('"refundTimeoutSeconds":'), 1)
+        path.write_text(text.replace('"refundTimeoutSeconds":', '"refundTimeoutSeconds":60,"refundTimeoutSeconds":', 1))
+        self.assert_rejected(bundle, 'artifact validation', "duplicate key 'refundTimeoutSeconds'")
+
+    def test_pool_id_outside_the_javascript_safe_range_is_rejected(self):
+        bundle = self.changed_bundle()
+        for name in ('latest', 'frontend-manifest-latest'):
+            self.change(bundle, name, lambda data: data.update(poolId_0=2**53) if 'poolId_0' in data
+                        else data['pools'][0].update(poolId=2**53))
+        self.assert_rejected(bundle, 'artifact validation', "poolId_0=9007199254740992 is outside the frontend's safe integer range")
+
+    def test_linked_bundle_files_are_refused(self):
+        for relative in ('abis/GameHub.abi.json', 'deployments/latest-v16.json'):
+            with self.subTest(file=relative):
+                bundle = self.changed_bundle()
+                copy_outside = self.root / 'outside-copy'
+                shutil.copy(bundle / relative, copy_outside)
+                (bundle / relative).unlink()
+                (bundle / relative).symlink_to(copy_outside)
+                self.assert_refused(bundle, f'Release bundle {relative} is missing or not a regular file')
+                shutil.rmtree(bundle)
+                copy_outside.unlink()
+
+    def test_the_bundle_is_read_once_before_validation(self):
+        # The source manifest routes pool 0 to an attacker's Bank. A forge shim swaps the source back to the signed
+        # projection on the importer's first forge call, after the importer read its input and before the validator
+        # does. The validator must judge the bytes that are activated, so the import is refused.
+        bundle = self.changed_bundle()
+        manifest = bundle / 'deployments/frontend-manifest-latest-v16.json'
+        signed = self.root / 'signed-manifest.json'
+        shutil.copy(manifest, signed)
+        self.addCleanup(signed.unlink)
+        self.change(bundle, 'frontend-manifest-latest', lambda data: data['pools'][0].update(bank='0x' + 'f' * 40))
+        shims = self.root / 'forge-shim'
+        shims.mkdir()
+        self.addCleanup(shutil.rmtree, shims)
+        (shims / 'forge').write_text('#!/usr/bin/env bash\n'
+                                     'if [ ! -e "$SWAP_DONE" ]; then cp "$SWAP_FROM" "$SWAP_TO"; touch "$SWAP_DONE"; fi\n'
+                                     'exec "$REAL_FORGE" "$@"\n')
+        (shims / 'forge').chmod(0o755)
+        env = {'PATH': f'{shims}{os.pathsep}{os.environ["PATH"]}', 'REAL_FORGE': shutil.which('forge'),
+               'SWAP_FROM': str(signed), 'SWAP_TO': str(manifest), 'SWAP_DONE': str(shims / 'swapped')}
+        result = self.sync(bundle, env=env)
+        self.assertTrue((shims / 'swapped').exists(), result.stderr)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn('artifact validation failed; active release was not changed', result.stderr)
+        self.assertIn('pools[0].bank', result.stderr)
+        self.assertEqual(self.files(self.active), self.original)
 
 
 if __name__ == '__main__':
