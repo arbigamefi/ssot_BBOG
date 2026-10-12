@@ -103,10 +103,14 @@ The seed of the historical Coin profit is part of the case: `NFT_GAS_PROFIT_SEED
 must settle that setup bet as a pool profit. If it is missing or no longer does, setup stops and names the first seed
 in 0..1023 that does, to be recorded. Every concentrated case pinned on 2026-10-11 records seed 4.
 
-`gas-audit-adversarial-cases.json` holds the independent audit's 102 adversarial concentrated cases
+`gas-audit-adversarial-cases.json` holds the independent audit's adversarial concentrated cases
 (`independent-audit-2026-10-10/tests/audit-adversarial-gas-cases.json`, archived) under the audit's own names, each with
-its `EXPECT_PREDICATE` (96 accept the prefix, 6 reject it). They join the certificate v5 matrix. Each records seed 4
-like the cases above; the first matrix run checks that seed case by case and stops on any case that needs another.
+its `EXPECT_PREDICATE` (26 accept the prefix, 2 reject it), and records seed 4 like the cases above. The audit listed
+102 combinations, eight games by twelve seeds and six whole-pool shapes; its own run executed 28 and the fixture's
+preconditions rejected the rest. The first certificate v5 matrix (2026-10-12) rejected the same 74, case by case: in
+62 the seed settles the target as a pool profit, so it is no concentrated loss witness, and the 12 Coin targets
+collide with the historical Coin game the profile needs. Those 74 never execute and were removed; the file keeps the 28
+that do, all of which settled within the provider budget.
 
 `NFT_GAS_EXPECT_PREDICATE` walks the tree through `test/utils/PrefixPath.sol`, which reads the deployed vault's public
 `treeNode` view. The unit fuzz test of the prefix replay requires it to agree with the original internal helper kept
@@ -171,9 +175,10 @@ here. It has to be argued component by component, or the fixture has to be exten
 `gas-certificate-witness-cases.json` pins the six worst-shape cases that the independent certificate review of
 2026-10-07 built from the tree DP's maximizing cutoff pattern (loss, prefix covers k, the predicate walking all 40
 levels). Its case `witness-dp-argmax-covers-loss-keno25-pp` combines that tree shape with Keno 25 rounds, fresh
-L0/L1/L2 slots and a refused payment (PP), and it set the highest observed wrapper gas so far: 2,005,280. The strict
-matrix runs these cases together with every other pinned case file: `--all-cases` takes the union of every
-`*cases.json` here (files in name order, the first case with a name wins; 211 cases on 2026-10-12), records it as
+L0/L1/L2 slots and a refused payment (PP), and it set the highest observed wrapper gas: 2,005,280 on the v1.6
+contracts, 1,989,307 on the launch candidate (2026-10-12; the player's turnover now shares the open-hold slot, so its
+first write is no longer fresh). The strict matrix runs these cases together with every other pinned case file: `--all-cases` takes the union of every
+`*cases.json` here (files in name order, the first case with a name wins; 137 cases on 2026-10-12), records it as
 `cases.json` in the output and includes every case file in the source manifests:
 
 ```sh
