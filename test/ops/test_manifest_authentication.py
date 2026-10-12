@@ -3,6 +3,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import shutil
 import socket
 import time
@@ -162,8 +163,8 @@ class SignedImportIntegrationTests(unittest.TestCase):
     """Real generators, signature verification and live local governance; no passing-check mocks.
 
     SafeConfigMockV16 models the Safe configuration only; this test does not prove Safe quorum execution. Both
-    loopback nodes receive the same deployment, so its addresses are the same on both: on one the wiring executes and
-    the release is signed, on the other the wiring stays scheduled (ADR-0037 §9).
+    loopback nodes receive the same deployment, so its addresses and code are the same on both (setUpClass checks
+    them): on one the wiring executes and the release is signed, on the other the wiring stays scheduled (ADR-0037 §9).
     """
 
     @classmethod
@@ -192,6 +193,15 @@ class SignedImportIntegrationTests(unittest.TestCase):
                              '--manifest', str(bundle / 'deployments/frontend-manifest-latest-v16.json'),
                              '--dest', str(bundle / 'abis')], cwd=ROOT)
         cls.snapshot = json.loads((cls.bundle / 'deployments/latest-v16.json').read_text())
+        # One deployment on both nodes: the same code at every address the release names, only the wiring state apart.
+        # A difference fails here, naming the address, instead of in a test that expects another rejection reason.
+        for key, address in sorted(cls.snapshot.items()):
+            if isinstance(address, str) and re.fullmatch('0x[0-9a-fA-F]{40}', address):
+                accepted, pending = (cls.rpc(endpoint, 'eth_getCode', [address, 'latest'])
+                                     for endpoint in (cls.accepted_rpc, cls.pending_rpc))
+                if accepted != pending:
+                    raise AssertionError(f'Local release fixture: the nodes hold different code at {key} {address} '
+                                         f'(accepted {len(accepted) // 2 - 1} bytes, pending {len(pending) // 2 - 1})')
         # Keep one Foundry project identity for the class. Changing cwd for each
         # case invalidates Foundry's source cache even when the sources match.
         cls.import_temp = tempfile.TemporaryDirectory(prefix='release-import-')
@@ -448,6 +458,30 @@ class SignedImportIntegrationTests(unittest.TestCase):
         shutil.copytree(self.bundle, bundle)
         self.assert_rejected(bundle, 'live governance', endpoint=self.pending_rpc)
         self.assert_verifier_reason(bundle, 'VerifyGovernanceV16', 'wiring not executed', endpoint=self.pending_rpc)
+
+    def test_the_safe_mock_compiled_alone_is_the_code_on_both_nodes(self):
+        # The nodes receive the Safe and the guardian from separate Forge runs, and the release signs their code hash.
+        # Compiled alone, in a new cache, the mock must be that code. Defined in a file that Forge's dynamic test
+        # linking rewrites, it had another code hash in each compilation and the nodes could differ (freeze run of
+        # 2026-10-12).
+        with tempfile.TemporaryDirectory(prefix='safe-mock-') as temp:
+            build = subprocess.run(['forge', 'build', '--out', f'{temp}/out', '--cache-path', f'{temp}/cache',
+                                    'test/utils/SafeConfigMockV16.sol'], cwd=self.root, capture_output=True, text=True,
+                                   timeout=300)
+            self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+            artifact = json.loads(Path(temp, 'out/SafeConfigMockV16.sol/SafeConfigMockV16.json').read_text())
+        runtime = artifact['deployedBytecode']
+        code = bytearray.fromhex(runtime['object'][2:])
+        # The one immutable is the account that created the mock: the fixture's deployer.
+        operator = bytes.fromhex(self.snapshot['deployer'][2:]).rjust(32, b'\0')
+        for references in runtime['immutableReferences'].values():
+            for reference in references:
+                code[reference['start']:reference['start'] + reference['length']] = operator
+        for key in ('gov', 'guardian'):
+            for node, endpoint in (('accepted', self.accepted_rpc), ('pending', self.pending_rpc)):
+                with self.subTest(contract=key, node=node):
+                    self.assertEqual(self.rpc(endpoint, 'eth_getCode', [self.snapshot[key], 'latest']),
+                                     '0x' + code.hex())
 
     def assert_refused(self, bundle, message):
         result = self.sync(bundle)

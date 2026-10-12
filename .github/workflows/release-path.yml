@@ -17,6 +17,7 @@ on:
       - "test/fixtures/ReleaseImportFixture.s.sol"
       - "test/fixtures/release-import-fixture.sh"
       - "test/utils/ReleaseV16Fixture.sol"
+      - "test/utils/SafeConfigMockV16.sol"
       - "script/DeployV16.s.sol"
       - "script/common/SafeGovernance.sol"
       - "frontend/scripts/ssot-sync.mjs"
