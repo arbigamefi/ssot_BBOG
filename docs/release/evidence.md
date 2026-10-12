@@ -114,3 +114,10 @@ review S-11, fix review 3 W-1(3)).
 5. Within a day of being sealed, new evidence is archived into a new dated folder under the archive root (a tarball
    with its repository prefix, a per-member manifest, and a restore check), its files are added to
    `evidence-index.sha256`, and a row is added here. The Owner then refreshes the durable copy.
+
+`script/release/run_freeze.sh` performs rule 1 for the local gates on a clean worktree: it records the commit, its
+tree and a manifest of every tracked file, checks the manifest between groups of stages, runs the regression,
+nightly, tree, admission, certificate-tool and ops gates, the fork gates (the 137-case callback matrix, the void
+branch with the pinned USDC, the direct wrapper) and computes the first-callback certificate on the same tree
+(`script/certificate/certify.py`). It runs through `script/tools/with-ops-rpc.sh alchemy base-sepolia` and removes the
+endpoint from every log it writes. The GitHub runs at the same commit are recorded next to its output.
