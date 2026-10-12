@@ -21,7 +21,9 @@ const budgets = [
   { route: "/(product)/casino/[slug]/page", publicPath: "/casino/[slug]", maxKb: 205 },
   // 2026-10-09: the NFT liquidity redesign (ADR-0034) replaced the async-redemption panels with per-deposit
   // positions, exact percentage quotes and partial-withdrawal relock; measured 181.9 kB after removing the SDK barrel import.
-  { route: "/(product)/earn/page", publicPath: "/earn", maxKb: 190 },
+  // 2026-10-12: the launch candidate's inactive-pool and void reads (D) and the required pool-rule disclosure (C4)
+  // measured 189.6 kB locally and 190.1 kB on the CI builder, which compresses about 0.5 kB larger.
+  { route: "/(product)/earn/page", publicPath: "/earn", maxKb: 192 },
   { route: "/(product)/ops/page", publicPath: "/ops", maxKb: 220 },
   { route: "/(product)/portfolio/page", publicPath: "/portfolio", maxKb: 190 },
   {
