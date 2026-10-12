@@ -23,6 +23,7 @@ Store and share the archives accordingly.
 | `2026-10-11-clean-slate/`      | The clean slate of launch candidate §4: all git refs (`all-refs-2026-10-11.bundle`, 25 refs, complete history), the remaining `dist/` (2,545 files), `deployments/` (28 files), the isolated deploy copy of 1b7419bca (3,605 files) and the uncommitted worktree changes (`worktrees/`) |
 | `2026-10-11-post-clean-slate/` | Evidence made after the clean slate: the launch candidate plan review, the B0 design reviews and the external pre-review package (117 files)                                                                                                                                            |
 | `2026-10-12-freeze/`           | The launch candidate's freeze run on `1a5e9df00` with certificate v5 (`dist/freeze-2026-10-12/`, the 249 files of its seal; the matrix's isolated build output is left out)                                                                                                      |
+| `2026-10-12-certificate-v5-review/` | Freeze delta 1 (`dist/freeze-2026-10-12-delta-1/`, commit `56527403e`) and the certificate v5 review package (`dist/certificate-v5-review-2026-10-12/` and its tarball), 36 files |
 
 ## Verify
 
@@ -55,6 +56,7 @@ only with `tar -xzf <archive> <member path>`. The bundle: `git bundle verify <bu
 | `2026-10-11-clean-slate/dist.tar.gz`                                        | extracted into a new directory, `shasum -c`                                                           | 2,545 OK                               |
 | `2026-10-11-post-clean-slate/dist.tar.gz`                                   | extracted into a new directory, `shasum -c`                                                           | 117 OK                                 |
 | `2026-10-12-freeze/dist.tar.gz` (2026-10-12)                                | extracted into a new directory, `shasum -c`                                                           | 249 OK                                 |
+| `2026-10-12-certificate-v5-review/dist.tar.gz` (2026-10-12)                 | extracted into a new directory, `shasum -c`                                                           | 36 OK                                  |
 | `2026-10-11-clean-slate/deployments.tar.gz`, `deploy-copy-1b7419bca.tar.gz` | members hashed in memory against their manifests, never written to disk (they hold environment files) | 28 and 3,605 equal, none unlisted      |
 | `2026-10-11-clean-slate/all-refs-2026-10-11.bundle`                         | `git bundle verify`                                                                                   | complete history, 25 refs              |
 
@@ -84,6 +86,8 @@ are archive member paths.
 | External pre-review package (B0)                | post-clean-slate `dist.tar.gz` | `dist/external-prereview-b0-2026-10-11.tar.gz`                        | `850d34d7bfe4a58df9c898986f44c9fef72b4053a63c526a21648e8ffc33218f` |
 | Freeze run of the launch candidate (`1a5e9df00`) | 2026-10-12-freeze `dist.tar.gz` | `dist/freeze-2026-10-12/EVIDENCE.sha256`                              | `9290496745124977e01669ae90e7b78b64e618631a7478861dbda2e12d0bf4f2` |
 | Certificate v5                                  | 2026-10-12-freeze `dist.tar.gz` | `dist/freeze-2026-10-12/certificate/MANIFEST.sha256`                  | `5726389a84ea2348d3801328914e2cbf85354314bde83466cbce9d078f79f674` |
+| Freeze delta 1 (`56527403e`)                    | 2026-10-12-certificate-v5-review `dist.tar.gz` | `dist/freeze-2026-10-12-delta-1/EVIDENCE.sha256`        | `476b63d8234af1a1a2b251e54d83b69b1a5e54e5d1c3cd4473fdb91cf4aa773c` |
+| Certificate v5 review package                   | 2026-10-12-certificate-v5-review `dist.tar.gz` | `dist/certificate-v5-review-2026-10-12.tar.gz`          | `267e4de506e2e116dfbff1f884d9d2e840e2016199d791d46f50779ad2ef7c4b` |
 
 Certificate v5 reproduces with `python3 script/certificate/certify.py <new directory>` on a checkout of `1a5e9df00`
 (`docs/audit/first-callback-gas-certificate-2026-10-07.md`, section 8). Certificate v4 reproduces from these archives
