@@ -112,6 +112,15 @@ like the cases above; the first matrix run checks that seed case by case and sto
 `treeNode` view. The unit fuzz test of the prefix replay requires it to agree with the original internal helper kept
 verbatim in `test/utils/VaultPrefixReference.sol`.
 
+## Launch-candidate cases
+
+`NFT_GAS_SECOND_HOLD` places a second bet of the same player right after the target, so the player holds the
+maximum two positions (ADR-0037 §5) and the target's settlement takes the player's Bank slot from two open holds to
+one; the terminal checks then expect the second hold's principal, reserve and lock to remain. `NFT_GAS_DISABLE_GAME`
+disables the game after the target bet was accepted and checks that no new bet can be quoted; the callback must still
+settle the accepted bet. `gas-launch-candidate-cases.json` combines both with Keno, Baccarat and Plinko at 25 rounds,
+a refused payment and immediately eligible rewards.
+
 ## Setup history callbacks
 
 Setup settles earlier bets through the same wrapper and the same consumer gas:
@@ -151,6 +160,7 @@ The fixture rejects illegal combinations with `require`:
 | `NFT_GAS_EXPECT_PREDICATE` | 0, 1 or 2 | nonzero only with a nonzero `CUTOFF_RETAIN` |
 | `NFT_GAS_BLACKLIST` | bool | the result must owe the player something |
 | `NFT_GAS_VARIANT2` | Dice: 0 or 1 (direction) | — |
+| `NFT_GAS_SECOND_HOLD` / `NFT_GAS_DISABLE_GAME` | bool | `SECOND_HOLD` requires `TREE` 0..2 and `AMOUNT_PROFILE=0` |
 
 The concentrated profile clears the reward slots, so it cannot be combined with a prior holdback release or a
 new-source lock. A certificate's maximizing combination that needs both cannot be instantiated as one witness
@@ -162,7 +172,15 @@ here. It has to be argued component by component, or the fixture has to be exten
 2026-10-07 built from the tree DP's maximizing cutoff pattern (loss, prefix covers k, the predicate walking all 40
 levels). Its case `witness-dp-argmax-covers-loss-keno25-pp` combines that tree shape with Keno 25 rounds, fresh
 L0/L1/L2 slots and a refused payment (PP), and it set the highest observed wrapper gas so far: 2,005,280. The strict
-matrix runs these cases together with every other pinned case file.
+matrix runs these cases together with every other pinned case file: `--all-cases` takes the union of every
+`*cases.json` here (files in name order, the first case with a name wins; 211 cases on 2026-10-12), records it as
+`cases.json` in the output and includes every case file in the source manifests:
+
+```sh
+script/tools/with-ops-rpc.sh alchemy base-sepolia bash -c \
+  'NFT_GAS_RPC_URL="$OPS_RPC_URL" python3 test/helpers/nft-callback/run_gas_matrix.py --all-cases --require-fit \
+     --isolate-build --output <new directory outside the repository>'
+```
 
 ## Interpretation boundaries
 

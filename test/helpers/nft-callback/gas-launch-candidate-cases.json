@@ -1,0 +1,6 @@
+[
+  {"name": "lc-keno25-second-hold", "GAME": 0, "ROUNDS": 25, "TREE": 1, "SECOND_HOLD": true},
+  {"name": "lc-keno25-game-disabled", "GAME": 0, "ROUNDS": 25, "TREE": 1, "DISABLE_GAME": true},
+  {"name": "lc-baccarat25-second-hold-disabled-pp", "GAME": 2, "VARIANT": 2, "ROUNDS": 25, "TREE": 1, "SEED": 2869, "SECOND_HOLD": true, "DISABLE_GAME": true, "BLACKLIST": true},
+  {"name": "lc-plinko25-second-hold-eligible", "GAME": 1, "ROUNDS": 25, "TREE": 1, "SEED": 0, "SECOND_HOLD": true, "ELIGIBLE": true}
+]

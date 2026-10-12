@@ -23,14 +23,26 @@ FIXTURE = "test/fork/NftCallbackGasQualificationFork.t.sol"
 FIT_LABEL = "provider bounded callback settled"
 
 
-def source_manifest(cases_path: Path) -> str:
+def all_cases(directory: Path) -> tuple[list[dict], dict[str, int]]:
+    """Union of every case file in this directory, files in name order; the first case with a name wins."""
+    cases, seen, counts = [], set(), {}
+    for path in sorted(directory.glob("*cases.json")):
+        for case in json.loads(path.read_text()):
+            if case["name"] not in seen:
+                seen.add(case["name"])
+                cases.append(case)
+                counts[path.name] = counts.get(path.name, 0) + 1
+    return cases, counts
+
+
+def source_manifest(cases_paths: list[Path]) -> str:
     # Cover production/test inputs and a superset of compiled Solidity dependencies.
     # Upstream identity is still authenticated by the separate dependency gate.
     paths = set()
     for directory in ("src", "lib/forge-std/src", "lib/openzeppelin-contracts/contracts", "lib/chainlink-brownie-contracts/contracts"):
         paths.update((ROOT / directory).rglob("*.sol"))
-    paths.update({ROOT / FIXTURE, ROOT / "test/utils/PrefixPath.sol", Path(__file__), cases_path.resolve(),
-                  ROOT / "foundry.toml", ROOT / "deps.lock"})
+    paths.update({ROOT / FIXTURE, ROOT / "test/utils/PrefixPath.sol", Path(__file__),
+                  ROOT / "foundry.toml", ROOT / "deps.lock", *(path.resolve() for path in cases_paths)})
     lines = []
     for path in sorted(paths):
         if path.is_file():
@@ -42,6 +54,8 @@ def source_manifest(cases_path: Path) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", type=Path, default=Path(__file__).with_name("gas-qualification-cases.json"))
+    parser.add_argument("--all-cases", action="store_true",
+                        help="every case file in this directory; the first case with a name wins (files in name order)")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--filter", default="*")
     parser.add_argument("--require-fit", action="store_true")
@@ -51,7 +65,13 @@ def main() -> int:
     if not rpc:
         parser.error("NFT_GAS_RPC_URL must name a Base Sepolia archive RPC; do not put credentials in arguments")
     forge = shutil.which("forge") or str(Path.home() / ".foundry/bin/forge")
-    cases = json.loads(args.cases.read_text())
+    if args.all_cases:
+        case_files = sorted(Path(__file__).parent.glob("*cases.json"))
+        cases, counts = all_cases(Path(__file__).parent)
+        print(json.dumps({"caseFiles": counts, "cases": len(cases)}), flush=True)
+    else:
+        case_files = [args.cases]
+        cases = json.loads(args.cases.read_text())
     cases = [case for case in cases if fnmatch.fnmatchcase(case["name"], args.filter)]
     if not cases:
         parser.error("no cases match filter")
@@ -59,9 +79,10 @@ def main() -> int:
     if len(set(names)) != len(names) or any(not re.fullmatch(r"[a-z0-9-]+", name) for name in names):
         parser.error("case names must be unique safe lowercase filenames")
     args.output.mkdir(parents=True, exist_ok=True)
+    (args.output / "cases.json").write_text(json.dumps(cases, indent=2) + "\n")
     build_args = ["--out", str((args.output / "forge-out").resolve()),
                   "--cache-path", str((args.output / "forge-cache").resolve())] if args.isolate_build else []
-    source_before = source_manifest(args.cases)
+    source_before = source_manifest(case_files)
     (args.output / "SOURCE_BEFORE.sha256").write_text(source_before)
     # Foundry also accepts legacy DAPP_* options. Neither may override the pinned build.
     base = {key: value for key, value in os.environ.items()
@@ -86,7 +107,7 @@ def main() -> int:
     results = []
     source_drift = False
     for case in cases:
-        case_source = source_manifest(args.cases)
+        case_source = source_manifest(case_files)
         if case_source != source_before:
             source_drift = True
             print(json.dumps({"sourceDriftBeforeCase": case["name"]}), flush=True)
@@ -121,7 +142,7 @@ def main() -> int:
         (args.output / "results.json").write_text(json.dumps(results, indent=2) + "\n")
         if process.returncode and "Compiler run failed" in output:
             break  # A common build failure cannot provide independent per-case gas observations.
-    source_after = source_manifest(args.cases)
+    source_after = source_manifest(case_files)
     (args.output / "SOURCE_AFTER.sha256").write_text(source_after)
     source_unchanged = not source_drift and source_before == source_after
     semantic = sum(bool(row["semanticChecksPassed"]) for row in results)

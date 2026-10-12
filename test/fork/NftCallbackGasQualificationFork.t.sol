@@ -115,6 +115,11 @@ contract NftCallbackGasQualificationForkTest is Test {
     uint256 private expectPredicate;
     uint256 private lateLargeUsdc;
     uint256 private setupCallbackFailures;
+    bool private secondHold;
+    bool private disableGame;
+    uint256 private secondBetId;
+    uint256 private secondStake;
+    uint256 private secondReserved;
     uint256 private betId;
     uint256 private requestId;
     uint256 private expectedGross;
@@ -176,6 +181,11 @@ contract NftCallbackGasQualificationForkTest is Test {
         cutoffRetain = vm.envOr("NFT_GAS_CUTOFF_RETAIN", uint256(0)); // parts of ONE kept in the cutoff NFT
         expectPredicate = vm.envOr("NFT_GAS_EXPECT_PREDICATE", uint256(0)); // 1 all splits cover, 2 all splits reject
         lateLargeUsdc = vm.envOr("NFT_GAS_LATE_LARGE_USDC", uint256(1_000_000));
+        // Launch candidate: a second open hold of the same player (its Bank slot goes 2 -> 1 at settlement) and a game
+        // disabled after the target bet was accepted (the callback must still settle it).
+        secondHold = vm.envOr("NFT_GAS_SECOND_HOLD", false);
+        disableGame = vm.envOr("NFT_GAS_DISABLE_GAME", false);
+        require(!secondHold || (treeMode <= 2 && amountProfile == 0), "second hold keeps the uniform deposit tree");
         require(amountProfile <= 1 && expectPredicate <= 2 && cutoffRetain < ONE, "amount profile input");
         require(
             amountProfile == 0 || (treeMode == 4 && !thinPrefix && !priorHoldback && !priorNewSourceHeld && game != 3),
@@ -207,6 +217,18 @@ contract NftCallbackGasQualificationForkTest is Test {
         if (priorNewSourceHeld) _preparePriorNewSourceHeld();
         betId = _place(spec);
         requestId = hub.getBet(betId).requestId;
+        if (secondHold) {
+            secondBetId = _place(spec);
+            (, secondStake, secondReserved,,) = bank.holds(secondBetId);
+            assertEq(bank.openHoldsOf(PLAYER), 2, "the player holds the maximum two positions");
+        }
+        if (disableGame) {
+            vm.prank(GOV);
+            hub.disableGame(gameId);
+            assertTrue(hub.gameDisabled(gameId));
+            vm.expectRevert(abi.encodeWithSelector(IGameHub.GameIsDisabled.selector, gameId));
+            hub.quoteVRFFee(gameId, spec.betCount, 2 gwei);
+        }
         (,,, targetCutoff,) = bank.holds(betId);
         if (treeMode == 4) assertEq(targetCutoff, denseCutoff, "target snapshots the specified dense cutoff");
         uint256[] memory words = _words(seed);
@@ -728,6 +750,8 @@ contract NftCallbackGasQualificationForkTest is Test {
         emit log_named_uint("cutoff NFT retained parts of 1e12", cutoffRetain);
         emit log_named_uint("expected full predicate (0 none, 1 covers, 2 rejects)", expectPredicate);
         emit log_named_uint("late large NFT USDC (concentrated profile)", amountProfile == 1 ? lateLargeUsdc : 0);
+        emit log_named_uint("second open hold of the player", secondHold ? 1 : 0);
+        emit log_named_uint("game disabled after placement", disableGame ? 1 : 0);
         emit log_named_uint("gross payout", expectedGross);
         emit log_named_uint("net payout", expectedNet);
         emit log_named_uint("partial refund", expectedRefund);
@@ -746,7 +770,7 @@ contract NftCallbackGasQualificationForkTest is Test {
         assertEq(uint8(consumer.getRequest(requestId).state), uint8(IVRFHub.RequestState.Received));
         assertEq(consumer.unbookedResultCount(address(bank)), 1);
         assertEq(uint8(router.getPosition(betId).state), uint8(SSOTTypes.PositionState.Held));
-        assertEq(bank.pendingStakeTotal(), UNIT);
+        assertEq(bank.pendingStakeTotal(), UNIT + secondStake);
         assertEq(bank.totalBetsSettled(), beforeSettled);
         assertEq(vault.getReserve(), beforeRoot);
         assertEq(token.balanceOf(PLAYER), beforePlayer);
@@ -782,9 +806,12 @@ contract NftCallbackGasQualificationForkTest is Test {
         assertEq(bank.playerPayable(PLAYER), blocked ? expectedNet + expectedRefund : 0);
         SSOTTypes.SSOT memory s = bank.getSSOT();
         assertTrue(s.accountingValid);
-        assertEq(s.P + s.R + s.K, 0);
+        assertEq(s.P, secondStake, "only the second hold stays pending");
+        assertEq(s.R, secondReserved);
+        assertEq(s.K, secondReserved - secondStake);
+        assertEq(bank.openHoldsOf(PLAYER), secondHold ? 1 : 0);
         assertEq(s.vaultCash, s.L);
-        assertEq(s.bankCash, s.PF + s.XP + s.PP);
+        assertEq(s.bankCash, s.PF + s.XP + s.PP + s.P);
         assertEq(s.bankSurplus + s.vaultSurplus, 0);
         uint256 awards;
         uint256 uniquePayees;
