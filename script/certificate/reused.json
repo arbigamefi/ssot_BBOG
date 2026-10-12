@@ -1,0 +1,62 @@
+{
+  "about": "Independently reviewed components the certificate reuses instead of recomputing, each with the sealed evidence it comes from (a member of ~/arbigamefi-archive/2026-10-11-superseded/superseded-2026-10-11.tar.gz, digest as in that archive's MANIFEST.sha256) and the code it was computed on. bindings.py refuses a reuse whose code no longer matches.",
+  "token": {
+    "use": "tokenBodies: every USDC callee body on the settlement path (at most 11 balanceOf and 2 transfer calls on a loss, 9 balanceOf, 1 transferFrom and 1 transfer on a profit)",
+    "jointCalleeBodyBound": 78394,
+    "evidence": "dist/callback-cost-certificate-2026-10-04/tree/independent-token-crosscheck.json",
+    "evidenceSha256": "18a713cde5d4a3e73c8357e028e8286e4e195645cf28d7fc4749e9ac4f799a6e",
+    "identity": "dist/callback-cost-certificate-2026-10-04/payment/usdc-identity.json",
+    "identitySha256": "f90cf6179ab3792d491cca85e74c8b447591af35a745328d3a8a577c72b9dd32",
+    "proxyRuntimeSha256": "e878b99fc0c17354c86c7edeb999c70c18cfd925abb0958496f027cbad996d28",
+    "implementationRuntimeSha256": "9e410c49b2c8f98e4924d5cab8f07e734625c650c940a7ed600b376f010eba77",
+    "topology": {
+      "about": "calls per settlement the bound covers; protocol/frames.py counts them on the build",
+      "loss": {
+        "balanceOf": 11,
+        "transfer": 2,
+        "transferFrom": 0
+      },
+      "profit": {
+        "balanceOf": 9,
+        "transfer": 1,
+        "transferFrom": 1
+      }
+    }
+  },
+  "staticModuleBounds": {
+    "use": "secondary module measure (the 2026-10-04 static bound at 25 rounds)",
+    "evidence": "dist/callback-cost-certificate-2026-10-04/tree/independent-module-crosscheck.json",
+    "evidenceSha256": "1cb09122f7b98a47231cf814fdc940656959468e0cdbeea97bac18df2302f3e0",
+    "bounds25": {
+      "CoinTossModule": 57130,
+      "DiceModule": 82271,
+      "SlotsModule": 199384,
+      "RouletteModule": 149196,
+      "PlinkoModule": 213028,
+      "SicBoModule": 258137,
+      "KenoModule": 324094,
+      "BaccaratModule": 320032
+    },
+    "executableSha256": {
+      "CoinTossModule": "65ddae2c44b95a2a66cc2cff0724cd75c3b87074622330be2c38b9cde7994bc4",
+      "DiceModule": "af6f20dcf0a4e18e55a0b2dfad8a15af5460e1bc214dbb0cb33e5c0dfb4613bc",
+      "SlotsModule": "a32416772fbc2da13420cfb249a4fa3a11f983a17d3f7fcb55aa6169ea0d5b80",
+      "RouletteModule": "5e4fa16a4af415a21d6735e6a34f89f15853f529e06321ec328edf08592e5d56",
+      "PlinkoModule": "a95e66ebd9587fccabd07aa6b909318ed6c72f67c6699e8f554f8855512e370a",
+      "SicBoModule": "267e0de5c97e18f8294cdd5af19c9047146ce84c3893493a6982de61f12a3f1c",
+      "KenoModule": "c029057e5686da7bc95a98b6c4dc183f3e2c36aaa179301a8c2e5fa9f221534b",
+      "BaccaratModule": "f818ce748a4b90ef9b1120f840f15a025628740ac16d4fd9db806fca0c12f92c"
+    },
+    "executableSource": "dist/landing-2026-10-08/certificate-v4/bindings/component-bindings.json in ~/arbigamefi-archive/2026-10-11-clean-slate/dist.tar.gz"
+  },
+  "vaultFrame": {
+    "use": "Vault frame storage, cold local slots and warm calls for k > 0 (ledger/ledger.py VAULT_FRAME)",
+    "evidence": "dist/h1-callback-cost-certificate-2026-10-04/protocol/vault-frame-review.md",
+    "evidenceSha256": "a8ed0badddbb88acd3942d851eafefd20eab9eabdd0e1c06614963268a12f181"
+  },
+  "ledger": {
+    "use": "storage, event and access components (ledger/ledger.py), Bank row changed for the launch candidate",
+    "evidence": "dist/callback-cost-certificate-2026-10-04/protocol/fixed-components.py",
+    "evidenceSha256": "03403be8c33254d3eae5d8a4d2db51214731b87cc594f904fc092f9d9388420e"
+  }
+}

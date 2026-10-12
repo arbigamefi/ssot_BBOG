@@ -42,6 +42,9 @@ jobs:
         run: |
           FOUNDRY_PROFILE=pr forge test --no-match-path "test/unit/DeploymentV16.t.sol" --match-path "test/unit/*" -vvv
 
+      - name: Check the first-callback certificate tools on this build
+        run: python3 -m unittest discover -s test/certificate -v
+
       - name: Verify v1.6 deployment and governance boundary
         run: FOUNDRY_PROFILE=pr forge test --threads 1 --match-path "test/unit/DeploymentV16.t.sol" -vvv
 
