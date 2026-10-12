@@ -4,8 +4,9 @@ The project has not launched. The accepted target is immediate funding into per-
 a fixed 24-hour withdrawal cooldown, original Azuro V3 tree allocation and liquidity-limited synchronous
 payment, plus same-callback VRF settlement. **The launch candidate is implemented and locally verified: authority
 through a 72-hour governance timelock, pause, per-player capacity and the void of unbookable results
-([ADR-0037](../adr/0037-launch-candidate-authority-pause-capacity-void.md)). The freeze, certificate v5, the reviews,
-the external audit and network acceptance are pending.**
+([ADR-0037](../adr/0037-launch-candidate-authority-pause-capacity-void.md)). It is frozen at `1a5e9df00` (2026-10-12)
+and [certificate v5](../audit/first-callback-gas-certificate-2026-10-07.md) is computed on it; the certificate's
+independent review, the external audit and network acceptance are pending.**
 Follow the [detailed plan](../design/lp-accounting-and-callback-implementation.md) and
 [contract rules](../constitution/SSOT.v1.6.md).
 

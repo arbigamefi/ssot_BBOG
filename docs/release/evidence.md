@@ -22,6 +22,7 @@ Store and share the archives accordingly.
 | `2026-10-11-superseded/`       | Material moved out of `dist/`, `deployments/` and `broadcast/` after the 1b7419bca deployment: 68 top-level paths, 8,621 files and 5 symlinks (`README.md`, `PATHS.txt`)                                                                                                                |
 | `2026-10-11-clean-slate/`      | The clean slate of launch candidate §4: all git refs (`all-refs-2026-10-11.bundle`, 25 refs, complete history), the remaining `dist/` (2,545 files), `deployments/` (28 files), the isolated deploy copy of 1b7419bca (3,605 files) and the uncommitted worktree changes (`worktrees/`) |
 | `2026-10-11-post-clean-slate/` | Evidence made after the clean slate: the launch candidate plan review, the B0 design reviews and the external pre-review package (117 files)                                                                                                                                            |
+| `2026-10-12-freeze/`           | The launch candidate's freeze run on `1a5e9df00` with certificate v5 (`dist/freeze-2026-10-12/`, the 249 files of its seal; the matrix's isolated build output is left out)                                                                                                      |
 
 ## Verify
 
@@ -53,6 +54,7 @@ only with `tar -xzf <archive> <member path>`. The bundle: `git bundle verify <bu
 | `2026-10-11-superseded/superseded-2026-10-11.tar.gz`                        | extracted into a new directory, `shasum -c`                                                           | 8,621 OK; 5 symlink lines, as expected |
 | `2026-10-11-clean-slate/dist.tar.gz`                                        | extracted into a new directory, `shasum -c`                                                           | 2,545 OK                               |
 | `2026-10-11-post-clean-slate/dist.tar.gz`                                   | extracted into a new directory, `shasum -c`                                                           | 117 OK                                 |
+| `2026-10-12-freeze/dist.tar.gz` (2026-10-12)                                | extracted into a new directory, `shasum -c`                                                           | 249 OK                                 |
 | `2026-10-11-clean-slate/deployments.tar.gz`, `deploy-copy-1b7419bca.tar.gz` | members hashed in memory against their manifests, never written to disk (they hold environment files) | 28 and 3,605 equal, none unlisted      |
 | `2026-10-11-clean-slate/all-refs-2026-10-11.bundle`                         | `git bundle verify`                                                                                   | complete history, 25 refs              |
 
@@ -80,8 +82,12 @@ are archive member paths.
 | B0 design review                                | post-clean-slate `dist.tar.gz` | `dist/independent-review-b0-2026-10-11/MANIFEST.sha256`               | `71de1eb573020ab674bbd30aaac3d89bf0f7dea46472583c00ef59fdd1ae7ac1` |
 | B0 design review r2                             | post-clean-slate `dist.tar.gz` | `dist/independent-review-b0-2026-10-11/r2/MANIFEST.sha256`            | `6c9ffcee957885c20881eae03b9427b51bafa8d6a83073079554f24caf691c6d` |
 | External pre-review package (B0)                | post-clean-slate `dist.tar.gz` | `dist/external-prereview-b0-2026-10-11.tar.gz`                        | `850d34d7bfe4a58df9c898986f44c9fef72b4053a63c526a21648e8ffc33218f` |
+| Freeze run of the launch candidate (`1a5e9df00`) | 2026-10-12-freeze `dist.tar.gz` | `dist/freeze-2026-10-12/EVIDENCE.sha256`                              | `9290496745124977e01669ae90e7b78b64e618631a7478861dbda2e12d0bf4f2` |
+| Certificate v5                                  | 2026-10-12-freeze `dist.tar.gz` | `dist/freeze-2026-10-12/certificate/MANIFEST.sha256`                  | `5726389a84ea2348d3801328914e2cbf85354314bde83466cbce9d078f79f674` |
 
-Certificate v4 reproduces from these archives with `python3 script/certificate/reproduce_first_callback_v4.py` on a
+Certificate v5 reproduces with `python3 script/certificate/certify.py <new directory>` on a checkout of `1a5e9df00`
+(`docs/audit/first-callback-gas-certificate-2026-10-07.md`, section 8). Certificate v4 reproduces from these archives
+with `python3 script/certificate/reproduce_first_callback_v4.py` on a
 checkout of commit `4a5762aa3`, the last one with the v4 contracts (see the certificate's section 8).
 
 ## Deleted GitHub releases and tags

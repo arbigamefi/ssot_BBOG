@@ -123,7 +123,7 @@ contract CallbackDomainV16Test is Test {
         assertEq(committed.readString(".status"), "PENDING_INDEPENDENT_REVIEW");
         assertEq(
             committed.readString(".certificateSeal.sha256"),
-            "d67a7083a9f3676514339432cc5f690d3cc4de0253935d431c8d9631f8873491"
+            "5726389a84ea2348d3801328914e2cbf85354314bde83466cbce9d078f79f674"
         );
         assertEq(committed.readUint(".consumerCallbackGasLimit"), 2_447_746);
         assertEq(committed.readUint(".maxBetCountCeiling"), 25);
@@ -225,18 +225,15 @@ contract CallbackDomainV16Test is Test {
         return a;
     }
 
-    /// The seals the domain file cites are copied into the repository, so the citation is checkable without dist/.
-    function test_committedDomainCitesTheSealedCertificateAndReview() public view {
-        string memory seal = vm.readFile("script/release/certificates/first-callback-v4/CERTIFICATE-v4.sha256");
+    /// The seal the domain file cites is copied into the repository, so the citation is checkable without dist/.
+    /// Until the certificate review accepts v5 the file cites no review and stays pending.
+    function test_committedDomainCitesTheSealedCertificate() public view {
+        string memory seal = vm.readFile("script/release/certificates/first-callback-v5/CERTIFICATE-v5.sha256");
         assertEq(
             sha256(bytes(seal)), vm.parseBytes32(string.concat("0x", committed.readString(".certificateSeal.sha256")))
         );
-        string memory review =
-            vm.readFile("script/release/certificates/first-callback-v4/independent-review.MANIFEST.sha256");
-        assertEq(
-            sha256(bytes(review)),
-            vm.parseBytes32(string.concat("0x", committed.readString(".certificateSeal.reviewSha256")))
-        );
+        assertEq(committed.readString(".certificateSeal.version"), "v5");
+        assertFalse(vm.keyExistsJson(committed, ".certificateSeal.reviewSha256"));
     }
 
     function test_snapshotInsideCertifiedDomainPasses() public {

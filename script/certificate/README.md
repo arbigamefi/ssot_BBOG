@@ -4,7 +4,9 @@ These scripts compute the first-callback gas certificate on a checkout: an upper
 callback needs to settle a k > 0 casino position, compared with the gas the consumer receives at `VRFHub` entry
 (2,447,746, `VRFHub.MAX_CALLBACK_GAS`). The domain table is `script/release/first-callback-domain-84532.json`; the
 certificate document is `docs/audit/first-callback-gas-certificate-2026-10-07.md`. Certificate v5 covers the
-launch candidate (`docs/release/launch-candidate.zh-CN.md` §10).
+launch candidate (`docs/release/launch-candidate.zh-CN.md` §10); it was computed on freeze commit `1a5e9df00` into
+`freeze-2026-10-12/certificate/`, whose seal the domain file cites (copy in `script/release/certificates/
+first-callback-v5/`).
 
 ```sh
 forge build src
@@ -49,8 +51,10 @@ the curated bounds of that review (13,092 and 4,541); on Bank's two getters, whi
 
 ## Provenance
 
-Digests of the sealed certificate v4 files are those in `script/release/certificates/first-callback-v4/
-CERTIFICATE-v4.sha256`; the 2026-10-04 files are members of the superseded archive (`docs/release/evidence.md`).
+Digests of the sealed certificate v4 files are those in its seal `CERTIFICATE-v4.sha256`
+(`landing-2026-10-08/certificate-v4/` in the clean-slate archive; a copy is in `script/release/certificates/
+first-callback-v4/` at commit `4a5762aa3`); the 2026-10-04 files are members of the superseded archive
+(`docs/release/evidence.md`).
 
 | File | Origin | Change |
 | --- | --- | --- |
@@ -73,5 +77,6 @@ the code it was computed on: the USDC callee bodies (bound to the token runtimes
 2026-10-04 static module bounds (the secondary measure, bound to unchanged module executable code), the Vault frame
 constants and the ledger components.
 
-`reproduce_first_callback_v4.py` reproduces certificate v4 from the archived evidence on commit `4a5762aa3`; it
-goes when certificate v5 replaces v4 in the domain file.
+Certificate v4 reproduces from the archived evidence with `script/certificate/reproduce_first_callback_v4.py` on a
+checkout of `4a5762aa3`, the last commit with the v4 contracts; the script was removed from later commits when v5
+replaced v4 in the domain file.

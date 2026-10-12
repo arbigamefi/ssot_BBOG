@@ -163,8 +163,9 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    erratum and the independent review (`d6c1619c…`) in its `certificateSeal` block. Any recertification trigger in
    ADR-0006 sets it back to `PENDING_INDEPENDENT_REVIEW`, after which every release attempt fails by design until a
    new certificate is accepted. Work package B changes certified runtimes, so since B9 (2026-10-11) the file is
-   `PENDING_INDEPENDENT_REVIEW` with pins regenerated from the current build; the launch candidate's certificate v5
-   replaces v4. Each chain needs its own certificate.
+   `PENDING_INDEPENDENT_REVIEW` with pins regenerated from the current build. The launch candidate's certificate v5
+   (seal `5726389a…`, computed on freeze commit `1a5e9df00`) replaces v4 and waits for its independent
+   review; the file cites no review until then. Each chain needs its own certificate.
 4. Run the authenticated **Frontend Docker Images** workflow on the same source commit with the
    signed bundle's release tag, exact filename, approved SHA-256, and `chain_id=84532`. Configure the
    independent `V16_RELEASE_SIGNER` repository variable. The workflow verifies the archive's source
