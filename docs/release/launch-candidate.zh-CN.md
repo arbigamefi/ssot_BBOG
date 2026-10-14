@@ -306,7 +306,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | 通知外审方：r2 已被本候选版取代，`1e95d7fe…` 不会有外审；送 B0 设计预审；约定外审后修复回路 | 实施方准备，Owner 发送 | 复核 S-2 |
 | K0-4 配置漂移告警：Owner 参数、时间锁排队与 Ready 超期、`OpenHoldLimit`、作废事件；排队告警推送到 LP 可见的公开渠道 | 实施方，Owner 部署 | 已随 A11 实现（`script/ops/config-drift-monitor.py`，手册 `docs/ops/runbooks/config-drift-alerts.md`）；复核 S-9；在本机以 launchd 运行，RPC 用 `INFURA_API_KEY_OPS`（HTTP，经包装脚本）。Owner：建公开频道（bot 为管理员），安装后按手册做三项上线前测试；Mac 休眠会推迟告警，价值网络前定常驻主机 |
 | legacy Bank 退役（31 个未暂停：Base 2 个、Base Sepolia 29 个，见 `docs/ops/legacy-banks.md`）与 RPC key 轮换 | Owner | C7 已登记；key 已于 2026-10-11 按用途改名 |
-| 主网备用 keeper 只配 `KEEPER_RPC_HTTP`（`ALCHEMY_API_KEY_OPS`），不配 WS；`frontend/deploy/casino-keeper/backup.base-mainnet.env.example` 随 D 更新 | 实施方，Owner 部署 | 主网上线后 |
+| 主网备用 keeper 只配 `KEEPER_RPC_HTTP`（`ALCHEMY_API_KEY_OPS`），不配 WS；`frontend/deploy/casino-keeper/backup.base-mainnet.env.example` 随 D 更新 | 实施方，Owner 部署 | 主网上线后。示例已改为只配 HTTP（2026-10-14；keeper 没有 WS 时只走 HTTP 轮询，`runtime-errors.test.ts` 覆盖） |
 | 原生安全扫描：排期，或写明由外审取代 | Owner | 复核 S-10 |
 | 生产服务器（root@45.77.243.138）：在此之前只保留旧数据，不维护、不换 key；随新合约的全新部署一起重建，不做迁移（Owner 2026-10-12）：保留系统，删除旧应用、容器与数据（命令清单由实施方准备，Owner 在服务器上执行），再按 key 分配重新部署整套服务（web、keeper、索引、健康检查与 Telegram 告警，索引库全新建库）；`*_PROD_KEEPER` 由 Owner 运行实施方准备的脚本写入服务器环境，脚本不打印任何值 | 实施方准备与部署，Owner 删除与写入 key | 准备已随 A5 完成（2026-10-12）：手册 `docs/ops/runbooks/production-rebuild.md`（只读清点；Owner 按清点出的名字执行删除；从签名发布部署，索引库全新；Owner 写入秘密；上线前检查）；`script/ops/send-keeper-rpc.sh` 由 Owner 在本机运行，只读两个 `*_PROD_KEEPER`，经 ssh 标准输入交给 `swap-keeper-key.sh --rpc` 一次原子替换 `KEEPER_RPC_HTTP` 与 `KEEPER_RPC_WS`，不打印、不进命令行；旧主机上手工建的健康探针 systemd 单元已入库。执行在新合约部署时 |
 
