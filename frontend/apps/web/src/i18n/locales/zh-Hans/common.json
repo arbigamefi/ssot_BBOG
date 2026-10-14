@@ -2061,7 +2061,7 @@
       },
       "indexerLag": {
         "label": "索引器延迟",
-        "healthyWindow": "健康窗口：{count} 个确认。",
+        "healthyWindow": "{count} 秒内为健康。",
         "unavailable": "确认窗口不可用。"
       },
       "safeHead": {
@@ -2090,7 +2090,7 @@
     "workerRows": {
       "health": {
         "label": "健康",
-        "currentLag": "当前延迟 {count} 个区块。",
+        "currentLag": "当前延迟 {count} 秒。",
         "unavailable": "延迟数据不可用。"
       },
       "confirmations": {
@@ -2103,7 +2103,7 @@
       },
       "batchSize": {
         "label": "批大小",
-        "detail": "每轮扫描处理的最大事件切片。"
+        "detail": "每次日志查询的区块数，不超过 RPC 的单次范围上限。"
       },
       "latestBlock": {
         "label": "最新区块",
@@ -2202,16 +2202,16 @@
         "releaseIdentity": "Release 身份"
       },
       "context": {
-        "eventsPerSweep": "每轮 {count} 个事件",
+        "blocksPerQuery": "每次日志查询 {count} 个区块",
         "awaitingWorkerConfig": "等待 worker 配置",
-        "lagBlocks": "延迟 {count} 个区块",
+        "lagSeconds": "延迟 {count} 秒",
         "lagUnknown": "延迟未知",
         "embeddedRelease": "内置 release"
       }
     },
     "units": {
       "blocks": "{count} 个区块",
-      "events": "{count} 个事件",
+      "seconds": "{count} 秒",
       "pending": "{count} 待处理"
     },
     "governance": {

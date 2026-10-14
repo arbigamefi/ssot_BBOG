@@ -6,12 +6,17 @@ import { getContractAbis } from "../abis/index.mjs";
 import type { SSOTDb } from "./store";
 import type { GameHubEventName, GameHubEventNormalized } from "./reduce";
 import { applyGameHubEventToBet } from "./reduce";
+import { createBlockClock } from "./blockClock";
 
+/** Durations are seconds, turned into blocks at the measured block rate; only `batchSize` counts blocks. */
 export interface GameHubIndexerConfig {
-  confirmations: number;
+  /** Blocks younger than this wait for a later pass. */
+  confirmationSeconds: number;
   pollIntervalMs: number;
+  /** Blocks per eth_getLogs, first and last included: Base's public RPC takes 201. */
   batchSize: number;
-  rewindBlocks: number;
+  /** Each pass rereads this much chain before its cursor, replacing what a shallow reorg changed. */
+  rewindSeconds: number;
 }
 
 export interface GameHubIndexerStatus {
@@ -19,6 +24,9 @@ export interface GameHubIndexerStatus {
   gameHub: Address;
   lastSyncedBlock?: number;
   latestBlock?: number;
+  /** The newest block old enough to index at the last pass: latest minus the confirmation blocks. */
+  targetBlock?: number;
+  blocksPerSecond?: number;
   lastRunAt?: number;
   lastError?: string;
 }
@@ -30,11 +38,11 @@ export interface GameHubIndexer {
   getStatus(): GameHubIndexerStatus;
 }
 
-const DEFAULT_CONFIG: GameHubIndexerConfig = {
-  confirmations: 12,
+export const GAME_HUB_INDEXER_DEFAULTS: GameHubIndexerConfig = {
+  confirmationSeconds: 24,
   pollIntervalMs: 10_000,
-  batchSize: 2_000,
-  rewindBlocks: 24
+  batchSize: 200,
+  rewindSeconds: 48
 };
 
 const GAME_HUB_EVENTS: GameHubEventName[] = [
@@ -52,8 +60,9 @@ export function createGameHubIndexer(params: {
   config?: Partial<GameHubIndexerConfig>;
 }): GameHubIndexer {
   const { release, publicClient, db } = params;
-  const config: GameHubIndexerConfig = { ...DEFAULT_CONFIG, ...(params.config ?? {}) };
+  const config: GameHubIndexerConfig = { ...GAME_HUB_INDEXER_DEFAULTS, ...(params.config ?? {}) };
   const gameHub = getAddress(release.contracts.gameHub) as Address;
+  const clock = createBlockClock(publicClient);
 
   const status: GameHubIndexerStatus = { chainId: release.chainId, gameHub };
   let timer: any | undefined;
@@ -63,11 +72,12 @@ export function createGameHubIndexer(params: {
       status.lastRunAt = Date.now();
       status.lastError = undefined;
 
-      const latestBlockBn = await publicClient.getBlockNumber();
-      const latestBlock = Number(latestBlockBn);
+      const latestBlock = Number((await clock.latest()).number);
       status.latestBlock = latestBlock;
+      status.blocksPerSecond = clock.blocksPerSecond;
 
-      const targetBlock = Math.max(0, latestBlock - config.confirmations);
+      const targetBlock = Math.max(0, latestBlock - clock.blocks(config.confirmationSeconds));
+      status.targetBlock = targetBlock;
 
       const cursorId = `${release.chainId}:${gameHub}`;
       const cursor = await db.cursors.get(cursorId);
@@ -76,10 +86,10 @@ export function createGameHubIndexer(params: {
       const releaseStartBlock = Number(release.meta?.blockNumber ?? 0);
 
       let fromBlock = cursor ? cursor.lastProcessedBlock + 1 : releaseStartBlock;
-      if (cursor && config.rewindBlocks > 0) {
+      if (cursor && config.rewindSeconds > 0) {
         fromBlock = Math.max(
           releaseStartBlock,
-          cursor.lastProcessedBlock - config.rewindBlocks + 1
+          cursor.lastProcessedBlock - clock.blocks(config.rewindSeconds) + 1
         );
       }
 

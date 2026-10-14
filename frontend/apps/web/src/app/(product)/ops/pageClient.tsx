@@ -58,8 +58,8 @@ export function OpsPageClient() {
   const health = React.useMemo(
     () =>
       deriveHealth({
-        lag: indexerStatus?.lagBlocks,
-        confirmations: indexerStatus?.config?.confirmations,
+        lag: indexerStatus?.lagSeconds,
+        confirmations: indexerStatus?.config?.confirmationSeconds,
         labels: {
           unknown: t("health.unknown"),
           healthy: t("health.healthy"),
@@ -67,7 +67,7 @@ export function OpsPageClient() {
           stalled: t("health.stalled")
         }
       }),
-    [indexerStatus?.config?.confirmations, indexerStatus?.lagBlocks, t]
+    [indexerStatus?.config?.confirmationSeconds, indexerStatus?.lagSeconds, t]
   );
 
   const refreshOps = React.useCallback(() => {
@@ -85,20 +85,20 @@ export function OpsPageClient() {
       {
         label: t("metrics.indexerLag.label"),
         value:
-          typeof indexerStatus?.lagBlocks === "number"
-            ? t("units.blocks", { count: indexerStatus.lagBlocks })
+          typeof indexerStatus?.lagSeconds === "number"
+            ? t("units.seconds", { count: indexerStatus.lagSeconds })
             : "—",
         detail:
-          typeof indexerStatus?.config?.confirmations === "number"
+          typeof indexerStatus?.config?.confirmationSeconds === "number"
             ? t("metrics.indexerLag.healthyWindow", {
-                count: indexerStatus.config.confirmations
+                count: indexerStatus.config.confirmationSeconds
               })
             : t("metrics.indexerLag.unavailable"),
         tone: health.tone
       },
       {
         label: t("metrics.safeHead.label"),
-        value: String(indexerStatus?.safeHeadBlock ?? "—"),
+        value: String(indexerStatus?.targetBlock ?? "—"),
         detail: t("metrics.safeHead.detail")
       },
       {
@@ -142,24 +142,24 @@ export function OpsPageClient() {
         label: t("workerRows.health.label"),
         value: health.label,
         detail:
-          typeof indexerStatus?.lagBlocks === "number"
-            ? t("workerRows.health.currentLag", { count: indexerStatus.lagBlocks })
+          typeof indexerStatus?.lagSeconds === "number"
+            ? t("workerRows.health.currentLag", { count: indexerStatus.lagSeconds })
             : t("workerRows.health.unavailable"),
         tone: health.tone
       },
       {
         label: t("workerRows.confirmations.label"),
         value:
-          typeof indexerStatus?.config?.confirmations === "number"
-            ? t("units.blocks", { count: indexerStatus.config.confirmations })
+          typeof indexerStatus?.config?.confirmationSeconds === "number"
+            ? t("units.seconds", { count: indexerStatus.config.confirmationSeconds })
             : "—",
         detail: t("workerRows.confirmations.detail")
       },
       {
         label: t("workerRows.rewindWindow.label"),
         value:
-          typeof indexerStatus?.config?.rewindBlocks === "number"
-            ? t("units.blocks", { count: indexerStatus.config.rewindBlocks })
+          typeof indexerStatus?.config?.rewindSeconds === "number"
+            ? t("units.seconds", { count: indexerStatus.config.rewindSeconds })
             : "—",
         detail: t("workerRows.rewindWindow.detail")
       },
@@ -167,7 +167,7 @@ export function OpsPageClient() {
         label: t("workerRows.batchSize.label"),
         value:
           typeof indexerStatus?.config?.batchSize === "number"
-            ? t("units.events", {
+            ? t("units.blocks", {
                 count: indexerStatus.config.batchSize.toLocaleString(locale)
               })
             : "—",
@@ -251,20 +251,20 @@ export function OpsPageClient() {
         tone: indexerStatus?.running ? "success" : "warn",
         context:
           typeof indexerStatus?.config?.batchSize === "number"
-            ? t("trail.context.eventsPerSweep", {
+            ? t("trail.context.blocksPerQuery", {
                 count: indexerStatus.config.batchSize.toLocaleString(locale)
               })
             : t("trail.context.awaitingWorkerConfig")
       },
       {
         time: t("trail.live"),
-        block: String(indexerStatus?.safeHeadBlock ?? "—"),
+        block: String(indexerStatus?.targetBlock ?? "—"),
         event: t("trail.events.safeHeadAdvance"),
         status: health.label,
         tone: health.tone,
         context:
-          typeof indexerStatus?.lagBlocks === "number"
-            ? t("trail.context.lagBlocks", { count: indexerStatus.lagBlocks })
+          typeof indexerStatus?.lagSeconds === "number"
+            ? t("trail.context.lagSeconds", { count: indexerStatus.lagSeconds })
             : t("trail.context.lagUnknown")
       },
       {
@@ -356,6 +356,7 @@ export function OpsPageClient() {
   );
 }
 
+/** Lag and confirmation window in seconds: healthy within the window, stalled beyond three of them. */
 function deriveHealth({
   lag,
   confirmations,

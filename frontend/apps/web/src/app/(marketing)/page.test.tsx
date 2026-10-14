@@ -190,8 +190,8 @@ describe("HomePage", () => {
       ]
     };
     state.indexerStatus = {
-      lagBlocks: 1,
-      config: { confirmations: 3 },
+      lagSeconds: 1,
+      config: { confirmationSeconds: 24 },
       lastRunAt: Date.now() - 60_000
     };
     state.betCount = 12;

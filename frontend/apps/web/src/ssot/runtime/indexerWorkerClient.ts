@@ -2,19 +2,9 @@
 
 import type { SSOTRelease } from "@ssot/ssot/release";
 import type { GameHubIndexerConfig } from "@ssot/ssot/indexer";
+import type { GameHubIndexerWorkerStatus } from "../../workers/gameHubIndexer.worker";
 
-export type GameHubIndexerWorkerStatus = {
-  chainId: number;
-  gameHub: `0x${string}`;
-  lastSyncedBlock?: number;
-  latestBlock?: number;
-  lastRunAt?: number;
-  lastError?: string;
-  running: boolean;
-  config: GameHubIndexerConfig;
-  safeHeadBlock?: number;
-  lagBlocks?: number;
-};
+export type { GameHubIndexerWorkerStatus };
 
 type WorkerInit = {
   chainId: number;

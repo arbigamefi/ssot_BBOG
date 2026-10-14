@@ -29,8 +29,8 @@ type WorkerInit = {
 export type GameHubIndexerWorkerStatus = GameHubIndexerStatus & {
   running: boolean;
   config: GameHubIndexerConfig;
-  safeHeadBlock?: number;
-  lagBlocks?: number;
+  /** How far the index trails the last pass's target block, in seconds at the measured block rate. */
+  lagSeconds?: number;
 };
 
 type ToWorkerMessage =
@@ -58,21 +58,12 @@ function computeDerivedStatus(
   base: GameHubIndexerStatus,
   cfg: GameHubIndexerConfig
 ): GameHubIndexerWorkerStatus {
-  const latestBlock = base.latestBlock;
-  const safeHead =
-    typeof latestBlock === "number" ? Math.max(0, latestBlock - cfg.confirmations) : undefined;
-  const lastSynced = base.lastSyncedBlock;
-  const lag =
-    typeof safeHead === "number" && typeof lastSynced === "number"
-      ? Math.max(0, safeHead - lastSynced)
+  const { targetBlock, lastSyncedBlock, blocksPerSecond } = base;
+  const lagSeconds =
+    targetBlock != null && lastSyncedBlock != null && blocksPerSecond
+      ? Math.ceil(Math.max(0, targetBlock - lastSyncedBlock) / blocksPerSecond)
       : undefined;
-  return {
-    ...base,
-    running,
-    config: cfg,
-    safeHeadBlock: safeHead,
-    lagBlocks: lag
-  };
+  return { ...base, running, config: cfg, lagSeconds };
 }
 
 async function ensureIndexer(): Promise<void> {

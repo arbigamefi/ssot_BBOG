@@ -41,16 +41,17 @@ const state = {
     chainId: 84532,
     gameHub: "0x1111111111111111111111111111111111111111",
     running: true,
-    latestBlock: 120,
-    safeHeadBlock: 108,
-    lastSyncedBlock: 106,
-    lagBlocks: 2,
+    latestBlock: 220,
+    targetBlock: 100,
+    blocksPerSecond: 5,
+    lastSyncedBlock: 90,
+    lagSeconds: 2,
     lastRunAt: 1_765_000_000_000,
     config: {
-      confirmations: 12,
+      confirmationSeconds: 24,
       pollIntervalMs: 10_000,
-      batchSize: 2_000,
-      rewindBlocks: 24
+      batchSize: 200,
+      rewindSeconds: 48
     }
   } as any,
   keeperHealth: {
@@ -147,7 +148,7 @@ describe("OpsPageClient", () => {
     refreshKeeperHealth.mockClear();
     state.indexerStatus.lastError = undefined;
     state.indexerStatus.running = true;
-    state.indexerStatus.lagBlocks = 2;
+    state.indexerStatus.lagSeconds = 2;
   });
 
   it("frames ops as a release and worker pulse", () => {
@@ -158,12 +159,26 @@ describe("OpsPageClient", () => {
     expect(screen.getByText("Operational focus")).toBeDefined();
     expect(screen.getByText("Recent operational receipts")).toBeDefined();
     expect(screen.getAllByText("Healthy").length).toBeGreaterThan(0);
-    expect(screen.getByText("2 blocks")).toBeDefined();
+    expect(screen.getByText("2 s")).toBeDefined();
+    expect(screen.getByText("Healthy within 24 seconds.")).toBeDefined();
+    expect(screen.getByText("48 s")).toBeDefined();
+    expect(screen.getByText("200 blocks")).toBeDefined();
     expect(screen.getByText("Keeper state")).toBeDefined();
     expect(screen.getAllByText("Casino keeper").length).toBeGreaterThan(0);
     expect(screen.getByText("Keeper queue")).toBeDefined();
     expect(screen.getByText("0 pending")).toBeDefined();
     expect(screen.getByText("0x8888...8888")).toBeDefined();
+  });
+
+  it.each([
+    [25, "Behind"],
+    [72, "Behind"],
+    [73, "Stalled"]
+  ])("judges an indexer lag of %i seconds %s against the 24-second window", (lag, label) => {
+    state.indexerStatus.lagSeconds = lag;
+    render(<OpsPageClient />);
+    expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    expect(screen.getByText(`${lag} s`)).toBeDefined();
   });
 
   it("keeps sync and refresh actions wired to the runtime", () => {

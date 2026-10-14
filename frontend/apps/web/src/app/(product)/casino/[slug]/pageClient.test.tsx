@@ -10,7 +10,7 @@ const state = {
   bets: [] as any[],
   betsLoading: false,
   betsError: null as Error | null,
-  indexerStatus: { lastSyncedBlock: 321, lagBlocks: 4 },
+  indexerStatus: { lastSyncedBlock: 321, lagSeconds: 4 },
   account: null as string | null,
   sdkExtra: null as Record<string, unknown> | null
 };
@@ -380,7 +380,7 @@ describe("GamePageClient", () => {
     state.bets = [];
     state.betsLoading = false;
     state.betsError = null;
-    state.indexerStatus = { lastSyncedBlock: 321, lagBlocks: 4 };
+    state.indexerStatus = { lastSyncedBlock: 321, lagSeconds: 4 };
     state.account = null;
     state.sdkExtra = null;
   });

@@ -4,8 +4,8 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import {
   createDexieJournalSink,
+  GAME_HUB_INDEXER_DEFAULTS,
   getReleaseScopedSSOTDb,
-  type GameHubIndexerConfig,
   type SSOTDb
 } from "@ssot/ssot/indexer";
 import { useChainId, useConfig } from "wagmi";
@@ -40,10 +40,7 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
     undefined
   );
 
-  const indexerConfig: GameHubIndexerConfig = React.useMemo(
-    () => ({ batchSize: 2_000, confirmations: 12, pollIntervalMs: 10_000, rewindBlocks: 24 }),
-    []
-  );
+  const indexerConfig = GAME_HUB_INDEXER_DEFAULTS;
 
   const rpcUrl = React.useMemo(() => {
     const chain = wagmiConfig.chains.find((c) => c.id === releaseChainId);

@@ -65,9 +65,20 @@ const MOCK_RELEASE: SSOTRelease = {
 };
 
 // ——— Mock publicClient ———
-function createMockPublicClient(opts: { blockNumber?: bigint; logs?: any[] }) {
+// Block `n` has timestamp `timestampOf(n)`: two-second blocks by default, as before Denim.
+function createMockPublicClient(opts: {
+  blockNumber?: bigint;
+  logs?: any[];
+  timestampOf?: (n: bigint) => bigint;
+}) {
+  const state = { head: opts.blockNumber ?? 200n };
+  const timestampOf = opts.timestampOf ?? ((n: bigint) => n * 2n);
   return {
-    getBlockNumber: vi.fn().mockResolvedValue(opts.blockNumber ?? 200n),
+    state,
+    getBlock: vi.fn(async (args?: { blockNumber?: bigint }) => {
+      const number = args?.blockNumber ?? state.head;
+      return { number, timestamp: timestampOf(number) };
+    }),
     getLogs: vi.fn().mockResolvedValue(opts.logs ?? [])
   } as any;
 }
@@ -134,7 +145,7 @@ describe("gameHubIndexer.syncOnce()", () => {
         release: MOCK_RELEASE,
         publicClient: client,
         db,
-        config: { confirmations: 0 }
+        config: { confirmationSeconds: 0 }
       });
       await indexer.syncOnce();
       expect(indexer.getStatus().lastError).toBeUndefined();
@@ -175,7 +186,7 @@ describe("gameHubIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0 }
+      config: { confirmationSeconds: 0 }
     });
     await indexer.syncOnce();
     expect(indexer.getStatus().lastError).toBe("terminal RPC unavailable");
@@ -193,12 +204,13 @@ describe("gameHubIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
+      config: { confirmationSeconds: 0, rewindSeconds: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
 
-    expect(client.getBlockNumber).toHaveBeenCalledTimes(1);
+    // The latest block, and once a sample behind it for the block rate.
+    expect(client.getBlock).toHaveBeenCalledTimes(2);
     // 5 event types → 5 getLogs calls
     expect(client.getLogs).toHaveBeenCalledTimes(5);
   });
@@ -209,7 +221,7 @@ describe("gameHubIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
+      config: { confirmationSeconds: 0, rewindSeconds: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -227,7 +239,7 @@ describe("gameHubIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
+      config: { confirmationSeconds: 0, rewindSeconds: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -260,7 +272,7 @@ describe("gameHubIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
+      config: { confirmationSeconds: 0, rewindSeconds: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -283,7 +295,7 @@ describe("gameHubIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
+      config: { confirmationSeconds: 0, rewindSeconds: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -293,7 +305,7 @@ describe("gameHubIndexer.syncOnce()", () => {
     expect(cursor1!.lastProcessedBlock).toBe(200);
 
     // Second sync with higher block number
-    client.getBlockNumber.mockResolvedValueOnce(500n);
+    client.state.head = 500n;
     await indexer.syncOnce();
 
     const cursor2 = await db.cursors.get(cursorId);
@@ -306,10 +318,15 @@ describe("gameHubIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 100, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
+      config: {
+        confirmationSeconds: 200,
+        rewindSeconds: 0,
+        batchSize: 10000,
+        pollIntervalMs: 999999
+      }
     });
 
-    // targetBlock = 50 - 100 = max(0, -50) = 0, fromBlock = 100 (meta.blockNumber)
+    // 200 seconds are 100 blocks: targetBlock = max(0, 50 - 100) = 0, fromBlock = 100 (meta.blockNumber)
     // So fromBlock (100) > targetBlock (0) → skip
     await indexer.syncOnce();
 
@@ -319,13 +336,13 @@ describe("gameHubIndexer.syncOnce()", () => {
 
   it("catches errors and sets lastError in status", async () => {
     const client = createMockPublicClient({});
-    client.getBlockNumber.mockRejectedValue(new Error("RPC down"));
+    client.getBlock.mockRejectedValue(new Error("RPC down"));
 
     indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
+      config: { confirmationSeconds: 0, rewindSeconds: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -359,7 +376,12 @@ describe("gameHubIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 10, batchSize: 10000, pollIntervalMs: 999999 }
+      config: {
+        confirmationSeconds: 0,
+        rewindSeconds: 20,
+        batchSize: 10000,
+        pollIntervalMs: 999999
+      }
     });
 
     await indexer.syncOnce();
@@ -368,5 +390,43 @@ describe("gameHubIndexer.syncOnce()", () => {
     // Should still only have 1 event row (put is upsert)
     const events = await db.gameHubEvents.toArray();
     expect(events.length).toBe(1);
+  });
+
+  it("waits and rereads by seconds at five blocks a second after Denim, in 200-block log ranges", async () => {
+    const client = createMockPublicClient({ blockNumber: 10_000n, timestampOf: (n) => n / 5n });
+    indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
+    const ranges = () =>
+      [
+        ...new Set(
+          client.getLogs.mock.calls.map(
+            ([call]: [{ fromBlock: bigint; toBlock: bigint }]) =>
+              `${call.fromBlock}-${call.toBlock}`
+          )
+        )
+      ] as string[];
+
+    await indexer.syncOnce();
+    // 24 seconds are 120 blocks: everything from the release block through 9,880.
+    expect(indexer.getStatus()).toMatchObject({
+      latestBlock: 10_000,
+      targetBlock: 9_880,
+      lastSyncedBlock: 9_880,
+      blocksPerSecond: 5
+    });
+    expect(ranges().at(0)).toBe("100-299");
+    expect(ranges().at(-1)).toBe("9700-9880");
+
+    client.getLogs.mockClear();
+    client.state.head = 10_050n;
+    await indexer.syncOnce();
+    // The 48-second rewind is 240 blocks before the cursor.
+    expect(ranges()).toEqual(["9641-9840", "9841-9930"]);
+  });
+
+  it("keeps the twelve-block wait of two-second blocks before Denim", async () => {
+    const client = createMockPublicClient({ blockNumber: 10_000n });
+    indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
+    await indexer.syncOnce();
+    expect(indexer.getStatus()).toMatchObject({ targetBlock: 9_988, blocksPerSecond: 0.5 });
   });
 });

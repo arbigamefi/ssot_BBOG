@@ -2061,7 +2061,7 @@
       },
       "indexerLag": {
         "label": "Indexer lag",
-        "healthyWindow": "Healthy window: {count} confirmations.",
+        "healthyWindow": "Healthy within {count} seconds.",
         "unavailable": "Confirmation window unavailable."
       },
       "safeHead": {
@@ -2090,7 +2090,7 @@
     "workerRows": {
       "health": {
         "label": "Health",
-        "currentLag": "Current lag is {count} blocks.",
+        "currentLag": "Current lag is {count} seconds.",
         "unavailable": "Lag data unavailable."
       },
       "confirmations": {
@@ -2103,7 +2103,7 @@
       },
       "batchSize": {
         "label": "Batch size",
-        "detail": "Maximum event slice processed per sweep."
+        "detail": "Blocks per log query, within the RPC's range limit."
       },
       "latestBlock": {
         "label": "Latest block",
@@ -2202,16 +2202,16 @@
         "releaseIdentity": "Release identity"
       },
       "context": {
-        "eventsPerSweep": "{count} events per sweep",
+        "blocksPerQuery": "{count} blocks per log query",
         "awaitingWorkerConfig": "Awaiting worker config",
-        "lagBlocks": "{count} lag blocks",
+        "lagSeconds": "{count} s lag",
         "lagUnknown": "Lag unknown",
         "embeddedRelease": "Embedded release"
       }
     },
     "units": {
       "blocks": "{count} blocks",
-      "events": "{count} events",
+      "seconds": "{count} s",
       "pending": "{count} pending"
     },
     "governance": {
