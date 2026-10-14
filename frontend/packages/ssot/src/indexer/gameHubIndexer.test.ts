@@ -429,4 +429,33 @@ describe("gameHubIndexer.syncOnce()", () => {
     await indexer.syncOnce();
     expect(indexer.getStatus()).toMatchObject({ targetBlock: 9_988, blocksPerSecond: 0.5 });
   });
+
+  it("keeps the confirmation and the rewind at least as long as configured across the switch to 200ms blocks", async () => {
+    // Two-second blocks up to 10,000, then five a second (the independent review's witness, 2026-10-14).
+    const denim = 10_000n;
+    const stamp = (n: bigint) => (n <= denim ? n * 2n : denim * 2n + (n - denim) / 5n);
+    const client = createMockPublicClient({ blockNumber: denim, timestampOf: stamp });
+    const release = { ...MOCK_RELEASE, meta: { ...MOCK_RELEASE.meta, blockNumber: 9_900 } };
+    indexer = createGameHubIndexer({ release: release as any, publicClient: client, db });
+    let cursor: bigint | undefined;
+    for (const head of [denim, 10_050n, 10_100n, 10_150n, 10_200n, 10_300n, 10_400n]) {
+      client.state.head = head;
+      client.getLogs.mockClear();
+      await indexer.syncOnce();
+      const status = indexer.getStatus();
+      expect(status.lastError).toBeUndefined();
+      const target = BigInt(status.targetBlock!);
+      expect(stamp(head) - stamp(target)).toBeGreaterThanOrEqual(24n);
+      const from = (client.getLogs.mock.calls as [{ fromBlock: bigint }][]).map(
+        ([call]) => call.fromBlock
+      );
+      if (cursor != null && from.length) {
+        const start = from.reduce((low, block) => (block < low ? block : low));
+        expect(stamp(cursor) - stamp(start)).toBeGreaterThanOrEqual(48n);
+      }
+      cursor = target;
+    }
+    // Once the rate has settled the target is exactly 24 seconds old.
+    expect(stamp(10_400n) - stamp(BigInt(indexer.getStatus().targetBlock!))).toBe(24n);
+  });
 });

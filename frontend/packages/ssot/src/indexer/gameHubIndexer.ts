@@ -63,6 +63,8 @@ export function createGameHubIndexer(params: {
   const config: GameHubIndexerConfig = { ...GAME_HUB_INDEXER_DEFAULTS, ...(params.config ?? {}) };
   const gameHub = getAddress(release.contracts.gameHub) as Address;
   const clock = createBlockClock(publicClient);
+  /** The block and timestamp the cursor was last set to, so the next rewind needs no read for it. */
+  let lastTarget: { number: bigint; timestamp: bigint } | undefined;
 
   const status: GameHubIndexerStatus = { chainId: release.chainId, gameHub };
   let timer: any | undefined;
@@ -72,11 +74,23 @@ export function createGameHubIndexer(params: {
       status.lastRunAt = Date.now();
       status.lastError = undefined;
 
-      const latestBlock = Number((await clock.latest()).number);
+      const head = await clock.latest();
+      const latestBlock = Number(head.number);
       status.latestBlock = latestBlock;
       status.blocksPerSecond = clock.blocksPerSecond;
 
-      const targetBlock = Math.max(0, latestBlock - clock.blocks(config.confirmationSeconds));
+      // The measured rate estimates the confirmation; the target block's own timestamp guarantees it.
+      const estimate = Math.max(0, latestBlock - clock.blocks(config.confirmationSeconds));
+      const target =
+        estimate === latestBlock
+          ? head
+          : await clock.atOrBefore(
+              head.timestamp - BigInt(config.confirmationSeconds),
+              BigInt(estimate),
+              0n
+            );
+      if (!target) return;
+      const targetBlock = Number(target.number);
       status.targetBlock = targetBlock;
 
       const cursorId = `${release.chainId}:${gameHub}`;
@@ -87,10 +101,23 @@ export function createGameHubIndexer(params: {
 
       let fromBlock = cursor ? cursor.lastProcessedBlock + 1 : releaseStartBlock;
       if (cursor && config.rewindSeconds > 0) {
-        fromBlock = Math.max(
-          releaseStartBlock,
-          cursor.lastProcessedBlock - clock.blocks(config.rewindSeconds) + 1
+        // Reread from a block at least rewindSeconds older than the cursor's, checked like the target.
+        const cursorTime =
+          lastTarget && Number(lastTarget.number) === cursor.lastProcessedBlock
+            ? lastTarget.timestamp
+            : (await publicClient.getBlock({ blockNumber: BigInt(cursor.lastProcessedBlock) }))
+                .timestamp;
+        const start = await clock.atOrBefore(
+          cursorTime - BigInt(config.rewindSeconds),
+          BigInt(
+            Math.max(
+              releaseStartBlock,
+              cursor.lastProcessedBlock - clock.blocks(config.rewindSeconds) + 1
+            )
+          ),
+          BigInt(releaseStartBlock)
         );
+        fromBlock = start ? Math.max(releaseStartBlock, Number(start.number)) : releaseStartBlock;
       }
 
       if (fromBlock > targetBlock) {
@@ -115,6 +142,7 @@ export function createGameHubIndexer(params: {
           updatedAt: Date.now()
         });
       });
+      lastTarget = target;
     } catch (e: any) {
       status.lastError = e?.message ? String(e.message) : String(e);
     }
