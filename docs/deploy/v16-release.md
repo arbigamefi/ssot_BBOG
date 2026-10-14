@@ -25,9 +25,10 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
   `test/fixtures/deploy-rehearsal.sh [new directory outside the repository] [commit]` runs the preflight, the deploy
   copy, the gated broadcast, the Safe's wiring from the copy and release-mode verification on a fork of the public Base
   Sepolia RPC, with mock Safe and guardian multisigs, an impersonated Safe and a throwaway keystore, in an environment
-  stripped of inherited endpoints, wallets and Foundry settings. It uses no key, sends nothing to a real chain and ends
-  with `E2E PASS` (about two minutes). It does not cover explorer verification, signing and packaging, Release Gate,
-  the activation or the applications.
+  stripped of inherited endpoints, wallets and Foundry settings. It uses no operator or production key (only the
+  fixtures' public test key and a throwaway keystore), sends nothing to a real chain and ends with `E2E PASS` (about
+  two minutes). It does not cover explorer verification, signing and packaging, Release Gate, the activation or the
+  applications.
 
 ## Deployment and application setup
 
