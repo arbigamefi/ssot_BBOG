@@ -1087,7 +1087,7 @@ async function queryBetReceiptRpcFallback({
       ]);
       const logs = await logsIn(["BetPlaced"], placement.fromBlock, placement.toBlock);
       if (logs.length === 0) return null;
-      const placedBlock = logs[0].blockNumber ?? placement.fromBlock;
+      const placedBlock = logs[0]?.blockNumber ?? placement.fromBlock;
       let readyFound = false;
       let terminalFrom: bigint | undefined;
       if (terminal) {
