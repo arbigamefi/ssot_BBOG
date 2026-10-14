@@ -1,9 +1,10 @@
-import type { Address, Hex, PublicClient } from "viem";
+import type { Address, Hash, Hex, PublicClient } from "viem";
 import { BANK_KEEPER_ABI } from "./abi.js";
 import { UnknownBlockGrace } from "./block-grace.js";
 import { describeError } from "./errors.js";
 import { HeadMonitor } from "./head-monitor.js";
 import type { PayableHealth } from "./health.js";
+import type { PayableState, PayableStateStore } from "./payables-state.js";
 import { splitBlockRange } from "./scan.js";
 import type { KeeperLogger } from "./types.js";
 
@@ -38,13 +39,15 @@ type TrackedPlayer = {
  * by under-funding its gas, is recorded as a payable. `claimPlayerPayable` always pays the player itself, so the
  * keeper can complete it without any authority over the funds.
  *
- * Discovery is memory-only and replays finalized blocks from the release origin after a restart. New debts
- * therefore wait for chain finality before automatic discovery. A monotonic finalized cursor preserves
- * coverage even when a small scan budget takes many passes to catch up. A finalized read below the
- * cursor scans nothing and is reported as `finalizedBehindBy`, not as an error; a finalized head that has
- * not advanced for `finalizedStallMs` is reported as `finalizedStalledSince`. Events only nominate
- * players: the on-chain balance decides whether a claim is sent. An explicitly recognized token refusal
- * leaves the debt owed and retries with backoff. Unrecognized failures require operational attention.
+ * Discovery reads finalized blocks only, so new debts wait for chain finality before automatic discovery. With a
+ * state store it saves its cursor and tracked players after each pass that changes them, and after a restart
+ * resumes from the saved block once that block's hash matches the chain; without one, or when the hash differs,
+ * it replays from the release origin. A monotonic finalized cursor preserves coverage even when a small scan
+ * budget takes many passes to catch up. A finalized read below the cursor scans nothing and is reported as
+ * `finalizedBehindBy`, not as an error; a finalized head that has not advanced for `finalizedStallMs` is
+ * reported as `finalizedStalledSince`. Events only nominate players: the on-chain balance decides whether a
+ * claim is sent. An explicitly recognized token refusal leaves the debt owed and retries with backoff.
+ * Unrecognized failures require operational attention.
  */
 export function createPayableClaimer({
   bank,
@@ -53,6 +56,7 @@ export function createPayableClaimer({
   maxChunks,
   logger,
   finalizedStallMs,
+  state,
   now = Date.now
 }: {
   bank: Address;
@@ -61,11 +65,23 @@ export function createPayableClaimer({
   maxChunks: number;
   logger?: KeeperLogger;
   finalizedStallMs?: number;
+  state?: PayableStateStore;
   now?: () => number;
 }) {
   const players = new Map<string, TrackedPlayer>();
+  const stateKey = (through: bigint, tracked: readonly Address[]) =>
+    `${through}:${tracked
+      .map((player) => player.toLowerCase())
+      .sort()
+      .join(",")}`;
   let nextBlock = origin ?? 0n;
   let scannedThrough = origin == null ? undefined : origin - 1n;
+  let stateLoaded = state == null;
+  /** Loaded, not yet checked against the chain: nothing is scanned until it is. */
+  let restoring: PayableState | undefined;
+  /** The cursor and players of the last save; a pass that changes neither saves nothing. */
+  let savedKey: string | undefined;
+  let stateError: string | undefined;
   const finality = new HeadMonitor({
     scanner: `payables:${bank}`,
     head: "finalized",
@@ -99,7 +115,34 @@ export function createPayableClaimer({
       let finalizedBehindBy: bigint | undefined;
       let finalizedStalledSince: string | undefined;
       let caughtUp = false;
+      let finalizedRead: { number: bigint; hash: Hash | null } | undefined;
       try {
+        if (!stateLoaded) {
+          restoring = await state!.load();
+          stateLoaded = true;
+        }
+        if (restoring) {
+          const saved = restoring;
+          const block = await client.getBlock({ blockNumber: saved.scannedThrough });
+          if (block.hash === saved.scannedThroughHash) {
+            nextBlock = saved.scannedThrough + 1n;
+            scannedThrough = saved.scannedThrough;
+            for (const player of saved.players)
+              players.set(player.toLowerCase(), { player, retryAt: 0, failures: 0 });
+            finality.seed(saved.scannedThrough);
+            savedKey = stateKey(saved.scannedThrough, saved.players);
+            logger?.info("casino.keeper.payables_state_restored", {
+              bank,
+              scannedThrough: saved.scannedThrough.toString(),
+              players: saved.players.length
+            });
+          } else
+            logger?.warn("casino.keeper.payables_state_ignored", {
+              bank,
+              reason: `block ${saved.scannedThrough} is ${block.hash} on this chain, not ${saved.scannedThroughHash}`
+            });
+          restoring = undefined;
+        }
         const block = await client.getBlock();
         if (block.number == null)
           throw new Error("Payable reconciliation requires a numbered chain block");
@@ -107,6 +150,7 @@ export function createPayableClaimer({
         const finalized = await client.getBlock({ blockTag: "finalized" });
         if (finalized.number == null)
           throw new Error("Payable discovery requires a numbered finalized block");
+        finalizedRead = { number: finalized.number, hash: finalized.hash };
         const observed = finality.observe(finalized.number);
         finalizedBlock = observed.target;
         finalizedBehindBy = observed.behindBy;
@@ -215,6 +259,31 @@ export function createPayableClaimer({
         }
       }
 
+      if (state && scannedThrough != null && scannedThrough >= origin) {
+        const through = scannedThrough;
+        const tracked = [...players.values()].map((item) => item.player);
+        const key = stateKey(through, tracked);
+        if (key !== savedKey) {
+          try {
+            const hash =
+              through === finalizedRead?.number
+                ? finalizedRead.hash
+                : (await client.getBlock({ blockNumber: through })).hash;
+            if (hash == null) throw new Error(`block ${through} has no hash`);
+            await state.save({
+              scannedThrough: through,
+              scannedThroughHash: hash,
+              players: tracked
+            });
+            savedKey = key;
+            stateError = undefined;
+          } catch (failure) {
+            stateError = `payable state not saved: ${describeError(failure)}`;
+            logger?.warn("casino.keeper.payables_state_save_failed", { bank, error: stateError });
+          }
+        }
+      }
+
       const tracked = [...players.values()];
       readError ??= tracked.find((item) => item.readError)?.readError;
       const claimError = tracked.find((item) => item.claimError)?.claimError;
@@ -230,8 +299,9 @@ export function createPayableClaimer({
         headBlock: head?.toString(),
         caughtUp,
         pending: tracked.filter((item) => item.zeroObservedAt == null).length,
-        error: error ?? claimError ?? tracked.find((item) => item.error)?.error,
+        error: error ?? claimError ?? stateError ?? tracked.find((item) => item.error)?.error,
         ...(claimError ? { claimError } : {}),
+        ...(stateError ? { stateError } : {}),
         ...(readError ? { readError } : {}),
         ...(transientReadError ? { transientReadError } : {})
       };

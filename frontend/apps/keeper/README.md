@@ -19,20 +19,21 @@ pnpm -C frontend keeper:start
 
 Set these environment variables before starting:
 
-| Variable                         | Purpose                                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------------------------- |
-| `KEEPER_RELEASE_PATH`            | Current release JSON: timelock, GameHub, VRFHub, PoolRegistry, pools and deployment block   |
-| `KEEPER_RPC_HTTP`                | HTTP RPC endpoint                                                                           |
-| `KEEPER_PRIVATE_KEY`             | Transaction signer key                                                                      |
-| `KEEPER_RPC_WS`                  | Optional websocket endpoint; HTTP recovery remains active                                   |
-| `KEEPER_ROLE`                    | `primary` or `backup`                                                                       |
-| `KEEPER_BACKUP_DELAY_SECONDS`    | Delay before a backup processes queued work or voids a newly eligible bet                   |
-| `KEEPER_HEALTH_PATH`             | Optional path for the atomic health JSON snapshot                                           |
-| `KEEPER_VOID_GAS_LIMIT`          | Gas limit of every `voidBet` simulation and transaction; default 11,000,000                 |
-| `KEEPER_FINALIZED_STALL_SECONDS` | Degrade finalized-head scans when finalized has not advanced this long; default 3600, 0 off |
-| `BET_INDEX_WRITE_ENABLED`        | Enable durable event, ledger, governance and recovery storage                               |
-| `BET_INDEX_DATABASE_URL`         | PostgreSQL connection string                                                                |
-| `BET_INDEX_SSL`                  | Enable SSL for PostgreSQL                                                                   |
+| Variable                         | Purpose                                                                                       |
+| -------------------------------- | --------------------------------------------------------------------------------------------- |
+| `KEEPER_RELEASE_PATH`            | Current release JSON: timelock, GameHub, VRFHub, PoolRegistry, pools and deployment block     |
+| `KEEPER_RPC_HTTP`                | HTTP RPC endpoint                                                                             |
+| `KEEPER_PRIVATE_KEY`             | Transaction signer key                                                                        |
+| `KEEPER_RPC_WS`                  | Optional websocket endpoint; HTTP recovery remains active                                     |
+| `KEEPER_ROLE`                    | `primary` or `backup`                                                                         |
+| `KEEPER_BACKUP_DELAY_SECONDS`    | Delay before a backup processes queued work or voids a newly eligible bet                     |
+| `KEEPER_HEALTH_PATH`             | Optional path for the atomic health JSON snapshot                                             |
+| `KEEPER_STATE_DIR`               | Optional directory for saved payable discovery; unset, every start replays it from the origin |
+| `KEEPER_VOID_GAS_LIMIT`          | Gas limit of every `voidBet` simulation and transaction; default 11,000,000                   |
+| `KEEPER_FINALIZED_STALL_SECONDS` | Degrade finalized-head scans when finalized has not advanced this long; default 3600, 0 off   |
+| `BET_INDEX_WRITE_ENABLED`        | Enable durable event, ledger, governance and recovery storage                                 |
+| `BET_INDEX_DATABASE_URL`         | PostgreSQL connection string                                                                  |
+| `BET_INDEX_SSL`                  | Enable SSL for PostgreSQL                                                                     |
 
 `KEEPER_CHAIN_ID`, when provided, must match the release. Local wrappers select
 a file under `frontend/deploy/casino-keeper/` using `KEEPER_ENV_FILE`; they do not
@@ -100,6 +101,15 @@ finalized blocks, using a monotonic bounded cursor. Small budgets resume the unf
 is no moving-head overlap that can age out a replacement event. Health exposes the latest head and
 finalized discovery target; `caughtUp` refers to that finalized target. Newly created debts may wait
 for chain finality before automatic discovery. Players can always trigger their own on-chain claim.
+
+With `KEEPER_STATE_DIR` set, each Bank's claimer saves its cursor, the hash of the cursor's block and
+its tracked players to `payables-<chainId>-<bank>.json` after each pass that changes them. A restart
+resumes from the cursor once that block's hash matches the chain, and scans nothing until it has read
+that block. A missing file, an unreadable one, or one for another chain, Bank or origin is logged as
+`casino.keeper.payables_state_ignored` and discovery replays from the release origin, as it does
+without the setting; a hash mismatch does the same. A failed save degrades `payables` until a save
+succeeds. Production Compose mounts the `keeper_state` volume there. After resetting a local chain,
+delete the directory: until the chain reaches the saved block again, discovery waits for it.
 
 Known debts are read at the latest numbered block and paid with `claimPlayerPayable`, which always
 pays the player's own address. A successful claim or observed zero remains tracked until a zero at a
@@ -280,17 +290,17 @@ the bet remains queued and is not yet terminal. A skipped/unknown state does
 not clear an error. Void failures are retained per bet the same way. Queue depth alone is not
 an error because healthy bets can be waiting for randomness.
 
-| `degradedBy`      | Meaning                                                                                  |
-| ----------------- | ---------------------------------------------------------------------------------------- |
-| `scan` / `ledger` | Event or provider-ledger scan failed, or the ledger's finalized head stalled             |
-| `finalize`        | Casino terminalization failed                                                            |
-| `void`            | A void attempt failed, `voidBet` ran out of gas, or a void pass could not read the chain |
-| `unbookedResult`  | A received result that cannot be booked is more than one hour old                        |
-| `recovery`        | Lifecycle coverage is incomplete or persistence/read failed                              |
-| `pools`           | Bank/Vault identity, invariant or canonical LP-state read failed                         |
-| `payables`        | Payable discovery incomplete, finalized head stalled, or state/claim delivery failed     |
-| `governance`      | Release governance mismatch, timelock indexing failed, or its finalized head stalled     |
-| `stalled`         | Scan progress or lifecycle reconciliation stopped advancing                              |
+| `degradedBy`      | Meaning                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `scan` / `ledger` | Event or provider-ledger scan failed or stopped short of its target, or the ledger's finalized head stalled  |
+| `finalize`        | Casino terminalization failed                                                                                |
+| `void`            | A void attempt failed, `voidBet` ran out of gas, or a void pass could not read the chain                     |
+| `unbookedResult`  | A received result that cannot be booked is more than one hour old                                            |
+| `recovery`        | Lifecycle coverage is incomplete or persistence/read failed                                                  |
+| `pools`           | Bank/Vault identity, invariant or canonical LP-state read failed                                             |
+| `payables`        | Payable discovery incomplete, finalized head stalled, or a balance read, claim delivery or state save failed |
+| `governance`      | Release governance mismatch, timelock indexing failed or incomplete, or its finalized head stalled           |
+| `stalled`         | Scan progress or lifecycle reconciliation stopped advancing                                                  |
 
 Lifecycle reconciliation stalled for five minutes degrades health even if normal event
 scanning still works. Logs and health errors redact RPC URLs and credentials.

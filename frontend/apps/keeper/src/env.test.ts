@@ -221,3 +221,13 @@ describe("finalized stall limit", () => {
       );
   });
 });
+
+describe("state directory", () => {
+  it("is optional and trimmed", () => {
+    expect(loadKeeperConfig(baseEnv()).stateDir).toBeUndefined();
+    expect(loadKeeperConfig(baseEnv({ KEEPER_STATE_DIR: "  " })).stateDir).toBeUndefined();
+    expect(
+      loadKeeperConfig(baseEnv({ KEEPER_STATE_DIR: " /var/lib/arbigamefi/state " })).stateDir
+    ).toBe("/var/lib/arbigamefi/state");
+  });
+});

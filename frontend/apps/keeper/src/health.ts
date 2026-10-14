@@ -81,6 +81,8 @@ export type PayableHealth = {
    */
   transientReadError?: string;
   claimError?: string;
+  /** The last save to KEEPER_STATE_DIR failed: a restart would replay discovery from the release origin. */
+  stateError?: string;
   error?: string;
 };
 
@@ -596,13 +598,19 @@ export class KeeperHealthReporter {
   async recordPayables(payables: PayableHealth[], queueDepth: number) {
     const failures = payables
       .filter(
-        (item) => !item.caughtUp || item.readError || item.claimError || item.finalizedStalledSince
+        (item) =>
+          !item.caughtUp ||
+          item.readError ||
+          item.claimError ||
+          item.stateError ||
+          item.finalizedStalledSince
       )
       .map(
         (item) =>
           `${item.bank}: ${
             item.readError ??
             item.claimError ??
+            item.stateError ??
             (item.finalizedStalledSince
               ? `finalized head ${item.finalizedBlock} has not advanced since ${item.finalizedStalledSince}`
               : `payable discovery incomplete through ${item.scannedThrough ?? "unknown"} (finalized target ${item.finalizedBlock ?? "unknown"})`)

@@ -59,6 +59,8 @@ export type KeeperConfig = {
   /** Independent full lifecycle recovery origin. */
   casinoRecoveryStartBlock?: bigint;
   healthPath?: string;
+  /** Directory of the keeper's saved discovery state (payables); unset keeps it in memory only. */
+  stateDir?: string;
   betIndexDatabaseUrl?: string;
   betIndexSsl: boolean;
   betIndexWriteEnabled: boolean;

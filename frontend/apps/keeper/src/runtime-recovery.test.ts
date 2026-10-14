@@ -1,3 +1,6 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BaseError,
@@ -885,6 +888,58 @@ describe("runtime recovery composition", () => {
     await vi.advanceTimersByTimeAsync(500);
     expect(runtime.queue.has(1n)).toBe(true);
     expect(mock.client.writeContract).not.toHaveBeenCalled();
+  });
+
+  it("resumes payable discovery after a restart from the state saved in KEEPER_STATE_DIR", async () => {
+    const bank = "0x0000000000000000000000000000000000000003" as const;
+    const asset = "0x0000000000000000000000000000000000000004" as const;
+    const stateDir = await mkdtemp(join(tmpdir(), "keeper-state-"));
+    let head = 120n;
+    mock.client.getBlock = vi.fn(async (args?: { blockNumber?: bigint }) => {
+      const number = args?.blockNumber ?? head;
+      return { number, hash: `0x${number.toString(16).padStart(64, "0")}`, timestamp: 1_000n };
+    });
+    mock.client.getBlockNumber = vi.fn(async () => head);
+    mock.client.getLogs = vi.fn(async () => []);
+    mock.client.getContractEvents = vi.fn(async () => []);
+    mock.client.readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
+      if (functionName === "openHolds") return 0n;
+      if (functionName === "MAX_OPEN_HOLDS") return 128n;
+      if (functionName === "minBetAmount") return 10_000n;
+      throw new Error(`Unexpected ${functionName}`);
+    });
+    const payableQueries = () =>
+      vi
+        .mocked(mock.client.getContractEvents as ReturnType<typeof vi.fn>)
+        .mock.calls.map(([query]) => query as { eventName: string; fromBlock: bigint })
+        .filter((query) => query.eventName === "PlayerPayableCreated");
+    const config = {
+      ...base,
+      casinoRecoveryStartBlock: 100n,
+      scanChunkBlocks: 100n,
+      vaultProviderLedgerPools: [{ bank, vault: bank, asset, poolId: 1, decimals: 6 }],
+      stateDir
+    };
+    try {
+      runtime = make(config);
+      await runtime.start();
+      await vi.waitFor(async () =>
+        expect(
+          JSON.parse(await readFile(join(stateDir, `payables-8453-${bank}.json`), "utf8"))
+        ).toMatchObject({ chainId: 8453, origin: "100", scannedThrough: "120", players: [] })
+      );
+      expect(payableQueries()[0]).toMatchObject({ fromBlock: 100n, toBlock: 120n });
+      await runtime.stop();
+      head = 130n;
+      vi.mocked(mock.client.getContractEvents as ReturnType<typeof vi.fn>).mockClear();
+      runtime = make(config);
+      await runtime.start();
+      await vi.waitFor(() =>
+        expect(payableQueries()[0]).toMatchObject({ fromBlock: 121n, toBlock: 130n })
+      );
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
   });
 
   it.each([

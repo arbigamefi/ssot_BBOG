@@ -53,6 +53,7 @@ import type { BetRead, FinalizeOutcome, KeeperConfig, KeeperEvent, KeeperLogger 
 import { BANK_KEEPER_ABI } from "./abi.js";
 import { readPoolHealth } from "./pools.js";
 import { createPayableClaimer } from "./payables.js";
+import { createPayableStateFile } from "./payables-state.js";
 import type { PayableHealth } from "./health.js";
 import {
   attemptVoid,
@@ -302,7 +303,17 @@ export function createKeeperRuntime({
       chunkSize: config.scanChunkBlocks,
       maxChunks: config.scanMaxChunksPerPass,
       logger,
-      finalizedStallMs
+      finalizedStallMs,
+      state:
+        config.stateDir && recoveryOrigin != null
+          ? createPayableStateFile({
+              stateDir: config.stateDir,
+              chainId: config.chainId,
+              bank: pool.bank,
+              origin: recoveryOrigin,
+              logger
+            })
+          : undefined
     })
   );
   /** Received results whose settlement reverts, by bet ID (ADR-0037 §7.3 operating rule 3). */

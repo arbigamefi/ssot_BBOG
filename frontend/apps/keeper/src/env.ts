@@ -205,6 +205,7 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     // Full lifecycle recovery starts at the release origin, including its first block.
     casinoRecoveryStartBlock,
     healthPath: env.KEEPER_HEALTH_PATH?.trim() || undefined,
+    stateDir: env.KEEPER_STATE_DIR?.trim() || undefined,
     betIndexDatabaseUrl: env.BET_INDEX_DATABASE_URL?.trim() || undefined,
     betIndexSsl: parseBool(env.BET_INDEX_SSL),
     betIndexWriteEnabled: parseBool(env.BET_INDEX_WRITE_ENABLED),

@@ -1,15 +1,35 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Address, PublicClient } from "viem";
+import type { Address, Hash, PublicClient } from "viem";
 import { createPayableClaimer, type PayableClaim } from "./payables.js";
+import type { PayableState } from "./payables-state.js";
 import { KeeperHealthReporter } from "./health.js";
 import type { KeeperConfig, KeeperLogger } from "./types.js";
 
 const bank = "0x0000000000000000000000000000000000000001" as const;
 const alice = "0x00000000000000000000000000000000000000a1" as Address;
 const bob = "0x00000000000000000000000000000000000000b0" as Address;
+const carol = "0x00000000000000000000000000000000000000c0" as Address;
 const hash = `0x${"ab".repeat(32)}` as const;
+const blockHash = (blockNumber: bigint) =>
+  `0x${blockNumber.toString(16).padStart(64, "0")}` as Hash;
 
-function fixture(chunkSize = 1_000n, maxChunks = 5, logger?: KeeperLogger) {
+function memoryStore(saved?: PayableState) {
+  const store = {
+    saved,
+    load: vi.fn(async () => store.saved),
+    save: vi.fn(async (state: PayableState) => {
+      store.saved = state;
+    })
+  };
+  return store;
+}
+
+function fixture(
+  chunkSize = 1_000n,
+  maxChunks = 5,
+  logger?: KeeperLogger,
+  store?: ReturnType<typeof memoryStore>
+) {
   const state = {
     head: 100n,
     events: [] as { blockNumber: bigint; player: Address; removed?: boolean }[],
@@ -17,6 +37,9 @@ function fixture(chunkSize = 1_000n, maxChunks = 5, logger?: KeeperLogger) {
     refuse: new Set<string>(),
     finalizedOwed: new Map<string, bigint>(),
     finalizedHead: undefined as bigint | undefined,
+    /** Blocks whose hash differs from `blockHash`, as on another chain. */
+    hashes: new Map<bigint, Hash>(),
+    blockNumberError: undefined as Error | undefined,
     clock: 0
   };
   const getContractEvents = vi.fn(
@@ -26,9 +49,13 @@ function fixture(chunkSize = 1_000n, maxChunks = 5, logger?: KeeperLogger) {
         .map((event) => ({ removed: event.removed ?? false, args: { player: event.player } }))
   );
   const client = {
-    getBlock: vi.fn(async (args?: { blockTag?: string }) => ({
-      number: args?.blockTag === "finalized" ? (state.finalizedHead ?? state.head) : state.head
-    })),
+    getBlock: vi.fn(async (args?: { blockTag?: string; blockNumber?: bigint }) => {
+      if (args?.blockNumber != null && state.blockNumberError) throw state.blockNumberError;
+      const number =
+        args?.blockNumber ??
+        (args?.blockTag === "finalized" ? (state.finalizedHead ?? state.head) : state.head);
+      return { number, hash: state.hashes.get(number) ?? blockHash(number) };
+    }),
     readContract: vi.fn(
       async ({ args, blockNumber }: { args: readonly [Address]; blockNumber?: bigint }) =>
         (state.finalizedHead != null && blockNumber === state.finalizedHead
@@ -49,9 +76,25 @@ function fixture(chunkSize = 1_000n, maxChunks = 5, logger?: KeeperLogger) {
     chunkSize,
     maxChunks,
     logger,
+    state: store,
     now: () => state.clock
   });
   return { state, client, claim, claimer, getContractEvents };
+}
+
+function reporter() {
+  return new KeeperHealthReporter({
+    config: {
+      pollIntervalMs: 15_000,
+      vaultProviderLedgerPools: [],
+      chainId: 84532,
+      role: "primary",
+      gameHub: bank,
+      vrfHub: bank,
+      voidGasLimit: 11_000_000n
+    } as unknown as KeeperConfig,
+    keeper: bank
+  });
 }
 
 describe("player payable claims", () => {
@@ -542,5 +585,126 @@ describe("finalized stalls and lagging nodes", () => {
     expect(recovered.readError).toBeUndefined();
     expect(recovered.transientReadError).toBeUndefined();
     expect(f.claim).toHaveBeenCalledWith(bank, alice);
+  });
+});
+
+describe("saved payable state", () => {
+  const saved = { scannedThrough: 50n, scannedThroughHash: blockHash(50n), players: [alice] };
+
+  it("resumes from a saved block whose hash matches the chain, with its players", async () => {
+    const store = memoryStore(saved);
+    const f = fixture(1_000n, 5, undefined, store);
+    f.state.events.push({ blockNumber: 60n, player: carol });
+    f.state.owed.set(alice, 5n);
+    f.state.owed.set(carol, 5n);
+    const health = await f.claimer.run(f.client, f.claim);
+    expect(f.getContractEvents).toHaveBeenCalledTimes(1);
+    expect(f.getContractEvents.mock.calls[0]?.[0]).toMatchObject({ fromBlock: 51n, toBlock: 100n });
+    expect(f.claim.mock.calls.map(([, player]) => player)).toEqual([alice, carol]);
+    expect(health).toMatchObject({ scannedThrough: "100", caughtUp: true });
+  });
+
+  it("does not rewrite a restored state, and reports a finalized read below its block", async () => {
+    const store = memoryStore(saved);
+    const f = fixture(1_000n, 5, undefined, store);
+    f.state.finalizedHead = 40n;
+    f.state.owed.set(alice, 5n);
+    f.state.refuse.add(alice);
+    const health = await f.claimer.run(f.client, f.claim);
+    expect(health).toMatchObject({ scannedThrough: "50", finalizedBehindBy: "10" });
+    expect(f.getContractEvents).not.toHaveBeenCalled();
+    expect(store.save).not.toHaveBeenCalled();
+  });
+
+  it("replays from the origin when the saved block's hash is not the chain's", async () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const f = fixture(1_000n, 5, logger, memoryStore(saved));
+    f.state.hashes.set(50n, `0x${"ee".repeat(32)}`);
+    f.state.events.push({ blockNumber: 20n, player: bob });
+    f.state.owed.set(alice, 5n);
+    f.state.owed.set(bob, 5n);
+    await f.claimer.run(f.client, f.claim);
+    expect(f.getContractEvents.mock.calls[0]?.[0]).toMatchObject({ fromBlock: 10n });
+    expect(f.claim.mock.calls.map(([, player]) => player)).toEqual([bob]);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "casino.keeper.payables_state_ignored",
+      expect.objectContaining({ bank, reason: expect.stringContaining("block 50 is 0xeeee") })
+    );
+  });
+
+  it("scans nothing until the saved block has been read, and loads the state once", async () => {
+    const store = memoryStore(saved);
+    const f = fixture(1_000n, 5, undefined, store);
+    f.state.blockNumberError = new Error("rpc unavailable");
+    const failed = await f.claimer.run(f.client, f.claim);
+    expect(failed).toMatchObject({ caughtUp: false, scannedThrough: "9" });
+    expect(failed.readError).toContain("rpc unavailable");
+    expect(f.getContractEvents).not.toHaveBeenCalled();
+    expect(store.save).not.toHaveBeenCalled();
+    f.state.blockNumberError = undefined;
+    await f.claimer.run(f.client, f.claim);
+    expect(f.getContractEvents.mock.calls[0]?.[0]).toMatchObject({ fromBlock: 51n });
+    expect(store.load).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves the cursor, its block hash and the players after each pass that changes them", async () => {
+    const store = memoryStore();
+    const f = fixture(1_000n, 5, undefined, store);
+    f.state.finalizedHead = 80n;
+    f.state.events.push({ blockNumber: 20n, player: alice });
+    f.state.owed.set(alice, 5n);
+    f.state.refuse.add(alice);
+    await f.claimer.run(f.client, f.claim);
+    expect(store.saved).toEqual({
+      scannedThrough: 80n,
+      scannedThroughHash: blockHash(80n),
+      players: [alice]
+    });
+    // Paid, but the zero is not yet finalized: neither the cursor nor the players change.
+    f.state.refuse.clear();
+    f.state.clock = 5 * 60_000;
+    await f.claimer.run(f.client, f.claim);
+    expect(f.claim).toHaveBeenCalledTimes(2);
+    expect(store.save).toHaveBeenCalledTimes(1);
+    f.state.head = 130n;
+    f.state.finalizedHead = 120n;
+    await f.claimer.run(f.client, f.claim);
+    expect(store.saved).toEqual({
+      scannedThrough: 120n,
+      scannedThroughHash: blockHash(120n),
+      players: []
+    });
+  });
+
+  it("saves a capped pass with the hash of the last block it scanned", async () => {
+    const store = memoryStore();
+    const f = fixture(10n, 1, undefined, store);
+    await f.claimer.run(f.client, f.claim);
+    expect(store.saved).toEqual({
+      scannedThrough: 19n,
+      scannedThroughHash: blockHash(19n),
+      players: []
+    });
+  });
+
+  it("degrades payables while the state cannot be saved", async () => {
+    const store = memoryStore();
+    store.save.mockRejectedValueOnce(new Error("disk full"));
+    const f = fixture(1_000n, 5, undefined, store);
+    const health = reporter();
+    await health.recordRunning(100n, 0);
+    const failed = await f.claimer.run(f.client, f.claim);
+    expect(failed.stateError).toBe("payable state not saved: Error: disk full");
+    await health.recordPayables([failed], 0);
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["payables"],
+      lastError: `${bank}: payable state not saved: Error: disk full`
+    });
+    const saved = await f.claimer.run(f.client, f.claim);
+    expect(saved.stateError).toBeUndefined();
+    expect(store.save).toHaveBeenCalledTimes(2);
+    await health.recordPayables([saved], 0);
+    expect(health.snapshot().status).toBe("running");
   });
 });

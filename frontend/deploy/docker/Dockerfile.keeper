@@ -29,7 +29,7 @@ WORKDIR /app/frontend
 RUN corepack enable \
   && groupadd --system --gid 1001 keeper \
   && useradd --system --uid 1001 --gid keeper keeper \
-  && mkdir -p /var/lib/arbigamefi/casino-keeper \
+  && mkdir -p /var/lib/arbigamefi/casino-keeper /var/lib/arbigamefi/casino-keeper-state \
   && chown -R keeper:keeper /var/lib/arbigamefi
 
 COPY --from=builder --chown=keeper:keeper /app/frontend/package.json /app/frontend/pnpm-lock.yaml /app/frontend/pnpm-workspace.yaml ./
