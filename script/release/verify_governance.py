@@ -42,8 +42,10 @@ GAMES = (('DICE', 'moduleDice'), ('COIN_TOSS', 'moduleCoinToss'), ('ROULETTE', '
 MODES = ('release', 'live')
 # GovernanceTimelock.MIN_DELAY, the release delay (ADR-0037 D7).
 RELEASE_DELAY = 259_200
-# Base's public RPC refuses eth_getLogs ranges above 200 blocks (HTTP 413).
+# Base's public RPC refuses eth_getLogs ranges above 201 blocks (HTTP 413). The operator endpoints of
+# script/tools/with-ops-rpc.sh take others: Infura 10,000 blocks, Alchemy's free tier 10 (measured 2026-10-14).
 DEFAULT_PAGE_BLOCKS = 200
+PROVIDER_PAGE_BLOCKS = {'infura': 10_000, 'alchemy': 10}
 MAX_PAGE_BLOCKS = 10_000
 # Transient provider answers worth another attempt; every other failure is final at once.
 RETRY_HTTP = frozenset({408, 425, 429}) | frozenset(range(500, 600))
@@ -113,7 +115,14 @@ def role(name):
 
 
 def page_blocks():
-    value = os.environ.get('GOVERNANCE_LOG_PAGE_BLOCKS', str(DEFAULT_PAGE_BLOCKS))
+    """GOVERNANCE_LOG_PAGE_BLOCKS; else, when RPC_URL is the OPS_RPC_URL of with-ops-rpc.sh, its provider's page size;
+    else the public RPC's."""
+    value = os.environ.get('GOVERNANCE_LOG_PAGE_BLOCKS')
+    if value is None:
+        operator = os.environ.get('OPS_RPC_URL')
+        if operator and operator == os.environ.get('RPC_URL'):
+            return PROVIDER_PAGE_BLOCKS.get(os.environ.get('OPS_RPC_PROVIDER'), DEFAULT_PAGE_BLOCKS)
+        return DEFAULT_PAGE_BLOCKS
     require(re.fullmatch(r'[1-9][0-9]*', value) is not None and int(value) <= MAX_PAGE_BLOCKS,
             f'GOVERNANCE_LOG_PAGE_BLOCKS must be 1 to {MAX_PAGE_BLOCKS}')
     return int(value)
@@ -175,6 +184,31 @@ class Rpc:
                 raise VerificationError(f'RPC {method} failed: {value} after {attempt} attempt(s)')
             self.retries += 1
             self.sleep(min(30.0, self.backoff * 2 ** (attempt - 1)))
+
+
+def last_block_at_or_before(time_of, timestamp, high, low=0, guess=1):
+    """The highest block in [low, high] whose timestamp is at most `timestamp`, or low - 1 if there is none.
+
+    Header timestamps never decrease but need not increase: since Base Denim about five consecutive blocks share one
+    second. `time_of(number)` is the block's timestamp. Steps back from `high`, first by `guess` blocks and then
+    doubling, and bisects; a good guess saves reads, a wrong one only costs them."""
+    if time_of(high) <= timestamp:
+        return high
+    hi, step = high, max(guess, 1)
+    while True:
+        lo = max(hi - step, low)
+        if time_of(lo) <= timestamp:
+            break
+        if lo == low:
+            return low - 1
+        hi, step = lo, step * 2
+    while hi - lo > 1:
+        middle = (lo + hi) // 2
+        if time_of(middle) <= timestamp:
+            lo = middle
+        else:
+            hi = middle
+    return lo
 
 
 def call(rpc, target, name, args, block):

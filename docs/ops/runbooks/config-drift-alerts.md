@@ -17,7 +17,8 @@ that LPs and players can read (ADR-0037 D5 and R-5).
 
 ## What it reports
 
-Each run reads new logs up to a confirmed block, by default 12 blocks behind the head. One `eth_getLogs` per page covers
+Each run reads new logs up to a confirmed block, by default the last block at least 24 seconds older than the head
+(`DRIFT_CONFIRMATION_SECONDS`). One `eth_getLogs` per page covers
 every release contract: the timelock, PoolRegistry, GameHub, ReferralRegistry, SettlementRouter, VRFHub, each Bank and
 Vault, and the USDC proxy. A message lists its sections in this order:
 
@@ -26,7 +27,7 @@ Vault, and the USDC proxy. A message lists its sections in this order:
 | Admission review failed                   | A scheduled call that admits an uncertified Bank, Vault, asset, hub or module, leaves the certified domain, moves governance to or from the timelock, or cannot be reviewed                                                                           | The Safe or the guardian cancels the operation before the ready time in the title. Reminded until it is cancelled or executed                                                                                                          |
 | Live release verification failed          | The deployed release no longer matches the signed release: roles, delay, governance, sentinel, guardian, pools, hubs, routes or games differ, or an active pool lacks the release activation                                                          | Treat it as an incident unless the change is part of a new release being signed. Reminded while it lasts; a recovery message follows                                                                                                   |
 | Certified domain violated                 | Live state outside the domain file: USDC implementation or code, VRF wrapper, coordinator or gas parameters, a module runtime, a game's module, callback gas or round limit, a pool's minimum bet                                                     | Release verification would fail now. Stop releases and recertify ([ADR-0006](../../adr/0006-vrf-callback-settlement.md) "Validity and recertification"). Reminded while it lasts                                                       |
-| Eligible bet not attempted                | A bet eligible for `voidBet` is still unbooked `DRIFT_VOID_ATTEMPT_BLOCKS` (300) blocks after it became eligible                                                                                                                                      | The operator's keeper attempts every eligible bet in request order (ADR-0037 §7.3 rule 3): restore it, or void the bet. Anyone may. Reminded while it lasts; cleared when the bet settles or is voided                                 |
+| Eligible bet not attempted                | A bet eligible for `voidBet` is still unbooked `DRIFT_VOID_ATTEMPT_SECONDS` (600) after it became eligible                                                                                                                                            | The operator's keeper attempts every eligible bet in request order (ADR-0037 §7.3 rule 3): restore it, or void the bet. Anyone may. Reminded while it lasts; cleared when the bet settles or is voided                                 |
 | Unbooked result older than 1 h            | A VRF result received but not booked for `DRIFT_UNBOOKED_ALERT_SECONDS` (3,600)                                                                                                                                                                       | The LP fence of that Bank stays closed. Retry the same seed and find the failure ([casino finalization](game-finalization-diffs.md)); open a void window only under the rules of ADR-0037 §7.3. Reminded while it lasts                |
 | Bet settled after a void on the same path | An eligible bet settled after another bet of the same Bank and the same window, or both by the 7-day limit, was voided                                                                                                                                | The execution order decided which bets were voided (residual R-5). Record the bets and their order for the disclosure                                                                                                                  |
 | Unbooked result reaches 7 days soon       | An unbooked result on the 7-day path is within `DRIFT_PUBLIC_VOID_WARNING_SECONDS` (12 h) of 7 days                                                                                                                                                   | After 7 days anyone may void it once a settlement attempt fails. Book it first if the failure has ended                                                                                                                                |
@@ -123,21 +124,22 @@ oldest first. Eligibility follows `GameHub.voidBet`: a bet requested at or befor
 its result was received. A bet's path is the window or the 7-day limit, whichever made it eligible first. Ages and
 deadlines use the timestamp of the confirmed block.
 
-| Rule 4                                                        | Alert                                                                     | Kind                        |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------- |
-| Every `VoidWindowOpened`                                      | Settlement anomaly                                                        | Once                        |
-| An unbooked result older than one hour                        | Unbooked result older than 1 h (`DRIFT_UNBOOKED_ALERT_SECONDS`)           | Standing: reminded, cleared |
-| Some hours before an unbooked result reaches 7 days           | Unbooked result reaches 7 days soon (`DRIFT_PUBLIC_VOID_WARNING_SECONDS`) | Once per result             |
-| An eligible bet unattempted N blocks after it became eligible | Eligible bet not attempted (`DRIFT_VOID_ATTEMPT_BLOCKS`)                  | Standing: reminded, cleared |
-| An eligible bet settles after a bet on its path was voided    | Bet settled after a void on the same path                                 | Once                        |
+| Rule 4                                                          | Alert                                                                     | Kind                        |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------- |
+| Every `VoidWindowOpened`                                        | Settlement anomaly                                                        | Once                        |
+| An unbooked result older than one hour                          | Unbooked result older than 1 h (`DRIFT_UNBOOKED_ALERT_SECONDS`)           | Standing: reminded, cleared |
+| Some hours before an unbooked result reaches 7 days             | Unbooked result reaches 7 days soon (`DRIFT_PUBLIC_VOID_WARNING_SECONDS`) | Once per result             |
+| An eligible bet unattempted 10 minutes after it became eligible | Eligible bet not attempted (`DRIFT_VOID_ATTEMPT_SECONDS`)                 | Standing: reminded, cleared |
+| An eligible bet settles after a bet on its path was voided      | Bet settled after a void on the same path                                 | Once                        |
 
 Limits of what logs and views show:
 
 - A `voidBet` that settles the bet emits the same logs as `retry` or `finalize`, so the monitor cannot tell which call
   settled it. For the not-attempted alert this does not matter: a `voidBet` that runs either settles the bet or voids
   it, and one that reverts is no attempt. An eligible bet that is still unbooked has therefore had no attempt.
-- The block count of the not-attempted alert compares the eligibility time with the timestamp of the block N blocks
-  below the confirmed one. This is exact while block timestamps rise with every block, as they do on Base.
+- The not-attempted alert compares the eligibility time with the confirmed block's timestamp minus
+  `DRIFT_VOID_ATTEMPT_SECONDS`. Block timestamps are whole seconds and never decrease; since Base Denim about five
+  consecutive blocks share one, which changes neither this comparison nor the confirmed block.
 - A late VRF response that arrives and settles in one transaction was never unbooked; the settled-after-a-void alert
   does not count it.
 - The 7-day warning is given only for bets on the 7-day path: a bet in a window's cohort is eligible already.
@@ -249,14 +251,17 @@ While the wiring waits in the queue, the monitor can run without `RELEASE_PATH` 
 then reviews the wiring as it is scheduled, and the live verification is off. Add both settings after signing and keep
 the state file.
 
-**RPC budget.** On Base, with one pool, a routine run makes 5 calls: chain id, block number, one `eth_getLogs` for
-about 150 blocks, `openHolds()` and `unbookedResultCount()`. That is about 1,450 calls a day, 288 of them
-`eth_getLogs`. The hourly domain check adds about 40 calls and the hourly live verification about 30, including 9
-`eth_getLogs` pages for 1,800 blocks: about 3,100 calls a day, about 500 of them `eth_getLogs`. While results stay
-unbooked, each run reads one or two block headers more, and each newly tracked result costs three reads. A scheduled
-operation adds a few code reads and calls per reviewed call. Catching up after downtime takes up to 25 pages per run
-(`DRIFT_MAX_BLOCKS_PER_RUN` / 200). The first verification after arming replays from the signed checkpoint, about 216
-pages per day since signing. Do not put the monitor on the keeper's RPC quota.
+**RPC budget.** Base makes five blocks a second since Denim (Base Sepolia 2026-10-21, mainnet November 2026), so a
+run every 300 seconds finds about 1,500 new blocks. Through `with-ops-rpc.sh infura` a log page is 10,000 blocks
+(`GOVERNANCE_LOG_PAGE_BLOCKS`; 200 on any other endpoint, under the 201 of Base's public RPC). With one pool a routine run
+makes about 14 calls: chain id, block number, about 9 block headers to find the confirmed block, one `eth_getLogs`,
+`openHolds()` and `unbookedResultCount()`. That is about 4,000 calls a day, 288 of them `eth_getLogs`. The hourly domain
+check adds about 40 calls and the hourly live verification about 25, with two `eth_getLogs` pages for its 18,000
+blocks: about 5,600 calls a day. While results stay unbooked, each run reads one or two block headers more, and each
+newly tracked result costs three reads. A scheduled operation adds a few code reads and calls per reviewed call.
+Catching up after downtime takes up to 5 pages per run (`DRIFT_MAX_BLOCKS_PER_RUN`, 50,000 blocks, about 2.8 hours).
+The first verification after arming replays from the signed checkpoint, about 44 pages per day since signing. Do not
+put the monitor on the keeper's RPC quota.
 
 ## Before relying on it
 

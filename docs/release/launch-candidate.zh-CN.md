@@ -45,7 +45,7 @@
 | 其余已接受的设计取舍 | 维持接受，残余清单补全并逐项披露（§9） |
 | Foundry 1.8.x | 放入本版，A7 在工作包 B 与证书 v5 之前完成 |
 | CI 的 fork RPC | A1 完成后改为公共 RPC；不另建 CI 专用 key |
-| RPC key 分配 | 仓库根 `.env` 的四个 key 按用途命名（只改名，值未变）：`INFURA_API_KEY_OPS` 用于本机部署广播、发布检查、`verify_governance` 回放与 K0-4（K0-4 在本机运行）；`ALCHEMY_API_KEY_OPS` 用于 preflight、fork 演练、gas 矩阵，以及主网上线后的备用 keeper（只走 HTTP，与主 keeper 的 HTTP 不同提供方）；`INFURA_API_KEY_PROD_KEEPER`、`ALCHEMY_API_KEY_PROD_KEEPER` 只在服务器上给生产 keeper 用（`KEEPER_RPC_HTTP`、`KEEPER_RPC_WS`）。OPS 与 PROD_KEEPER 分属不同账户，旧 Alchemy key 已重建（Owner 确认）。实施方只经 `script/tools/with-ops-rpc.sh` 使用两个 OPS key，不得使用 `*_PROD_KEEPER`；浏览器与 web 服务端用 Base 公共 RPC |
+| RPC key 分配 | 仓库根 `.env` 的四个 key 按用途命名（只改名，值未变）：`INFURA_API_KEY_OPS` 用于本机部署广播、发布检查、`verify_governance` 回放与 K0-4（K0-4 在本机运行），以及主网上线后的备用 keeper（只走 HTTP；Owner 2026-10-14 由 Alchemy 改为 Infura，与主 keeper 的 HTTP 同一服务商、不同账户）；`ALCHEMY_API_KEY_OPS` 用于 preflight、fork 演练、gas 矩阵（免费档，`eth_getLogs` 每次最多 10 块，不用于日志扫描）；`INFURA_API_KEY_PROD_KEEPER`、`ALCHEMY_API_KEY_PROD_KEEPER` 只在服务器上给生产 keeper 用（`KEEPER_RPC_HTTP`、`KEEPER_RPC_WS`）。OPS 与 PROD_KEEPER 分属不同账户，旧 Alchemy key 已重建（Owner 确认）。实施方只经 `script/tools/with-ops-rpc.sh` 使用两个 OPS key，不得使用 `*_PROD_KEEPER`；浏览器与 web 服务端用 Base 公共 RPC |
 | 文档 | 一档过程记录直接删除，二档先迁移决策与状态再删除，作为第一项工作（C2） |
 
 Owner 于 2026-10-14 追加两项决定：
@@ -307,7 +307,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | 通知外审方：r2 已被本候选版取代，`1e95d7fe…` 不会有外审；送 B0 设计预审；约定外审后修复回路 | 实施方准备，Owner 发送 | 复核 S-2 |
 | K0-4 配置漂移告警：Owner 参数、时间锁排队与 Ready 超期、`OpenHoldLimit`、作废事件；排队告警推送到 LP 可见的公开渠道 | 实施方，Owner 部署 | 已随 A11 实现（`script/ops/config-drift-monitor.py`，手册 `docs/ops/runbooks/config-drift-alerts.md`）；复核 S-9；在本机以 launchd 运行，RPC 用 `INFURA_API_KEY_OPS`（HTTP，经包装脚本）。Owner：建公开频道（bot 为管理员），安装后按手册做三项上线前测试；Mac 休眠会推迟告警，价值网络前定常驻主机 |
 | legacy Bank 退役（31 个未暂停：Base 2 个、Base Sepolia 29 个，见 `docs/ops/legacy-banks.md`）与 RPC key 轮换 | Owner | C7 已登记；key 已于 2026-10-11 按用途改名 |
-| 主网备用 keeper 只配 `KEEPER_RPC_HTTP`（`ALCHEMY_API_KEY_OPS`），不配 WS；`frontend/deploy/casino-keeper/backup.base-mainnet.env.example` 随 D 更新 | 实施方，Owner 部署 | 主网上线后。示例已改为只配 HTTP（2026-10-14；keeper 没有 WS 时只走 HTTP 轮询，`runtime-errors.test.ts` 覆盖）。注意：`ALCHEMY_API_KEY_OPS` 是免费档，`eth_getLogs` 每次最多 10 块，Denim 之后撑不起备用 keeper 的日志扫描（A13 (c)） |
+| 主网备用 keeper 只配 `KEEPER_RPC_HTTP`（`INFURA_API_KEY_OPS`，Owner 2026-10-14 由 Alchemy 改为 Infura），不配 WS；`frontend/deploy/casino-keeper/backup.base-mainnet.env.example` 随 D 更新 | 实施方，Owner 部署 | 主网上线后。示例已改为只配 HTTP（2026-10-14；keeper 没有 WS 时只走 HTTP 轮询，`runtime-errors.test.ts` 覆盖）。原定的 `ALCHEMY_API_KEY_OPS` 是免费档，`eth_getLogs` 每次最多 10 块，Denim 之后撑不起日志扫描（A13 (c)），故改用 Infura（实测每次约 10,000 块） |
 | 原生安全扫描：排期，或写明由外审取代 | Owner | 复核 S-10 |
 | 生产服务器（root@45.77.243.138）：在此之前只保留旧数据，不维护、不换 key；随新合约的全新部署一起重建，不做迁移（Owner 2026-10-12）：保留系统，删除旧应用、容器与数据（命令清单由实施方准备，Owner 在服务器上执行），再按 key 分配重新部署整套服务（web、keeper、索引、健康检查与 Telegram 告警，索引库全新建库）；`*_PROD_KEEPER` 由 Owner 运行实施方准备的脚本写入服务器环境，脚本不打印任何值 | 实施方准备与部署，Owner 删除与写入 key | 准备已随 A5 完成（2026-10-12）：手册 `docs/ops/runbooks/production-rebuild.md`（只读清点；Owner 按清点出的名字执行删除；从签名发布部署，索引库全新；Owner 写入秘密；上线前检查）；`script/ops/send-keeper-rpc.sh` 由 Owner 在本机运行，只读两个 `*_PROD_KEEPER`，经 ssh 标准输入交给 `swap-keeper-key.sh --rpc` 一次原子替换 `KEEPER_RPC_HTTP` 与 `KEEPER_RPC_WS`，不打印、不进命令行；旧主机上手工建的健康探针 systemd 单元已入库。执行在新合约部署时 |
 

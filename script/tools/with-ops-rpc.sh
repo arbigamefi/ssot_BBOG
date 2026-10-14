@@ -10,7 +10,8 @@ set -uo pipefail
 #   alchemy  ALCHEMY_API_KEY_OPS: preflight, fork rehearsal, gas matrix (NFT_GAS_RPC_URL)
 # The production keeper keys (*_PROD_KEEPER) belong to the server and are never read here.
 #
-# The command sees the endpoint as OPS_RPC_URL, for example:
+# The command sees the endpoint as OPS_RPC_URL and the provider name (infura or alchemy) as OPS_RPC_PROVIDER, for
+# example:
 #   script/tools/with-ops-rpc.sh alchemy base-sepolia bash -c 'NFT_GAS_RPC_URL="$OPS_RPC_URL" python3 ...'
 # Only this script reads the key line; the key reaches the command inside OPS_RPC_URL alone, and every output line,
 # stdout and stderr together, is printed with the key replaced. Files the command writes are not redacted: keep its
@@ -52,7 +53,7 @@ case "$provider" in
   alchemy) url="https://${chain}.g.alchemy.com/v2/${key}" ;;
 esac
 
-OPS_RPC_URL="$url" "$@" 2>&1 | OPS_REDACT_KEY="$key" OPS_REDACT_AS="<${provider}-ops-key>" python3 -I -c '
+OPS_RPC_URL="$url" OPS_RPC_PROVIDER="$provider" "$@" 2>&1 | OPS_REDACT_KEY="$key" OPS_REDACT_AS="<${provider}-ops-key>" python3 -I -c '
 import os, sys
 key, mark = os.environ["OPS_REDACT_KEY"].encode(), os.environ["OPS_REDACT_AS"].encode()
 for line in sys.stdin.buffer:

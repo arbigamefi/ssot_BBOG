@@ -167,7 +167,8 @@ class FakeChain:
 
     def __init__(self):
         self.head = 200
-        self.genesis = NOW - 2 * self.head  # Base: one block every 2 seconds; block 200 is at NOW
+        self.ms_per_block = 2000  # Base before Denim: one block every 2 seconds; block 200 is at NOW
+        self.genesis = NOW - 2 * self.head
         self.logs, self.requests = [], []
         self.calls, self.storage, self.code, self.hashes = {}, {(TOKEN, IMPL_SLOT): word(IMPL)}, {}, {}
         self.down, self.fail = False, None
@@ -223,7 +224,12 @@ class FakeChain:
         return self.hashes.get(number, word(0xb10c << 64 | number))
 
     def block_time(self, number):
-        return self.genesis + 2 * number
+        return self.genesis + number * self.ms_per_block // 1000
+
+    def denim(self, head):
+        """Base Denim: five blocks a second with whole-second timestamps; block `head` is at NOW."""
+        self.head, self.ms_per_block = head, 200
+        self.genesis = NOW - head // 5
 
     def put(self, target, name, args, result):
         self.calls[(target, encode(name, *args))] = word(result)
@@ -442,6 +448,20 @@ class ArmingAndEventsTest(MonitorFixture):
         self.chain.head = 207
         self.assertEqual(self.run_once(), 0)
         self.assertIn('MinBetAmountSet 50 BELOW the certified floor 99 (Owner policy 10000)', self.ops()[0])
+
+    def test_the_confirmed_block_is_24_seconds_old_at_200ms_blocks(self):
+        # Block 2000 is in second 400; second 376 ends with block 1884.
+        self.chain.denim(2000)
+        self.armed()
+        self.assertEqual(self.state()['cursor'], 1884)
+        self.chain.emit(BANK, 'MinBetAmountSet(uint256)', [], [50], block=1885)
+        self.chain.head = 2004  # still second 400
+        self.assertEqual(self.run_once(), 0)
+        self.assertEqual(self.ops(), [])
+        self.chain.head = 2005  # second 401: second 377, blocks 1885 to 1889, is confirmed
+        self.assertEqual(self.run_once(), 0)
+        self.assertIn('MinBetAmountSet 50 BELOW the certified floor 99 (Owner policy 10000)', self.ops()[0])
+        self.assertEqual(self.state()['cursor'], 1889)
 
     def test_min_bet_below_floor_is_both_an_event_and_a_domain_violation(self):
         self.armed()
@@ -1114,12 +1134,29 @@ class UnbookedResultTest(MonitorFixture):
         self.assertEqual(self.run_once(), 0)
         self.assertIn('ELIGIBLE BET NOT ATTEMPTED', self.ops()[-1])
         self.assertIn(f'- NEW Bank pool 1: position 9 (request 43) eligible since {MON.utc(cohort)} on the path of the '
-                      f'window opened {MON.utc(cohort)}, still unbooked 300 blocks later', self.ops()[-1])
+                      f'window opened {MON.utc(cohort)}, still unbooked 600 seconds later', self.ops()[-1])
         self.void(43, 9, block=510)
         self.chain.head = 530
         self.assertEqual(self.run_once(), 0)
         self.assertIn('Settled or voided since; previously reported as not attempted:', self.ops()[-1])
         self.assertIn('BetVoided position 9 by keeper', self.ops()[-1])
+
+    def test_an_unattempted_bet_is_alerted_600_seconds_after_eligibility_at_200ms_blocks(self):
+        self.chain.denim(1000)
+        self.armed()
+        self.receive(43, 9, self.time(996) - 2 * 86_400, block=995)
+        cohort = self.window(block=996)  # second 199
+        self.chain.head = 1200
+        self.assertEqual(self.run_once(), 0)
+        self.assertNotIn('ELIGIBLE BET NOT ATTEMPTED', self.ops()[-1])
+        # 600 seconds after second 199 is second 799; it is confirmed once the head reaches second 823 (block 4115).
+        self.chain.head = 4114
+        self.assertEqual(self.run_once(), 0)
+        self.assertFalse(any('ELIGIBLE BET NOT ATTEMPTED' in text for text in self.ops()))
+        self.chain.head = 4115
+        self.assertEqual(self.run_once(), 0)
+        self.assertIn(f'- NEW Bank pool 1: position 9 (request 43) eligible since {MON.utc(cohort)} on the path of the '
+                      f'window opened {MON.utc(cohort)}, still unbooked 600 seconds later', self.ops()[-1])
 
     def test_a_bet_eligible_by_the_seven_day_limit_is_tracked_on_that_path(self):
         self.armed()
@@ -1127,7 +1164,7 @@ class UnbookedResultTest(MonitorFixture):
         self.chain.head = 195 + 300 + 12
         self.assertEqual(self.run_once(), 0)
         self.assertIn(f'- NEW Bank pool 1: position 10 (request 44) eligible since {MON.utc(self.time(195))} on the 7-day '
-                      'path, still unbooked 300 blocks later', self.ops()[-1])
+                      'path, still unbooked 600 seconds later', self.ops()[-1])
 
     def test_a_bet_settled_after_a_void_on_the_same_path_is_reported(self):
         self.armed()

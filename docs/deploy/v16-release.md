@@ -128,7 +128,11 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    The release record signs the governance checkpoint of the signing run (`checkpointSha256`, block and block hash)
    together with the snapshot digest; the package ships it as `deployments/governance-checkpoint-latest-v16.json`,
    and the Release Gate, the image import and the drift monitor replay from that block.
-   Logs are read in pages of `GOVERNANCE_LOG_PAGE_BLOCKS` blocks (default 200, the Base public RPC limit). Transient
+   Logs are read in pages of `GOVERNANCE_LOG_PAGE_BLOCKS` blocks. The default follows the endpoint: 10,000 through
+   `with-ops-rpc.sh infura`, 10 through `with-ops-rpc.sh alchemy` (its free tier), otherwise 200, under the 201 that
+   Base's public RPC accepts. Since Base Denim (five blocks a second) a day is 432,000 blocks: 44 pages on Infura,
+   2,160 on the public RPC. The Release Gate replays on the public RPC from the signed checkpoint, so dispatch it soon
+   after signing; each day in between adds about 2,160 pages to a job limited to 90 minutes. Transient
    provider failures (HTTP 408, 425, 429 and 5xx, dropped connections) are retried with backoff (`RPC_MAX_ATTEMPTS`,
    default 6; `RPC_BACKOFF_SECONDS`, default 1); errors name the HTTP status or JSON-RPC code, never the URL. Each run
    prints `checkpointSha256` and, with `GOVERNANCE_CHECKPOINT_OUT`, writes the replayed state. A later run starts from
@@ -194,8 +198,8 @@ line.
 
 | Key | Used for |
 | --- | --- |
-| `ALCHEMY_API_KEY_OPS` (`alchemy`) | preflight and its fork rehearsal, `make timelock-batches-v16`, the gas matrix |
-| `INFURA_API_KEY_OPS` (`infura`) | broadcast, release signing (`release_v16.sh`), governance replay, K0-4 on the operator's machine |
+| `ALCHEMY_API_KEY_OPS` (`alchemy`) | preflight and its fork rehearsal, `make timelock-batches-v16`, the gas matrix; a free-tier key, so never a log scan (`eth_getLogs` takes at most 10 blocks) |
+| `INFURA_API_KEY_OPS` (`infura`) | broadcast, release signing (`release_v16.sh`), governance replay, K0-4 on the operator's machine, and the mainnet backup keeper's HTTP endpoint (Owner, 2026-10-14) |
 | `INFURA_API_KEY_PROD_KEEPER`, `ALCHEMY_API_KEY_PROD_KEEPER` | the production keeper's HTTP and WebSocket endpoints, on the server only; the Owner writes them there with `script/ops/send-keeper-rpc.sh` ([production rebuild](../ops/runbooks/production-rebuild.md)), and no local step uses them |
 
 The browser and the web server use the Base public RPCs, and so does CI, with no key.

@@ -39,6 +39,11 @@ class WithOpsRpcTest(unittest.TestCase):
             result = self.run_wrapper(provider, network, 'bash', '-c', 'echo "$OPS_RPC_URL"')
             self.assertEqual(result.stdout.strip(), endpoint)
 
+    def test_the_command_also_sees_the_provider_name(self):
+        for provider in ('infura', 'alchemy'):
+            result = self.run_wrapper(provider, 'base', 'bash', '-c', 'echo "$OPS_RPC_PROVIDER"')
+            self.assertEqual(result.stdout.strip(), provider)
+
     def test_key_reaches_the_command_only_inside_the_endpoint(self):
         result = self.run_wrapper('alchemy', 'base', 'bash', '-c', 'env | grep -c alchemyOpsTestKey456')
         self.assertEqual(result.stdout.strip(), '1')

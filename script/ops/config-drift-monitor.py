@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """K0-4: push timelock operations, configuration drift and settlement anomalies of a release to the alert channels.
 
-Every run works up to a confirmed block, the chain head minus DRIFT_CONFIRMATIONS:
+Every run works up to a confirmed block, the last one at least DRIFT_CONFIRMATION_SECONDS older than the chain head:
 
 1. Event scan. One eth_getLogs per page reads every release contract: the GovernanceTimelock, PoolRegistry, GameHub,
    ReferralRegistry, SettlementRouter, VRFHub, each Bank and Vault, and the USDC proxy. Logs after the last delivered
@@ -56,7 +56,7 @@ Every run works up to a confirmed block, the chain head minus DRIFT_CONFIRMATION
    Eligibility follows GameHub.voidBet: VOID_DELAY after the request for a bet in the cohort of a void window, not
    before the window opened, otherwise PUBLIC_VOID_DELAY after the request, and never before the result was received.
    Standing conditions: a result unbooked for DRIFT_UNBOOKED_ALERT_SECONDS; an eligible bet still unbooked
-   DRIFT_VOID_ATTEMPT_BLOCKS blocks after it became eligible (any voidBet that runs either settles the bet or voids it,
+   DRIFT_VOID_ATTEMPT_SECONDS after it became eligible (any voidBet that runs either settles the bet or voids it,
    so an eligible bet that is still unbooked has had no attempt); and a VRFHub unbookedResultCount that differs from
    the tracked results, which covers results received before the monitor armed. One-shot alerts: every
    VoidWindowOpened, an unbooked result on the 7-day path DRIFT_PUBLIC_VOID_WARNING_SECONDS before it reaches 7 days,
@@ -81,15 +81,15 @@ Environment (config-drift-alert.sh sources ALERT_CONFIG_FILE first):
   RELEASE_TOOLS_DIR                directory of verify_governance.py, verify_callback_provider.py and the domain file
                                    (default: this script's directory when they are there, else ../../script/release)
   DRIFT_STATE_FILE                 state file (default /var/lib/arbigamefi/config-drift.state.json)
-  DRIFT_CONFIRMATIONS              blocks behind the head (12)
-  DRIFT_MAX_BLOCKS_PER_RUN         blocks scanned per run (5000)
+  DRIFT_CONFIRMATION_SECONDS       age of the confirmed block below the head (24)
+  DRIFT_MAX_BLOCKS_PER_RUN         blocks scanned per run (50000)
   DRIFT_DOMAIN_CHECK_SECONDS       domain check interval (3600)
   DRIFT_GOVERNANCE_CHECK_SECONDS   live verification interval (3600)
   DRIFT_READY_WARNING_SECONDS      warning before an operation becomes ready (43200)
   DRIFT_OPEN_HOLDS_ALERT           open holds of one Bank that raise the capacity alert (96, of 128)
   DRIFT_UNBOOKED_ALERT_SECONDS     age of an unbooked result that raises its alert (3600)
   DRIFT_PUBLIC_VOID_WARNING_SECONDS  warning before an unbooked result reaches 7 days (43200)
-  DRIFT_VOID_ATTEMPT_BLOCKS        blocks an eligible bet may stay unattempted (300)
+  DRIFT_VOID_ATTEMPT_SECONDS       time an eligible bet may stay unattempted (600)
   DRIFT_RESULT_READS_PER_RUN       unbooked results whose details are read per run (32)
   DRIFT_ALERT_AFTER_FAILURES       consecutive failed runs before the stall alert (3)
   ALERT_REMIND_SECONDS             reminder interval (21600)
@@ -98,7 +98,8 @@ Environment (config-drift-alert.sh sources ALERT_CONFIG_FILE first):
   TELEGRAM_PUBLIC_CHAT_ID          public channel of the same bot, for timelock operations, admission reviews and voids
   ALERT_PUBLIC_WEBHOOK_URL         public webhook for the same messages
   TELEGRAM_API_BASE                Telegram API base (default https://api.telegram.org)
-  GOVERNANCE_LOG_PAGE_BLOCKS       blocks per eth_getLogs page (verify_governance; default 200)
+  GOVERNANCE_LOG_PAGE_BLOCKS       blocks per eth_getLogs page (verify_governance; default: the provider's under
+                                   with-ops-rpc.sh, Infura 10000, else 200)
   RPC_MAX_ATTEMPTS, RPC_BACKOFF_SECONDS   RPC retries (verify_governance.Rpc; defaults 6 and 1)
 Nothing printed or delivered contains the RPC URL, a webhook URL or the bot token.
 """
@@ -126,8 +127,8 @@ RELEASE_DIR = Path(os.environ.get('RELEASE_TOOLS_DIR')
 sys.path.insert(0, str(RELEASE_DIR))
 from verify_governance import (  # noqa: E402
     CHECKPOINT_SCHEMA, GAMES, ZERO, Release, Rpc, VerificationError, address, call, checkpoint_document, data_words,
-    decode_state, events, hex_word, load_checkpoint, quantity, replay, require, role, signature, verify_permissions,
-    word)
+    decode_state, events, hex_word, last_block_at_or_before, load_checkpoint, quantity, replay, require, role,
+    signature, verify_permissions, word)
 from verify_callback_provider import verify_provider  # noqa: E402
 
 NOTIFY = HERE / 'alert-notify.py'
@@ -384,8 +385,8 @@ class Config:
             'snapshot lacks the release parameters')
         self.rpc_url = env['RPC_URL']
         self.state_file = Path(env.get('DRIFT_STATE_FILE', '/var/lib/arbigamefi/config-drift.state.json'))
-        self.confirmations = setting(env, 'DRIFT_CONFIRMATIONS', 12, 0)
-        self.max_blocks = setting(env, 'DRIFT_MAX_BLOCKS_PER_RUN', 5000)
+        self.confirmation_seconds = setting(env, 'DRIFT_CONFIRMATION_SECONDS', 24, 0)
+        self.max_blocks = setting(env, 'DRIFT_MAX_BLOCKS_PER_RUN', 50000)
         self.domain_interval = setting(env, 'DRIFT_DOMAIN_CHECK_SECONDS', 3600, 0)
         self.governance_interval = setting(env, 'DRIFT_GOVERNANCE_CHECK_SECONDS', 3600, 0)
         self.warning_seconds = setting(env, 'DRIFT_READY_WARNING_SECONDS', 43200, 0)
@@ -394,7 +395,7 @@ class Config:
         self.remind_seconds = setting(env, 'ALERT_REMIND_SECONDS', 21600, 0)
         self.unbooked_seconds = setting(env, 'DRIFT_UNBOOKED_ALERT_SECONDS', 3600)
         self.public_void_warning = setting(env, 'DRIFT_PUBLIC_VOID_WARNING_SECONDS', 43200, 0)
-        self.attempt_blocks = setting(env, 'DRIFT_VOID_ATTEMPT_BLOCKS', 300)
+        self.attempt_seconds = setting(env, 'DRIFT_VOID_ATTEMPT_SECONDS', 600)
         self.result_reads = setting(env, 'DRIFT_RESULT_READS_PER_RUN', 32)
         require(self.holds_alert <= MAX_OPEN_HOLDS, 'DRIFT_OPEN_HOLDS_ALERT exceeds the Bank limit of 128')
         token = env.get('TELEGRAM_BOT_TOKEN', '').strip()
@@ -1387,14 +1388,12 @@ def result_conditions(ctx, voids, caught_up, report):
         if since <= now:
             eligible.append((key, entry, path, since))
     if eligible:
-        # Block timestamps rise with every block, so a bet eligible at the timestamp of block (head - N) has been
-        # eligible for at least N blocks.
-        lag = ctx.time(max(ctx.block - config.attempt_blocks, 0))
+        lag = ctx.time(ctx.block) - config.attempt_seconds
         for key, entry, path, since in eligible:
             if since <= lag:
                 idle[key] = (f'{names.thing("Bank", entry["bank"])}: position {entry["betId"]} (request {key}) '
                              f'eligible since {utc(since)} on {path_label(path)}, still unbooked '
-                             f'{config.attempt_blocks} blocks later')
+                             f'{config.attempt_seconds} seconds later')
     untracked = {}
     for _, bank, _ in ctx.release.pools.values():
         count = call(ctx.rpc, address(ctx.snap['vrfHub']), 'unbookedResultCount(address)', [bank], ctx.block)
@@ -1649,8 +1648,14 @@ def run(config, rpc, env, now=None, dry_run=False, from_block=None, opener=OPEN)
     rpc, chain, new, report = GuardedRpc(rpc), config.chain, copy.deepcopy(state), Report()
     try:
         require(quantity(rpc('eth_chainId', [])) == chain, 'RPC is on another chain')
-        safe = quantity(rpc('eth_blockNumber', [])) - config.confirmations
-        require(safe >= config.snapshot['blockNumber'], 'chain is behind the release snapshot')
+        ctx = Context(config, rpc, None)
+        head = quantity(rpc('eth_blockNumber', []))
+        floor = config.snapshot['blockNumber']
+        # Base makes five blocks a second since Denim: start that far back.
+        safe = last_block_at_or_before(ctx.time, ctx.time(head) - config.confirmation_seconds, head, floor - 1,
+                                       5 * config.confirmation_seconds + 5)
+        require(safe >= floor, 'chain is behind the release snapshot')
+        ctx.block = safe
         armed = 'cursor' not in state
         if armed:
             # First run: arm at an explicit block or at the confirmed head; history before it is the release's.
@@ -1659,7 +1664,6 @@ def run(config, rpc, env, now=None, dry_run=False, from_block=None, opener=OPEN)
         else:
             cursor = state['cursor']
         end = min(safe, cursor + config.max_blocks)
-        ctx = Context(config, rpc, safe)
         rows = events(rpc, {target: WATCHED for target in config.watch}, cursor + 1, end) if end > cursor else []
         operation_rows, findings, folded, result_rows = scan(ctx, rows)
         voids = new['voids']

@@ -539,6 +539,29 @@ class RpcRetryTests(unittest.TestCase):
         _, sleeps, _, _ = self.run_rpc([http_error(429)] * 6, backoff=10)
         self.assertEqual(sleeps, [10, 20, 30, 30, 30])
 
+    def test_the_operator_endpoint_sets_the_page_size(self):
+        wrapper = {'OPS_RPC_URL': 'https://ops.invalid', 'RPC_URL': 'https://ops.invalid'}
+        for provider, size in (('infura', 10_000), ('alchemy', 10), ('other', CHECK.DEFAULT_PAGE_BLOCKS)):
+            with self.subTest(provider=provider), patch.dict(os.environ, {**wrapper, 'OPS_RPC_PROVIDER': provider}):
+                os.environ.pop('GOVERNANCE_LOG_PAGE_BLOCKS', None)
+                self.assertEqual(CHECK.page_blocks(), size)
+        with patch.dict(os.environ, {**wrapper, 'OPS_RPC_PROVIDER': 'infura', 'RPC_URL': 'https://sepolia.base.org'}):
+            os.environ.pop('GOVERNANCE_LOG_PAGE_BLOCKS', None)
+            self.assertEqual(CHECK.page_blocks(), CHECK.DEFAULT_PAGE_BLOCKS)  # another endpoint than the wrapper's
+        with patch.dict(os.environ, {**wrapper, 'OPS_RPC_PROVIDER': 'infura', 'GOVERNANCE_LOG_PAGE_BLOCKS': '50'}):
+            self.assertEqual(CHECK.page_blocks(), 50)
+
+    def test_last_block_at_or_before_with_whole_second_timestamps(self):
+        # Before Base Denim one block every 2 seconds; since, five blocks share each second.
+        for ms in (2000, 200):
+            times = [1_000 + number * ms // 1000 for number in range(400)]
+            for target in range(990, times[-1] + 2):
+                expected = max([n for n in range(10, 400) if times[n] <= target], default=9)
+                for guess in (1, 7, 125, 1_000):
+                    with self.subTest(ms=ms, target=target, guess=guess):
+                        self.assertEqual(CHECK.last_block_at_or_before(times.__getitem__, target, 399, 10, guess),
+                                         expected)
+
     def test_page_size_comes_from_the_environment_within_bounds(self):
         for value_ in ('0', '10001', 'abc', '-5'):
             with self.subTest(value=value_), patch.dict(os.environ, GOVERNANCE_LOG_PAGE_BLOCKS=value_):
