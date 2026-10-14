@@ -92,7 +92,7 @@ function gameRead(functionName: string): unknown {
 function mockPublicClient(overrides?: Record<string, any>) {
   return {
     getGasPrice: vi.fn().mockResolvedValue(1n),
-    getBlock: vi.fn().mockResolvedValue({ timestamp: 1_700_000_000n }),
+    getBlock: vi.fn().mockResolvedValue({ number: 130n, timestamp: 1_700_000_000n }),
     getContractEvents: vi.fn().mockResolvedValue([]),
     getBlockNumber: vi.fn().mockResolvedValue(130n),
     getLogs: vi.fn().mockResolvedValue([]),
@@ -505,7 +505,7 @@ describe("createSSOTSDK", () => {
       protocolFeeAccrual: 2_000n,
       refundAmount: 100_000n
     });
-    pub.getBlockNumber.mockRejectedValueOnce(new Error("RPC unavailable"));
+    pub.getBlock.mockRejectedValueOnce(new Error("RPC unavailable"));
 
     expect(await sdk.gameHub.getTerminalProof(9n)).toEqual({
       kind: "settled",
@@ -520,66 +520,99 @@ describe("createSSOTSDK", () => {
     });
   });
 
-  it("scans recent GameHub terminal proof ranges backwards in RPC-safe chunks", async () => {
-    pub.readContract.mockResolvedValueOnce({
-      state: 4,
+  describe("terminal transaction lookup", () => {
+    const NOW = 1_700_000_000n;
+    const settlementTx =
+      "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" as Hex;
+    const economics = {
       payoutGross: 1_000_000n,
       payoutNet: 980_000n,
       refundAmount: 0n,
       feeOnPayout: 20_000n,
       protocolFeeAccrual: 10_000n
-    });
-    const settlementTx =
-      "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" as Hex;
-    pub.getContractEvents.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      {
-        args: {
-          positionId: 8n,
-          payoutGross: 1_000_000n,
-          payoutNet: 980_000n,
-          feeOnPayout: 20_000n,
-          protocolFeeAccrual: 10_000n
-        },
-        transactionHash: settlementTx,
-        blockNumber: 119n,
-        logIndex: 2
-      }
-    ]);
-
-    const proof = await sdk.gameHub.getTerminalProof(8n);
-
-    // Storage names the terminal kind, so each chunk costs one log query for that event only.
-    expect(pub.getContractEvents).toHaveBeenCalledTimes(2);
-    expect(pub.getContractEvents).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        eventName: "BetFinalized",
-        args: { positionId: 8n },
-        fromBlock: 121n,
-        toBlock: 130n
-      })
-    );
-    expect(pub.getContractEvents).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        eventName: "BetFinalized",
-        args: { positionId: 8n },
-        fromBlock: 111n,
-        toBlock: 120n
-      })
-    );
-    expect(proof).toEqual({
+    };
+    const terminal = { state: 4, ...economics };
+    const unlocated = {
       kind: "settled",
-      settlement: {
-        txHash: settlementTx,
-        blockNumber: 119n,
-        payoutGross: 1_000_000n,
-        payoutNet: 980_000n,
-        feeOnPayout: 20_000n,
-        protocolFeeAccrual: 10_000n,
-        refundAmount: 0n,
-        payment: { status: "unknown", amount: "980000" }
-      }
+      settlement: { ...economics, payment: { status: "unknown", amount: "980000" } }
+    };
+    // Five blocks a second up to block 2,000 at NOW, as on Base since Denim.
+    function chain(resolvedAt: bigint) {
+      pub.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+        if (functionName === "getBetTerminal") return terminal;
+        if (functionName === "getBet") return { resolvedAt };
+        throw new Error(`unexpected ${functionName}`);
+      });
+      pub.getBlock.mockImplementation(async (args?: { blockNumber?: bigint }) => {
+        const number = args?.blockNumber ?? 2_000n;
+        return { number, timestamp: NOW - (2_000n - number) / 5n };
+      });
+    }
+    const ranges = () =>
+      pub.getContractEvents.mock.calls.map(
+        ([call]: [{ eventName: string; fromBlock: bigint; toBlock: bigint }]) => [
+          call.eventName,
+          call.fromBlock,
+          call.toBlock
+        ]
+      );
+
+    it("goes back from the latest block in 200-block chunks to the terminal's second", async () => {
+      chain(NOW - 100n);
+      pub.getContractEvents
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            args: { positionId: 8n },
+            transactionHash: settlementTx,
+            blockNumber: 1_500n,
+            logIndex: 2
+          }
+        ]);
+
+      const proof = await sdk.gameHub.getTerminalProof(8n);
+
+      // Storage names the terminal kind, so each chunk costs one log query for that event only.
+      expect(ranges()).toEqual([
+        ["BetFinalized", 1_801n, 2_000n],
+        ["BetFinalized", 1_601n, 1_800n],
+        ["BetFinalized", 1_401n, 1_600n]
+      ]);
+      expect(proof).toMatchObject({
+        kind: "settled",
+        settlement: { txHash: settlementTx, blockNumber: 1_500n, payoutNet: 980_000n }
+      });
+    });
+
+    it("stops after the chunk that reaches the terminal's second", async () => {
+      chain(NOW - 50n);
+      const proof = await sdk.gameHub.getTerminalProof(8n);
+      // Block 1,601 is 79 seconds old: nothing before it can hold the terminal.
+      expect(ranges()).toEqual([
+        ["BetFinalized", 1_801n, 2_000n],
+        ["BetFinalized", 1_601n, 1_800n]
+      ]);
+      expect(proof).toEqual(unlocated);
+    });
+
+    it("does not search logs for a terminal older than the lookback window", async () => {
+      chain(NOW - 501n);
+      expect(await sdk.gameHub.getTerminalProof(8n)).toEqual(unlocated);
+      expect(pub.getContractEvents).not.toHaveBeenCalled();
+    });
+
+    it("never searches below the release block", async () => {
+      chain(0n);
+      pub.getBlock.mockImplementation(async (args?: { blockNumber?: bigint }) => ({
+        number: args?.blockNumber ?? 450n,
+        timestamp: NOW
+      }));
+      await sdk.gameHub.getTerminalProof(8n);
+      expect(ranges()).toEqual([
+        ["BetFinalized", 251n, 450n],
+        ["BetFinalized", 100n, 250n]
+      ]);
     });
   });
 

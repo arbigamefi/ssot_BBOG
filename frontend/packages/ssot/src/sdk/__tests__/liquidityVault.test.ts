@@ -110,13 +110,17 @@ describe("NFT liquidity SDK", () => {
   it("keeps Vault history scans within RPC range limits", async () => {
     const f = nftFixture();
     f.pub.getBlockNumber.mockResolvedValue(5_000n);
-    await f.sdk.vault.getProviderLedger(1, OWNER, { startBlock: 0 });
-    expect(f.pub.getLogs).toHaveBeenCalledTimes(3);
-    for (const [params] of f.pub.getLogs.mock.calls as unknown as [
-      { fromBlock: bigint; toBlock: bigint }
-    ][]) {
-      expect(params.toBlock - params.fromBlock).toBeLessThanOrEqual(1_900n);
-    }
+    await f.sdk.vault.getProviderLedger(1, OWNER, { startBlock: 4_550 });
+    // Base's public RPC takes 201 blocks per eth_getLogs, first and last included.
+    expect(
+      (f.pub.getLogs.mock.calls as unknown as [{ fromBlock: bigint; toBlock: bigint }][]).map(
+        ([params]) => [params.fromBlock, params.toBlock]
+      )
+    ).toEqual([
+      [4_801n, 5_000n],
+      [4_601n, 4_800n],
+      [4_550n, 4_600n]
+    ]);
   });
   it("does not sign when shared free capital changes before withdrawal simulation", async () => {
     const f = nftFixture();

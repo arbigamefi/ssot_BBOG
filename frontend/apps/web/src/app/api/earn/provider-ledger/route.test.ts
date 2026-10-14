@@ -140,7 +140,7 @@ describe("provider cash flow deployment identity", () => {
     expect(body.coverage).toEqual({ fromBlock: null, toBlock: 20, complete: false });
   });
 
-  it("paginates empty RPC windows instead of claiming a complete empty history", async () => {
+  it("paginates empty 2,000-block RPC windows instead of claiming a complete empty history", async () => {
     mocks.store = null;
     mocks.scan.mockResolvedValue([]);
     const { GET } = await import("./route");
@@ -153,13 +153,13 @@ describe("provider cash flow deployment identity", () => {
     const body = await response.json();
     expect(body).toMatchObject({
       rows: [],
-      coverage: { fromBlock: 3101, toBlock: 5000, complete: false },
-      page: { hasMore: true, nextCursor: { beforeBlock: 3101, beforeLogIndex: 0 } }
+      coverage: { fromBlock: 3001, toBlock: 5000, complete: false },
+      page: { hasMore: true, nextCursor: { beforeBlock: 3001, beforeLogIndex: 0 } }
     });
     expect(mocks.scan).toHaveBeenCalledWith(
       1,
       owner,
-      expect.objectContaining({ startBlock: 3101, endBlock: 5000 })
+      expect.objectContaining({ startBlock: 3001, endBlock: 5000 })
     );
     const last = await GET(
       new Request(

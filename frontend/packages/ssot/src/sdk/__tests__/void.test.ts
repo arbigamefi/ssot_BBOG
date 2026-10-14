@@ -108,8 +108,8 @@ function fixture(options: { wallet?: boolean } = {}) {
   };
   const pub = {
     getBlockNumber: vi.fn().mockResolvedValue(500n),
-    getBlock: vi.fn(async ({ blockNumber }: { blockNumber: bigint }) => ({
-      number: blockNumber,
+    getBlock: vi.fn(async (args?: { blockNumber?: bigint }) => ({
+      number: args?.blockNumber ?? 500n,
       timestamp: state.now
     })),
     readContract: vi.fn(
@@ -363,6 +363,8 @@ describe("void of an unbookable result (ADR-0037 §7)", () => {
   it("proves a voided terminal: stake as refundAmount, zero payouts, BetVoided location", async () => {
     const f = fixture();
     f.state.betState = 6;
+    // Within the lookback window of the void's block (resolvedAt).
+    f.state.now = REQUESTED_AT + DAY + 10n;
     f.pub.getContractEvents.mockResolvedValue([
       {
         args: { positionId: 7n, caller: KEEPER, stake: STAKE, settlementErrorPrefix: PREFIX },
@@ -392,12 +394,13 @@ describe("void of an unbookable result (ADR-0037 §7)", () => {
     );
   });
 
-  it("keeps the stored void economics when its event is outside the scanned range", async () => {
+  it("keeps the stored void economics without a location once the void is older than the lookback", async () => {
     const f = fixture();
     f.state.betState = 6;
     expect(await f.sdk.gameHub.getTerminalProof(7n)).toEqual({
       kind: "voided",
       refund: { refundAmount: STAKE, payment: { status: "unknown", amount: STAKE.toString() } }
     });
+    expect(f.pub.getContractEvents).not.toHaveBeenCalled();
   });
 });

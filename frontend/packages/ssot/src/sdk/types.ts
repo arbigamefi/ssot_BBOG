@@ -253,11 +253,15 @@ export interface SSOTLiquidityVaultAPI {
   addDeposit(poolId: number, assets: bigint, owner?: Address): Promise<TxResult>;
   /** Only the current NFT owner may withdraw; assets are paid to that owner. */
   withdrawDeposit(poolId: number, depositId: bigint, percent: bigint): Promise<TxResult>;
+  /**
+   * Reads the Vault's logs from `startBlock` back from `endBlock` (default latest) in 200-block queries: the caller
+   * states the range, since its RPC cost grows with the block count. The durable index serves full history.
+   */
   getProviderLedger(
     poolId: number,
     owner: Address,
-    opts?: {
-      startBlock?: number;
+    opts: {
+      startBlock: number;
       endBlock?: number;
       beforeBlock?: number;
       beforeLogIndex?: number;

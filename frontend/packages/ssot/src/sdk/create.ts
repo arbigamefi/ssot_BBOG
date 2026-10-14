@@ -37,13 +37,14 @@ import type {
 import { toDomainError } from "./errors";
 import { planExactApproval } from "./approval";
 
-const GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS = 250n;
-const GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS = 10n;
+// Terminal transactions are located by logs for this long after the terminal block; storage proves older ones.
+const GAME_HUB_TERMINAL_PROOF_LOOKBACK_SECONDS = 500n;
+// One eth_getLogs range within Base's public RPC limit (201 blocks, first and last included).
+const GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS = 200n;
 const ALLOWANCE_CONFIRMATION_ATTEMPTS = 6;
 const ALLOWANCE_CONFIRMATION_DELAY_MS = 500;
-// Base public RPC rejects eth_getLogs ranges above 2,000 blocks. Keep this
-// below the cap to avoid inclusive range interpretation differences.
-const PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS = 1_900n;
+// Blocks per eth_getLogs, first and last included: Base's public RPC takes 201 (HTTP 413 above).
+const PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS = 200n;
 const PROVIDER_LEDGER_DEFAULT_LIMIT = 50;
 
 /**
@@ -291,30 +292,6 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     return { open: BigInt(open as bigint), max: BigInt(max as bigint) };
   }
 
-  function terminalProofRanges(latestBlock: bigint) {
-    const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
-    const lookbackStart =
-      latestBlock > GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS
-        ? latestBlock - GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS
-        : 0n;
-    const fromBlock = lookbackStart > releaseBlock ? lookbackStart : releaseBlock;
-    const ranges: Array<{ fromBlock: bigint; toBlock: bigint }> = [];
-    let cursor = latestBlock;
-
-    while (cursor >= fromBlock) {
-      const rangeFrom =
-        cursor + 1n > GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS
-          ? cursor + 1n - GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS
-          : 0n;
-      const boundedFrom = rangeFrom > fromBlock ? rangeFrom : fromBlock;
-      ranges.push({ fromBlock: boundedFrom, toBlock: cursor });
-      if (boundedFrom === fromBlock) break;
-      cursor = boundedFrom - 1n;
-    }
-
-    return ranges;
-  }
-
   const TERMINAL_EVENT_NAMES = {
     settled: "BetFinalized",
     refunded: "BetRefunded",
@@ -347,6 +324,41 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       if (blockA !== blockB) return blockA > blockB ? -1 : 1;
       return Number(b.logIndex ?? 0) - Number(a.logIndex ?? 0);
     });
+  }
+
+  /**
+   * The latest terminal event of a recent terminal. `resolvedAt` is the terminal block's timestamp, and Base can
+   * give several blocks one timestamp, so chunks go back from the latest block until one starts before that second.
+   * A terminal older than the lookback window is not searched.
+   */
+  async function findTerminalEvent(betId: bigint, kind: GameHubTerminalProof["kind"]) {
+    const [latest, bet] = await Promise.all([
+      publicClient.getBlock(),
+      publicClient.readContract({
+        address: gameHubAddress,
+        abi: GAME_HUB_ABI,
+        functionName: "getBet",
+        args: [betId]
+      }) as Promise<{ resolvedAt?: bigint | number }>
+    ]);
+    if (latest.number == null) return undefined;
+    const resolvedAt = BigInt(bet?.resolvedAt ?? 0);
+    const windowStart = latest.timestamp - GAME_HUB_TERMINAL_PROOF_LOOKBACK_SECONDS;
+    if (resolvedAt !== 0n && resolvedAt < windowStart) return undefined;
+    const earliest = resolvedAt > windowStart ? resolvedAt : windowStart;
+    const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
+    let toBlock = latest.number;
+    while (toBlock >= releaseBlock) {
+      const start = toBlock + 1n - GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS;
+      const fromBlock = start > releaseBlock ? start : releaseBlock;
+      const [event] = await readTerminalEventsInRange({ betId, kind, fromBlock, toBlock });
+      if (event) return event;
+      if (fromBlock === releaseBlock) return undefined;
+      const first = await publicClient.getBlock({ blockNumber: fromBlock });
+      if (first.timestamp < earliest) return undefined;
+      toBlock = fromBlock - 1n;
+    }
+    return undefined;
   }
 
   async function readTerminalReceipt(betId: bigint): Promise<GameHubTerminalProof | null> {
@@ -1337,12 +1349,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       // Terminal storage proves economics. Logs locate the transaction for delivery evidence.
       let latest: any;
       try {
-        const latestBlock = await publicClient.getBlockNumber();
-        for (const range of terminalProofRanges(latestBlock)) {
-          const events = await readTerminalEventsInRange({ betId, kind: terminal.kind, ...range });
-          latest = events[0];
-          if (latest) break;
-        }
+        latest = await findTerminalEvent(betId, terminal.kind);
       } catch {
         return withPlayerPayment(betId, terminal);
       }
@@ -1797,16 +1804,11 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       const pool = resolveBankPool(poolId);
       const identity = owner.toLowerCase();
       const latest =
-        opts?.endBlock != null
+        opts.endBlock != null
           ? BigInt(opts.endBlock)
           : await publicClient.getBlockNumber({ cacheTime: 0 });
-      const fromBlock =
-        opts?.startBlock != null
-          ? BigInt(opts.startBlock)
-          : latest > 100_000n
-            ? latest - 100_000n
-            : 0n;
-      const limit = opts?.limit ?? PROVIDER_LEDGER_DEFAULT_LIMIT;
+      const fromBlock = BigInt(opts.startBlock);
+      const limit = opts.limit ?? PROVIDER_LEDGER_DEFAULT_LIMIT;
       if (
         !Number.isInteger(limit) ||
         limit < 1 ||
@@ -1818,13 +1820,13 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       await verifyVaultBinding(publicClient, pool, latest);
       const entries: VaultProviderLedgerEntry[] = [];
       let end =
-        opts?.beforeBlock != null && BigInt(opts.beforeBlock) < latest
+        opts.beforeBlock != null && BigInt(opts.beforeBlock) < latest
           ? BigInt(opts.beforeBlock)
           : latest;
       while (end >= fromBlock && entries.length < limit) {
         const start =
-          end - fromBlock > PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS
-            ? end - PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS
+          end - fromBlock >= PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS
+            ? end + 1n - PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS
             : fromBlock;
         const logs = await publicClient.getLogs({
           address: pool.vault,
@@ -1841,7 +1843,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           )
             continue;
           if (
-            opts?.beforeBlock != null &&
+            opts.beforeBlock != null &&
             (log.blockNumber > BigInt(opts.beforeBlock) ||
               (log.blockNumber === BigInt(opts.beforeBlock) &&
                 log.logIndex >= (opts.beforeLogIndex ?? 0)))

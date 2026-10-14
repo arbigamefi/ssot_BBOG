@@ -26,6 +26,9 @@ export const runtime = "nodejs";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
+// Without the durable index, one page reads this many blocks before its cursor: ten 200-block log queries on
+// Base's public RPC, about seven minutes of chain at five blocks a second. Coverage says how far it reached.
+const PROVIDER_LEDGER_RPC_PAGE_BLOCKS = 2_000;
 let durableBetIndexStore: BetIndexStore | null | undefined;
 let durableBetIndexInitialization: Promise<void> | null = null;
 
@@ -271,7 +274,7 @@ export async function GET(request: Request) {
     const shouldScan = store == null || startBlock != null;
     const origin = Math.max(releaseResult.release.meta?.blockNumber ?? 0, startBlock ?? 0);
     const scanEnd = Math.min(endBlock, beforeBlock ?? endBlock);
-    const scanStart = Math.max(origin, scanEnd - 1_899);
+    const scanStart = Math.max(origin, scanEnd + 1 - PROVIDER_LEDGER_RPC_PAGE_BLOCKS);
     const scannedEntries =
       shouldScan && scanEnd >= origin
         ? await sdk.vault.getProviderLedger(poolId, owner, {
