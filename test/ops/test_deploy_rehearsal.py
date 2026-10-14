@@ -9,6 +9,7 @@ names, Foundry runs outside the repository, an output inside the repository is r
 is still stopped. The terminal driver: prompts, exit codes, the timeout under continuous output and the cleanup of the
 command's process group.
 """
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 BASH = '/bin/bash' if Path('/bin/bash').exists() else shutil.which('bash')
@@ -229,10 +231,14 @@ class DriveTerminalTests(unittest.TestCase):
             if process.poll() is None:
                 process.kill()
                 process.communicate()
-        pid_file = self.base / 'child.pid'
-        if pid_file.exists() and pid_file.read_text():
+        left = []
+        for name in ('child.pid', 'pids.json'):
+            path = self.base / name
+            if path.exists() and path.read_text():
+                left += json.loads(path.read_text()) if name.endswith('.json') else [int(path.read_text())]
+        for pid in left:
             try:
-                os.kill(int(pid_file.read_text()), signal.SIGKILL)
+                os.kill(pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
         self.directory.cleanup()
@@ -249,9 +255,17 @@ class DriveTerminalTests(unittest.TestCase):
         return process
 
     def child_gone(self, pid_file):
-        pid = int(pid_file.read_text())
-        with self.assertRaises(ProcessLookupError):
-            os.kill(pid, 0)
+        self.assert_gone(int(pid_file.read_text()))
+
+    def assert_gone(self, pid):
+        # A grandchild is reaped by the system after its parent dies: allow it a moment.
+        for _ in range(60):
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                return
+            time.sleep(0.05)
+        self.fail(f'process {pid} is still alive')
 
     def test_fragmented_prompts_are_answered_and_the_exit_code_is_kept(self):
         process = self.drive("import sys, time\nprint('Type BRO', end='', flush=True); time.sleep(0.05)\n"
@@ -289,6 +303,49 @@ class DriveTerminalTests(unittest.TestCase):
         process.communicate(timeout=30)
         self.assertEqual(process.returncode, 124)
         self.child_gone(pid_file)
+
+    def test_a_second_signal_during_the_cleanup_waits_for_it(self):
+        # The command and its child stay in the command's process group and ignore TERM and HUP; the driver gets a TERM
+        # and, while it waits out the grace period, a HUP.
+        pids = self.base / 'pids.json'
+        process = self.drive("import json, os, signal, time\n"
+                             "for s in (signal.SIGTERM, signal.SIGHUP): signal.signal(s, signal.SIG_IGN)\n"
+                             "child = os.fork()\n"
+                             "if child == 0:\n    time.sleep(60)\n"
+                             f"open({str(pids)!r}, 'w').write(json.dumps([os.getpid(), child]))\ntime.sleep(60)",
+                             grace=1)
+        for _ in range(100):
+            if pids.exists() and pids.read_text():
+                break
+            time.sleep(0.05)
+        process.send_signal(signal.SIGTERM)
+        time.sleep(0.05)
+        process.send_signal(signal.SIGHUP)
+        process.communicate(timeout=30)
+        self.assertEqual(process.returncode, 128 + signal.SIGTERM)
+        for pid in json.loads(pids.read_text()):
+            self.assert_gone(pid)
+
+    def test_stopping_waits_through_eperm_from_a_killed_group_and_reaps(self):
+        # macOS can answer EPERM for a killed group until its last process is reaped.
+        spec = importlib.util.spec_from_file_location('drive_terminal', DRIVER)
+        driver = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(driver)
+        answers = iter([None, PermissionError(1, 'EPERM'), PermissionError(1, 'EPERM'), ProcessLookupError()])
+        sent = []
+
+        def killpg(pid, sig):
+            sent.append(sig)
+            outcome = next(answers)
+            if outcome:
+                raise outcome
+        reaps = iter([(0, 0), (0, 0), (4242, 9)])
+        state = {'reaped': False}
+        with patch.object(driver.os, 'killpg', killpg), patch.object(driver.os, 'waitpid', lambda pid, flags: next(reaps)), \
+                patch.object(driver.time, 'sleep', lambda seconds: None):
+            driver.stop(4242, state)
+        self.assertTrue(state['reaped'])
+        self.assertEqual(sent, [signal.SIGTERM, 0, 0, 0])
 
     def test_a_term_to_the_driver_stops_the_command(self):
         pid_file = self.base / 'child.pid'
