@@ -48,6 +48,13 @@
 | RPC key 分配 | 仓库根 `.env` 的四个 key 按用途命名（只改名，值未变）：`INFURA_API_KEY_OPS` 用于本机部署广播、发布检查、`verify_governance` 回放与 K0-4（K0-4 在本机运行）；`ALCHEMY_API_KEY_OPS` 用于 preflight、fork 演练、gas 矩阵，以及主网上线后的备用 keeper（只走 HTTP，与主 keeper 的 HTTP 不同提供方）；`INFURA_API_KEY_PROD_KEEPER`、`ALCHEMY_API_KEY_PROD_KEEPER` 只在服务器上给生产 keeper 用（`KEEPER_RPC_HTTP`、`KEEPER_RPC_WS`）。OPS 与 PROD_KEEPER 分属不同账户，旧 Alchemy key 已重建（Owner 确认）。实施方只经 `script/tools/with-ops-rpc.sh` 使用两个 OPS key，不得使用 `*_PROD_KEEPER`；浏览器与 web 服务端用 Base 公共 RPC |
 | 文档 | 一档过程记录直接删除，二档先迁移决策与状态再删除，作为第一项工作（C2） |
 
+Owner 于 2026-10-14 追加两项决定：
+
+| 事项 | 决定 |
+| --- | --- |
+| 外审交付的发送时机 | 选项 A：在证书 v5 的独立复核完成之前发送外审交付（§5 第 4 步的复核与外审因此并行）；复核封存与域文件改为 `CERTIFIED` 的改动以补充件交付（C6） |
+| 准入合规 | 只在链下：合约对下注与 LP 存入不设准入限制；地域屏蔽、KYC/AML 与负责任博彩由运营方的网站与运营承担。2026-09-29 提议的链上准入控制（运营方 blocklist、玩家自我排除、未验证钱包累计上限、LP 存入白名单）不进本候选版。残余见 §9，条款披露见 C9 |
+
 ## 4. 清理记录（2026-10-11）
 
 归档目录：`~/arbigamefi-archive/2026-10-11-clean-slate/`（另有 `~/arbigamefi-archive/2026-10-11-superseded/`）。原件移入废纸篓
@@ -225,6 +232,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | Safe 丢失则治理永久冻结 | 新增；只能清退（ADR-0037 R-8） | 条款与 LP 材料 |
 | 智能合约钱包可能无法自行作废 | 新增（ADR-0037 R-9） | 条款 |
 | 发行方没收类故障时作废无效 | 新增（P5c） | 条款与 LP 材料 |
+| 准入无许可：直接调用合约的钱包绕过网站的地区限制、进入确认与负责任博彩工具 | 新增（Owner 2026-10-14，合规在链下）；网站控制与运营监控 | 条款与风险免责声明（C9） |
 
 ## 10. 认证、部署与核验
 
@@ -286,9 +294,10 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | C3 | 发布手册：隔离副本部署、EIP-7702 检查、从标签 dispatch 并核对 `head_sha` 与作业列表、RPC 选择（§3 的 key 分配、包装脚本用法、本机绝不使用 `*_PROD_KEEPER`）；时间锁接管与解除暂停的时间表；更正 `v16-release.md:152` 的 “one person … cannot pass the gate alone”，写明 `V16_AUDITED_TREE` 是复核接受的树而非外审树；`docs/release/README.md` 与 `checklist.md` 更新到当前状态。**已完成**（2026-10-12）：隔离副本、EIP-7702 与门控广播随 A5 写入 `v16-release.md` 第 1、2 步；Release Gate 从发布标签 dispatch（运行的是该标签自己的 `release.yml`），只有 `headSha` 为标签提交、事件为 `workflow_dispatch`、作业恰为六个且全部成功时才接受，以 `release-ready` 为准；`audited_source_tree` 与 `V16_AUDITED_TREE` 是外审（含修复复核）接受的树，清理后变量未设，设置前门槛一律失败；两个树值只防错标签与输错，不是双人控制（仓库没有 environment、ruleset 或分支保护）；新增“RPC endpoints”（每个 key 的用途）与“From deployment to betting”（72 小时时间锁下的时间表，激活最早在第 6 天，暂停即时、解除需 72 小时）；`docs/release/README.md`、`docs/release/checklist.md` 与 `docs/deploy/checklist.md` 按本候选版更新（容量 128/Bank 与 2/玩家、作废对“结算失败不把赢家变成退款”的唯一例外、从时间锁创建前回放、上线前的网络演练） | 复核 S-1 |
 | C4 | 条款与 LP 材料：作废规则（VRF 原生费不退）；准入时间锁与 LP 退出窗口；暂停不阻止提款；每玩家 2 个持仓；guardian 否决权；§9 全部残余。**已完成**（2026-10-12，Owner 审定措辞，包括“本页与合约不一致时以合约为准”与 keeper 按请求顺序处理作废的运营承诺；pt-BR、ru、tr 上线前宜请母语者复核）：站内服务条款与风险免责声明各 10 节，按 ADR-0037 与 §9 写入投注与容量（128/资金池、2/玩家）、开奖与退款、作废及其裁量与限制（VRF 原生费不退、本应中奖也只退本金、智能合约钱包、发行方冻结与没收）、暂停只挡新投注与新存入、停用资金池与游戏、72 小时治理时间锁（只可调高）与取消权、Safe 丢失后只能清退、先后顺序与事故期间先到先得、64 个地址占满容量；Earn 风险面板新增“资金池规则”5 条并链接风险免责声明。en、zh-Hans、pt-BR、ru、tr 五种语言齐全（后三种此前没有法律页译文），测试检查每种语言每节齐全且不是英文照抄 | §7、§9 |
 | C5 | 规范修订（宪法的修订需 Owner 明确批准并留记录）：`docs/constitution/SSOT.v1.6.md:125, 128-130, 137`；`ExecutableSSOT.v1.6.md:48-52, 243-249, 302`；`docs/adr/0006-vrf-callback-settlement.md:87-90, 197-204, 229`；`docs/adr/0034-nft-liquidity-deposits.md:30, 145`；`docs/architecture/overview.md:95, 116`；`docs/audit/v1.6-audit-scope.md:49, 171`；`docs/audit/threat-model.md:140`；`WHITEPAPER.zh-CN.md:18, 196, 200, 211, 214-215, 222, 228, 231-232`；`WHITEPAPER.product.zh-CN.md:108`；`docs/strategy/economic-design.md:104`；`docs/ops/runbooks/pause-config-drift.md:11, 18, 36-39`；`docs/ops/alerts.md:25`；`docs/ops/runbooks/governance-safe-setup.md:22-61`。B9 另需：`SSOT.v1.6.md:18, 147, 230, 265` 与 `ExecutableSSOT.v1.6.md:64-66, 266, 302` 删去或改写体育（草案已备，随本项送 Owner），`docs/adr/0032-fixed-lp-share-operator-funded-referrals.md:74` 的体育分配句。**已完成**（2026-10-12）：Owner 审阅草案（`33eaa4c08`）后明确批准，记录在 `SSOT.v1.6.md` §10。宪法按 ADR-0037 与 B9 修订：治理从部署起经时间锁，sentinel 与 guardian 只能即时降风险，暂停只挡新仓位与新入金，每玩家 2 个持仓，作废是已收到结果无法结算时的唯一出路，一个 hub 与一个业务域；`ExecutableSSOT` 删去 A9，新增 G6（时间锁与 sentinel）、G7（容量）。同样的规则写入 ADR-0006、0032、0034、架构概述、审计范围、威胁模型、经济设计、两本白皮书（r5）、暂停、Safe 与前端准入手册、告警、指标、路线图和测试网验收清单 | 复核 M-6 |
-| C6 | ADR-0006 的两处改进（M4 范围限定、确认记录的位置）；本版外审交付按 FZ-6 清单打包。**ADR 部分已完成**（2026-10-12）：M4 的范围按勘误 E8 限定为模块层 `resolve` 与 GameHub 其后的算术检查，Router、Bank、Vault 的 revert 位点由帧界、O1/O2 与 Bank/Vault 结算测试覆盖；“已独立确认”以证书组件表（§4）中引用封存复核的复核状态为准。**外审交付已备好**（2026-10-14，Owner 发送）：审计范围文档 `docs/audit/v1.6-audit-scope.md` 按本候选版重写（被审对象、目标设计、Owner 固定的决定、八项审查对象、既往发现在本版的状态、§9 与 ADR-0037 R-1–R-9 的残余、未完成门槛），不变量映射补 ADR-0037 各行，即被审提交 `fcbb2ad61`（CI 38504778203 通过；冻结 delta 2 记录 `0be336e40`–`fcbb2ad61` 的改动，`EVIDENCE.sha256` `d9bde325…`）。交付 `dist/external-audit-delivery-2026-10-14.tar.gz`（SHA-256 `774a0d00…`）：`SCOPE.md`、`RECONCILIATION.json`、`make audit-package` 切出的源码包与 20 个证据归档（冻结运行与两个 delta、证书 v5 复核请求包、规划与 B0 复核、外部预审包、AI 审计与三轮修复复核、证书 v5 复用组件的来源、v4 证书与复核、10-07 的复核与裁决；其中 12 个与 r2 逐字节相同）。包内全部 129 份清单逐一核对：当前候选版的清单都在原目录或其所描述的根目录通过，其余为旧源码的源清单与评审方的工作清单，逐项说明；密钥扫描无命中；`SCOPE.md` 第 9 节的核对步骤在全新目录中原样跑通。证书 v5 的独立复核尚未完成：按 FZ-6，复核封存与域文件改为 `CERTIFIED` 的改动以补充件随后交付。证书复核请求包不含复用组件的来源证据，复核方需要交付包中的 `callback-cost-certificate-2026-10-04`、`h1-callback-cost-certificate-2026-10-04`、`landing-2026-10-08` 与 `independent-review-certificate-v4-2026-10-08` | 复核 S-8 |
+| C6 | ADR-0006 的两处改进（M4 范围限定、确认记录的位置）；本版外审交付按 FZ-6 清单打包。**ADR 部分已完成**（2026-10-12）：M4 的范围按勘误 E8 限定为模块层 `resolve` 与 GameHub 其后的算术检查，Router、Bank、Vault 的 revert 位点由帧界、O1/O2 与 Bank/Vault 结算测试覆盖；“已独立确认”以证书组件表（§4）中引用封存复核的复核状态为准。**外审交付已备好**（2026-10-14，Owner 发送）：审计范围文档 `docs/audit/v1.6-audit-scope.md` 按本候选版重写（被审对象、目标设计、Owner 固定的决定、八项审查对象、既往发现在本版的状态、§9 与 ADR-0037 R-1–R-9 的残余、未完成门槛），不变量映射补 ADR-0037 各行，即被审提交 `fcbb2ad61`（CI 38504778203 通过；冻结 delta 2 记录 `0be336e40`–`fcbb2ad61` 的改动，`EVIDENCE.sha256` `d9bde325…`）。交付 `dist/external-audit-delivery-2026-10-14.tar.gz`（SHA-256 `774a0d00…`）：`SCOPE.md`、`RECONCILIATION.json`、`make audit-package` 切出的源码包与 20 个证据归档（冻结运行与两个 delta、证书 v5 复核请求包、规划与 B0 复核、外部预审包、AI 审计与三轮修复复核、证书 v5 复用组件的来源、v4 证书与复核、10-07 的复核与裁决；其中 12 个与 r2 逐字节相同）。包内全部 129 份清单逐一核对：当前候选版的清单都在原目录或其所描述的根目录通过，其余为旧源码的源清单与评审方的工作清单，逐项说明；密钥扫描无命中；`SCOPE.md` 第 9 节的核对步骤在全新目录中原样跑通。证书 v5 的独立复核尚未完成；Owner 选项 A（§3）：交付现在发送，按 FZ-6，复核封存与域文件改为 `CERTIFIED` 的改动以补充件随后交付。随附给外审方的说明信写明 r2 与 `1e95d7fe…` 不再审计、预审包原样收录、准入合规在链下、修复回路的约定。证书复核请求包不含复用组件的来源证据，复核方需要交付包中的 `callback-cost-certificate-2026-10-04`、`h1-callback-cost-certificate-2026-10-04`、`landing-2026-10-08` 与 `independent-review-certificate-v4-2026-10-08` | 复核 S-8 |
 | C7 | legacy Bank 地址登记：18 个 Bank 的链、地址、是否暂停、余额、治理方、退役计划与 RPC key 轮换记录（2026-10-11：四个 key 按用途改名；OPS 与 PROD_KEEPER 分属不同账户，旧 Alchemy key 已重建，均经 Owner 确认）。**已完成**（2026-10-12）：`docs/ops/legacy-banks.md`。按旧 key 的全部 CREATE 地址在两条链上各取一个区块普查（Base 公共 RPC，只读）：旧 key 治理 44 个 Bank，Base 5 个（全部为空，2 个未暂停）、Base Sepolia 39 个（10 个暂停、29 个未暂停，14 个持有测试代币）；其余受它治理的合约不持有 ETH、USDC 或 WETH；没有待接任的治理。原记的 18 个只覆盖部分部署。文中写明 Owner 的退役步骤与 RPC key 改名记录 | 复核 M-12 |
 | C8 | 体育文档移出本版（随 B9），路线图保留体育作为未来能力。**已完成**（2026-10-11，随 B9）：删除 sportsbook 运维手册、两篇赔率 provider 文档与体育生产路线；42 篇文档去掉体育定位、组件、告警、指标与运维内容（含 `docs/design/adr/` 三篇的措辞）；路线图 §4 改为“体育作为未来能力”；简介、两本白皮书升到 r4、路线图升到 r2（2026-10-11）；ADR-0029 加修订说明，其余 ADR 正文与宪法未改（见 C5） | Owner 选项 A |
+| C9 | 准入合规在链下的披露（Owner 2026-10-14，§3）：服务条款与风险免责声明第 9 节写明合约不检查所在地、年龄与身份，网站的地区限制、进入确认与负责任博彩工具只作用于网站（后两者只在设置它们的浏览器中生效），在不允许参与的地方直接调用合约或借此绕开限制即违反条款；五种语言。**草案已备**（2026-10-14，待 Owner 审定措辞；pt-BR、ru、tr 上线前宜请母语者复核） | Owner |
 
 ## 12. 运营事项
 
@@ -304,7 +313,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 ## 13. 价值网络与主网前置（冻结签核 FZ-8）
 
 主网证书、主网 M4 证明、余量不低于 50,000、K0-4 与 `CallbackSettlementFailed` 告警、§9 全部披露、专业机构外审、B1 准入时间锁、guardian 独立多签；
-运营主体、司法辖区与准入合规（地域屏蔽、制裁筛查、玩家限额）。
+运营主体、司法辖区与准入合规（地域屏蔽、制裁筛查、玩家限额；按 Owner 2026-10-14 的决定全部在链下，见 §3）。
 
 ## 14. 来源
 
