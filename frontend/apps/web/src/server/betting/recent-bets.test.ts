@@ -411,7 +411,9 @@ describe("recent bets server aggregation", () => {
         updatedAt: Number(second(terminal)) * 1000
       });
       if (events.length > 1) expect(response.row?.randomHash).toBe(`0x${"55".repeat(32)}`);
-      expect(client.getBlock.mock.calls.length).toBeLessThanOrEqual(100);
+      // A few reads to locate each second; the result search stops at its first chunk with a hit.
+      expect(client.getBlock.mock.calls.length).toBeLessThanOrEqual(50);
+      expect(client.getLogs.mock.calls.length).toBeLessThanOrEqual(7);
     });
 
     it("finds a receipt in a durable index that lacks its row", async () => {

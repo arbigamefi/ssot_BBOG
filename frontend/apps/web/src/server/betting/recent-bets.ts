@@ -1079,13 +1079,16 @@ async function queryBetReceiptRpcFallback({
         return { fromBlock: start > releaseBlock ? start : releaseBlock, toBlock };
       };
 
-      const placement = await secondWindow(placedAt);
+      // The two seconds are located concurrently: each search is a few sequential block reads.
+      const [placement, terminal] = await Promise.all([
+        secondWindow(placedAt),
+        resolvedAt > 0n ? secondWindow(resolvedAt) : undefined
+      ]);
       const logs = await logsIn(["BetPlaced"], placement.fromBlock, placement.toBlock);
       if (logs.length === 0) return null;
       let readyFound = false;
       let terminalFrom: bigint | undefined;
-      if (resolvedAt > 0n) {
-        const terminal = await secondWindow(resolvedAt);
+      if (terminal) {
         terminalFrom = terminal.fromBlock;
         const found = await logsIn(
           ["BetRandomReady", ...TERMINAL_GAMEHUB_EVENTS],
@@ -1110,8 +1113,16 @@ async function queryBetReceiptRpcFallback({
         let toBlock = placement.toBlock + readySearchBlocks;
         if (terminalFrom != null && toBlock >= terminalFrom) toBlock = terminalFrom - 1n;
         if (toBlock > confirmedThrough) toBlock = confirmedThrough;
-        if (toBlock > placement.toBlock)
-          logs.push(...(await logsIn(["BetRandomReady"], placement.toBlock + 1n, toBlock)));
+        // One chunk at a time from the placement: the result usually arrives within seconds.
+        for (const chunk of getBlockChunks({
+          chunkBlocks,
+          fromBlock: placement.toBlock + 1n,
+          toBlock
+        })) {
+          const ready = await logsIn(["BetRandomReady"], chunk.fromBlock, chunk.toBlock);
+          logs.push(...ready);
+          if (ready.length) break;
+        }
       }
 
       const timestampedLogs = await attachBlockTimestamps({
