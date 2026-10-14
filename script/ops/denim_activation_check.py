@@ -30,7 +30,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'script/release'))
-from verify_governance import Rpc, VerificationError, quantity, require, signature  # noqa: E402
+from verify_governance import EmptyResult, Rpc, VerificationError, quantity, require, signature  # noqa: E402
 from verify_callback_provider import GAME_HUB_REQUEST_CONFIRMATIONS, verify_provider  # noqa: E402
 
 BASE_SEPOLIA = 84532
@@ -53,9 +53,21 @@ def block_hash(value):
     return value.lower()
 
 
+def numbered_block(rpc, number):
+    """The canonical block of this number, or None when the node has none (a null result, not an error here)."""
+    try:
+        block = rpc('eth_getBlockByNumber', [hex(number), False])
+    except EmptyResult:
+        return None
+    return block if isinstance(block, dict) else None
+
+
 def block_at(rpc, number):
-    block = rpc('eth_getBlockByNumber', [hex(number), False])
-    require(isinstance(block, dict), f'no block {number}')
+    """A block of the reading: one the node does not have, at or below the head just read, means the chain (or the
+    node answering, behind a load balancer) changed."""
+    block = numbered_block(rpc, number)
+    if block is None:
+        raise HeadChanged
     return {**block, 'hash': block_hash(block.get('hash'))}
 
 
@@ -98,11 +110,11 @@ def reading(rpc, domain):
                                 and (second.get('to') or '').lower() == BASETIME,
     }
     # A sealed block is one the canonical chain holds under the same number and hash; before Denim "pending" returned
-    # the block being built, after it (on Vibenet) the latest block.
+    # the block being built, which has no number on the chain yet, after it (on Vibenet) the latest block.
     pending_block = rpc('eth_getBlockByNumber', ['pending', False])
     require(isinstance(pending_block, dict), 'no pending block')
     pending_number = quantity(pending_block['number'])
-    sealed = rpc('eth_getBlockByNumber', [hex(pending_number), False])
+    sealed = numbered_block(rpc, pending_number)
     pending = {
         'number': pending_number,
         'pendingIsALatestBlock': isinstance(sealed, dict) and isinstance(pending_block.get('hash'), str)
@@ -152,8 +164,8 @@ def check(rpc, domain):
 def confirm(rpc, report):
     """True if the report's block number still names the report's hash."""
     block = report['block']
-    current = rpc('eth_getBlockByNumber', [hex(block['number']), False])
-    return isinstance(current, dict) and (current.get('hash') or '').lower() == block_hash(block['hash'])
+    current = numbered_block(rpc, block['number'])
+    return current is not None and (current.get('hash') or '').lower() == block_hash(block['hash'])
 
 
 def main():

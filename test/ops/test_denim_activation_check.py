@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location('denim_check', ROOT / 'script/ops/denim_activation_check.py')
 CHECK = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(CHECK)
+GOVERNANCE = sys.modules['verify_governance']
 HEAD = 48_200_000
 
 
@@ -205,6 +207,93 @@ class DenimActivationCheckTests(unittest.TestCase):
         # Without an argument every run gets a new directory named by its UTC time; an existing one is refused.
         self.assertIn('out=${1:-$root/dist/denim-activation-check-$(date -u +%Y%m%dT%H%M%SZ)}', runner)
         self.assertIn('[ ! -e "$out" ] || { echo "exists: $out" >&2; exit 1; }', runner)
+
+
+class Transport:
+    """urlopen for the real verify_governance.Rpc, answered from a chain as a node would: a null result for a block it
+    does not have, a JSON-RPC error where the chain reverts, and `faults` (a predicate on method and params, then the
+    JSON-RPC error code) for the requests it fails."""
+
+    def __init__(self, chain, faults=()):
+        self.chain, self.faults, self.requests = chain, list(faults), []
+
+    def __call__(self, request, timeout=30):
+        body = json.loads(request.data)
+        self.requests.append((body['method'], body['params']))
+        payload = {'jsonrpc': '2.0', 'id': body['id']}
+        if self.faults and self.faults[0][0](body['method'], body['params']):
+            payload['error'] = {'code': self.faults.pop(0)[1], 'message': 'node fault'}
+        else:
+            try:
+                payload['result'] = self.chain(body['method'], body['params'])
+            except CHECK.VerificationError:
+                payload['error'] = {'code': 3, 'message': 'execution reverted'}
+        return io.BytesIO(json.dumps(payload).encode())
+
+
+class RealRpcTests(unittest.TestCase):
+    """The check and its CLI through the real Rpc adapter and its JSON handling; only the HTTP transport is replaced."""
+
+    def run_main(self, transport, *args):
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory) / 'check.json'
+            env = {'OPS_RPC_URL': 'https://secret.invalid', 'RPC_MAX_ATTEMPTS': '1', 'RPC_BACKOFF_SECONDS': '0'}
+            with patch.dict(CHECK.os.environ, env), patch.object(GOVERNANCE.urllib.request, 'urlopen', transport), \
+                    patch.object(CHECK.sys, 'argv', ['x', *(args or [str(out)])]), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                code = CHECK.main()
+            return code, json.loads(out.read_text()) if out.exists() else None
+
+    def test_before_denim_a_pending_block_not_yet_on_the_chain_is_reported_unsealed(self):
+        chain = DenimChain(denim=False)
+        transport = Transport(chain)
+        code, report = self.run_main(transport)
+        # The pending block's number, HEAD + 1, has no block yet: the node answers null, and the report goes on. (main
+        # reads the real domain file, which this chain's provider does not match, hence MISMATCH and exit 1.)
+        self.assertIn(('eth_getBlockByNumber', [hex(HEAD + 1), False]), transport.requests)
+        self.assertEqual(report['pending'], {'number': HEAD + 1, 'pendingIsALatestBlock': False})
+        self.assertEqual(report['verdict'], {'denimActive': False, 'ok': False})
+        self.assertEqual(report['provider']['status'], 'MISMATCH')
+        self.assertEqual(code, 1)
+
+    def test_after_denim_the_pending_block_is_the_sealed_head(self):
+        chain = DenimChain(denim=True)
+        code, report = self.run_main(Transport(chain))
+        self.assertEqual(report['pending'], {'number': HEAD, 'pendingIsALatestBlock': True})
+        self.assertEqual(report['block'], {'number': HEAD, 'hash': chain.hash_of(HEAD), 'attempts': 1})
+
+    def test_a_node_error_on_the_sealed_block_query_still_fails_the_check(self):
+        chain = DenimChain(denim=False)
+        fault = (lambda method, params: params == [hex(HEAD + 1), False], -32603)
+        with self.assertRaisesRegex(CHECK.VerificationError, 'JSON-RPC error -32603'):
+            self.run_main(Transport(chain, [fault]))
+
+    def test_a_node_behind_the_head_it_reported_makes_the_reading_start_again(self):
+        # A load-balanced endpoint may answer the head from one node and a block of it from another, lagging one.
+        chain = DenimChain(denim=True)
+        lagging = Transport(chain)
+        missing = {'count': 0}
+        original = chain.__class__.__call__
+
+        def lag_once(method, params):
+            if method == 'eth_getBlockByNumber' and params == [hex(HEAD), False] and missing['count'] == 0:
+                missing['count'] += 1
+                return None
+            return original(chain, method, params)
+        lagging.chain = lag_once
+        _, report = self.run_main(lagging)
+        self.assertEqual(report['block']['attempts'], 2)
+
+    def test_confirm_answers_through_the_real_rpc_and_a_missing_block_is_not_the_same(self):
+        chain = DenimChain(denim=True)
+        report = CHECK.check(chain, chain.domain)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'check.json'
+            path.write_text(json.dumps(report))
+            self.assertEqual(self.run_main(Transport(chain), '--confirm', str(path))[0], 0)
+            report['block']['number'] = HEAD + 5
+            path.write_text(json.dumps(report))
+            self.assertEqual(self.run_main(Transport(chain), '--confirm', str(path))[0], 1)
 
 
 RUNNER_STUB_CHECK = """import json, os, sys

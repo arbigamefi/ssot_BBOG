@@ -75,6 +75,10 @@ class VerificationError(ValueError):
     pass
 
 
+class EmptyResult(VerificationError):
+    """The node answered with a null result: for a block query, no block of that number or hash yet."""
+
+
 def require(condition, message):
     if not condition:
         raise VerificationError(message)
@@ -151,7 +155,7 @@ class Rpc:
         self.retries = 0
 
     def once(self, method, params):
-        """Return ('ok', result), ('retry', class) or ('final', class)."""
+        """Return ('ok', result), ('empty', class), ('retry', class) or ('final', class)."""
         request = urllib.request.Request(self.url, json.dumps({
             'jsonrpc': '2.0', 'id': 1, 'method': method, 'params': params,
         }).encode(), {'Content-Type': 'application/json', 'User-Agent': 'ArbiGameFi-release-verifier/1'})
@@ -171,7 +175,7 @@ class Rpc:
             code = code if type(code) is int else None
             return ('retry' if code in RETRY_JSONRPC else 'final'), f'JSON-RPC error {code}'
         if data.get('result') is None:
-            return 'final', 'empty JSON-RPC result'
+            return 'empty', 'empty JSON-RPC result'
         return 'ok', data['result']
 
     def __call__(self, method, params):
@@ -180,6 +184,8 @@ class Rpc:
             outcome, value = self.once(method, params)
             if outcome == 'ok':
                 return value
+            if outcome == 'empty':
+                raise EmptyResult(f'RPC {method} failed: {value} after {attempt} attempt(s)')
             if outcome == 'final' or attempt == self.attempts:
                 raise VerificationError(f'RPC {method} failed: {value} after {attempt} attempt(s)')
             self.retries += 1
