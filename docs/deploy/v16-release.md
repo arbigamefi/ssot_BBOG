@@ -62,6 +62,7 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    Before anything is broadcast the script rehearses the two release operations on the simulated deployment (the
    Safe schedules, 72 hours pass, anyone executes), checks the results as release verification does and restores
    the simulated state; a batch that would revert or wire something else stops the deployment.
+
 2. Prepare the deploy copy; the Owner broadcasts from it:
 
    ```bash
@@ -103,6 +104,7 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    binds the routers, randomness consumers, guardians and sentinels, sets the Bank parameters that differ from the
    constructor defaults, registers the pool, the hub, its route and the eight certified games, and leaves every pool
    inactive. Anyone executes it once ready; LPs can then deposit and nobody can bet.
+
 3. Once the wiring has executed, run `make release-v16` with the configured signer and network. A release contains a
    signed digest, manifest, ABIs and encoding vectors. `make release-v16` runs `script/release/release_v16.sh` from a
    clean checkout of the deployed commit, with the copy's snapshot at `deployments/latest-v16.json`, through
@@ -131,8 +133,10 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    Logs are read in pages of `GOVERNANCE_LOG_PAGE_BLOCKS` blocks. The default follows the endpoint: 10,000 through
    `with-ops-rpc.sh infura`, 10 through `with-ops-rpc.sh alchemy` (its free tier), otherwise 200, under the 201 that
    Base's public RPC accepts. Since Base Denim (five blocks a second) a day is 432,000 blocks: 44 pages on Infura,
-   2,160 on the public RPC. The Release Gate replays on the public RPC from the signed checkpoint, so dispatch it soon
-   after signing; each day in between adds about 2,160 pages to a job limited to 90 minutes. Transient
+   2,160 on the public RPC. The Release Gate and the image import replay on the public RPC from the signed checkpoint:
+   each day after signing adds about 2,160 pages, about an hour at the 1.7 seconds a page measured on Base Sepolia's
+   public RPC (2026-10-14). Dispatch both on the day of signing; the Release Gate's 240-minute limit leaves about three
+   days and the image workflow's 180 minutes about two. Transient
    provider failures (HTTP 408, 425, 429 and 5xx, dropped connections) are retried with backoff (`RPC_MAX_ATTEMPTS`,
    default 6; `RPC_BACKOFF_SECONDS`, default 1); errors name the HTTP status or JSON-RPC code, never the URL. Each run
    prints `checkpointSha256` and, with `GOVERNANCE_CHECKPOINT_OUT`, writes the replayed state. A later run starts from
@@ -170,6 +174,7 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    `PENDING_INDEPENDENT_REVIEW` with pins regenerated from the current build. The launch candidate's certificate v5
    (seal `5726389a…`, computed on freeze commit `1a5e9df00`) replaces v4 and waits for its independent
    review; the file cites no review until then. Each chain needs its own certificate.
+
 4. Run the authenticated **Frontend Docker Images** workflow on the same source commit with the
    signed bundle's release tag, exact filename, approved SHA-256, and `chain_id=84532`. Configure the
    independent `V16_RELEASE_SIGNER` repository variable. The workflow verifies the archive's source
@@ -196,10 +201,10 @@ as `OPS_RPC_URL` and replaces the key in every line the command prints. The wrap
 operator scripts replace the key in the logs and records they write themselves. No key is ever typed on a command
 line.
 
-| Key | Used for |
-| --- | --- |
-| `ALCHEMY_API_KEY_OPS` (`alchemy`) | preflight and its fork rehearsal, `make timelock-batches-v16`, the gas matrix; a free-tier key, so never a log scan (`eth_getLogs` takes at most 10 blocks) |
-| `INFURA_API_KEY_OPS` (`infura`) | broadcast, release signing (`release_v16.sh`), governance replay, K0-4 on the operator's machine, and the mainnet backup keeper's HTTP endpoint (Owner, 2026-10-14) |
+| Key                                                         | Used for                                                                                                                                                                                                                              |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ALCHEMY_API_KEY_OPS` (`alchemy`)                           | preflight and its fork rehearsal, `make timelock-batches-v16`, the gas matrix; a free-tier key, so never a log scan (`eth_getLogs` takes at most 10 blocks)                                                                           |
+| `INFURA_API_KEY_OPS` (`infura`)                             | broadcast, release signing (`release_v16.sh`), governance replay, K0-4 on the operator's machine, and the mainnet backup keeper's HTTP endpoint (Owner, 2026-10-14)                                                                   |
 | `INFURA_API_KEY_PROD_KEEPER`, `ALCHEMY_API_KEY_PROD_KEEPER` | the production keeper's HTTP and WebSocket endpoints, on the server only; the Owner writes them there with `script/ops/send-keeper-rpc.sh` ([production rebuild](../ops/runbooks/production-rebuild.md)), and no local step uses them |
 
 The browser and the web server use the Base public RPCs, and so does CI, with no key.
@@ -208,13 +213,13 @@ The browser and the web server use the Base public RPCs, and so does CI, with no
 
 The governance timelock sets the earliest dates; each operation waits at least 72 hours after the Safe schedules it.
 
-| When | Step | State afterwards |
-| --- | --- | --- |
-| day 0 | preflight again, broadcast (step 2); the Safe schedules the wiring and the operations file is published; K0-4 announces it | contracts exist, nothing wired |
-| day 3 at the earliest | anyone executes the wiring | pool registered and inactive: LPs can deposit, nobody can bet |
-| after the wiring | release signed and packaged (step 3, release mode), Release Gate `release-ready`, images built and imported (step 4), stack deployed (step 5) | |
-| after the release | the Safe schedules the activation, whose predecessor is the wiring; published and announced as before | |
-| day 6 at the earliest | anyone executes the activation | betting open; testnet acceptance follows the [checklist](v16-sepolia-acceptance.md) |
+| When                  | Step                                                                                                                                          | State afterwards                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| day 0                 | preflight again, broadcast (step 2); the Safe schedules the wiring and the operations file is published; K0-4 announces it                    | contracts exist, nothing wired                                                      |
+| day 3 at the earliest | anyone executes the wiring                                                                                                                    | pool registered and inactive: LPs can deposit, nobody can bet                       |
+| after the wiring      | release signed and packaged (step 3, release mode), Release Gate `release-ready`, images built and imported (step 4), stack deployed (step 5) |                                                                                     |
+| after the release     | the Safe schedules the activation, whose predecessor is the wiring; published and announced as before                                         |                                                                                     |
+| day 6 at the earliest | anyone executes the activation                                                                                                                | betting open; testnet acceptance follows the [checklist](v16-sepolia-acceptance.md) |
 
 Until an operation is ready, the Safe or the guardian can cancel it; once ready, anyone can execute it (ADR-0037 D5).
 The Safe, as sentinel, or the guardian pauses a Bank at once (`setRiskInPaused(true)`); unpausing is a timelock

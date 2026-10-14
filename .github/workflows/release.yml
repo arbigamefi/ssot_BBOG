@@ -122,7 +122,8 @@ jobs:
 
   release-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # The governance replay from the signed checkpoint grows by about an hour a day after signing (Denim).
+    timeout-minutes: 240
     env:
       RELEASE_SIGNER: ${{ vars.V16_RELEASE_SIGNER }}
     steps:
