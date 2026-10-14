@@ -2605,7 +2605,7 @@
           },
           "9": {
             "title": "No universal availability",
-            "body": "The frontend may not be available in every jurisdiction, network condition, browser environment, or release channel. Users are responsible for determining whether access or participation is permitted where they are located."
+            "body": "The frontend may not be available in every jurisdiction, network condition, browser environment, or release channel. Users are responsible for determining whether access or participation is permitted where they are located. The smart contracts do not check a user's location, age or identity, and anyone can call them directly. The country restrictions, entry confirmation and responsible-gambling tools of this frontend apply to the frontend only. Using the contracts directly from a place where participation is not permitted, or to get around those restrictions, breaches these terms."
           }
         }
       },
@@ -2686,7 +2686,7 @@
           },
           "9": {
             "title": "Jurisdiction and compliance",
-            "body": "Users must determine for themselves whether use of the frontend, room participation, or LP activity is lawful in their jurisdiction."
+            "body": "Users must determine for themselves whether use of the frontend, room participation, or LP activity is lawful in their jurisdiction. The contracts are permissionless: for bets and for LP deposits alike, they do not check where a user is or who they are. Country restrictions apply only to this frontend. The entry confirmation, self-exclusion and reminders are stored in the browser where they were made and apply only there. None of them covers anyone who interacts with the contracts directly."
           }
         }
       }

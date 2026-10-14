@@ -648,7 +648,7 @@
           },
           "9": {
             "title": "Her yerde erişilebilir değil",
-            "body": "Arayüz her yargı bölgesinde, ağ koşulunda, tarayıcıda veya sürüm kanalında erişilebilir olmayabilir. Bulunduğu yerde erişimin veya katılımın serbest olup olmadığını belirlemek kullanıcının sorumluluğundadır."
+            "body": "Arayüz her yargı bölgesinde, ağ koşulunda, tarayıcıda veya sürüm kanalında erişilebilir olmayabilir. Bulunduğu yerde erişimin veya katılımın serbest olup olmadığını belirlemek kullanıcının sorumluluğundadır. Akıllı sözleşmeler kullanıcının konumunu, yaşını veya kimliğini kontrol etmez ve herkes onları doğrudan çağırabilir. Bu arayüzün ülke kısıtlamaları, giriş onayı ve sorumlu oyun araçları yalnızca arayüz için geçerlidir. Sözleşmeleri katılımın yasak olduğu bir yerden ya da bu kısıtlamaları aşmak için doğrudan kullanmak bu şartların ihlalidir."
           }
         }
       },
@@ -729,7 +729,7 @@
           },
           "9": {
             "title": "Yargı bölgesi ve uyumluluk",
-            "body": "Kullanıcılar, arayüzün kullanımının, odalara katılımın veya LP faaliyetinin kendi yargı bölgelerinde yasal olup olmadığını kendileri belirlemelidir."
+            "body": "Kullanıcılar, arayüzün kullanımının, odalara katılımın veya LP faaliyetinin kendi yargı bölgelerinde yasal olup olmadığını kendileri belirlemelidir. Sözleşmeler izin gerektirmez: ne bahislerde ne de LP yatırımlarında kullanıcının nerede olduğunu veya kim olduğunu kontrol eder. Ülke kısıtlamaları yalnızca bu arayüz için geçerlidir. Giriş onayı, kendini dışlama ve hatırlatmalar yapıldıkları tarayıcıda saklanır ve yalnızca orada geçerlidir. Sözleşmelerle doğrudan etkileşime girenler bunların hiçbirinin kapsamında değildir."
           }
         }
       }

@@ -648,7 +648,7 @@
           },
           "9": {
             "title": "Disponibilidade não universal",
-            "body": "O frontend pode não estar disponível em todas as jurisdições, condições de rede, navegadores ou canais de lançamento. Cabe ao usuário verificar se o acesso ou a participação são permitidos onde ele está."
+            "body": "O frontend pode não estar disponível em todas as jurisdições, condições de rede, navegadores ou canais de lançamento. Cabe ao usuário verificar se o acesso ou a participação são permitidos onde ele está. Os contratos inteligentes não verificam a localização, a idade nem a identidade do usuário, e qualquer pessoa pode chamá-los diretamente. As restrições por país, a confirmação de entrada e as ferramentas de jogo responsável deste frontend valem apenas para o frontend. Usar os contratos diretamente a partir de um lugar onde a participação não é permitida, ou para contornar essas restrições, viola estes termos."
           }
         }
       },
@@ -729,7 +729,7 @@
           },
           "9": {
             "title": "Jurisdição e conformidade",
-            "body": "Cada usuário deve verificar por conta própria se o uso do frontend, a participação nas salas ou a atividade de LP são permitidos na sua jurisdição."
+            "body": "Cada usuário deve verificar por conta própria se o uso do frontend, a participação nas salas ou a atividade de LP são permitidos na sua jurisdição. Os contratos não exigem permissão: nem nas apostas nem nos depósitos de LP eles verificam onde o usuário está ou quem ele é. As restrições por país valem apenas para este frontend. A confirmação de entrada, a autoexclusão e os lembretes ficam salvos no navegador em que foram feitos e só valem nele. Nada disso se aplica a quem interage diretamente com os contratos."
           }
         }
       }
