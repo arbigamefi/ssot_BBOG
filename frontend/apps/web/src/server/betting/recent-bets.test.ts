@@ -43,10 +43,25 @@ const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
 const ASSET = "0x4444444444444444444444444444444444444444" as const;
 const ASSET_TWO = "0x9999999999999999999999999999999999999999" as const;
 
-function latestBlockAfterEmbeddedRelease(windowBlocks: bigint) {
+function releaseBlock() {
   const release = loadEmbeddedRelease(84532);
   if (!release.ok) throw new Error(release.error);
-  return BigInt(release.release.meta?.blockNumber ?? 0) + 2n + windowBlocks;
+  return BigInt(release.release.meta?.blockNumber ?? 0);
+}
+
+// With two-second blocks the four-second confirmation leaves out the newest two blocks.
+function latestBlockAfterEmbeddedRelease(windowBlocks: bigint) {
+  return releaseBlock() + 2n + windowBlocks;
+}
+
+/** A chain whose latest block is `head` and whose block `n` has timestamp `timestampOf(n)`. */
+function chainAt(head: bigint, timestampOf = (n: bigint) => n * 2n) {
+  return {
+    getBlock: vi.fn(async (args?: { blockNumber?: bigint }) => {
+      const number = args?.blockNumber ?? head;
+      return { number, timestamp: timestampOf(number) };
+    })
+  };
 }
 
 const ENV_KEYS = [
@@ -56,7 +71,7 @@ const ENV_KEYS = [
   "PLAYER_BETS_LOG_CHUNK_BLOCKS",
   "PLAYER_BETS_WINDOW_BLOCKS",
   "BET_RECEIPT_LOG_CHUNK_BLOCKS",
-  "BET_RECEIPT_WINDOW_BLOCKS",
+  "BET_RECEIPT_MAX_BLOCKS",
   "BET_RECEIPT_RPC_FALLBACK_ENABLED",
   "BET_INDEX_RPC_FALLBACK_ENABLED",
   "RECENT_BETS_LOG_CHUNK_BLOCKS",
@@ -175,25 +190,19 @@ describe("recent bets server aggregation", () => {
     });
   });
 
-  it("falls back to exact receipt logs and preserves chain timestamps", async () => {
+  it("reads a receipt from its placement second to its terminal second, with chain timestamps", async () => {
     process.env.BET_INDEX_READ_ENABLED = "0";
     process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
     process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
-    process.env.BET_RECEIPT_WINDOW_BLOCKS = "9";
-    process.env.BET_RECEIPT_LOG_CHUNK_BLOCKS = "10";
 
-    const release = loadEmbeddedRelease(84532);
-    if (!release.ok) throw new Error(release.error);
-    const releaseBlock = BigInt(release.release.meta?.blockNumber ?? 0);
-    const placedBlock = releaseBlock + 1n;
-    const readyBlock = releaseBlock + 2n;
-    const finalizedBlock = releaseBlock + 3n;
-    const getLogs = vi
-      .fn()
-      .mockResolvedValueOnce([
+    const placedBlock = releaseBlock() + 1n;
+    const readyBlock = releaseBlock() + 2n;
+    const finalizedBlock = releaseBlock() + 3n;
+    const byEvent: Record<string, unknown[]> = {
+      BetPlaced: [
         {
           args: {
-            asset: "0x4444444444444444444444444444444444444444",
+            asset: ASSET,
             gameId: GAME_ID,
             player: PLAYER,
             positionId: 8n,
@@ -204,46 +213,36 @@ describe("recent bets server aggregation", () => {
           logIndex: 1,
           transactionHash: "0xaaa"
         }
-      ])
-      .mockResolvedValueOnce([
+      ],
+      BetRandomReady: [
         {
-          args: {
-            positionId: 8n,
-            randomHash: `0x${"55".repeat(32)}`,
-            requestId: 99n
-          },
+          args: { positionId: 8n, randomHash: `0x${"55".repeat(32)}`, requestId: 99n },
           blockNumber: readyBlock,
           logIndex: 2,
           transactionHash: "0xbbb"
         }
-      ])
-      .mockResolvedValueOnce([
+      ],
+      BetFinalized: [
         {
-          args: {
-            positionId: 8n,
-            payoutGross: 20n,
-            payoutNet: 19n
-          },
+          args: { positionId: 8n, payoutGross: 20n, payoutNet: 19n },
           blockNumber: finalizedBlock,
           logIndex: 3,
           transactionHash: "0xccc"
         }
-      ])
-      .mockResolvedValue([]);
-    const getBlock = vi.fn().mockImplementation(({ blockNumber }) =>
-      Promise.resolve({
-        timestamp: blockNumber + 1_000n
-      })
+      ]
+    };
+    const getLogs = vi.fn(
+      async ({ event }: { event: { name: string } }) => byEvent[event.name] ?? []
     );
+    const readContract = vi.fn(async () => ({
+      placedAt: placedBlock * 2n,
+      resolvedAt: finalizedBlock * 2n
+    }));
 
     const response = await queryBetReceipt({
       betId: "8",
       chainId: 84532,
-      client: {
-        getBlock,
-        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(9n)),
-        getLogs
-      } as any,
+      client: { ...chainAt(releaseBlock() + 1_000n), getLogs, readContract } as any,
       now: () => 1234
     });
 
@@ -258,29 +257,101 @@ describe("recent bets server aggregation", () => {
       lastEventName: "BetFinalized",
       lastTxHash: "0xccc",
       payout: "19",
-      placedAt: Number(placedBlock + 1_000n) * 1000,
+      placedAt: Number(placedBlock * 2n) * 1000,
       player: PLAYER,
       state: "finalized",
-      updatedAt: Number(finalizedBlock + 1_000n) * 1000
+      updatedAt: Number(finalizedBlock * 2n) * 1000
     });
-    // BetPlaced, BetRandomReady and the three terminal events, including BetVoided.
-    expect(getLogs).toHaveBeenCalledTimes(5);
-    expect(getBlock).toHaveBeenCalledTimes(3);
+    expect(readContract).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "getBet", args: [8n] })
+    );
+    // BetPlaced, BetRandomReady and the three terminal events, BetVoided included, over the bet's own blocks.
+    expect(
+      getLogs.mock.calls.map(([params]: any[]) => [
+        params.event.name,
+        params.fromBlock,
+        params.toBlock
+      ])
+    ).toEqual(
+      ["BetPlaced", "BetRandomReady", "BetFinalized", "BetRefunded", "BetVoided"].map((name) => [
+        name,
+        placedBlock,
+        finalizedBlock
+      ])
+    );
+  });
+
+  it("finds an hour-old receipt at five blocks a second with a bounded number of reads", async () => {
+    process.env.BET_INDEX_READ_ENABLED = "0";
+    process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
+    process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
+
+    // Five blocks share each second; the bet was placed an hour before the head and settled ten seconds later.
+    const head = releaseBlock() + 100_000n;
+    const placedBlock = head - 18_000n - (head % 5n);
+    const second = (n: bigint) => n / 5n;
+    const client = {
+      ...chainAt(head, second),
+      readContract: vi.fn(async () => ({
+        placedAt: second(placedBlock),
+        resolvedAt: second(placedBlock) + 10n
+      })),
+      getLogs: vi.fn(async ({ event }: { event: { name: string } }) =>
+        event.name === "BetPlaced"
+          ? [
+              {
+                args: { asset: ASSET, gameId: GAME_ID, player: PLAYER, positionId: 8n, stake: 10n },
+                blockNumber: placedBlock + 2n,
+                logIndex: 1,
+                transactionHash: "0xaaa"
+              }
+            ]
+          : []
+      )
+    };
+
+    const response = await queryBetReceipt({
+      betId: "8",
+      chainId: 84532,
+      client: client as any,
+      now: () => 1234
+    });
+
+    expect(response.row).toMatchObject({ betId: "8", player: PLAYER });
+    expect(
+      client.getLogs.mock.calls.map(([params]: any[]) => [params.fromBlock, params.toBlock])
+    ).toEqual(Array(5).fill([placedBlock, placedBlock + 54n]));
+    expect(client.getBlock.mock.calls.length).toBeLessThanOrEqual(80);
+  });
+
+  it("returns no receipt for a bet the GameHub has not placed", async () => {
+    process.env.BET_INDEX_READ_ENABLED = "0";
+    process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
+    process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
+    const getLogs = vi.fn();
+    const response = await queryBetReceipt({
+      betId: "8",
+      chainId: 84532,
+      client: {
+        ...chainAt(releaseBlock() + 100n),
+        getLogs,
+        readContract: vi.fn(async () => ({ placedAt: 0n, resolvedAt: 0n }))
+      } as any,
+      now: () => 1234
+    });
+    expect(response.row).toBeNull();
+    expect(getLogs).not.toHaveBeenCalled();
   });
 
   it("folds a voided bet from receipt logs with its stake returned", async () => {
     process.env.BET_INDEX_READ_ENABLED = "0";
     process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
     process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
-    process.env.BET_RECEIPT_WINDOW_BLOCKS = "9";
-    process.env.BET_RECEIPT_LOG_CHUNK_BLOCKS = "10";
 
-    const release = loadEmbeddedRelease(84532);
-    if (!release.ok) throw new Error(release.error);
-    const releaseBlock = BigInt(release.release.meta?.blockNumber ?? 0);
+    const release = releaseBlock();
     const log = (args: Record<string, unknown>, block: bigint, logIndex: number, hash: string) => ({
       args,
-      blockNumber: releaseBlock + block,
+      blockNumber: release + block,
       logIndex,
       transactionHash: hash
     });
@@ -317,9 +388,12 @@ describe("recent bets server aggregation", () => {
       betId: "8",
       chainId: 84532,
       client: {
-        getBlock: vi.fn(async ({ blockNumber }) => ({ timestamp: blockNumber + 1_000n })),
-        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(9n)),
-        getLogs
+        ...chainAt(release + 100n),
+        getLogs,
+        readContract: vi.fn(async () => ({
+          placedAt: (release + 1n) * 2n,
+          resolvedAt: (release + 3n) * 2n
+        }))
       } as any,
       now: () => 1234
     });
@@ -378,7 +452,7 @@ describe("recent bets server aggregation", () => {
     const response = await queryRecentBets({
       chainId: 84532,
       client: {
-        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(25n)),
+        ...chainAt(latestBlockAfterEmbeddedRelease(25n)),
         getLogs
       } as any,
       limit: 10,
@@ -401,7 +475,7 @@ describe("recent bets server aggregation", () => {
     const response = await queryRecentBets({
       chainId: 84532,
       client: {
-        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(25n)),
+        ...chainAt(latestBlockAfterEmbeddedRelease(25n)),
         getLogs: vi.fn().mockRejectedValue(new Error("rate limited"))
       } as any,
       limit: 10,
@@ -473,7 +547,7 @@ describe("recent bets server aggregation", () => {
     const response = await queryPlayerBets({
       chainId: 84532,
       client: {
-        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(9n)),
+        ...chainAt(latestBlockAfterEmbeddedRelease(9n)),
         getLogs
       } as any,
       limit: 10,
@@ -574,7 +648,7 @@ describe("recent bets server aggregation", () => {
       asset: ASSET,
       chainId: 84532,
       client: {
-        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(9n)),
+        ...chainAt(latestBlockAfterEmbeddedRelease(9n)),
         getLogs,
         readContract: vi.fn().mockResolvedValue({
           state: 4,

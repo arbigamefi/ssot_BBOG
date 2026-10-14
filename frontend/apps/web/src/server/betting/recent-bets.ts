@@ -24,6 +24,7 @@ import type {
   PlayerBetsResponse,
   RecentBetsResponse
 } from "../../features/betting/recent-bets";
+import { lastBlockAtOrBefore } from "../block-time";
 import { resolveServerRpcUrl } from "../rpc";
 import { getActiveGameHub, isSameGameHub } from "./active-game-hub";
 
@@ -41,15 +42,19 @@ const DEFAULT_PLAYER_LIMIT = 100;
 const MAX_PLAYER_LIMIT = 500;
 const DEFAULT_AFFILIATE_LIMIT = 100;
 const MAX_AFFILIATE_LIMIT = 500;
-const DEFAULT_WINDOW_BLOCKS = 200;
-const DEFAULT_PLAYER_WINDOW_BLOCKS = 500;
-const DEFAULT_AFFILIATE_WINDOW_BLOCKS = 1_000;
-const DEFAULT_RECEIPT_WINDOW_BLOCKS = 100_000;
-const DEFAULT_LOG_CHUNK_BLOCKS = 10;
-const DEFAULT_RECEIPT_LOG_CHUNK_BLOCKS = 2_000;
+// Without durable rows the RPC fallbacks read the blocks before the confirmed head. The windows are budgets of log
+// queries; at five blocks a second they cover about as long as 200, 500 and 1,000 blocks did at one every two seconds.
+const DEFAULT_WINDOW_BLOCKS = 2_000;
+const DEFAULT_PLAYER_WINDOW_BLOCKS = 5_000;
+const DEFAULT_AFFILIATE_WINDOW_BLOCKS = 10_000;
+// A receipt reads its bet's own blocks, from the placement second to the terminal second, at most this many.
+const DEFAULT_RECEIPT_MAX_BLOCKS = 10_000;
+// Blocks per eth_getLogs, first and last included: Base's public RPC takes 201 (HTTP 413 above).
+const DEFAULT_LOG_CHUNK_BLOCKS = 200;
 const DEFAULT_LOG_CONCURRENCY = 12;
 const DEFAULT_RECEIPT_LOG_CONCURRENCY = 4;
-const DEFAULT_CONFIRMATIONS = 2;
+// Blocks younger than this are left out, so their logs and timestamps have reached every node.
+const DEFAULT_CONFIRMATION_SECONDS = 4;
 const DEFAULT_CACHE_TTL_MS = 8_000;
 const DEFAULT_RECENT_RPC_TIMEOUT_MS = 4_000;
 const DEFAULT_PLAYER_RPC_TIMEOUT_MS = 6_000;
@@ -283,7 +288,6 @@ async function loadGameHubClient({
 }): Promise<{
   client: PublicClient;
   gameHub: Address;
-  latestBlock: bigint;
   release: SSOTRelease;
 }> {
   const releaseResult = loadEmbeddedRelease(chainId);
@@ -302,24 +306,36 @@ async function loadGameHubClient({
   return {
     client: publicClient,
     gameHub: getAddress(release.contracts.gameHub) as Address,
-    latestBlock: await publicClient.getBlockNumber(),
     release
   };
 }
 
-function resolveBlockWindow({
-  latestBlock,
+async function readLatestBlock(client: PublicClient) {
+  const latest = await client.getBlock();
+  if (latest.number == null) throw new Error("The latest block has no number");
+  return { number: latest.number, timestamp: latest.timestamp };
+}
+
+/** `windowBlocks` back from the last block at least `confirmationSeconds` older than the latest one. */
+async function resolveBlockWindow({
+  client,
   release,
   windowBlocks,
-  confirmations
+  confirmationSeconds
 }: {
-  latestBlock: bigint;
+  client: PublicClient;
   release: SSOTRelease;
   windowBlocks: bigint;
-  confirmations: bigint;
+  confirmationSeconds: bigint;
 }) {
-  const toBlock = latestBlock > confirmations ? latestBlock - confirmations : latestBlock;
   const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
+  const latest = await readLatestBlock(client);
+  const toBlock = await lastBlockAtOrBefore(
+    client,
+    latest.timestamp - confirmationSeconds,
+    latest,
+    releaseBlock
+  );
   const windowStart = toBlock > windowBlocks ? toBlock - windowBlocks : 0n;
   return {
     fromBlock: windowStart > releaseBlock ? windowStart : releaseBlock,
@@ -449,7 +465,10 @@ export async function queryRecentBets({
   const normalizedGameId = normalizeGameId(gameId);
   const cacheTtlMs = numberEnv("RECENT_BETS_CACHE_TTL_MS", DEFAULT_CACHE_TTL_MS);
   const windowBlocks = bigintEnv("RECENT_BETS_WINDOW_BLOCKS", DEFAULT_WINDOW_BLOCKS);
-  const confirmations = bigintEnv("RECENT_BETS_CONFIRMATIONS", DEFAULT_CONFIRMATIONS);
+  const confirmationSeconds = bigintEnv(
+    "RECENT_BETS_CONFIRMATION_SECONDS",
+    DEFAULT_CONFIRMATION_SECONDS
+  );
   const chunkBlocks = bigintEnv("RECENT_BETS_LOG_CHUNK_BLOCKS", DEFAULT_LOG_CHUNK_BLOCKS);
   const logConcurrency = numberEnv("RECENT_BETS_LOG_CONCURRENCY", DEFAULT_LOG_CONCURRENCY);
   const rpcTimeoutMs = numberEnv("RECENT_BETS_RPC_TIMEOUT_MS", DEFAULT_RECENT_RPC_TIMEOUT_MS);
@@ -458,7 +477,7 @@ export async function queryRecentBets({
     normalizedGameId ?? "*",
     normalizedLimit,
     windowBlocks,
-    confirmations,
+    confirmationSeconds,
     chunkBlocks,
     logConcurrency,
     rpcTimeoutMs
@@ -500,9 +519,9 @@ export async function queryRecentBets({
     const response = await withTimeout(
       (async () => {
         const loaded = await loadGameHubClient({ chainId, client });
-        const { fromBlock, toBlock } = resolveBlockWindow({
-          confirmations,
-          latestBlock: loaded.latestBlock,
+        const { fromBlock, toBlock } = await resolveBlockWindow({
+          client: loaded.client,
+          confirmationSeconds,
           release: loaded.release,
           windowBlocks
         });
@@ -983,54 +1002,60 @@ async function queryBetReceiptRpcFallback({
   client?: PublicClient;
 }) {
   const receiptBetId = BigInt(betId);
-  const windowBlocks = bigintEnv("BET_RECEIPT_WINDOW_BLOCKS", DEFAULT_RECEIPT_WINDOW_BLOCKS);
-  const confirmations = bigintEnv("BET_RECEIPT_CONFIRMATIONS", DEFAULT_CONFIRMATIONS);
-  const chunkBlocks = bigintEnv("BET_RECEIPT_LOG_CHUNK_BLOCKS", DEFAULT_RECEIPT_LOG_CHUNK_BLOCKS);
+  const maxBlocks = bigintEnv("BET_RECEIPT_MAX_BLOCKS", DEFAULT_RECEIPT_MAX_BLOCKS);
+  const confirmationSeconds = bigintEnv(
+    "BET_RECEIPT_CONFIRMATION_SECONDS",
+    DEFAULT_CONFIRMATION_SECONDS
+  );
+  const chunkBlocks = bigintEnv("BET_RECEIPT_LOG_CHUNK_BLOCKS", DEFAULT_LOG_CHUNK_BLOCKS);
   const logConcurrency = numberEnv("BET_RECEIPT_LOG_CONCURRENCY", DEFAULT_RECEIPT_LOG_CONCURRENCY);
   const rpcTimeoutMs = numberEnv("BET_RECEIPT_RPC_TIMEOUT_MS", DEFAULT_RECEIPT_RPC_TIMEOUT_MS);
 
   return withTimeout(
     (async () => {
       const loaded = await loadGameHubClient({ chainId, client });
-      const { fromBlock, toBlock } = resolveBlockWindow({
-        confirmations,
-        latestBlock: loaded.latestBlock,
-        release: loaded.release,
-        windowBlocks
-      });
+      const releaseBlock = BigInt(loaded.release.meta?.blockNumber ?? 0);
+      const bet = (await loaded.client.readContract({
+        address: loaded.gameHub,
+        abi: GameHubAbi,
+        functionName: "getBet",
+        args: [receiptBetId]
+      })) as { placedAt?: bigint | number; resolvedAt?: bigint | number } | undefined;
+      const placedAt = BigInt(bet?.placedAt ?? 0);
+      if (placedAt === 0n) return null;
+      const resolvedAt = BigInt(bet?.resolvedAt ?? 0);
+      const latest = await readLatestBlock(loaded.client);
+      const confirmedThrough = await lastBlockAtOrBefore(
+        loaded.client,
+        latest.timestamp - confirmationSeconds,
+        latest,
+        releaseBlock
+      );
+      // The bet's events lie from the first block of its placement second to the last of its terminal second.
+      const fromBlock =
+        (await lastBlockAtOrBefore(loaded.client, placedAt - 1n, latest, releaseBlock)) + 1n;
+      const terminalThrough =
+        resolvedAt > 0n
+          ? await lastBlockAtOrBefore(loaded.client, resolvedAt, latest, fromBlock)
+          : confirmedThrough;
+      const capped = fromBlock + maxBlocks - 1n;
+      let toBlock = terminalThrough < confirmedThrough ? terminalThrough : confirmedThrough;
+      if (toBlock > capped) toBlock = capped;
       if (fromBlock > toBlock) return null;
 
-      const placedLogs = await getGameHubLogsInChunks({
-        args: { positionId: receiptBetId },
-        chunkBlocks,
-        concurrency: logConcurrency,
-        client: loaded.client,
-        eventName: "BetPlaced",
-        fromBlock,
-        gameHub: loaded.gameHub,
-        toBlock
-      });
-      if (placedLogs.length === 0) return null;
-
-      const placedFromBlock = placedLogs.reduce((min, log) => {
-        const blockNumber = log.blockNumber ?? min;
-        return blockNumber < min ? blockNumber : min;
-      }, placedLogs[0]?.blockNumber ?? fromBlock);
-
-      const logs: Array<EventLogLike & { eventName: GameHubEventName }> = [
-        ...placedLogs.map((log) => ({ ...log, eventName: "BetPlaced" as const }))
-      ];
-      for (const eventName of ["BetRandomReady", ...TERMINAL_GAMEHUB_EVENTS] as const) {
+      const logs: Array<EventLogLike & { eventName: GameHubEventName }> = [];
+      for (const eventName of GAME_HUB_EVENTS) {
         const eventLogs = await getGameHubLogsInChunks({
           args: { positionId: receiptBetId },
           chunkBlocks,
           concurrency: logConcurrency,
           client: loaded.client,
           eventName,
-          fromBlock: placedFromBlock,
+          fromBlock,
           gameHub: loaded.gameHub,
           toBlock
         });
+        if (eventName === "BetPlaced" && eventLogs.length === 0) return null;
         logs.push(...eventLogs.map((log) => ({ ...log, eventName })));
       }
 
@@ -1094,7 +1119,10 @@ export async function queryPlayerBets({
   const normalizedPlayer = normalizePlayerAddress(player);
   const cacheTtlMs = numberEnv("PLAYER_BETS_CACHE_TTL_MS", DEFAULT_CACHE_TTL_MS);
   const windowBlocks = bigintEnv("PLAYER_BETS_WINDOW_BLOCKS", DEFAULT_PLAYER_WINDOW_BLOCKS);
-  const confirmations = bigintEnv("PLAYER_BETS_CONFIRMATIONS", DEFAULT_CONFIRMATIONS);
+  const confirmationSeconds = bigintEnv(
+    "PLAYER_BETS_CONFIRMATION_SECONDS",
+    DEFAULT_CONFIRMATION_SECONDS
+  );
   const chunkBlocks = bigintEnv("PLAYER_BETS_LOG_CHUNK_BLOCKS", DEFAULT_LOG_CHUNK_BLOCKS);
   const logConcurrency = numberEnv("PLAYER_BETS_LOG_CONCURRENCY", DEFAULT_LOG_CONCURRENCY);
   const rpcTimeoutMs = numberEnv("PLAYER_BETS_RPC_TIMEOUT_MS", DEFAULT_PLAYER_RPC_TIMEOUT_MS);
@@ -1104,7 +1132,7 @@ export async function queryPlayerBets({
     normalizedPlayer.toLowerCase(),
     normalizedLimit,
     windowBlocks,
-    confirmations,
+    confirmationSeconds,
     chunkBlocks,
     logConcurrency,
     rpcTimeoutMs
@@ -1152,9 +1180,9 @@ export async function queryPlayerBets({
     const response = await withTimeout(
       (async () => {
         const loaded = await loadGameHubClient({ chainId, client });
-        const { fromBlock, toBlock } = resolveBlockWindow({
-          confirmations,
-          latestBlock: loaded.latestBlock,
+        const { fromBlock, toBlock } = await resolveBlockWindow({
+          client: loaded.client,
+          confirmationSeconds,
           release: loaded.release,
           windowBlocks
         });
@@ -1268,7 +1296,10 @@ export async function queryAffiliateBets({
   const normalizedAsset = normalizeOptionalAssetAddress(asset);
   const cacheTtlMs = numberEnv("AFFILIATE_BETS_CACHE_TTL_MS", DEFAULT_CACHE_TTL_MS);
   const windowBlocks = bigintEnv("AFFILIATE_BETS_WINDOW_BLOCKS", DEFAULT_AFFILIATE_WINDOW_BLOCKS);
-  const confirmations = bigintEnv("AFFILIATE_BETS_CONFIRMATIONS", DEFAULT_CONFIRMATIONS);
+  const confirmationSeconds = bigintEnv(
+    "AFFILIATE_BETS_CONFIRMATION_SECONDS",
+    DEFAULT_CONFIRMATION_SECONDS
+  );
   const chunkBlocks = bigintEnv("AFFILIATE_BETS_LOG_CHUNK_BLOCKS", DEFAULT_LOG_CHUNK_BLOCKS);
   const logConcurrency = numberEnv("AFFILIATE_BETS_LOG_CONCURRENCY", DEFAULT_LOG_CONCURRENCY);
   const rpcTimeoutMs = numberEnv("AFFILIATE_BETS_RPC_TIMEOUT_MS", DEFAULT_PLAYER_RPC_TIMEOUT_MS);
@@ -1279,7 +1310,7 @@ export async function queryAffiliateBets({
     normalizedAsset?.toLowerCase() ?? "all-assets",
     normalizedLimit,
     windowBlocks,
-    confirmations,
+    confirmationSeconds,
     chunkBlocks,
     logConcurrency,
     rpcTimeoutMs
@@ -1335,9 +1366,9 @@ export async function queryAffiliateBets({
     const response = await withTimeout(
       (async () => {
         const loaded = await loadGameHubClient({ chainId, client });
-        const { fromBlock, toBlock } = resolveBlockWindow({
-          confirmations,
-          latestBlock: loaded.latestBlock,
+        const { fromBlock, toBlock } = await resolveBlockWindow({
+          client: loaded.client,
+          confirmationSeconds,
           release: loaded.release,
           windowBlocks
         });
