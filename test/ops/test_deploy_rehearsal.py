@@ -1,13 +1,18 @@
 """test/fixtures/deploy-rehearsal.sh, the deployment path end to end on a public Base Sepolia fork (plan A5).
 
-Running it needs anvil and the public RPC, so these checks are static: it drives the repository's own scripts without
-any key, and the preflight line its failure injection rewrites is still where the injection expects it.
+Running it needs anvil and the public RPC, so these checks stop short of that: it drives the repository's own scripts
+without any key, refuses an output directory inside the repository before it starts, and the preflight line its
+failure injection rewrites is still where the injection expects it.
 """
 import os
 from pathlib import Path
+import shutil
+import subprocess
+import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+BASH = '/bin/bash' if Path('/bin/bash').exists() else shutil.which('bash')
 REHEARSAL = ROOT / 'test/fixtures/deploy-rehearsal.sh'
 ANCHOR = '\n  for _ in $(seq 120); do\n'
 
@@ -20,8 +25,20 @@ class DeployRehearsalTests(unittest.TestCase):
                      'script/release/broadcast_v16.sh', 'make -C "$C" timelock-batches-v16',
                      'script/release/verify_governance.py', '--fork-url https://sepolia.base.org'):
             self.assertIn(step, script)
+        code = '\n'.join(line for line in script.splitlines() if not line.lstrip().startswith('#'))
         for absent in ('with-ops-rpc', 'API_KEY', 'PROD_KEEPER', '.env'):
-            self.assertNotIn(absent, script)
+            self.assertNotIn(absent, code)
+
+    def test_an_output_inside_the_repository_is_refused_before_anything_starts(self):
+        # prepare_deploy_copy.sh would refuse the copy only after the preflight; without Foundry on the PATH a
+        # rehearsal that went on could not start a fork either.
+        inside = ROOT / 'deployments' / f'rehearsal-refusal-{os.getpid()}'
+        path = os.pathsep.join((str(Path(sys.executable).parent), '/usr/bin', '/bin'))
+        result = subprocess.run([BASH, str(REHEARSAL), str(inside)], capture_output=True, text=True, timeout=60,
+                                env={**os.environ, 'PATH': path})
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('the output must be outside the repository', result.stderr)
+        self.assertFalse(inside.exists())
 
     def test_the_failure_injection_lands_after_the_fork_starts_and_before_the_deployment(self):
         self.assertIn(repr(ANCHOR).replace("'", '"'), REHEARSAL.read_text())

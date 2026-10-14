@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The whole deployment path on a Base Sepolia fork (launch candidate plan A5), before the real preflight:
 #
-#   test/fixtures/deploy-rehearsal.sh [new output directory] [commit] [fail-rehearsal]
+#   test/fixtures/deploy-rehearsal.sh [new output directory outside the repository] [commit] [fail-rehearsal]
 #
 # Public RPC, no keys: mock Safe and guardian multisigs, a throwaway deployer keystore, the preflight
 # (script/release/run_preflight.sh), the deploy copy, the gated broadcast (answered by drive_terminal.py), then the Safe's
@@ -9,13 +9,16 @@
 # marked CERTIFIED; the real domain file is not changed. With fail-rehearsal the preflight's rehearsal stage fails right
 # after its fork starts, and the run passes only if the preflight stops and leaves no fork running.
 #
-# The output holds a full deploy copy and the throwaway keystore, so without an argument it goes to a new directory
-# under the system temporary directory, not dist/. The last line is E2E PASS (or E2E FAIL-PATH PASS) on success.
+# The output holds the deploy copy, which prepare_deploy_copy.sh refuses below the repository root and its .env, and the
+# throwaway keystore; without an argument it goes to a new directory under the system temporary directory. The last
+# line is E2E PASS (or E2E FAIL-PATH PASS) on success.
 set -uo pipefail
 R=$(cd "$(dirname "$0")/../.." && pwd)
 B=$R/test/fixtures
 S=${1:-${TMPDIR:-/tmp}/deploy-rehearsal-$(date -u +%Y%m%dT%H%M%SZ)}
 [ ! -e "$S" ] || { echo "exists: $S" >&2; exit 1; }
+python3 -c 'import os, sys; s, r = map(os.path.realpath, sys.argv[1:]); sys.exit(s == r or s.startswith(r + os.sep))' "$S" "$R" ||
+  { echo "the output must be outside the repository: $S" >&2; exit 1; }
 mkdir -p "$S" && S=$(cd "$S" && pwd)
 echo "output: $S"
 cd "$R"

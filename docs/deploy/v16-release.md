@@ -21,10 +21,11 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
   The first deployment is Base Sepolia with exactly one USDC casino pool.
 - Re-read Safe code, owner and control hashes. Use current generated ABIs; a build without a verified
   imported manifest intentionally has no connected pools.
-- Rehearse the steps below on the commit first: `test/fixtures/deploy-rehearsal.sh [new directory] [commit]` runs the
-  preflight, the deploy copy, the gated broadcast, the Safe's wiring from the copy and release verification on a fork of
-  the public Base Sepolia RPC, with mock Safe and guardian multisigs and a throwaway keystore. It uses no key, sends
-  nothing to a real chain and ends with `E2E PASS` (about two minutes).
+- Rehearse the steps below on the commit first:
+  `test/fixtures/deploy-rehearsal.sh [new directory outside the repository] [commit]` runs the preflight, the deploy
+  copy, the gated broadcast, the Safe's wiring from the copy and release verification on a fork of the public Base
+  Sepolia RPC, with mock Safe and guardian multisigs and a throwaway keystore. It uses no key, sends nothing to a real
+  chain and ends with `E2E PASS` (about two minutes).
 
 ## Deployment and application setup
 
