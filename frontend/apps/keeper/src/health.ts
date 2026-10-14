@@ -2,6 +2,11 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Address, Hex } from "viem";
+import type {
+  KeeperDegradedSource,
+  KeeperHealthSnapshotField,
+  KeeperPoolHealthField
+} from "@ssot/ssot/keeper-health";
 
 import type { FinalizeOutcome, KeeperConfig, KeeperEvent, KeeperRole } from "./types.js";
 import type { VoidAttemptOutcome } from "./void.js";
@@ -217,6 +222,17 @@ export type KeeperHealthSnapshot = {
     updatedAt: string;
   };
 };
+
+// The web validates snapshots against the shared field lists; these fail to compile when they drift.
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type Holds<T extends true> = T;
+export type KeeperHealthFieldsAreShared = Holds<
+  Same<keyof KeeperHealthSnapshot, KeeperHealthSnapshotField>
+>;
+export type KeeperPoolFieldsAreShared = Holds<Same<keyof PoolHealth, KeeperPoolHealthField>>;
+export type KeeperDegradedSourcesAreShared = Holds<
+  Same<KeeperFailureSource | "stalled", KeeperDegradedSource>
+>;
 
 export type KeeperHealthSink = {
   write(snapshot: KeeperHealthSnapshot): void | Promise<void>;

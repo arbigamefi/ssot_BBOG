@@ -1,5 +1,11 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  KEEPER_DEGRADED_SOURCES,
+  KEEPER_HEALTH_SNAPSHOT_FIELDS,
+  KEEPER_POOL_HEALTH_FIELDS,
+  type KeeperDegradedSource
+} from "@ssot/ssot/keeper-health";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -43,10 +49,12 @@ export type KeeperHealthSnapshot = {
     claimError?: string;
     error?: string;
   }>;
+  scanHeadBehindBy?: string;
+  vaultProviderLedger?: Record<string, unknown>;
+  governance?: Record<string, unknown>;
+  voids?: Record<string, unknown>;
   casinoRecoveryScannedThrough?: string;
-  degradedBy?: Array<
-    "scan" | "ledger" | "finalize" | "recovery" | "pools" | "payables" | "stalled"
-  >;
+  degradedBy?: KeeperDegradedSource[];
   rpc?: {
     errorsLastMinute: Record<string, number>;
     lastMinute: Record<string, number>;
@@ -136,34 +144,12 @@ export type KeeperPoolHealth = {
   paused?: boolean;
   lpStatus?: number;
   error?: string;
+  transientError?: string;
+  transientSince?: string;
 };
-const SNAPSHOT_KEYS = new Set([
-  "schemaVersion",
-  "status",
-  "role",
-  "chainId",
-  "gameHub",
-  "vrfHub",
-  "keeper",
-  "startedAt",
-  "updatedAt",
-  "queueDepth",
-  "lastScannedBlock",
-  "lastScanAt",
-  "lastEnqueuedAt",
-  "lastEnqueued",
-  "lastFinalizeSuccessAt",
-  "lastFinalizeSuccess",
-  "lastFinalizeFailureAt",
-  "lastFinalizeFailure",
-  "lastError",
-  "pools",
-  "lastPoolScanAt",
-  "payables",
-  "casinoRecoveryScannedThrough",
-  "degradedBy",
-  "rpc"
-]);
+// The keeper's snapshot fields (see @ssot/ssot/keeper-health); anything else rejects the snapshot.
+const SNAPSHOT_KEYS = new Set<string>(KEEPER_HEALTH_SNAPSHOT_FIELDS);
+const DEGRADED_SOURCES = new Set<string>(KEEPER_DEGRADED_SOURCES);
 const POOL_NUMBERS = [
   "observedBlock",
   "openHolds",
@@ -181,15 +167,7 @@ const POOL_NUMBERS = [
   "XP",
   "PP"
 ] as const;
-const POOL_KEYS = new Set([
-  "bank",
-  "vault",
-  ...POOL_NUMBERS,
-  "accountingValid",
-  "paused",
-  "lpStatus",
-  "error"
-]);
+const POOL_KEYS = new Set<string>(KEEPER_POOL_HEALTH_FIELDS);
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -217,12 +195,7 @@ function validSnapshot(value: unknown, chainId: number): value is KeeperHealthSn
   if (
     value.degradedBy !== undefined &&
     (!Array.isArray(value.degradedBy) ||
-      value.degradedBy.some(
-        (item) =>
-          !["scan", "ledger", "finalize", "recovery", "pools", "payables", "stalled"].includes(
-            String(item)
-          )
-      ))
+      value.degradedBy.some((item) => !DEGRADED_SOURCES.has(String(item))))
   )
     return false;
   return (
@@ -241,6 +214,8 @@ function validSnapshot(value: unknown, chainId: number): value is KeeperHealthSn
           ) &&
           (pool.accountingValid === undefined || typeof pool.accountingValid === "boolean") &&
           (pool.paused === undefined || typeof pool.paused === "boolean") &&
+          (pool.transientError === undefined || typeof pool.transientError === "string") &&
+          (pool.transientSince === undefined || typeof pool.transientSince === "string") &&
           (pool.lpStatus === undefined ||
             (typeof pool.lpStatus === "number" &&
               Number.isInteger(pool.lpStatus) &&

@@ -2,6 +2,11 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import {
+  KEEPER_DEGRADED_SOURCES,
+  KEEPER_HEALTH_SNAPSHOT_FIELDS,
+  KEEPER_POOL_HEALTH_FIELDS
+} from "@ssot/ssot/keeper-health";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readKeeperHealthSnapshot } from "./keeper-health";
@@ -109,6 +114,84 @@ describe("readKeeperHealthSnapshot", () => {
     expect(await readKeeperHealthSnapshot({ chainId: 84532 })).toMatchObject({
       pools,
       degradedBy: ["pools"]
+    });
+  });
+  it("accepts every field and degraded source the keeper writes", async () => {
+    const healthPath = join(tempDir, "health.json");
+    const now = new Date().toISOString();
+    const pool = {
+      bank: `0x${"44".repeat(20)}`,
+      vault: `0x${"55".repeat(20)}`,
+      observedBlock: "99",
+      openHolds: "1",
+      maxOpenHolds: "128",
+      capacityHeadroom: "127",
+      minBetAmount: "10000",
+      bankCash: "26",
+      vaultCash: "100",
+      L: "100",
+      P: "20",
+      R: "30",
+      K: "10",
+      G: "120",
+      PF: "1",
+      XP: "2",
+      PP: "3",
+      accountingValid: true,
+      paused: false,
+      lpStatus: 0,
+      error: "read failed",
+      transientError: "block not found",
+      transientSince: now
+    };
+    const full = {
+      ...runningSnapshot(84532),
+      status: "degraded",
+      lastScannedBlock: "100",
+      lastScanAt: now,
+      lastEnqueuedAt: now,
+      lastEnqueued: { source: "vrf", betId: "1", requestId: "2", blockNumber: "99" },
+      lastFinalizeSuccessAt: now,
+      lastFinalizeSuccess: { betId: "1", txHash: `0x${"ab".repeat(32)}`, latencyMs: 10 },
+      lastFinalizeFailureAt: now,
+      lastFinalizeFailure: { betId: "2", reason: "revert", retryable: true },
+      lastError: "rpc timeout",
+      scanHeadBehindBy: "3",
+      pools: [pool],
+      lastPoolScanAt: now,
+      payables: [{ bank: pool.bank, caughtUp: true, pending: 0, scannedThrough: "90" }],
+      vaultProviderLedger: { scannedThrough: "90", finalizedBlock: "95" },
+      governance: { timelock: `0x${"66".repeat(20)}`, caughtUp: true, scannedThrough: "90" },
+      voids: {
+        gasLimit: "11000000",
+        candidates: [],
+        candidateCount: 0,
+        attempts: 0,
+        voided: 0,
+        settled: 0,
+        failed: 0,
+        startupRecoveryComplete: true
+      },
+      casinoRecoveryScannedThrough: "90",
+      degradedBy: [...KEEPER_DEGRADED_SOURCES],
+      rpc: {
+        errorsLastMinute: {},
+        lastMinute: {},
+        total: {},
+        totalErrors: {},
+        windowStartedAt: now,
+        updatedAt: now
+      }
+    };
+    expect(Object.keys(full).sort()).toEqual([...KEEPER_HEALTH_SNAPSHOT_FIELDS].sort());
+    expect(Object.keys(pool).sort()).toEqual([...KEEPER_POOL_HEALTH_FIELDS].sort());
+    await writeFile(healthPath, JSON.stringify(full));
+    process.env.KEEPER_HEALTH_PATH = healthPath;
+    expect(await readKeeperHealthSnapshot({ chainId: 84532 })).toMatchObject({
+      status: "degraded",
+      keeper: full.keeper,
+      voids: full.voids,
+      degradedBy: full.degradedBy
     });
   });
   it.each([
