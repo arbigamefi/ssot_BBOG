@@ -47,8 +47,8 @@ const MAX_AFFILIATE_LIMIT = 500;
 const DEFAULT_WINDOW_BLOCKS = 2_000;
 const DEFAULT_PLAYER_WINDOW_BLOCKS = 5_000;
 const DEFAULT_AFFILIATE_WINDOW_BLOCKS = 10_000;
-// A receipt reads the blocks of its bet's placement and terminal seconds; a VRF result outside them is searched for
-// at most this many blocks after the placement.
+// A receipt reads the blocks of its bet's placement and terminal seconds; a VRF result before the terminal second is
+// searched for in at most this many blocks from the placement block on.
 const DEFAULT_RECEIPT_READY_SEARCH_BLOCKS = 10_000;
 // The blocks ending at a second's last block that hold all of that second: five since Denim, one before.
 const RECEIPT_SECOND_WINDOW_BLOCKS = 10n;
@@ -1008,10 +1008,11 @@ function bigintStringFromUnknown(value: unknown) {
 
 /**
  * A bet's receipt from the chain when the durable index has no row. `getBet` gives the placement and terminal
- * seconds, so only their blocks are queried, a few each however long the bet was open; a VRF result outside the
- * terminal second is searched for at most BET_RECEIPT_READY_SEARCH_BLOCKS blocks after the placement. When the logs
- * found stop short of the state in storage, the row carries that state, without the amounts and transactions that
- * were not found, and `incomplete` is set: it never reads as the receipt of an earlier state.
+ * seconds, so only their blocks are queried, a few each however long the bet was open; a VRF result before the
+ * terminal second is searched for in at most BET_RECEIPT_READY_SEARCH_BLOCKS blocks from the placement block on, its
+ * own second included. When the logs found stop short of the state in storage, the row carries that state, without
+ * the amounts and transactions that were not found, and `incomplete` is set: it never reads as the receipt of an
+ * earlier state.
  */
 async function queryBetReceiptRpcFallback({
   betId,
@@ -1086,6 +1087,7 @@ async function queryBetReceiptRpcFallback({
       ]);
       const logs = await logsIn(["BetPlaced"], placement.fromBlock, placement.toBlock);
       if (logs.length === 0) return null;
+      const placedBlock = logs[0].blockNumber ?? placement.fromBlock;
       let readyFound = false;
       let terminalFrom: bigint | undefined;
       if (terminal) {
@@ -1098,8 +1100,9 @@ async function queryBetReceiptRpcFallback({
         readyFound = found.some((log) => log.eventName === "BetRandomReady");
         logs.push(...found);
       }
-      // A result delivered before the terminal second, or not yet followed by one, is searched for after the
-      // placement, up to the confirmed head.
+      // A result delivered before the terminal second, or not yet followed by one, is searched for from the
+      // placement block, up to the confirmed head: three confirmations take only 0.6 s at five blocks a second, so
+      // the result can land in the placement's own second.
       if (
         !readyFound &&
         (chainState === "randomReady" || chainState === "finalized" || chainState === "voided")
@@ -1110,15 +1113,11 @@ async function queryBetReceiptRpcFallback({
           latest,
           releaseBlock
         );
-        let toBlock = placement.toBlock + readySearchBlocks;
+        let toBlock = placedBlock + readySearchBlocks - 1n;
         if (terminalFrom != null && toBlock >= terminalFrom) toBlock = terminalFrom - 1n;
         if (toBlock > confirmedThrough) toBlock = confirmedThrough;
-        // One chunk at a time from the placement: the result usually arrives within seconds.
-        for (const chunk of getBlockChunks({
-          chunkBlocks,
-          fromBlock: placement.toBlock + 1n,
-          toBlock
-        })) {
+        // One chunk at a time: the result usually arrives within seconds.
+        for (const chunk of getBlockChunks({ chunkBlocks, fromBlock: placedBlock, toBlock })) {
           const ready = await logsIn(["BetRandomReady"], chunk.fromBlock, chunk.toBlock);
           logs.push(...ready);
           if (ready.length) break;

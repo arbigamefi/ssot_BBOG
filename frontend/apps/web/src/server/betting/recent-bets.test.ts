@@ -303,15 +303,25 @@ describe("recent bets server aggregation", () => {
       blockNumber,
       args: { positionId: 8n, ...args }
     });
-    const placedLog = log("BetPlaced", PLACED, {
-      asset: ASSET,
-      gameId: GAME_ID,
-      player: PLAYER,
-      requestId: 99n,
-      stake: 10n
-    });
-    /** Answers only inside the queried range, as an RPC does, and refuses a range Base's public RPC would. */
-    function strictChain(logs: Log[], bet: Record<string, bigint | number>, head: bigint) {
+    const placedLogAt = (blockNumber: bigint) =>
+      log("BetPlaced", blockNumber, {
+        asset: ASSET,
+        gameId: GAME_ID,
+        player: PLAYER,
+        requestId: 99n,
+        stake: 10n
+      });
+    const placedLog = placedLogAt(PLACED);
+    /**
+     * Answers only inside the queried range, as an RPC does, and refuses a range Base's public RPC would; each log
+     * query takes `latencyMs`.
+     */
+    function strictChain(
+      logs: Log[],
+      bet: Record<string, bigint | number>,
+      head: bigint,
+      latencyMs = 0
+    ) {
       const getLogs = vi.fn(
         async ({
           event,
@@ -322,6 +332,7 @@ describe("recent bets server aggregation", () => {
           fromBlock: bigint;
           toBlock: bigint;
         }) => {
+          if (latencyMs) await new Promise((resolve) => setTimeout(resolve, latencyMs));
           if (toBlock - fromBlock + 1n > 201n) throw new Error("HTTP 413");
           return logs
             .filter(
@@ -466,6 +477,88 @@ describe("recent bets server aggregation", () => {
       expect(response.row).toMatchObject({ state: "refunded", lastEventName: "BetPlaced" });
       expect(response.row?.refundAmount).toBeUndefined();
       expect(client.getTransactionReceipt).not.toHaveBeenCalled();
+    });
+
+    describe("with a result three blocks after the placement", () => {
+      // Three confirmations take 0.6 s at five blocks a second: placed in the first block of its second, the result
+      // shares that second. A result in the next second's first block is the control.
+      const EARLY = 100_000n;
+      const RANDOM_HASH = `0x${"55".repeat(32)}`;
+      const readyLog = (blockNumber: bigint) =>
+        log("BetRandomReady", blockNumber, { randomHash: RANDOM_HASH });
+      const settled = log("BetFinalized", EARLY + 2n * HOUR, { payoutGross: 20n, payoutNet: 19n });
+      const voided = log("BetVoided", EARLY + DAY, { stake: 10n });
+      async function receiptFrom(client: ReturnType<typeof strictChain>) {
+        process.env.BET_INDEX_READ_ENABLED = "0";
+        process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
+        process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
+        return queryBetReceipt({
+          betId: "8",
+          chainId: 84532,
+          client: client as any,
+          now: () => 1234
+        });
+      }
+
+      it.each([
+        [
+          "in the placement's second",
+          "waiting for its settlement",
+          3n,
+          3,
+          undefined,
+          "randomReady"
+        ],
+        ["in the placement's second", "settled two hours later", 3n, 4, settled, "finalized"],
+        ["in the placement's second", "voided 24 hours later", 3n, 6, voided, "voided"],
+        ["in the next second", "waiting for its settlement", 5n, 3, undefined, "randomReady"],
+        ["in the next second", "settled two hours later", 5n, 4, settled, "finalized"],
+        ["in the next second", "voided 24 hours later", 5n, 6, voided, "voided"]
+      ] as const)(
+        "finds a result %s for a bet %s",
+        async (_where, _name, offset, chainState, terminalLog, state) => {
+          const events = [
+            placedLogAt(EARLY),
+            readyLog(EARLY + offset),
+            ...(terminalLog ? [terminalLog] : [])
+          ];
+          const client = strictChain(
+            events,
+            {
+              placedAt: second(EARLY),
+              resolvedAt: terminalLog ? second(terminalLog.blockNumber) : 0,
+              state: chainState
+            },
+            events.at(-1)!.blockNumber + 1_000n
+          );
+
+          const response = await receiptFrom(client);
+
+          expect(response.incomplete).toBeUndefined();
+          expect(response.row).toMatchObject({ state, randomHash: RANDOM_HASH });
+          // BetPlaced, the terminal second's four queries when there is one, and the result's first chunk, which
+          // starts at the placement block.
+          expect(client.getLogs.mock.calls.length).toBe(terminalLog ? 6 : 2);
+          // Terminal-transaction enrichment is tried and unavailable: the logs carry the result.
+          if (terminalLog) expect(client.getTransactionReceipt).toHaveBeenCalled();
+        }
+      );
+
+      it("answers within the receipt timeout at 150 ms a log query", async () => {
+        const events = [placedLogAt(EARLY), readyLog(EARLY + 3n), settled];
+        const client = strictChain(
+          events,
+          { placedAt: second(EARLY), resolvedAt: second(settled.blockNumber), state: 4 },
+          settled.blockNumber + 1_000n,
+          150
+        );
+
+        // Six queries; a search that missed the result would make 55 and outlast the 8 s timeout.
+        const response = await receiptFrom(client);
+
+        expect(response.row).toMatchObject({ state: "finalized", randomHash: RANDOM_HASH });
+        expect(client.getLogs.mock.calls.length).toBe(6);
+      }, 12_000);
     });
   });
 
