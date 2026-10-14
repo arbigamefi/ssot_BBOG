@@ -219,10 +219,16 @@ describe("governance timelock indexing", () => {
       "casino.keeper.governance_scan_failed",
       expect.objectContaining({ error: expect.stringContaining("GovernanceMismatchError") })
     );
-    // Once the Bank is handed to the timelock, the next pass indexes.
+    // Once the Bank is handed to the timelock, the next pass indexes. Five chunks stop one block short of the
+    // finalized head, so the capped pass still degrades governance until the next one reaches it.
     chain.governance.set(bank, timelock);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(timelockQueries()).toHaveLength(5);
+    expect(runtime!.health.snapshot()).toMatchObject({
+      degradedBy: expect.arrayContaining(["governance"]),
+      governance: { scannedThrough: "149", finalizedBlock: "150", caughtUp: false }
+    });
+    await vi.advanceTimersByTimeAsync(60_000);
     expect(runtime!.health.snapshot().degradedBy ?? []).not.toContain("governance");
   });
 
@@ -268,7 +274,10 @@ describe("governance timelock indexing", () => {
 
   it("degrades governance when its finalized head has not advanced for the stall limit", async () => {
     logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-    runtime = createKeeperRuntime({ config: { ...config, finalizedStallMs: 120_000 }, logger });
+    runtime = createKeeperRuntime({
+      config: { ...config, finalizedStallMs: 120_000, scanMaxChunksPerPass: 50 },
+      logger
+    });
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
     expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("governance");

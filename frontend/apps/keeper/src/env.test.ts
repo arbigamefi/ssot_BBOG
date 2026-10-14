@@ -37,19 +37,21 @@ function baseEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
 }
 
 describe("loadKeeperConfig", () => {
-  it("defaults to an Alchemy-free-tier-safe scan window", () => {
+  it("defaults to a 2,000-block scan window, within Infura's log range", () => {
     const config = loadKeeperConfig(baseEnv());
 
-    expect(config.scanChunkBlocks).toBe(10n);
+    expect(config.scanChunkBlocks).toBe(2_000n);
   });
 
   it("bounds a catch-up pass, with headroom over Base's block rate", () => {
     const config = loadKeeperConfig(baseEnv());
 
-    // A 300s pass must cover at least ~15 chunks to keep pace with 2s blocks at
-    // the 10-block free-tier chunk size; anything lower falls behind forever.
+    // Base makes five blocks a second since Denim, so a 300s pass needs 1,500
+    // blocks; a budget below that falls behind forever. Keep 10x headroom.
     expect(config.scanMaxChunksPerPass).toBe(50);
-    expect(config.scanMaxChunksPerPass).toBeGreaterThan(15);
+    expect(BigInt(config.scanMaxChunksPerPass) * config.scanChunkBlocks).toBeGreaterThanOrEqual(
+      10n * 300n * 5n
+    );
   });
 
   it("allows the catch-up bound to be raised for providers with wider log ranges", () => {

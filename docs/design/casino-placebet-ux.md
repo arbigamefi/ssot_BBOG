@@ -97,7 +97,7 @@ The keeper listens to:
 | Instance        | Delay | Purpose                                              |
 | --------------- | ----- | ---------------------------------------------------- |
 | primary         | 0s    | first finalize attempt                               |
-| backup          | 5s    | separate region and RPC provider                     |
+| backup          | 5s    | separate region, keeper EOA and RPC account          |
 | public fallback | 30s   | permissionless manual or future bounty-driven actors |
 
 Duplicate finalization is harmless because `finalize` rejects non-`RandomReady`

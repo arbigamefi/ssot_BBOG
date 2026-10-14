@@ -157,7 +157,7 @@ describe("KeeperHealthReporter", () => {
       now: () => new Date("2026-05-17T00:00:00.000Z")
     });
 
-    await health.recordScan(120n, 0);
+    await health.recordScan(120n, 120n, 0);
 
     const saved = JSON.parse(await readFile(path, "utf8")) as KeeperHealthSnapshot;
     expect(saved).toMatchObject({
@@ -254,7 +254,7 @@ describe("KeeperHealthReporter failure recovery", () => {
       lastError: "HTTP request failed. Status: 429"
     });
 
-    await health.recordScan(200n, 0);
+    await health.recordScan(200n, 200n, 0);
 
     expect(health.snapshot()).toMatchObject({
       status: "running",
@@ -281,7 +281,7 @@ describe("KeeperHealthReporter failure recovery", () => {
       lastError: "ledger read failed"
     });
 
-    await health.recordScan(200n, 1);
+    await health.recordScan(200n, 200n, 1);
     expect(health.snapshot()).toMatchObject({
       status: "degraded",
       degradedBy: ["finalize", "ledger"],
@@ -402,7 +402,7 @@ describe("KeeperHealthReporter failure recovery", () => {
       lastError: "scan unavailable",
       lastFinalizeFailure: undefined
     });
-    await health.recordScan(200n, 0);
+    await health.recordScan(200n, 200n, 0);
     expect(health.snapshot().status).toBe("running");
   });
 
@@ -432,7 +432,7 @@ describe("KeeperHealthReporter failure recovery", () => {
       lastError: "event scan has not advanced since 2026-09-26T00:00:00.000Z"
     });
 
-    await health.recordScan(150n, 0);
+    await health.recordScan(150n, 150n, 0);
     advance(10_000);
     await health.recordHeartbeat(0);
     expect(health.snapshot()).toMatchObject({ status: "running", degradedBy: undefined });
@@ -475,7 +475,7 @@ describe("pool health", () => {
     const pool = { bank: baseConfig.gameHub, vault: baseConfig.gameHub };
     await health.recordRunning(100n, 0);
     await health.recordPools([{ ...pool, accountingValid: false, error: "Cash deficit" }], 0);
-    await health.recordScan(101n, 0);
+    await health.recordScan(101n, 101n, 0);
     await health.recordFinalizeOutcome({ betId: 5n }, { kind: "raced", state: "settled" }, 0);
     expect(health.snapshot().degradedBy).toEqual(["pools"]);
     await health.recordPools([{ ...pool, accountingValid: true }], 0);
@@ -502,7 +502,7 @@ describe("pool health", () => {
     });
     await health.recordRunning(100n, 0);
     timestamp = 300_001;
-    await health.recordScan(999n, 0);
+    await health.recordScan(999n, 999n, 0);
     expect(health.snapshot()).toMatchObject({
       status: "degraded",
       degradedBy: ["stalled"],
@@ -526,7 +526,7 @@ describe("payable health", () => {
       [{ bank, caughtUp: true, pending: 1, claimError: "send failed" }],
       0
     );
-    await health.recordScan(101n, 0);
+    await health.recordScan(101n, 101n, 0);
     expect(health.snapshot()).toMatchObject({
       status: "degraded",
       lastError: expect.stringContaining("send failed")
@@ -612,7 +612,7 @@ describe("finalized-head and governance progress", () => {
     advance(300_001);
     await health.recordHeartbeat(0);
     expect(health.snapshot()).toMatchObject({ status: "degraded", degradedBy: ["stalled"] });
-    await health.recordScan(101n, 0);
+    await health.recordScan(101n, 101n, 0);
     await health.recordScanHeadBehind(undefined, 0);
     expect(health.snapshot()).toMatchObject({ status: "running", scanHeadBehindBy: undefined });
   });
@@ -631,6 +631,36 @@ describe("finalized-head and governance progress", () => {
       status: "running",
       governance: { timelock, scannedThrough: "200", caughtUp: true }
     });
+  });
+});
+
+describe("capped scan passes", () => {
+  it("degrades every scan a capped pass left short of its target, until one reaches it", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    const timelock = "0x4444444444444444444444444444444444444444" as const;
+    await health.recordScan(150n, 1_500n, 0);
+    await health.recordScanBehind(1_350n, 1_500n, 0);
+    await health.recordLedgerScan(0, { scannedThrough: "120", finalizedBlock: "1500" });
+    await health.recordGovernanceScan(
+      { timelock, scannedThrough: "120", finalizedBlock: "1500", caughtUp: false },
+      0
+    );
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["scan", "ledger", "governance"],
+      lastError: "Governance timelock indexing incomplete through 120 (finalized target 1500)"
+    });
+    // The next pass's chunks fall short of the head too: the scan stays degraded between them.
+    await health.recordScan(1_000n, 1_500n, 0);
+    expect(health.snapshot().degradedBy).toContain("scan");
+    await health.recordScan(1_500n, 1_500n, 0);
+    await health.recordLedgerScan(0, { scannedThrough: "1500", finalizedBlock: "1500" });
+    await health.recordGovernanceScan(
+      { timelock, scannedThrough: "1500", finalizedBlock: "1500", caughtUp: true },
+      0
+    );
+    expect(health.snapshot()).toMatchObject({ status: "running", degradedBy: undefined });
   });
 });
 

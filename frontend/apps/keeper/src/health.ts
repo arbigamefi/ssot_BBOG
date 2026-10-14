@@ -14,7 +14,7 @@ import type { VoidAttemptOutcome } from "./void.js";
 export type KeeperHealthStatus = "starting" | "running" | "degraded" | "stopped";
 
 /**
- * Where a failure came from. Scans clear on a successful pass; finalization and void failures clear
+ * Where a failure came from. Scans clear on a successful pass that reaches its target; finalization and void failures clear
  * only when the same bet is successfully reconciled, including a healthy deferred read.
  */
 export type KeeperFailureSource =
@@ -160,6 +160,15 @@ export type VoidHealth = {
 const MAX_VOID_CANDIDATES_LISTED = 50;
 /** ADR-0037 §7.3 rule 4: an unbooked result older than this is alerted. */
 export const UNBOOKED_RESULT_ALERT_SECONDS = 3_600n;
+
+/** A finalized scan stopped short of its target: the pass was capped. */
+function behind(progress?: FinalizedScanHealth) {
+  return (
+    progress?.scannedThrough != null &&
+    progress.finalizedBlock != null &&
+    BigInt(progress.scannedThrough) < BigInt(progress.finalizedBlock)
+  );
+}
 
 /** A running keeper whose event scan has not advanced for this long is reported degraded. */
 export function scanStaleAfterMs(pollIntervalMs: number) {
@@ -361,10 +370,11 @@ export class KeeperHealthReporter {
     });
   }
 
-  async recordScan(lastScannedBlock: bigint, queueDepth: number) {
+  /** A scan chunk succeeded. Only a chunk that reaches the pass's target block clears a scan failure. */
+  async recordScan(lastScannedBlock: bigint, targetBlock: bigint, queueDepth: number) {
     const at = this.now();
     this.scanProgressMs = at.getTime();
-    this.failures.delete("scan");
+    if (lastScannedBlock >= targetBlock) this.failures.delete("scan");
     if (this.phase === "starting") this.phase = "running";
     await this.update({
       lastScannedBlock: lastScannedBlock.toString(),
@@ -373,18 +383,38 @@ export class KeeperHealthReporter {
     });
   }
 
-  /** A bank-provider ledger pass finished without error; a stalled finalized head still degrades it. */
+  /**
+   * A bank-provider ledger pass finished without error; a stalled finalized head, or a capped pass that stopped
+   * short of it, still degrades it.
+   */
   async recordLedgerScan(queueDepth: number, progress?: FinalizedScanHealth) {
     if (progress?.finalizedStalledSince)
       this.fail(
         "ledger",
         `Vault ledger finalized head ${progress.finalizedBlock} has not advanced since ${progress.finalizedStalledSince}`
       );
+    else if (behind(progress))
+      this.fail(
+        "ledger",
+        `Vault ledger scan incomplete through ${progress!.scannedThrough} (finalized target ${progress!.finalizedBlock})`
+      );
     else if (!this.failures.delete("ledger") && progress === undefined) return;
     await this.update({
       queueDepth,
       ...(progress === undefined ? {} : { vaultProviderLedger: progress })
     });
+  }
+
+  /**
+   * The event scan stopped at KEEPER_SCAN_MAX_CHUNKS_PER_PASS chunks short of the head. It degrades `scan` until a
+   * pass reaches the head: a budget that cannot keep pace would otherwise fall behind for good while looking healthy.
+   */
+  async recordScanBehind(remainingBlocks: bigint, targetBlock: bigint, queueDepth: number) {
+    this.fail(
+      "scan",
+      `event scan is ${remainingBlocks} blocks behind block ${targetBlock} after a capped pass`
+    );
+    await this.update({ queueDepth });
   }
 
   /** The event scan read a latest block below its cursor (informational), or no longer does. */
@@ -394,12 +424,20 @@ export class KeeperHealthReporter {
     await this.update({ queueDepth, scanHeadBehindBy: value });
   }
 
-  /** A governance timelock pass finished without error; a stalled finalized head still degrades it. */
+  /**
+   * A governance timelock pass finished without error; a stalled finalized head, or a capped pass that stopped
+   * short of it, still degrades it.
+   */
   async recordGovernanceScan(governance: GovernanceHealth, queueDepth: number) {
     if (governance.finalizedStalledSince)
       this.fail(
         "governance",
         `Governance timelock finalized head ${governance.finalizedBlock} has not advanced since ${governance.finalizedStalledSince}`
+      );
+    else if (!governance.caughtUp)
+      this.fail(
+        "governance",
+        `Governance timelock indexing incomplete through ${governance.scannedThrough ?? "unknown"} (finalized target ${governance.finalizedBlock ?? "unknown"})`
       );
     else this.failures.delete("governance");
     await this.update({ governance, queueDepth });

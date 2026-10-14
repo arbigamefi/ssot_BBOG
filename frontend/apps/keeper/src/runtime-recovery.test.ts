@@ -267,7 +267,11 @@ describe("runtime recovery composition", () => {
     expect(f.ranges().map((q) => q.fromBlock)).toEqual([1n, 1n]);
     expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(10n);
     expect(await mock.store!.getVaultProviderLedger(f.query)).toHaveLength(1);
-    expect(runtime.health.snapshot().degradedBy).not.toContain("ledger");
+    // One chunk a pass: the ledger is degraded by its backlog until it reaches the finalized head.
+    expect(runtime.health.snapshot().degradedBy).toContain("ledger");
+    for (let i = 0; i < 7; ++i) await vi.advanceTimersByTimeAsync(1000);
+    expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(76n);
+    expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("ledger");
   });
 
   it("indexes a replacement behind the old moving overlap once it is finalized", async () => {
@@ -342,8 +346,12 @@ describe("runtime recovery composition", () => {
       f.state.finalityFailure = "";
       f.state.finalized = 76n;
       await vi.advanceTimersByTimeAsync(1000);
-      expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("ledger");
       expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(20n);
+      // One chunk a pass: the ledger is degraded by its backlog until it reaches the finalized head.
+      expect(runtime.health.snapshot().degradedBy).toContain("ledger");
+      for (let i = 0; i < 6; ++i) await vi.advanceTimersByTimeAsync(1000);
+      expect(await mock.store!.getCursor(8453, "vault-provider-ledger-finalized", hub)).toBe(76n);
+      expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("ledger");
     }
   );
 
@@ -468,6 +476,25 @@ describe("runtime recovery composition", () => {
     await vi.advanceTimersByTimeAsync(60_000);
     expect(runtime.health.snapshot()).toMatchObject({ lastScannedBlock: "121" });
     expect(runtime.health.snapshot().scanHeadBehindBy).toBeUndefined();
+  });
+
+  it("degrades the event scan after a capped pass until a pass reaches the head", async () => {
+    runtime = make({ ...base, pollIntervalMs: 60_000 });
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(runtime.health.snapshot().lastScannedBlock).toBe("120");
+    expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("scan");
+    // Two 10-block chunks a pass: 30 new blocks leave 10 for the next pass.
+    vi.mocked(mock.client.getBlockNumber as ReturnType<typeof vi.fn>).mockResolvedValue(150n);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(runtime.health.snapshot()).toMatchObject({
+      lastScannedBlock: "140",
+      status: "degraded",
+      degradedBy: expect.arrayContaining(["scan"])
+    });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(runtime.health.snapshot().lastScannedBlock).toBe("150");
+    expect(runtime.health.snapshot().degradedBy ?? []).not.toContain("scan");
   });
 
   it("retries missing terminal refunds without checkpointing an incomplete range", async () => {

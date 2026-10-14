@@ -215,10 +215,13 @@ Without PostgreSQL, casino recovery replays bounded release history on restart.
 Lifecycle reconciliation continues when ordinary event scanning is disabled.
 
 `KEEPER_POLL_INTERVAL_SECONDS` controls ordinary HTTP scanning.
-`KEEPER_SCAN_CHUNK_BLOCKS` defaults to 10 and
-`KEEPER_SCAN_MAX_CHUNKS_PER_PASS` defaults to 50. These bound each historical
-pass. `casino.keeper.scan_capped` reports remaining backlog; do not fast-forward
-recovery cursors to suppress it. Adjust limits to the RPC provider and allow
+`KEEPER_SCAN_CHUNK_BLOCKS` defaults to 2,000 (one `eth_getLogs` range: Infura
+takes 10,000 blocks, Base's public RPC 201 and Alchemy's free tier 10; set it to
+the endpoint's limit when that is lower) and `KEEPER_SCAN_MAX_CHUNKS_PER_PASS`
+defaults to 50. These bound each historical pass. A pass that stops short of the
+head logs `casino.keeper.scan_capped` with the remaining backlog and degrades
+`scan` until a pass reaches the head; do not fast-forward recovery cursors to
+suppress it. Adjust limits to the RPC provider and allow
 catch-up to complete. `KEEPER_RPC_MIN_INTERVAL_MS` spaces tracked RPC calls
 within a process; it does not coordinate separate workers or the web app.
 

@@ -143,9 +143,11 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
   if (chainId !== release.chainId) {
     throw new Error(`KEEPER_CHAIN_ID=${chainId} does not match release chainId=${release.chainId}`);
   }
+  // One eth_getLogs range. Infura takes 10,000 blocks, Base's public RPC 201 and Alchemy's free tier 10: set it to
+  // the endpoint's limit when that is lower.
   const scanChunkBlocks = parseBlockCount(
     env.KEEPER_SCAN_CHUNK_BLOCKS,
-    10n,
+    2_000n,
     "KEEPER_SCAN_CHUNK_BLOCKS"
   );
   const casinoRecoveryStartBlock =
@@ -186,10 +188,11 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     // a Vault-ledger chunk combines all Vault addresses, plus timestamps.
     //
     // The default keeps a healthy keeper comfortable while refusing to grind: at
-    // the free-tier 10-block chunk size a 300s pass only needs ~15 chunks to keep
-    // pace with Base, so 50 leaves 3x headroom and still drains short outages
-    // quickly. Persistent backlog needs an audited recovery plan: the casino
-    // cursor also recovers unsettled bets and must not be blindly advanced.
+    // 2,000-block chunks a pass covers 100,000 blocks, 5.5 hours of Base at five
+    // blocks a second (Denim), against 1,500 blocks for a 300s pass, and still
+    // drains short outages quickly. A capped pass degrades its scan until one
+    // reaches the head. Persistent backlog needs an audited recovery plan: the
+    // casino cursor also recovers unsettled bets and must not be blindly advanced.
     scanMaxChunksPerPass: parsePositiveInteger(
       env.KEEPER_SCAN_MAX_CHUNKS_PER_PASS,
       50,

@@ -1127,8 +1127,10 @@ export function createKeeperRuntime({
         }
       }
       lastScannedBlock = range.toBlock;
-      writeHealth(health.recordScan(lastScannedBlock, queue.size));
+      writeHealth(health.recordScan(lastScannedBlock, latest, queue.size));
     }
+    if (lastScannedBlock < latest)
+      writeHealth(health.recordScanBehind(latest - lastScannedBlock, latest, queue.size));
   };
 
   const scanVaultProviderLedgerEvents = async (): Promise<FinalizedScanHealth | undefined> => {
