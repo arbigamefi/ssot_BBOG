@@ -33,7 +33,6 @@ type BackfillConfig = {
   dryRun: boolean;
   fromBlock: bigint;
   toBlock?: bigint;
-  confirmations: bigint;
   scanChunkBlocks: bigint;
   releasePath: string;
   vaultProviderLedgerPools: VaultProviderLedgerPool[];
@@ -106,29 +105,27 @@ export function loadBackfillConfig(env: NodeJS.ProcessEnv = process.env): Backfi
     gameHub: getAddress(release.contracts.gameHub),
     httpRpcUrl: resolveRpcUrl(env) ?? requireEnv(env, "KEEPER_RPC_HTTP"),
     releasePath,
+    // One eth_getLogs range, as KEEPER_SCAN_CHUNK_BLOCKS: within Infura's 10,000 blocks.
     scanChunkBlocks: parsePositiveBlock(
       env.BET_INDEX_SCAN_CHUNK_BLOCKS ?? env.KEEPER_SCAN_CHUNK_BLOCKS,
-      10n,
+      2_000n,
       "BET_INDEX_SCAN_CHUNK_BLOCKS"
     ),
-    confirmations: parseBlock(env.BET_INDEX_CONFIRMATIONS) ?? 2n,
     toBlock: parseBlock(env.BET_INDEX_TO_BLOCK)
   };
 }
 
+/** The replay stops at the finalized block: the running keeper indexes the blocks after it, and they can reorg. */
 export function resolveBackfillRange({
-  confirmations,
   fromBlock,
-  latestBlock,
+  finalizedBlock,
   toBlock
 }: {
-  confirmations: bigint;
   fromBlock: bigint;
-  latestBlock: bigint;
+  finalizedBlock: bigint;
   toBlock?: bigint;
 }) {
-  const confirmedLatest = latestBlock > confirmations ? latestBlock - confirmations : latestBlock;
-  const resolvedToBlock = toBlock == null || toBlock > confirmedLatest ? confirmedLatest : toBlock;
+  const resolvedToBlock = toBlock == null || toBlock > finalizedBlock ? finalizedBlock : toBlock;
   if (resolvedToBlock < fromBlock) {
     throw new Error(
       `BET_INDEX_TO_BLOCK (${resolvedToBlock}) is before BET_INDEX_FROM_BLOCK (${fromBlock})`
@@ -162,11 +159,12 @@ export async function runBetIndexBackfill({
 
   try {
     await indexStore.initializeSchema();
-    const latestBlock = await publicClient.getBlockNumber();
+    const finalized = await publicClient.getBlock({ blockTag: "finalized" });
+    if (finalized.number == null)
+      throw new Error("The backfill requires a numbered finalized block");
     const range = resolveBackfillRange({
-      confirmations: config.confirmations,
       fromBlock: config.fromBlock,
-      latestBlock,
+      finalizedBlock: finalized.number,
       toBlock: config.toBlock
     });
 

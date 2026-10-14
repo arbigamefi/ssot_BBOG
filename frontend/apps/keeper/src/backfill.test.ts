@@ -67,35 +67,55 @@ describe("loadBackfillConfig", () => {
 });
 
 describe("resolveBackfillRange", () => {
-  it("uses confirmed latest block when no explicit toBlock is provided", () => {
-    expect(
-      resolveBackfillRange({
-        confirmations: 2n,
-        fromBlock: 100n,
-        latestBlock: 150n
-      })
-    ).toEqual({ fromBlock: 100n, toBlock: 148n });
+  it("stops at the finalized block when no explicit toBlock is provided", () => {
+    expect(resolveBackfillRange({ fromBlock: 100n, finalizedBlock: 148n })).toEqual({
+      fromBlock: 100n,
+      toBlock: 148n
+    });
   });
 
-  it("caps explicit toBlock at the confirmed latest block", () => {
-    expect(
-      resolveBackfillRange({
-        confirmations: 3n,
-        fromBlock: 100n,
-        latestBlock: 150n,
-        toBlock: 200n
-      })
-    ).toEqual({ fromBlock: 100n, toBlock: 147n });
+  it("caps an explicit toBlock at the finalized block and keeps a lower one", () => {
+    expect(resolveBackfillRange({ fromBlock: 100n, finalizedBlock: 147n, toBlock: 200n })).toEqual({
+      fromBlock: 100n,
+      toBlock: 147n
+    });
+    expect(resolveBackfillRange({ fromBlock: 100n, finalizedBlock: 147n, toBlock: 120n })).toEqual({
+      fromBlock: 100n,
+      toBlock: 120n
+    });
   });
 
   it("rejects an empty block range", () => {
     expect(() =>
       resolveBackfillRange({
-        confirmations: 0n,
         fromBlock: 200n,
-        latestBlock: 150n
+        finalizedBlock: 150n
       })
     ).toThrow(/before BET_INDEX_FROM_BLOCK/);
+  });
+});
+
+describe("backfill range", () => {
+  it("defaults to 2,000-block log ranges and replays up to the finalized block, not the latest", async () => {
+    const config = loadBackfillConfig({
+      BET_INDEX_DRY_RUN: "true",
+      KEEPER_RELEASE_PATH: writeRelease(),
+      KEEPER_RPC_HTTP: "http://unused.invalid"
+    });
+    expect(config.scanChunkBlocks).toBe(2_000n);
+    const client = {
+      getBlockNumber: vi.fn(async () => 9_000n),
+      getBlock: vi.fn(async ({ blockTag }: { blockTag?: string }) => ({
+        number: blockTag === "finalized" ? 4_200n : 9_000n,
+        timestamp: 1000n
+      })),
+      getLogs: vi.fn(async () => [])
+    } as unknown as PublicClient;
+    const store = createMemoryBetIndexStore();
+    const result = await runBetIndexBackfill({ client, config, store });
+    expect(result).toMatchObject({ fromBlock: "123", toBlock: "4200" });
+    expect(await store.getCursor(config.chainId, "gamehub-events", config.gameHub)).toBe(4_200n);
+    expect(client.getBlockNumber).not.toHaveBeenCalled();
   });
 });
 
@@ -108,8 +128,7 @@ describe("terminal refund backfill", () => {
         KEEPER_RELEASE_PATH: writeRelease(),
         KEEPER_RPC_HTTP: "http://unused.invalid",
         BET_INDEX_FROM_BLOCK: "123",
-        BET_INDEX_TO_BLOCK: "123",
-        BET_INDEX_CONFIRMATIONS: "0"
+        BET_INDEX_TO_BLOCK: "123"
       });
       const amounts = {
         payoutGross: 200_000n,
@@ -118,8 +137,7 @@ describe("terminal refund backfill", () => {
         protocolFeeAccrual: 2_000n
       };
       const client = {
-        getBlockNumber: vi.fn(async () => 123n),
-        getBlock: vi.fn(async () => ({ timestamp: 1000n })),
+        getBlock: vi.fn(async () => ({ number: 123n, timestamp: 1000n })),
         getLogs: vi.fn(async ({ events }: { events: Array<{ name: string }> }) =>
           events.some((event) => event.name === "BetFinalized")
             ? [

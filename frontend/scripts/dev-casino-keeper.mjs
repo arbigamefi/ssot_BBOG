@@ -9,7 +9,8 @@ const REPO_ROOT = path.resolve(FRONTEND_ROOT, "..");
 const KEEPER_DEPLOY_ENV_DIR = path.join(FRONTEND_ROOT, "deploy/casino-keeper");
 const DEFAULT_KEEPER_ENV_FILE = "primary.env";
 const DEFAULT_ALL_KEEPER_ENV_FILES = ["primary.base-mainnet.env", "primary.env"];
-const DEFAULT_DEV_REWIND_BLOCKS = 2_000n;
+// About an hour of chain, whatever the block rate.
+const DEFAULT_DEV_REWIND_SECONDS = 4_000n;
 const DEFAULT_LOCAL_BET_INDEX_DATABASE_URL =
   "postgres://arbigamefi:arbigamefi_dev_only@127.0.0.1:54329/arbigamefi";
 
@@ -85,27 +86,50 @@ function readReleaseBlock(releasePath) {
   }
 }
 
-function parseRewindBlocks(env) {
-  const raw = env.KEEPER_DEV_REWIND_BLOCKS?.trim();
-  if (!raw) return DEFAULT_DEV_REWIND_BLOCKS;
+function parseRewindSeconds(env) {
+  const raw = env.KEEPER_DEV_REWIND_SECONDS?.trim();
+  if (!raw) return DEFAULT_DEV_REWIND_SECONDS;
   try {
     const parsed = BigInt(raw);
-    return parsed > 0n ? parsed : DEFAULT_DEV_REWIND_BLOCKS;
+    return parsed > 0n ? parsed : DEFAULT_DEV_REWIND_SECONDS;
   } catch {
-    return DEFAULT_DEV_REWIND_BLOCKS;
+    return DEFAULT_DEV_REWIND_SECONDS;
   }
 }
 
-async function fetchLatestBlock(rpcUrl) {
+async function fetchBlock(rpcUrl, tag) {
   const response = await fetch(rpcUrl, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] })
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_getBlockByNumber",
+      params: [tag, false]
+    })
   });
-  if (!response.ok) throw new Error(`eth_blockNumber failed with HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`eth_getBlockByNumber failed with HTTP ${response.status}`);
   const body = await response.json();
-  if (typeof body.result !== "string") throw new Error("eth_blockNumber returned no block");
-  return BigInt(body.result);
+  if (typeof body.result?.number !== "string")
+    throw new Error(`eth_getBlockByNumber returned no block ${tag}`);
+  return { number: BigInt(body.result.number), timestamp: BigInt(body.result.timestamp) };
+}
+
+/** The last block at or after `floor` that is at least `seconds` older than the latest one, by bisection. */
+async function blockSecondsAgo(rpcUrl, seconds, floor) {
+  const latest = await fetchBlock(rpcUrl, "latest");
+  const target = latest.timestamp - seconds;
+  const timestamp = async (number) =>
+    (await fetchBlock(rpcUrl, `0x${number.toString(16)}`)).timestamp;
+  let low = floor < latest.number ? floor : latest.number;
+  let high = latest.number;
+  if ((await timestamp(low)) > target) return { latest: latest.number, block: low };
+  while (low < high) {
+    const middle = (low + high + 1n) / 2n;
+    if ((await timestamp(middle)) <= target) low = middle;
+    else high = middle - 1n;
+  }
+  return { latest: latest.number, block: low };
 }
 
 function canConnectTcp({ host, port, timeoutMs = 250 }) {
@@ -165,14 +189,16 @@ async function applyDevStartBlock(env) {
   if (!env.KEEPER_RPC_HTTP?.trim()) return;
 
   try {
-    const latest = await fetchLatestBlock(env.KEEPER_RPC_HTTP);
     const releaseBlock = readReleaseBlock(env.KEEPER_RELEASE_PATH) ?? 0n;
-    const rewindBlocks = parseRewindBlocks(env);
-    const rewindStart = latest > rewindBlocks ? latest - rewindBlocks : 0n;
-    const startBlock = rewindStart > releaseBlock ? rewindStart : releaseBlock;
-    env.KEEPER_START_BLOCK = startBlock.toString();
+    const rewindSeconds = parseRewindSeconds(env);
+    const { latest, block } = await blockSecondsAgo(
+      env.KEEPER_RPC_HTTP,
+      rewindSeconds,
+      releaseBlock
+    );
+    env.KEEPER_START_BLOCK = block.toString();
     console.error(
-      `[casino-keeper-dev] KEEPER_START_BLOCK=${env.KEEPER_START_BLOCK} (latest=${latest}, rewind=${rewindBlocks})`
+      `[casino-keeper-dev] KEEPER_START_BLOCK=${env.KEEPER_START_BLOCK} (latest=${latest}, rewind=${rewindSeconds}s)`
     );
   } catch (error) {
     console.error(
@@ -193,7 +219,6 @@ async function keeperEnv({ envFile }) {
     env.KEEPER_RELEASE_PATH = resolveRepoPath(env.KEEPER_RELEASE_PATH);
   }
   env.KEEPER_POLL_INTERVAL_SECONDS ??= "5";
-  env.KEEPER_SCAN_CHUNK_BLOCKS ??= "10";
   const chainId = Number(env.KEEPER_CHAIN_ID || 0);
   if (chainId > 0 && !externalHealthPath) {
     env.KEEPER_HEALTH_PATH = localHealthPathForChain(chainId);

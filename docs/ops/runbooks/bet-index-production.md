@@ -28,16 +28,16 @@ run:
 
 ```bash
 BET_INDEX_FROM_BLOCK="$RELEASE_BLOCK" \
-BET_INDEX_TO_BLOCK="$CONFIRMED_END_BLOCK" \
-BET_INDEX_CONFIRMATIONS=6 \
-BET_INDEX_SCAN_CHUNK_BLOCKS=100 \
+BET_INDEX_TO_BLOCK="$END_BLOCK" \
 pnpm -C frontend keeper:backfill
 ```
 
-Set `RELEASE_BLOCK` and `CONFIRMED_END_BLOCK` to the intended block numbers first. Omitting
-`BET_INDEX_TO_BLOCK` selects the latest confirmed block; range size must fit the RPC provider's log limits. `BET_INDEX_DRY_RUN=true` uses
-memory instead of persisting. Repeated event ingestion is idempotent; reorg reconciliation may
-replace affected indexed data.
+Set `RELEASE_BLOCK` and `END_BLOCK` to the intended block numbers first. The replay never passes the
+finalized block, and omitting `BET_INDEX_TO_BLOCK` stops there; the running keeper indexes the later
+blocks. `BET_INDEX_SCAN_CHUNK_BLOCKS` (default `KEEPER_SCAN_CHUNK_BLOCKS`, else 2,000) is one
+`eth_getLogs` range and must fit the endpoint: Infura takes 10,000 blocks, Base's public RPC 201 and
+Alchemy's free tier 10. `BET_INDEX_DRY_RUN=true` uses memory instead of persisting. Repeated event
+ingestion is idempotent; reorg reconciliation may replace affected indexed data.
 
 The running keeper also maintains independent unresolved-bet recovery from the release block.
 Ordinary event cursors and `KEEPER_START_BLOCK` cannot skip that history. Persist events before

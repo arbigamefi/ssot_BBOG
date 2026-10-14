@@ -70,8 +70,6 @@ function backfillEnv() {
   if (env.KEEPER_RELEASE_PATH?.trim()) {
     env.KEEPER_RELEASE_PATH = resolveRepoPath(env.KEEPER_RELEASE_PATH);
   }
-  env.BET_INDEX_SCAN_CHUNK_BLOCKS ??= env.KEEPER_SCAN_CHUNK_BLOCKS ?? "10";
-  env.BET_INDEX_CONFIRMATIONS ??= "2";
   env.KEEPER_ENV_FILE = displayKeeperEnvFile(keeperEnvFile);
 
   return env;
@@ -118,9 +116,8 @@ Environment:
   BET_INDEX_DATABASE_URL       Postgres URL; required unless BET_INDEX_DRY_RUN=true
   BET_INDEX_SSL                Set true for managed Postgres SSL
   BET_INDEX_FROM_BLOCK         Optional explicit start block
-  BET_INDEX_TO_BLOCK           Optional explicit end block
-  BET_INDEX_CONFIRMATIONS      Default 2
-  BET_INDEX_SCAN_CHUNK_BLOCKS  Default 10
+  BET_INDEX_TO_BLOCK           Optional end block; the replay never passes the finalized block
+  BET_INDEX_SCAN_CHUNK_BLOCKS  Blocks per eth_getLogs; default KEEPER_SCAN_CHUNK_BLOCKS, else 2000
   BET_INDEX_DRY_RUN            true for a no-write scan
 
 Local Docker:
