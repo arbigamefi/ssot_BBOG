@@ -36,6 +36,11 @@ export type BetReceiptResponse = Omit<RecentBetsResponse, "fromBlock" | "rows" |
   row: RecentBetRow | null;
   /** Historical terminal-transaction payment evidence, not the player's current aggregate claim balance. */
   payment?: PlayerPaymentProof;
+  /**
+   * The chain fallback found logs short of the bet's state in storage: `row.state` is the stored state and the
+   * amounts or transactions it could not find are missing.
+   */
+  incomplete?: boolean;
 };
 
 export type RecentBetsQuery = {

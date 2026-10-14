@@ -71,7 +71,8 @@ const ENV_KEYS = [
   "PLAYER_BETS_LOG_CHUNK_BLOCKS",
   "PLAYER_BETS_WINDOW_BLOCKS",
   "BET_RECEIPT_LOG_CHUNK_BLOCKS",
-  "BET_RECEIPT_MAX_BLOCKS",
+  "BET_RECEIPT_READY_SEARCH_BLOCKS",
+  "BET_INDEX_DATABASE_URL",
   "BET_RECEIPT_RPC_FALLBACK_ENABLED",
   "BET_INDEX_RPC_FALLBACK_ENABLED",
   "RECENT_BETS_LOG_CHUNK_BLOCKS",
@@ -190,7 +191,7 @@ describe("recent bets server aggregation", () => {
     });
   });
 
-  it("reads a receipt from its placement second to its terminal second, with chain timestamps", async () => {
+  it("reads a receipt from its placement and terminal seconds, with chain timestamps", async () => {
     process.env.BET_INDEX_READ_ENABLED = "0";
     process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
     process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
@@ -236,7 +237,8 @@ describe("recent bets server aggregation", () => {
     );
     const readContract = vi.fn(async () => ({
       placedAt: placedBlock * 2n,
-      resolvedAt: finalizedBlock * 2n
+      resolvedAt: finalizedBlock * 2n,
+      state: 4
     }));
 
     const response = await queryBetReceipt({
@@ -252,6 +254,7 @@ describe("recent bets server aggregation", () => {
       generatedAt: 1234,
       source: "rpc-window"
     });
+    expect(response.incomplete).toBeUndefined();
     expect(response.row).toMatchObject({
       betId: "8",
       lastEventName: "BetFinalized",
@@ -265,63 +268,203 @@ describe("recent bets server aggregation", () => {
     expect(readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "getBet", args: [8n] })
     );
-    // BetPlaced, BetRandomReady and the three terminal events, BetVoided included, over the bet's own blocks.
+    // The placement second's blocks for BetPlaced; the terminal second's for the result and the three terminal
+    // events, BetVoided included. The result is there, so nothing else is searched.
+    const window = (block: bigint) => [
+      block > releaseBlock() + 9n ? block - 9n : releaseBlock(),
+      block
+    ];
     expect(
       getLogs.mock.calls.map(([params]: any[]) => [
         params.event.name,
         params.fromBlock,
         params.toBlock
       ])
-    ).toEqual(
-      ["BetPlaced", "BetRandomReady", "BetFinalized", "BetRefunded", "BetVoided"].map((name) => [
+    ).toEqual([
+      ["BetPlaced", ...window(placedBlock)],
+      ...["BetRandomReady", "BetFinalized", "BetRefunded", "BetVoided"].map((name) => [
         name,
-        placedBlock,
-        finalizedBlock
+        ...window(finalizedBlock)
       ])
-    );
+    ]);
   });
 
-  it("finds an hour-old receipt at five blocks a second with a bounded number of reads", async () => {
-    process.env.BET_INDEX_READ_ENABLED = "0";
-    process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
-    process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
-
-    // Five blocks share each second; the bet was placed an hour before the head and settled ten seconds later.
-    const head = releaseBlock() + 100_000n;
-    const placedBlock = head - 18_000n - (head % 5n);
+  describe("receipts of long-lived bets", () => {
+    // Five blocks a second from block 0 (timestamp n / 5). The placement is the fourth block of its second.
+    const PLACED = 100_003n;
     const second = (n: bigint) => n / 5n;
-    const client = {
-      ...chainAt(head, second),
-      readContract: vi.fn(async () => ({
-        placedAt: second(placedBlock),
-        resolvedAt: second(placedBlock) + 10n
-      })),
-      getLogs: vi.fn(async ({ event }: { event: { name: string } }) =>
-        event.name === "BetPlaced"
-          ? [
-              {
-                args: { asset: ASSET, gameId: GAME_ID, player: PLAYER, positionId: 8n, stake: 10n },
-                blockNumber: placedBlock + 2n,
-                logIndex: 1,
-                transactionHash: "0xaaa"
-              }
-            ]
-          : []
-      )
-    };
+    type Log = { eventName: string; blockNumber: bigint; args: Record<string, unknown> };
+    const log = (
+      eventName: string,
+      blockNumber: bigint,
+      args: Record<string, unknown> = {}
+    ): Log => ({
+      eventName,
+      blockNumber,
+      args: { positionId: 8n, ...args }
+    });
+    const placedLog = log("BetPlaced", PLACED, {
+      asset: ASSET,
+      gameId: GAME_ID,
+      player: PLAYER,
+      requestId: 99n,
+      stake: 10n
+    });
+    /** Answers only inside the queried range, as an RPC does, and refuses a range Base's public RPC would. */
+    function strictChain(logs: Log[], bet: Record<string, bigint | number>, head: bigint) {
+      const getLogs = vi.fn(
+        async ({
+          event,
+          fromBlock,
+          toBlock
+        }: {
+          event: { name: string };
+          fromBlock: bigint;
+          toBlock: bigint;
+        }) => {
+          if (toBlock - fromBlock + 1n > 201n) throw new Error("HTTP 413");
+          return logs
+            .filter(
+              (entry) =>
+                entry.eventName === event.name &&
+                entry.blockNumber >= fromBlock &&
+                entry.blockNumber <= toBlock
+            )
+            .map((entry) => ({
+              args: entry.args,
+              blockNumber: entry.blockNumber,
+              logIndex: 1,
+              transactionHash: `0x${entry.blockNumber.toString(16).padStart(64, "0")}`
+            }));
+        }
+      );
+      return {
+        ...chainAt(head, second),
+        getLogs,
+        readContract: vi.fn(async () => bet),
+        // Terminal-transaction enrichment unavailable: the logs alone must carry the state.
+        getTransactionReceipt: vi.fn(async () => {
+          throw new Error("receipt unavailable");
+        })
+      };
+    }
+    const HOUR = 18_000n;
+    const DAY = 24n * HOUR;
 
-    const response = await queryBetReceipt({
-      betId: "8",
-      chainId: 84532,
-      client: client as any,
-      now: () => 1234
+    it.each([
+      [
+        "a refund an hour later",
+        [log("BetRefunded", PLACED + HOUR + 1n, { refundAmount: 10n })],
+        5,
+        "refunded"
+      ],
+      [
+        "a void 24 hours later that records the result in the same transaction",
+        [
+          log("BetRandomReady", PLACED + DAY, { randomHash: `0x${"55".repeat(32)}` }),
+          log("BetVoided", PLACED + DAY, { stake: 10n })
+        ],
+        6,
+        "voided"
+      ],
+      [
+        "a void 7 days after a result delivered 30 seconds after the placement",
+        [
+          log("BetRandomReady", PLACED + 150n, { randomHash: `0x${"55".repeat(32)}` }),
+          log("BetVoided", PLACED + 7n * DAY, { stake: 10n })
+        ],
+        6,
+        "voided"
+      ],
+      [
+        "a settlement two hours after its result",
+        [
+          log("BetRandomReady", PLACED + 300n, { randomHash: `0x${"55".repeat(32)}` }),
+          log("BetFinalized", PLACED + 2n * HOUR - 3n, { payoutGross: 20n, payoutNet: 19n })
+        ],
+        4,
+        "finalized"
+      ]
+    ] as const)("finds %s", async (_name, events, chainState, state) => {
+      process.env.BET_INDEX_READ_ENABLED = "0";
+      process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
+      process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
+      const terminal = events.at(-1)!.blockNumber;
+      const client = strictChain(
+        [placedLog, ...events],
+        { placedAt: second(PLACED), resolvedAt: second(terminal), state: chainState },
+        terminal + 1_000n
+      );
+
+      const response = await queryBetReceipt({
+        betId: "8",
+        chainId: 84532,
+        client: client as any,
+        now: () => 1234
+      });
+
+      expect(response.incomplete).toBeUndefined();
+      expect(response.row).toMatchObject({
+        state,
+        lastEventName: events.at(-1)!.eventName,
+        placedAt: Number(second(PLACED)) * 1000,
+        updatedAt: Number(second(terminal)) * 1000
+      });
+      if (events.length > 1) expect(response.row?.randomHash).toBe(`0x${"55".repeat(32)}`);
+      expect(client.getBlock.mock.calls.length).toBeLessThanOrEqual(100);
     });
 
-    expect(response.row).toMatchObject({ betId: "8", player: PLAYER });
-    expect(
-      client.getLogs.mock.calls.map(([params]: any[]) => [params.fromBlock, params.toBlock])
-    ).toEqual(Array(5).fill([placedBlock, placedBlock + 54n]));
-    expect(client.getBlock.mock.calls.length).toBeLessThanOrEqual(80);
+    it("finds a receipt in a durable index that lacks its row", async () => {
+      process.env.BET_INDEX_DATABASE_URL = "postgres://user:pass@127.0.0.1:1/db";
+      process.env.BET_INDEX_READ_ENABLED = "1";
+      process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
+      clearRecentBetsCache();
+      const getBet = vi.fn(async () => null);
+      mockCreatePostgresBetIndexStore.mockReturnValue({ getBet });
+      const terminal = PLACED + HOUR + 1n;
+      const client = strictChain(
+        [placedLog, log("BetRefunded", terminal, { refundAmount: 10n })],
+        { placedAt: second(PLACED), resolvedAt: second(terminal), state: 5 },
+        terminal + 1_000n
+      );
+
+      const response = await queryBetReceipt({
+        betId: "8",
+        chainId: 84532,
+        client: client as any,
+        now: () => 1234
+      });
+
+      expect(getBet).toHaveBeenCalled();
+      expect(response).toMatchObject({
+        source: "rpc-window",
+        row: { state: "refunded", refundAmount: "10" }
+      });
+    });
+
+    it("marks a receipt whose terminal log is missing as incomplete, with the stored state", async () => {
+      process.env.BET_INDEX_READ_ENABLED = "0";
+      process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
+      process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
+      const terminal = PLACED + HOUR + 1n;
+      const client = strictChain(
+        [placedLog],
+        { placedAt: second(PLACED), resolvedAt: second(terminal), state: 5 },
+        terminal + 1_000n
+      );
+
+      const response = await queryBetReceipt({
+        betId: "8",
+        chainId: 84532,
+        client: client as any,
+        now: () => 1234
+      });
+
+      expect(response.incomplete).toBe(true);
+      expect(response.row).toMatchObject({ state: "refunded", lastEventName: "BetPlaced" });
+      expect(response.row?.refundAmount).toBeUndefined();
+      expect(client.getTransactionReceipt).not.toHaveBeenCalled();
+    });
   });
 
   it("returns no receipt for a bet the GameHub has not placed", async () => {

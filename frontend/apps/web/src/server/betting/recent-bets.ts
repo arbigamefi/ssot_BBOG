@@ -47,8 +47,20 @@ const MAX_AFFILIATE_LIMIT = 500;
 const DEFAULT_WINDOW_BLOCKS = 2_000;
 const DEFAULT_PLAYER_WINDOW_BLOCKS = 5_000;
 const DEFAULT_AFFILIATE_WINDOW_BLOCKS = 10_000;
-// A receipt reads its bet's own blocks, from the placement second to the terminal second, at most this many.
-const DEFAULT_RECEIPT_MAX_BLOCKS = 10_000;
+// A receipt reads the blocks of its bet's placement and terminal seconds; a VRF result outside them is searched for
+// at most this many blocks after the placement.
+const DEFAULT_RECEIPT_READY_SEARCH_BLOCKS = 10_000;
+// The blocks ending at a second's last block that hold all of that second: five since Denim, one before.
+const RECEIPT_SECOND_WINDOW_BLOCKS = 10n;
+// SSOTTypes.BetState (None, Held, PendingVRF, RandomReady, Settled, Refunded, Voided) as the receipt row names it.
+const CHAIN_BET_STATES: Partial<Record<number, BetRow["state"]>> = {
+  1: "placed",
+  2: "placed",
+  3: "randomReady",
+  4: "finalized",
+  5: "refunded",
+  6: "voided"
+};
 // Blocks per eth_getLogs, first and last included: Base's public RPC takes 201 (HTTP 413 above).
 const DEFAULT_LOG_CHUNK_BLOCKS = 200;
 const DEFAULT_LOG_CONCURRENCY = 12;
@@ -648,12 +660,13 @@ export async function queryBetReceipt({
   }
 
   if (onActiveGameHub && shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)) {
-    let fallbackRow = await queryBetReceiptRpcFallback({
+    const fallback = await queryBetReceiptRpcFallback({
       betId: normalizedBetId,
       chainId,
       client
     });
-    if (fallbackRow && isTerminalBetState(fallbackRow.state)) {
+    let fallbackRow = fallback?.row ?? null;
+    if (fallbackRow && !fallback?.incomplete && isTerminalBetState(fallbackRow.state)) {
       const proof = await withTimeout(
         queryBetReceiptTerminalTxFallback({
           betId: normalizedBetId,
@@ -683,7 +696,8 @@ export async function queryBetReceipt({
       generatedAt: now(),
       row: fallbackRow,
       payment,
-      source: "rpc-window"
+      source: "rpc-window",
+      ...(fallback?.incomplete ? { incomplete: true } : {})
     };
   }
 
@@ -992,6 +1006,13 @@ function bigintStringFromUnknown(value: unknown) {
   return "0";
 }
 
+/**
+ * A bet's receipt from the chain when the durable index has no row. `getBet` gives the placement and terminal
+ * seconds, so only their blocks are queried, a few each however long the bet was open; a VRF result outside the
+ * terminal second is searched for at most BET_RECEIPT_READY_SEARCH_BLOCKS blocks after the placement. When the logs
+ * found stop short of the state in storage, the row carries that state, without the amounts and transactions that
+ * were not found, and `incomplete` is set: it never reads as the receipt of an earlier state.
+ */
 async function queryBetReceiptRpcFallback({
   betId,
   chainId,
@@ -1000,9 +1021,12 @@ async function queryBetReceiptRpcFallback({
   betId: string;
   chainId: number;
   client?: PublicClient;
-}) {
+}): Promise<{ row: BetRow; incomplete: boolean } | null> {
   const receiptBetId = BigInt(betId);
-  const maxBlocks = bigintEnv("BET_RECEIPT_MAX_BLOCKS", DEFAULT_RECEIPT_MAX_BLOCKS);
+  const readySearchBlocks = bigintEnv(
+    "BET_RECEIPT_READY_SEARCH_BLOCKS",
+    DEFAULT_RECEIPT_READY_SEARCH_BLOCKS
+  );
   const confirmationSeconds = bigintEnv(
     "BET_RECEIPT_CONFIRMATION_SECONDS",
     DEFAULT_CONFIRMATION_SECONDS
@@ -1020,43 +1044,74 @@ async function queryBetReceiptRpcFallback({
         abi: GameHubAbi,
         functionName: "getBet",
         args: [receiptBetId]
-      })) as { placedAt?: bigint | number; resolvedAt?: bigint | number } | undefined;
+      })) as
+        | { placedAt?: bigint | number; resolvedAt?: bigint | number; state?: bigint | number }
+        | undefined;
       const placedAt = BigInt(bet?.placedAt ?? 0);
       if (placedAt === 0n) return null;
       const resolvedAt = BigInt(bet?.resolvedAt ?? 0);
+      const chainState = CHAIN_BET_STATES[Number(bet?.state ?? 0)];
       const latest = await readLatestBlock(loaded.client);
-      const confirmedThrough = await lastBlockAtOrBefore(
-        loaded.client,
-        latest.timestamp - confirmationSeconds,
-        latest,
-        releaseBlock
-      );
-      // The bet's events lie from the first block of its placement second to the last of its terminal second.
-      const fromBlock =
-        (await lastBlockAtOrBefore(loaded.client, placedAt - 1n, latest, releaseBlock)) + 1n;
-      const terminalThrough =
-        resolvedAt > 0n
-          ? await lastBlockAtOrBefore(loaded.client, resolvedAt, latest, fromBlock)
-          : confirmedThrough;
-      const capped = fromBlock + maxBlocks - 1n;
-      let toBlock = terminalThrough < confirmedThrough ? terminalThrough : confirmedThrough;
-      if (toBlock > capped) toBlock = capped;
-      if (fromBlock > toBlock) return null;
+      const logsIn = async (
+        eventNames: readonly GameHubEventName[],
+        fromBlock: bigint,
+        toBlock: bigint
+      ) => {
+        const found: Array<EventLogLike & { eventName: GameHubEventName }> = [];
+        for (const eventName of eventNames) {
+          const eventLogs = await getGameHubLogsInChunks({
+            args: { positionId: receiptBetId },
+            chunkBlocks,
+            concurrency: logConcurrency,
+            client: loaded.client,
+            eventName,
+            fromBlock,
+            gameHub: loaded.gameHub,
+            toBlock
+          });
+          found.push(...eventLogs.map((log) => ({ ...log, eventName })));
+        }
+        return found;
+      };
+      const secondWindow = async (second: bigint) => {
+        const toBlock = await lastBlockAtOrBefore(loaded.client, second, latest, releaseBlock);
+        const start = toBlock - RECEIPT_SECOND_WINDOW_BLOCKS + 1n;
+        return { fromBlock: start > releaseBlock ? start : releaseBlock, toBlock };
+      };
 
-      const logs: Array<EventLogLike & { eventName: GameHubEventName }> = [];
-      for (const eventName of GAME_HUB_EVENTS) {
-        const eventLogs = await getGameHubLogsInChunks({
-          args: { positionId: receiptBetId },
-          chunkBlocks,
-          concurrency: logConcurrency,
-          client: loaded.client,
-          eventName,
-          fromBlock,
-          gameHub: loaded.gameHub,
-          toBlock
-        });
-        if (eventName === "BetPlaced" && eventLogs.length === 0) return null;
-        logs.push(...eventLogs.map((log) => ({ ...log, eventName })));
+      const placement = await secondWindow(placedAt);
+      const logs = await logsIn(["BetPlaced"], placement.fromBlock, placement.toBlock);
+      if (logs.length === 0) return null;
+      let readyFound = false;
+      let terminalFrom: bigint | undefined;
+      if (resolvedAt > 0n) {
+        const terminal = await secondWindow(resolvedAt);
+        terminalFrom = terminal.fromBlock;
+        const found = await logsIn(
+          ["BetRandomReady", ...TERMINAL_GAMEHUB_EVENTS],
+          terminal.fromBlock,
+          terminal.toBlock
+        );
+        readyFound = found.some((log) => log.eventName === "BetRandomReady");
+        logs.push(...found);
+      }
+      // A result delivered before the terminal second, or not yet followed by one, is searched for after the
+      // placement, up to the confirmed head.
+      if (
+        !readyFound &&
+        (chainState === "randomReady" || chainState === "finalized" || chainState === "voided")
+      ) {
+        const confirmedThrough = await lastBlockAtOrBefore(
+          loaded.client,
+          latest.timestamp - confirmationSeconds,
+          latest,
+          releaseBlock
+        );
+        let toBlock = placement.toBlock + readySearchBlocks;
+        if (terminalFrom != null && toBlock >= terminalFrom) toBlock = terminalFrom - 1n;
+        if (toBlock > confirmedThrough) toBlock = confirmedThrough;
+        if (toBlock > placement.toBlock)
+          logs.push(...(await logsIn(["BetRandomReady"], placement.toBlock + 1n, toBlock)));
       }
 
       const timestampedLogs = await attachBlockTimestamps({
@@ -1064,9 +1119,11 @@ async function queryBetReceiptRpcFallback({
         concurrency: logConcurrency,
         logs
       });
-      return (
-        foldRecentBetLogs({ chainId, gameHub: loaded.gameHub, logs: timestampedLogs })[0] ?? null
-      );
+      const row = foldRecentBetLogs({ chainId, gameHub: loaded.gameHub, logs: timestampedLogs })[0];
+      if (!row) return null;
+      if (chainState && row.state !== chainState)
+        return { row: { ...row, state: chainState }, incomplete: true };
+      return { row, incomplete: false };
     })(),
     rpcTimeoutMs
   ).catch(() => null);
