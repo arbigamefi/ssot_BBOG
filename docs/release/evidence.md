@@ -27,6 +27,7 @@ Store and share the archives accordingly.
 | `2026-10-14-audit-delivery/` | Freeze delta 2 (`dist/freeze-2026-10-12-delta-2/`, commits `0be336e40`–`fcbb2ad61`), the source audit package of `fcbb2ad61` and the launch candidate's external audit delivery (`dist/external-audit-delivery-2026-10-14/` and its tarball), 41 files |
 | `2026-10-14-mainnet-certificate-inputs/` | The Base mainnet inputs for the first-callback certificate: provider and USDC readings, the code comparison with Base Sepolia, the token bound repriced on the mainnet runtimes and a draft domain file (`dist/mainnet-certificate-inputs-2026-10-14/`), 36 files |
 | `2026-10-14-audit-addendum-1/` | Freeze delta 3 (`dist/freeze-2026-10-12-delta-3/`, commits `15470d28c`–`39da7a67a`: off-chain code, workflows and documents only), the source audit package of `39da7a67a` and external audit addendum 1 (`dist/external-audit-addendum-1-2026-10-14/` and its tarball), 30 files |
+| `2026-10-14-denim-baseline/` | The Base Denim check on Base Sepolia before the activation (`dist/denim-activation-check-2026-10-14/`, `script/ops/denim-activation-check.sh` at `f7e3f4823`): two-second blocks, a 1.2B block gas limit, the provider and USDC as certified, the direct-wrapper fork test at block 48106654, 5 files |
 
 ## Verify
 
@@ -63,6 +64,7 @@ only with `tar -xzf <archive> <member path>`. The bundle: `git bundle verify <bu
 | `2026-10-14-audit-delivery/dist.tar.gz` (2026-10-14) | extracted into a new directory, `shasum -c` | 41 OK |
 | `2026-10-14-mainnet-certificate-inputs/dist.tar.gz` (2026-10-14) | extracted into a new directory, `shasum -c` | 36 OK |
 | `2026-10-14-audit-addendum-1/dist.tar.gz` (2026-10-14) | extracted into a new directory, `shasum -c` | 30 OK |
+| `2026-10-14-denim-baseline/dist.tar.gz` (2026-10-14) | extracted into a new directory, `shasum -c` | 5 OK |
 | `2026-10-11-clean-slate/deployments.tar.gz`, `deploy-copy-1b7419bca.tar.gz` | members hashed in memory against their manifests, never written to disk (they hold environment files) | 28 and 3,605 equal, none unlisted      |
 | `2026-10-11-clean-slate/all-refs-2026-10-11.bundle`                         | `git bundle verify`                                                                                   | complete history, 25 refs              |
 
@@ -99,6 +101,7 @@ are archive member paths.
 | Base mainnet certificate inputs | 2026-10-14-mainnet-certificate-inputs `dist.tar.gz` | `dist/mainnet-certificate-inputs-2026-10-14/EVIDENCE.sha256` | `e6d56207415da3f1a8e1a8de765e742b89ca5bf6dba541f305b95444a82b272f` |
 | Freeze delta 3 (`39da7a67a`) | 2026-10-14-audit-addendum-1 `dist.tar.gz` | `dist/freeze-2026-10-12-delta-3/EVIDENCE.sha256` | `eeb7f844d40cc442c2c8b453d09c7c9375881baecfbb5a1eb326137e2d84e8c7` |
 | External audit addendum 1 | 2026-10-14-audit-addendum-1 `dist.tar.gz` | `dist/external-audit-addendum-1-2026-10-14.tar.gz` | `751a948a6bac4ef94b57db4c580a59133da5fc018ddc76afeed74ea97179a376` |
+| Denim check before the activation (Base Sepolia) | 2026-10-14-denim-baseline `dist.tar.gz` | `dist/denim-activation-check-2026-10-14/EVIDENCE.sha256` | `70e6104edb70834a255d0d38de4e6039c162a70d29ba4a45e6f24bed436e7c77` |
 
 Certificate v5 reproduces with `python3 script/certificate/certify.py <new directory>` on a checkout of `1a5e9df00`
 (`docs/audit/first-callback-gas-certificate-2026-10-07.md`, section 8). Certificate v4 reproduces from these archives
