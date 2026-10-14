@@ -109,7 +109,8 @@ Deleted on 2026-10-11 (launch candidate §4, item 6). The assets are members of 
 | `v1.6.0-base-sepolia-3e36a4bfc` | `3e36a4bfc390a2a3ab0051e17f74903149914a8c` | `dist/ssot-release-v1.6.0-base-sepolia-3e36a4bfc-0x7b7764be.tar.gz` | `9744d9284f9f8df755c102577c6892b08a60719fb6066e34324844aa60502db8` |
 
 The commits remain in the repository history and in the bundle. The 16 deleted local branches and the stash are in
-the bundle as well.
+the bundle as well. So is `k0-4/config-drift-alerts` (head `15761dbc8d10f029d1c45ec6c8871709bd4d9724`, one commit, not in
+`master`), deleted locally and on GitHub on 2026-10-14 after A11 rebuilt the monitor on `master`.
 
 ## Freeze procedure
 
