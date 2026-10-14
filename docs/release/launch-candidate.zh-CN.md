@@ -315,6 +315,13 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 主网证书、主网 M4 证明、余量不低于 50,000、K0-4 与 `CallbackSettlementFailed` 告警、§9 全部披露、专业机构外审、B1 准入时间锁、guardian 独立多签；
 运营主体、司法辖区与准入合规（地域屏蔽、制裁筛查、玩家限额；按 Owner 2026-10-14 的决定全部在链下，见 §3）。
 
+主网证书的输入已备（2026-10-14，`mainnet-certificate-inputs-2026-10-14/`，`EVIDENCE.sha256` `e6d56207…`；提前准备，主网证书仍在测试网验收之后计算）：
+- **不需要改合约**：主网 wrapper 开销 13,400、coordinator 上限 2,500,000，与 Sepolia 相同，回调 gas 2,447,746 恰好放得下；wrapper 与 coordinator 和 Sepolia 是同一份编译产物，只有 immutable 不同。
+- **主网 USDC** 的代理与实现都和 Sepolia 不是同一份代码：实现只差链接库地址（签名校验路径）；代理只在升级用的 `isContract` 上不同，其后整体后移 54 字节。按 10-04 的方法在主网代码上重算，token 体界仍为 78,394，待独立复核。
+- **硬分叉**：两条链当前都是 Cobalt，`eth_config` 除链 ID 与激活时间外逐项相同。
+- **尚需**：`certify.py` 与 fork 夹具按链参数化；`reused.json` 的主网 token 条目；在主网固定区块上重跑矩阵、直连 wrapper 与真实 USDC 作废；随证书提交 8453 域文件（目录中有草案）。
+- **注意**：Denim（Sepolia 2026-10-21，主网 11 月；每秒 5 个块，`block.timestamp` 仍以秒计）的规格公布后要核对回调路径计价，Sepolia 证书在 10-21 之后、主网证书计算之前各确认一次；回调 gas 在两条链上都是零余量，provider 一旦调高开销或调低上限，新下注的请求就会 revert（R6）。
+
 ## 14. 来源
 
 证据索引、校验方法与冻结规程见 [`evidence.md`](evidence.md)。清理后，原 `dist/` 下的记录在两份归档里，成员路径保留 `dist/` 前缀：当日第一轮清理移走的旧目录在 `~/arbigamefi-archive/2026-10-11-superseded/superseded-2026-10-11.tar.gz`（`PATHS.txt`、`MANIFEST.sha256`），其余在 `~/arbigamefi-archive/2026-10-11-clean-slate/dist.tar.gz`（`dist.PATHS.txt`、逐文件清单 `dist.MANIFEST.sha256`）。仓库文档引用这些证据目录时只写目录名，相对于归档中的 `dist/`。
