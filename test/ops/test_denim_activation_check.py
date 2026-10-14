@@ -1,9 +1,12 @@
-"""Base Denim activation check (script/ops/denim_activation_check.py); no network calls."""
+"""Base Denim activation check (script/ops/denim_activation_check.py and its runner); no network calls."""
 import contextlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -19,21 +22,31 @@ HEAD = 48_200_000
 
 class DenimChain(Chain):
     """Chain's certified token and provider reads, plus Base blocks: one every two seconds before Denim, five a second
-    after it, with the BaseTime deposit at tx[1] and "pending" equal to the latest block."""
+    after it, with the BaseTime deposit at tx[1]. "pending" is the latest block after Denim and, before it, the block
+    being built: number HEAD + 1 with a hash no sealed block has. Blocks above HEAD are not sealed yet.
+
+    `reorgs` moves the chain to a new branch (new hashes and gas limit) just before answering the first request that
+    the next predicate accepts."""
 
     def __init__(self, denim, gas_limit=1_200_000_000):
         super().__init__()
         self.denim, self.gas_limit = denim, gas_limit
         self.end = HEAD
+        self.branch = 0
+        self.reorgs = []
+        self.millis = True
+
+    def hash_of(self, number):
+        return word(self.branch * 10 ** 9 + number)
 
     def block(self, number, full=False):
         if self.denim:
             timestamp = 1_792_605_600 + (number - 48_000_000) // 5
         else:
             timestamp = 1_791_000_000 + 2 * number
-        block = {'number': hex(number), 'hash': word(number), 'timestamp': hex(timestamp),
-                 'gasLimit': hex(self.gas_limit), 'baseFeePerGas': hex(5_000_000)}
-        if self.denim:
+        block = {'number': hex(number), 'hash': self.hash_of(number), 'parentHash': self.hash_of(number - 1),
+                 'timestamp': hex(timestamp), 'gasLimit': hex(self.gas_limit), 'baseFeePerGas': hex(5_000_000)}
+        if self.denim and self.millis:
             block['timestampMs'] = hex(timestamp * 1000 + number % 5 * 200)
         if full:
             attributes = {'type': '0x7e', 'to': '0x4200000000000000000000000000000000000015'}
@@ -43,14 +56,18 @@ class DenimChain(Chain):
         return block
 
     def __call__(self, method, params):
+        if self.reorgs and self.reorgs[0][0](method, params):
+            self.gas_limit = self.reorgs.pop(0)[1]
+            self.branch += 1
         if method == 'eth_getBlockByNumber':
             self.requests.append((method, params))
             tag = params[0]
             if tag == 'latest':
                 return self.block(HEAD, params[1])
             if tag == 'pending':
-                return self.block(HEAD if self.denim else HEAD + 1)
-            return self.block(int(tag, 16), params[1])
+                return self.block(HEAD) if self.denim else {**self.block(HEAD + 1), 'hash': word(7 * 10 ** 9 + HEAD + 1)}
+            number = int(tag, 16)
+            return self.block(number, params[1]) if number <= HEAD else None
         if method == 'eth_getCode' and params[0] == CHECK.BASETIME:
             return '0x' + '60' * 2059
         if method == 'eth_call' and params[0]['to'] == CHECK.BASETIME:
@@ -58,6 +75,10 @@ class DenimChain(Chain):
                 raise CHECK.VerificationError('RPC eth_call failed: JSON-RPC error 3')
             return word(1_792_605_600_000)
         return super().__call__(method, params)
+
+
+def numbered_read(method, params):
+    return method == 'eth_getBlockByNumber' and params[0] not in ('latest', 'pending')
 
 
 class DenimActivationCheckTests(unittest.TestCase):
@@ -84,9 +105,66 @@ class DenimActivationCheckTests(unittest.TestCase):
         self.assertTrue(report['pending']['pendingIsALatestBlock'])
         self.assertEqual(report['gas'], {'blockGasLimit': 1_200_000_000, 'baseFeePerGas': 5_000_000,
                                          'voidFits': True, 'txCapFits': True})
+        self.assertEqual(report['block'], {'number': HEAD, 'hash': chain.hash_of(HEAD), 'attempts': 1})
+        self.assertEqual(report['notes'], [])
         # Every provider and token read is pinned to the head block.
         reads = [params for method, params in chain.requests if method in ('eth_call', 'eth_getCode', 'eth_getStorageAt')]
         self.assertTrue(reads and all(params[-1] == hex(HEAD) for params in reads))
+
+    def test_a_head_replaced_after_the_first_read_is_read_again_on_the_new_branch(self):
+        # The first latest block passes (1.2B gas), its replacement does not (12M): no reading may mix the two.
+        chain = DenimChain(denim=True)
+        chain.reorgs = [(numbered_read, 12_000_000)]
+        report = CHECK.check(chain, chain.domain)
+        self.assertEqual(report['block'], {'number': HEAD, 'hash': chain.hash_of(HEAD), 'attempts': 2})
+        self.assertEqual(report['gas']['blockGasLimit'], 12_000_000)
+        self.assertFalse(report['verdict']['ok'])
+
+    def test_a_head_replaced_during_the_state_reads_is_caught_by_the_final_check(self):
+        chain = DenimChain(denim=True)
+        chain.reorgs = [(lambda method, params: method == 'eth_getStorageAt', 1_200_000_000)]
+        report = CHECK.check(chain, chain.domain)
+        self.assertEqual(report['block'], {'number': HEAD, 'hash': chain.hash_of(HEAD), 'attempts': 2})
+
+    def test_a_head_that_keeps_changing_fails_the_check(self):
+        # Every reading's first numbered block read, right after its latest block, finds a new branch.
+        last = {'tag': None}
+
+        def after_latest(method, params):
+            fire = numbered_read(method, params) and last['tag'] == 'latest'
+            if method == 'eth_getBlockByNumber':
+                last['tag'] = params[0]
+            return fire
+        chain = DenimChain(denim=True)
+        chain.reorgs = [(after_latest, 1_200_000_000)] * CHECK.ATTEMPTS
+        with self.assertRaisesRegex(CHECK.VerificationError, 'changed during each of 3 readings'):
+            CHECK.check(chain, chain.domain)
+
+    def test_confirm_says_whether_the_block_number_still_names_the_reported_hash(self):
+        chain = DenimChain(denim=True)
+        report = CHECK.check(chain, chain.domain)
+        self.assertTrue(CHECK.confirm(chain, report))
+        chain.branch += 1
+        self.assertFalse(CHECK.confirm(chain, report))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'check.json'
+            path.write_text(json.dumps(report))
+            for expected in (1, 0):
+                with patch.dict(CHECK.os.environ, {'OPS_RPC_URL': 'https://secret.invalid'}), \
+                        patch.object(CHECK, 'Rpc', return_value=chain), \
+                        patch.object(CHECK.sys, 'argv', ['x', '--confirm', str(path)]), \
+                        contextlib.redirect_stdout(io.StringIO()) as output:
+                    self.assertEqual(CHECK.main(), expected)
+                self.assertIn('NO LONGER' if expected else 'still has hash', output.getvalue())
+                chain.branch -= 1
+
+    def test_notes_name_active_observations_that_differ_from_the_specification(self):
+        chain = DenimChain(denim=True)
+        chain.millis = False
+        report = CHECK.check(chain, chain.domain)
+        self.assertEqual(report['verdict'], {'denimActive': True, 'ok': True})
+        self.assertEqual(report['notes'], ['timestampMs is missing from some cadence blocks '
+                                           '(the specification allows omitting it)'])
 
     def test_a_block_gas_limit_too_small_for_a_void_fails(self):
         chain = DenimChain(denim=True, gas_limit=12_000_000)
@@ -127,6 +205,99 @@ class DenimActivationCheckTests(unittest.TestCase):
         # Without an argument every run gets a new directory named by its UTC time; an existing one is refused.
         self.assertIn('out=${1:-$root/dist/denim-activation-check-$(date -u +%Y%m%dT%H%M%SZ)}', runner)
         self.assertIn('[ ! -e "$out" ] || { echo "exists: $out" >&2; exit 1; }', runner)
+
+
+RUNNER_STUB_CHECK = """import json, os, sys
+if sys.argv[1] == '--confirm':
+    sys.exit(0 if os.environ['STUB_CONFIRM'] == 'same' else 1)
+if os.environ['STUB_CHECK'] == 'none':
+    sys.exit('Denim activation check failed: RPC eth_chainId failed: HTTP 503 after 6 attempt(s)')
+json.dump({'block': {'number': 48200000, 'hash': '0x' + 'ab' * 32}}, open(sys.argv[1], 'w'))
+sys.exit(0 if os.environ['STUB_CHECK'] == 'ok' else 1)
+"""
+RUNNER_STUB_WRAPPER = """#!/usr/bin/env bash
+shift 2
+OPS_RPC_URL=https://stub.invalid/ops OPS_RPC_PROVIDER=alchemy "$@"
+"""
+RUNNER_STUB_FORGE = """#!/usr/bin/env bash
+echo "block=$NFT_FORK_BLOCK_NUMBER rpc=$NFT_FORK_RPC_URL" >> "$STUB_LOG"
+[ "$STUB_FORGE" = pass ] || { echo "Error: compilation failed"; exit 1; }
+echo "fork target mode: explicit"
+echo "Suite result: ok. 4 passed; 0 failed"
+"""
+
+
+class DenimRunnerTests(unittest.TestCase):
+    """The runner in a scratch repository whose check, wrapper and forge are stubs: every way it can end leaves the
+    finish line in RUN.txt and a non-zero status unless all three steps passed."""
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        base = Path(self.directory.name)
+        self.repo, self.bin, self.log = base / 'repo', base / 'bin', base / 'forge.log'
+        files = {'script/ops/denim-activation-check.sh': (ROOT / 'script/ops/denim-activation-check.sh').read_text(),
+                 'script/ops/denim_activation_check.py': RUNNER_STUB_CHECK,
+                 'script/tools/with-ops-rpc.sh': RUNNER_STUB_WRAPPER,
+                 'script/release/first-callback-domain-84532.json':
+                     (ROOT / 'script/release/first-callback-domain-84532.json').read_text()}
+        for name, text in files.items():
+            (self.repo / name).parent.mkdir(parents=True, exist_ok=True)
+            (self.repo / name).write_text(text)
+            (self.repo / name).chmod(0o755)
+        self.bin.mkdir()
+        (self.bin / 'forge').write_text(RUNNER_STUB_FORGE)
+        (self.bin / 'forge').chmod(0o755)
+        git = ['git', '-C', str(self.repo), '-c', 'user.name=t', '-c', 'user.email=t@invalid']
+        subprocess.run(git[:3] + ['init', '-q'], check=True)
+        subprocess.run(git + ['add', '-A'], check=True)
+        subprocess.run(git + ['commit', '-q', '-m', 'stub'], check=True)
+
+    def tearDown(self):
+        self.directory.cleanup()
+
+    def run_runner(self, check, forge='pass', confirm='same'):
+        out = Path(self.directory.name) / 'out'
+        env = {**os.environ, 'PATH': f"{self.bin}{os.pathsep}{os.environ['PATH']}", 'STUB_CHECK': check,
+               'STUB_FORGE': forge, 'STUB_CONFIRM': confirm, 'STUB_LOG': str(self.log)}
+        result = subprocess.run(['bash', str(self.repo / 'script/ops/denim-activation-check.sh'), str(out)],
+                                env=env, capture_output=True, text=True, timeout=60)
+        run = (out / 'RUN.txt').read_text()
+        forged = self.log.read_text() if self.log.exists() else ''
+        return result.returncode, run, forged
+
+    def test_a_check_that_leaves_no_report_skips_the_fork_and_still_finishes(self):
+        code, run, forged = self.run_runner('none')
+        self.assertEqual(code, 1)
+        self.assertIn('direct wrapper and confirmation SKIPPED', run)
+        self.assertRegex(run, r'finished \S+ status 1\n$')
+        self.assertEqual(forged, '')
+
+    def test_a_failed_check_with_a_report_still_runs_the_fork_and_the_confirmation_at_its_block(self):
+        code, run, forged = self.run_runner('not-ok')
+        self.assertEqual(code, 1)
+        self.assertIn('direct wrapper: passed at block 48200000', run)
+        self.assertIn('confirm: block 48200000 still has hash', run)
+        self.assertRegex(run, r'finished \S+ status 1\n$')
+        self.assertEqual(forged, 'block=48200000 rpc=https://stub.invalid/ops\n')
+
+    def test_a_fork_failure_without_its_summary_still_confirms_and_finishes(self):
+        code, run, _ = self.run_runner('ok', forge='fail')
+        self.assertEqual(code, 1)
+        self.assertIn('direct wrapper: FAILED at block 48200000', run)
+        self.assertIn('confirm: block 48200000 still has hash', run)
+        self.assertRegex(run, r'finished \S+ status 1\n$')
+
+    def test_a_block_replaced_by_the_end_fails_the_run(self):
+        code, run, _ = self.run_runner('ok', confirm='changed')
+        self.assertEqual(code, 1)
+        self.assertIn('no longer has hash', run)
+        self.assertRegex(run, r'finished \S+ status 1\n$')
+
+    def test_three_passing_steps_finish_with_status_0(self):
+        code, run, _ = self.run_runner('ok')
+        self.assertEqual(code, 0)
+        self.assertRegex(run, r'^commit [0-9a-f]{40}\nstarted ')
+        self.assertRegex(run, r'finished \S+ status 0\n$')
 
 
 if __name__ == '__main__':

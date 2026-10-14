@@ -1,18 +1,31 @@
 #!/usr/bin/env python3
 """Read-only check of Base Denim on Base Sepolia (launch candidate plan A13 and section 13).
 
-    script/ops/denim-activation-check.sh <new output directory>
+    script/ops/denim-activation-check.sh [new output directory]
 
-At the head block it reports the block cadence (five blocks a second after Denim; header timestamps in whole seconds,
+Every reading belongs to one block, the head at the start, recorded by number and hash: the 20 cadence blocks must
+chain by parent hash to it, the state reads are made at its number, and that number must still name the same hash at
+the end. Otherwise the whole reading is taken again, three times at most. The runner checks the hash once more after
+the fork test (`--confirm`).
+
+At that block it reports the block cadence (five blocks a second after Denim; header timestamps in whole seconds,
 `timestampMs` in 200 ms steps), the block gas limit against a void transaction, whose gas the immutable GameHub
-constants fix, the BaseTime predeploy and its tx[1] deposit, what the "pending" tag returns, and the VRF provider and
-USDC against the certified domain file (`verify_callback_provider.verify_provider`, the coordinator's minimum request
-confirmations included). The runner adds the direct-wrapper fork test at the same block. Run it once before and once
-after the activation (2026-10-21 18:00 UTC); the RPC endpoint comes from OPS_RPC_URL and is never printed.
+constants fix, the BaseTime predeploy and its tx[1] deposit, whether the "pending" tag returns a sealed block, and the
+VRF provider and USDC against the certified domain file (`verify_callback_provider.verify_provider`, the coordinator's
+minimum request confirmations included). The verdict is two narrow signals: `denimActive` (cadence and the BaseTime
+deposit) and `ok` (gas capacity and the provider fields the domain file names). Neither accepts the upgrade or a
+release; `notes` lists active-chain observations that differ from the Denim specification, and the observations
+themselves must be read. Run it once before and once after the activation (2026-10-21 18:00 UTC); the RPC endpoint
+comes from OPS_RPC_URL and is never printed.
+
+    denim_activation_check.py --confirm <check.json>
+
+exits 0 if the report's block number still names its hash, 1 otherwise.
 """
 import json
 import os
 from pathlib import Path
+import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -28,13 +41,32 @@ VOID_TRANSACTION_GAS = 10_755_000
 DEPOSIT_GAS = 2_000_000
 TX_GAS_CAP = 2 ** 24
 CADENCE_BLOCKS = 20
+ATTEMPTS = 3
 
 
-def check(rpc, domain):
-    require(quantity(rpc('eth_chainId', [])) == BASE_SEPOLIA, 'not Base Sepolia')
+class HeadChanged(Exception):
+    """The chain moved to another branch while a reading was taken."""
+
+
+def block_hash(value):
+    require(isinstance(value, str) and re.fullmatch(r'0x[0-9a-fA-F]{64}', value), 'invalid block hash')
+    return value.lower()
+
+
+def block_at(rpc, number):
+    block = rpc('eth_getBlockByNumber', [hex(number), False])
+    require(isinstance(block, dict), f'no block {number}')
+    return {**block, 'hash': block_hash(block.get('hash'))}
+
+
+def reading(rpc, domain):
     latest = rpc('eth_getBlockByNumber', ['latest', True])
-    head = quantity(latest['number'])
-    blocks = [rpc('eth_getBlockByNumber', [hex(n), False]) for n in range(head - CADENCE_BLOCKS + 1, head + 1)]
+    require(isinstance(latest, dict), 'no latest block')
+    head, head_hash = quantity(latest['number']), block_hash(latest['hash'])
+    blocks = [block_at(rpc, n) for n in range(head - CADENCE_BLOCKS + 1, head + 1)]
+    if blocks[-1]['hash'] != head_hash or any((b.get('parentHash') or '').lower() != a['hash']
+                                              for a, b in zip(blocks, blocks[1:])):
+        raise HeadChanged
     stamps = [quantity(block['timestamp']) for block in blocks]
     millis = [block.get('timestampMs') for block in blocks]
     span = stamps[-1] - stamps[0]
@@ -65,10 +97,16 @@ def check(rpc, domain):
         'tx1IsBaseTimeDeposit': isinstance(second, dict) and second.get('type') == '0x7e'
                                 and (second.get('to') or '').lower() == BASETIME,
     }
-    around = [rpc('eth_getBlockByNumber', [tag, False]) for tag in ('latest', 'pending', 'latest')]
+    # A sealed block is one the canonical chain holds under the same number and hash; before Denim "pending" returned
+    # the block being built, after it (on Vibenet) the latest block.
+    pending_block = rpc('eth_getBlockByNumber', ['pending', False])
+    require(isinstance(pending_block, dict), 'no pending block')
+    pending_number = quantity(pending_block['number'])
+    sealed = rpc('eth_getBlockByNumber', [hex(pending_number), False])
     pending = {
-        'numbers': [quantity(block['number']) for block in around],
-        'pendingIsALatestBlock': around[1]['hash'] in (around[0]['hash'], around[2]['hash']),
+        'number': pending_number,
+        'pendingIsALatestBlock': isinstance(sealed, dict) and isinstance(pending_block.get('hash'), str)
+                                 and (sealed.get('hash') or '').lower() == pending_block['hash'].lower(),
     }
     snap = {'chainId': BASE_SEPOLIA, 'numPools': 1, 'poolDomain_0': 1, 'poolAsset_0': domain['token']['proxy'],
             'vrfWrapper': domain['providerReference']['wrapper']}
@@ -77,22 +115,60 @@ def check(rpc, domain):
         provider = {'status': 'matches the certified domain', 'gameHubRequestConfirmations': GAME_HUB_REQUEST_CONFIRMATIONS}
     except VerificationError as error:
         provider = {'status': 'MISMATCH', 'error': str(error)}
+    if block_at(rpc, head)['hash'] != head_hash:
+        raise HeadChanged
     active = (cadence['blocksPerSecond'] or 0) >= 4 and base_time['tx1IsBaseTimeDeposit']
+    notes = []
+    if active:
+        if cadence['timestampMsSteps'] is None:
+            notes.append('timestampMs is missing from some cadence blocks (the specification allows omitting it)')
+        elif cadence['timestampMsSteps'] != [200]:
+            notes.append(f"timestampMs steps are {cadence['timestampMsSteps']}, not 200 ms")
+        if not isinstance(millis_now, str) or millis_now.startswith('reverts'):
+            notes.append('BaseTime timestampMs() did not answer')
+        if not pending['pendingIsALatestBlock']:
+            notes.append('"pending" did not return a sealed block')
     return {
-        'chainId': BASE_SEPOLIA, 'cadence': cadence, 'gas': gas, 'baseTime': base_time, 'pending': pending,
-        'provider': {'block': head, **provider},
+        'chainId': BASE_SEPOLIA, 'block': {'number': head, 'hash': head_hash}, 'cadence': cadence, 'gas': gas,
+        'baseTime': base_time, 'pending': pending, 'provider': {'block': head, **provider},
         'verdict': {'denimActive': active,
                     'ok': gas['voidFits'] and gas['txCapFits'] and provider['status'] != 'MISMATCH'},
+        'notes': notes,
     }
 
 
+def check(rpc, domain):
+    require(quantity(rpc('eth_chainId', [])) == BASE_SEPOLIA, 'not Base Sepolia')
+    for attempt in range(1, ATTEMPTS + 1):
+        try:
+            report = reading(rpc, domain)
+        except HeadChanged:
+            continue
+        report['block']['attempts'] = attempt
+        return report
+    raise VerificationError(f'the head block changed during each of {ATTEMPTS} readings; run the check again')
+
+
+def confirm(rpc, report):
+    """True if the report's block number still names the report's hash."""
+    block = report['block']
+    current = rpc('eth_getBlockByNumber', [hex(block['number']), False])
+    return isinstance(current, dict) and (current.get('hash') or '').lower() == block_hash(block['hash'])
+
+
 def main():
+    rpc = Rpc(os.environ['OPS_RPC_URL'])
+    if sys.argv[1] == '--confirm':
+        report = json.loads(Path(sys.argv[2]).read_text())
+        same = confirm(rpc, report)
+        print(f"block {report['block']['number']} {'still' if same else 'NO LONGER'} has hash {report['block']['hash']}")
+        return 0 if same else 1
     out = Path(sys.argv[1])
     domain = json.loads((ROOT / 'script/release/first-callback-domain-84532.json').read_text())
-    report = check(Rpc(os.environ['OPS_RPC_URL']), domain)
+    report = check(rpc, domain)
     out.write_text(json.dumps(report, indent=1) + '\n')
-    print(json.dumps(report['verdict']), 'head', report['cadence']['head'], 'blockGasLimit',
-          report['gas']['blockGasLimit'], 'provider', report['provider']['status'])
+    print(json.dumps(report['verdict']), 'block', report['block']['number'], report['block']['hash'], 'blockGasLimit',
+          report['gas']['blockGasLimit'], 'provider', report['provider']['status'], 'notes', len(report['notes']))
     return 0 if report['verdict']['ok'] else 1
 
 
