@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Read-only Base Denim check on Base Sepolia (launch candidate plan A13 and section 13):
 #
-#   script/ops/denim-activation-check.sh <new output directory>
+#   script/ops/denim-activation-check.sh [new output directory]
+#
+# Without an argument the output goes to dist/denim-activation-check-<UTC time>, a new directory on every run.
 #
 # Through the Alchemy operator endpoint (script/tools/with-ops-rpc.sh; the key is never shown):
 #   1. script/ops/denim_activation_check.py at the head block: check.json and check.log;
@@ -11,10 +13,11 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/../.." && pwd)
-out=${1:?usage: $0 <new output directory>}
+out=${1:-$root/dist/denim-activation-check-$(date -u +%Y%m%dT%H%M%SZ)}
 [ ! -e "$out" ] || { echo "exists: $out" >&2; exit 1; }
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
+echo "output: $out"
 cd "$root"
 { echo "commit $(git rev-parse HEAD)"; echo "started $(date -u +%Y-%m-%dT%H:%M:%SZ)"; } > "$out/RUN.txt"
 

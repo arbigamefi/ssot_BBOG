@@ -124,6 +124,9 @@ class DenimActivationCheckTests(unittest.TestCase):
                      'test/fork/NftDirectWrapperFork.t.sol'):
             self.assertIn(name, runner)
         self.assertNotIn('PROD_KEEPER', runner)
+        # Without an argument every run gets a new directory named by its UTC time; an existing one is refused.
+        self.assertIn('out=${1:-$root/dist/denim-activation-check-$(date -u +%Y%m%dT%H%M%SZ)}', runner)
+        self.assertIn('[ ! -e "$out" ] || { echo "exists: $out" >&2; exit 1; }', runner)
 
 
 if __name__ == '__main__':
