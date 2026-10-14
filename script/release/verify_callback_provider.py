@@ -18,6 +18,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from verify_governance import (  # noqa: E402
     Rpc, VerificationError, address, call, quantity, require, signature, word)
 
+# GameHub.placeBet asks VRFHub for this many confirmations (src/core/GameHub.sol). A coordinator whose minimum is higher
+# rejects every request, and the contracts cannot change the number.
+GAME_HUB_REQUEST_CONFIRMATIONS = 3
+
 
 def call_words(rpc, target, name, count, block):
     data = rpc('eth_call', [{'to': target, 'data': signature(name)[:10]}, hex(block)])
@@ -49,9 +53,12 @@ def verify_provider(rpc, snap, block, domain):
     require(call(rpc, wrapper, 's_vrfCoordinator()', [], block) == int(provider['coordinator'], 16),
             'VRF coordinator is not the certified provider')
     overhead = call_words(rpc, wrapper, 'getConfig()', 12, block)[4]
-    maximum = call_words(rpc, address(provider['coordinator']), 's_config()', 9, block)[1]
+    minimum_confirmations, maximum = call_words(rpc, address(provider['coordinator']), 's_config()', 9, block)[:2]
     require(overhead == provider['wrapperOverheadGas'] and maximum == provider['coordinatorMaxGas'],
             'VRF provider gas parameters differ from the certified ones')
+    require(minimum_confirmations <= GAME_HUB_REQUEST_CONFIRMATIONS,
+            f'VRF coordinator requires {minimum_confirmations} request confirmations; GameHub requests '
+            f'{GAME_HUB_REQUEST_CONFIRMATIONS}, so every new bet would revert')
     consumer = domain['consumerCallbackGasLimit']
     require(consumer + consumer // 63 + 1 + overhead <= maximum, 'certified consumer gas exceeds the provider limit')
 

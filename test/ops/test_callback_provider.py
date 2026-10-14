@@ -41,6 +41,19 @@ class CallbackProviderTests(unittest.TestCase):
                     'provider gas parameters differ')
         self.reject(lambda c: c.put_words(addr(81), 's_config()', [0, 2499999] + [0] * 7),
                     'provider gas parameters differ')
+        self.reject(lambda c: c.put_words(addr(81), 's_config()', [4, 2500000] + [0] * 7),
+                    'requires 4 request confirmations; GameHub requests 3')
+
+    def test_a_coordinator_minimum_up_to_gamehubs_confirmations_passes(self):
+        chain = Chain()
+        chain.put_words(addr(81), 's_config()', [3, 2500000] + [0] * 7)
+        CHECK.verify_provider(chain, chain.snap, chain.end, chain.domain)
+
+    def test_the_confirmation_count_is_the_one_gamehub_passes(self):
+        source = (ROOT / 'src/core/GameHub.sol').read_text()
+        self.assertIn(f'.requestRandomWords{{value: msg.value}}(positionId, cb, {CHECK.GAME_HUB_REQUEST_CONFIRMATIONS})',
+                      source)
+        self.assertEqual(source.count('.requestRandomWords{'), 1)
 
     def test_entrypoint_reads_the_chain_domain_file_and_rejects_a_changed_block(self):
         chain = Chain()

@@ -163,7 +163,8 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
      fails instead.
    - `verify_callback_provider.py`, also part of `release-domain-check`, checks the live token and provider at
      one frozen block. It fails unless the USDC implementation and code, the coordinator and its gas parameters
-     are the certified ones.
+     are the certified ones, and unless the coordinator's minimum request confirmations are at most the 3 that
+     `GameHub.placeBet` requests: a higher minimum rejects every VRF request, so every new bet would revert.
    - The governance check (`verify_governance.py`) replays `GameRegistered` and fails unless the registered game
      set is exactly the certified eight.
 

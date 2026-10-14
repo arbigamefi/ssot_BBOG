@@ -232,6 +232,8 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 | 事故期间先到先得 | 新增（ADR-0037 R-7） | LP 材料 |
 | Safe 丢失则治理永久冻结 | 新增；只能清退（ADR-0037 R-8） | 条款与 LP 材料 |
 | 智能合约钱包可能无法自行作废 | 新增（ADR-0037 R-9） | 条款 |
+| 作废交易需要约 1,076 万 gas（常量不可改），区块 gas 上限低于约 1,280 万（加两笔存款交易）的链上作废无法上链 | 新增（2026-10-14 核对 Denim）：节点在第一个 Denim 区块把上限除以 10，按现行设置 Base Sepolia 每块 1.2 亿、主网 4,000 万；上限由 Base 的 `SystemConfig` 决定，激活后核对 | 审计范围、运维手册 |
+| VRF coordinator 的最少确认数提高到 3 以上时每笔新下注都会 revert（GameHub 固定请求 3 个确认） | 新增（2026-10-14）：两条链当前为 0；`verify_callback_provider.py` 在签名前、预检与 K0-4 每小时检查中核对 | 审计范围、运维手册 |
 | 发行方没收类故障时作废无效 | 新增（P5c） | 条款与 LP 材料 |
 | 准入无许可：直接调用合约的钱包绕过网站的地区限制、进入确认与负责任博彩工具 | 新增（Owner 2026-10-14，合规在链下）；网站控制与运营监控 | 条款与风险免责声明（C9） |
 
@@ -321,7 +323,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
 - **主网 USDC** 的代理与实现都和 Sepolia 不是同一份代码：实现只差链接库地址（签名校验路径）；代理只在升级用的 `isContract` 上不同，其后整体后移 54 字节。按 10-04 的方法在主网代码上重算，token 体界仍为 78,394，待独立复核。
 - **硬分叉**：两条链当前都是 Cobalt，`eth_config` 除链 ID 与激活时间外逐项相同。
 - **尚需**：`certify.py` 与 fork 夹具按链参数化；`reused.json` 的主网 token 条目；在主网固定区块上重跑矩阵、直连 wrapper 与真实 USDC 作废；随证书提交 8453 域文件（目录中有草案）。
-- **注意**：Denim（Sepolia 2026-10-21，主网 11 月；每秒 5 个块，`block.timestamp` 仍以秒计）的规格公布后要核对回调路径计价，Sepolia 证书在 10-21 之后、主网证书计算之前各确认一次；回调 gas 在两条链上都是零余量，provider 一旦调高开销或调低上限，新下注的请求就会 revert（R6）。
+- **Denim 与回调计价**（2026-10-14 按规格、节点源码与 Vibenet 核对，激活后再确认）：规格不改操作码、gas 表与交易类型，单笔上限仍为 16,777,216；新增 BaseTime 预部署（`0x4200…0030`）与每块 tx[1] 的元数据存款（gas 上限 100 万）；B20 预编译的改动与本系统无关（USDC 是普通合约）。回调路径的计价因此不变，证书 v5 不受影响；wrapper 开销 13,400 与 coordinator 上限 2,500,000 是 Chainlink 的配置，不随 Denim 改变，回调 gas 仍是零余量，provider 一旦调高开销或调低上限，新下注的请求就会 revert（R6）。节点在第一个 Denim 区块把 `SystemConfig` 的区块 gas 上限除以 10、EIP-1559 分母乘以 10（`base/base` `925c6c9db`，`DENIM_GAS_PARAMETER_SCALING_FACTOR`），每秒吞吐与 base fee 的响应不变：Base Sepolia 每块 1.2 亿、主网 4,000 万，远高于作废交易所需的约 1,076 万（§9）；Vibenet（Denim 预览网，链 ID 84538453）每块 600 万，是那个网络自己的配置。Denim 之后 `pending` 标签没有内存池状态，在 Vibenet 上与 `latest` 返回同一区块：viem 取 nonce 用 `pending`，keeper 的写操作在写锁内逐笔等到回执，不会复用 nonce，只有等回执超时后的下一笔可能撞上未确认的那笔；代码中没有其他 `pending` 或 Flashblocks 用法。coordinator 当前要求的最少确认数为 0，GameHub 固定请求 3 个确认，Chainlink 若提高到 3 以上每笔新下注都会 revert，因此 `verify_callback_provider.py` 增加这项检查（§9）。激活后确认（Sepolia 2026-10-21 18:00 UTC 之后）：区块 `gasLimit`；provider 参数与最少确认数；在激活后的固定区块上重跑直连 wrapper 与真实 USDC 作废两项 fork 测试；主网证书计算前在主网上再确认一次。
 
 ## 14. 来源
 
