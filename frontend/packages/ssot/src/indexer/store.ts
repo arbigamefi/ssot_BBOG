@@ -103,51 +103,11 @@ export interface TxJournalRow {
   errorCode?: string;
 }
 
-export type BankXPEventName =
-  | "XPAwarded"
-  | "XPLockedUnlocked"
-  | "XPHoldbackReleased"
-  | "XPAccruedClaimed";
-
-export interface BankEventRow {
-  id: string; // `${chainId}:${bank}:${txHash}:${logIndex}`
-  chainId: number;
-  bank: Address;
-  blockNumber: number;
-  txHash: Hex;
-  logIndex: number;
-  eventName: string;
-  argsJson: string; // JSON.stringify(args) with bigint → string
-  createdAt: number;
-}
-
-export interface XPSnapshotRow {
-  bank: Address;
-  id: string; // `${chainId}:${payee}:${blockNumber}:${logIndex}`
-  chainId: number;
-  payee: Address;
-  eventType: BankXPEventName;
-  blockNumber: number;
-  logIndex: number;
-  txHash: Hex;
-  /** Primary amount for this event (stringified bigint). */
-  amount: string;
-  argsJson: string;
-  createdAt: number;
-}
-
-export interface VaultEventRow extends BankEventRow {
-  vault: Address;
-}
-
 export class SSOTDb extends Dexie {
   gameHubEvents!: Table<GameHubEventRow, string>;
   bets!: Table<BetRow, string>;
   cursors!: Table<CursorRow, string>;
   txJournal!: Table<TxJournalRow, string>;
-  bankEvents!: Table<BankEventRow, string>;
-  vaultEvents!: Table<VaultEventRow, string>;
-  xpSnapshots!: Table<XPSnapshotRow, string>;
 
   constructor(name = "arbigamefi_liquidity") {
     super(name);
@@ -155,10 +115,7 @@ export class SSOTDb extends Dexie {
       gameHubEvents: "id, chainId, gameHub, blockNumber, txHash, logIndex, eventName",
       bets: "id, chainId, betId, state, updatedBlock",
       cursors: "id, chainId, source",
-      txJournal: "id, chainId, txHash, createdAt, ok, action",
-      bankEvents: "id, chainId, bank, blockNumber, txHash, logIndex, eventName",
-      vaultEvents: "id, chainId, vault, bank, blockNumber, txHash, logIndex, eventName",
-      xpSnapshots: "id, [chainId+payee+blockNumber], payee, eventType, blockNumber"
+      txJournal: "id, chainId, txHash, createdAt, ok, action"
     });
   }
 }

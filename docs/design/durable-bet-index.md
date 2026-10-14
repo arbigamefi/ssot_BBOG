@@ -53,5 +53,4 @@ Configure `BET_INDEX_DATABASE_URL` and TLS explicitly. See the
 [keeper documentation](../../frontend/apps/keeper/README.md) and
 [database runbook](../ops/runbooks/bet-index-production.md). Existing tests cover PostgreSQL concurrency, rollback, replay and cross-authority isolation.
 Current NFT queries were executed on disposable PostgreSQL; a skipped PostgreSQL suite still does
-not count as evidence for any subsequent source change. Browser replay removes its old tail and
-lowers coverage atomically when the observed head retreats, including below deployment origin.
+not count as evidence for any subsequent source change.
