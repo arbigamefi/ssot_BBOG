@@ -120,6 +120,11 @@ def readback(rpc, roles, domain):
                                                          and guardian['modulesNext'] == SENTINEL
                                                          and guardian['guard'] == ZERO and guardian['singletonHasCode']
                                                          and guardian['fallbackHasCode'])
+    # A signer with code, an EIP-7702 delegation included, acts through that code as well as its key: a delegation
+    # framework can let others call the multisig's approveHash in its name. Every signer is a plain account (Owner,
+    # 2026-10-15).
+    signer_code = {owner: code(rpc, owner, block) for owner in sorted(set(safe['owners']) | set(guardian['owners']))}
+    checks['multisigSignersHaveNoCode'] = all(value == '0x' for value in signer_code.values())
     latest = quantity(rpc('eth_getTransactionCount', [deployer, 'latest']))
     pending = quantity(rpc('eth_getTransactionCount', [deployer, 'pending']))
     balances = {role: quantity(rpc('eth_getBalance', [named[role], hex(block)])) for role in ('DEPLOYER', 'KEEPER_ADDRESS')}
@@ -145,6 +150,7 @@ def readback(rpc, roles, domain):
     passed = all(value is True for key, value in checks.items() if key != 'tokenAndProviderFailure')
     return {'chainId': chain, 'blockNumber': block, 'blockHash': block_hash.lower(), 'roles': named,
             'safe': safe, 'guardian': guardian,
+            'signersWithCode': {owner: value for owner, value in signer_code.items() if value != '0x'},
             'deployer': {'address': deployer, 'latestNonce': latest, 'pendingNonce': pending,
                          'balance': balances['DEPLOYER']},
             'keeper': {'address': named['KEEPER_ADDRESS'], 'balance': balances['KEEPER_ADDRESS']},

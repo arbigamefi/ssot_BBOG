@@ -21,6 +21,7 @@ accounting evidence.
     Safe signer;
   - the deployer, the release signer and the keeper: distinct accounts with no code (no EIP-7702 delegation); the
     deployer funded for the deployment;
+  - every signer of the Safe and the guardian is a plain account with no code (no EIP-7702 delegation);
   - neither a role nor a signer of the Safe or the guardian is the governance key exposed on the old production host.
 - Public chain parameters from the [configuration template](v16/chain-84532.env.example), which the preflight fills
   in. USDC minimum per round is 0.01, with at most 25 rounds (0.25 USDC at that minimum); qualify each game's full

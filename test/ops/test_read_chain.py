@@ -130,6 +130,15 @@ class ReadChainTests(unittest.TestCase):
         chain = Chain(); chain.code[GUARDIAN] = '0x'   # an EOA
         self.assertIn('guardianHasNoModuleGuardOrBrokenControl', self.failing(self.read(chain)))
 
+    def test_every_multisig_signer_is_a_plain_account(self):
+        delegated = '0xef0100' + '63c0c19a282a1b52b07dd5a65b58948a07dae32b'   # an EIP-7702 delegation
+        for signer in (SAFE_OWNERS[0], GUARDIAN_OWNERS[2]):
+            chain = Chain(); chain.code[signer] = delegated
+            result = self.read(chain)
+            self.assertEqual(self.failing(result), ['multisigSignersHaveNoCode'], signer)
+            self.assertEqual(result['signersWithCode'], {signer: delegated})
+        self.assertEqual(self.read()['signersWithCode'], {})
+
     def test_the_deployer_is_a_funded_plain_account_with_nothing_pending(self):
         chain = Chain(); chain.code[DEPLOYER] = '0xef0100' + '11' * 20   # an EIP-7702 delegation
         self.assertEqual(self.failing(self.read(chain)), ['deployerKeeperAndSignerHaveNoCode'])

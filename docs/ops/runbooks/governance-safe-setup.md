@@ -7,7 +7,10 @@ never substitute a fixture address for a live authority.
 
 1. Establish the intended signer custody and quorum. If one person controls several signers, record
    that fact: separate devices do not create independent decision makers. Keep enough recoverable
-   signing material in separate locations to survive the loss of one device or location.
+   signing material in separate locations to survive the loss of one device or location. Every signer
+   of the Safe and the guardian is a plain account: no smart-account upgrade or EIP-7702 delegation, which
+   would let the delegate's code, and anyone it accepts, act for the signer (for example through
+   `approveHash`). The preflight refuses a signer with code (Owner, 2026-10-15).
 2. Verify the Safe's deployed code, owners, threshold and enabled controls against the deployment
    configuration. Review modules, guard and fallback handler as part of its effective authority.
 3. Exercise the intended approval and recovery signing paths on a test network before the Safe

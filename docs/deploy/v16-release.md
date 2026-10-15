@@ -47,7 +47,8 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    replaced.
    - `read-chain` (`read_chain.py`) reads everything at one block. It fails unless the Safe is exactly the reviewed
      2-of-3 of the listed owners with no module or guard; the guardian is a multisig of at least two signers, none of
-     them a Safe signer; the deployer, keeper and signer have no code (no EIP-7702 delegation); the deployer is funded
+     them a Safe signer; every signer of either multisig, and the deployer, keeper and signer, have no code (no
+     EIP-7702 delegation: a delegated signer acts through its delegate's code as well); the deployer is funded
      and its latest and pending nonces are equal (which shows only that the RPC node sees no pending transaction, not
      that none waits elsewhere); the roles are distinct, and neither a role nor a signer of the Safe or the guardian is
      the governance key exposed on the old production host; and the token, the VRF provider and the domain file are the certified ones. It fills
