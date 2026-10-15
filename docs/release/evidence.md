@@ -32,6 +32,7 @@ Store and share the archives accordingly.
 | `2026-10-15-ops-tools-reviews/` | The four independent reviews of the operator tools, the Denim activation check and the deploy rehearsal (`dist/ops-tools-reviews-2026-10-15/`, targets `01f6073d6`, `44e80b235`, `2e4d5082a`, `57de1332d`), and the four review requests, 1172 files |
 | `2026-10-15-certificate-v5-review-send/` | What goes to the certificate reviewer: the certificate v5 review package, the four reused evidence archives, the certificate and domain file as reviewed and the cover note (`dist/certificate-v5-review-send-2026-10-15/` and its tarball), and the cover note with the tarball's digest, 12 files |
 | `2026-10-15-certificate-v5-independent-review/` | The independent review of certificate v5, ACCEPT (`dist/independent-review-certificate-v5-2026-10-15/`, the reviewer's folder unchanged), and the reviewer's delivery archive with its two records (`dist/independent-review-certificate-v5-2026-10-15-delivery/`), 195 files |
+| `2026-10-15-audit-addendum-2/` | Freeze delta 5 (`dist/freeze-2026-10-12-delta-5/`, commits `01f6073d6`–`78276b1bf`), the source audit package of `78276b1bf`, external audit addendum 2 (`dist/external-audit-addendum-2-2026-10-15/` and its tarball) and its cover note, 27 files |
 
 ## Verify
 
@@ -73,6 +74,7 @@ only with `tar -xzf <archive> <member path>`. The bundle: `git bundle verify <bu
 | `2026-10-15-ops-tools-reviews/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 1172 OK |
 | `2026-10-15-certificate-v5-review-send/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 12 OK |
 | `2026-10-15-certificate-v5-independent-review/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 195 OK |
+| `2026-10-15-audit-addendum-2/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 27 OK |
 | `2026-10-11-clean-slate/deployments.tar.gz`, `deploy-copy-1b7419bca.tar.gz` | members hashed in memory against their manifests, never written to disk (they hold environment files) | 28 and 3,605 equal, none unlisted      |
 | `2026-10-11-clean-slate/all-refs-2026-10-11.bundle`                         | `git bundle verify`                                                                                   | complete history, 25 refs              |
 
@@ -116,6 +118,8 @@ are archive member paths.
 | Independent reviews of the operator tools (four rounds) | 2026-10-15-ops-tools-reviews `dist.tar.gz` | `dist/ops-tools-reviews-2026-10-15/MANIFEST.sha256` | `be0da2be0a8675a5551ba0633503c3148793a74db17a07914b30142ddf8c7f05` |
 | Certificate v5 review, as sent | 2026-10-15-certificate-v5-review-send `dist.tar.gz` | `dist/certificate-v5-review-send-2026-10-15.tar.gz` | `c2541c0ed81990ae5ff5bbc9e98275230cd82fa83ed84f6a26b39251e928c7a3` |
 | Certificate v5 independent review (ACCEPT) | 2026-10-15-certificate-v5-independent-review `dist.tar.gz` | `dist/independent-review-certificate-v5-2026-10-15/MANIFEST.sha256` | `2a7b8591b72147b1a45e8769e79b8bc5cc1cef758ee3e66f10d99d3c90266441` |
+| Freeze delta 5 (`78276b1bf`) | 2026-10-15-audit-addendum-2 `dist.tar.gz` | `dist/freeze-2026-10-12-delta-5/EVIDENCE.sha256` | `280da78a0d8bbb31a14f6aa6ca932cab058357995a5e4d11adbc7682511f32d6` |
+| External audit addendum 2 | 2026-10-15-audit-addendum-2 `dist.tar.gz` | `dist/external-audit-addendum-2-2026-10-15.tar.gz` | `814574e260ee60de4bc1618554c6116b5e77e2e1755bbc55ae5e960533adb29c` |
 
 Certificate v5 reproduces with `python3 script/certificate/certify.py <new directory>` on a checkout of `1a5e9df00`
 (`docs/audit/first-callback-gas-certificate-2026-10-07.md`, section 8). Certificate v4 reproduces from these archives
