@@ -440,6 +440,28 @@ class ArmingAndEventsTest(MonitorFixture):
         self.assertIn('- NEW registered game set differs from release', message)
         self.assertEqual(self.state()['cursor'], 198)
 
+    def test_edge_and_referral_changes_are_governance_events(self):
+        # The certificate v5 review confirmed that their values cannot move the certified bound (ADR-0006): they are
+        # alerted as governance changes and do not force the certified domain check.
+        self.reconfigure(DRIFT_DOMAIN_CHECK_SECONDS='3600')
+        self.armed()
+        checked = self.state()['domainCheckedAt']
+        self.now += 600
+        self.chain.emit(HUB, 'EdgeChangeQueued(uint16,uint16,uint64)', [], [200, 300, NOW], block=195)
+        self.chain.emit(HUB, 'EdgeChangeApplied(uint16,uint16)', [], [200, 300], block=196)
+        self.chain.emit(HUB, 'ReferralConfigCreated(uint32,uint16,uint16,uint16,uint16)', [2], [1000, 500, 250, 2000],
+                        block=196)
+        self.chain.emit(HUB, 'ActiveReferralConfigSet(uint32,uint32)', [], [1, 2], block=197)
+        self.chain.head = 210
+        self.assertEqual(self.run_once(), 0)
+        [message] = self.ops()
+        self.assertIn('GOVERNANCE OR AUTHORITY CHANGE', message)
+        self.assertNotIn('RECERTIFICATION TRIGGER', message)
+        for line in (f'EdgeChangeQueued 200 -> 300 bps, activates at {MON.utc(NOW)}', 'EdgeChangeApplied 200 -> 300 bps',
+                     'ReferralConfigCreated 2: 1000 500 250 2000', 'ActiveReferralConfigSet 1 -> 2'):
+            self.assertIn(line, message)
+        self.assertEqual(self.state()['domainCheckedAt'], checked)
+
     def test_unconfirmed_blocks_wait_for_confirmations(self):
         self.armed()
         self.chain.emit(BANK, 'MinBetAmountSet(uint256)', [], [50], block=195)
@@ -627,7 +649,7 @@ class DeliveryAndStateTest(MonitorFixture):
         self.now += 600
         self.assertEqual(self.run_once(), 0)
         self.assertEqual(self.ops(), [])  # not due yet
-        self.chain.emit(HUB, 'ActiveReferralConfigSet(uint32,uint32)', [], [1, 2], block=195)
+        self.chain.emit(BANK, 'RiskReserveBpsSet(uint256)', [], [7000], block=195)
         self.chain.head = 210
         self.assertEqual(self.run_once(), 0)  # a trigger event forces the domain check
         self.assertIn('pool 1: minimum bet 50 below the certified floor', self.ops()[-1])
@@ -735,6 +757,18 @@ class TimelockOperationTest(MonitorFixture):
         self.assertNotIn('RELEASE STATE NOTES', public)
         entry = self.state()['operations'][OTHER]
         self.assertEqual((entry['label'], entry['readyAt'], entry['failed']), ('undeclared', ready, False))
+
+    def test_edge_and_referral_operations_carry_no_recertification_note(self):
+        self.armed()
+        self.schedule(OTHER, [(HUB, encode('queueEdgeChange(uint16)', 300)),
+                              (HUB, encode('createReferralConfig(uint16,uint16,uint16,uint16)', 1000, 500, 250, 2000)),
+                              (HUB, encode('setActiveReferralConfig(uint32)', 2))])
+        [message] = self.ops()
+        self.assertIn(f'- {OTHER} (undeclared): 3 call(s)', message)
+        self.assertIn('1. GameHub.queueEdgeChange(300)\n', message)
+        self.assertIn('3. GameHub.setActiveReferralConfig(2)\n', message)
+        self.assertNotIn('recertification trigger', message)
+        self.assertIn('admission review: passed', message)
 
     def test_the_declared_activation_is_named_with_its_predecessor(self):
         self.armed()

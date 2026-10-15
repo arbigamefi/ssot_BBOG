@@ -180,8 +180,11 @@ action:
 - any change to certified bytecode, or a new module;
 - a USDC implementation upgrade; a wrapper or coordinator parameter change; a hard fork that reprices gas;
 - lowering a casino pool's minimum bet below 99 raw units; any `registerGame`; registering, allowing or
-  reactivating a casino pool; changing referral or edge parameters (until the certificate review confirms that
-  values inside the checked ranges cannot move the bound).
+  reactivating a casino pool.
+
+Changing referral or edge parameters was also a trigger until the certificate review confirmed that values inside
+the checked ranges cannot move the bound. The independent review of certificate v5 confirmed it on 2026-10-15
+(FZ-7); the Owner decided the same day that K0-4 reports these changes as governance events.
 
 The governance runbook lists these triggers. Configuration-drift alerts (K0-4) are required before any network
 that carries real funds. They are implemented by the [configuration drift monitor](../ops/runbooks/config-drift-alerts.md);

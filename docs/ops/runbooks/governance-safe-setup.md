@@ -47,9 +47,10 @@ governance can leave it afterwards. Recertify **before** signing any of these ch
 - Any `PoolRegistry.registerPool`, `setHubAllowedForPool` or `setPoolActive` that admits or reactivates a
   casino pool. A new pool brings its own Bank and Vault, whose code and constructor `minBetAmount` the
   certificate has not seen.
-- Any `GameHub.createReferralConfig`, `setActiveReferralConfig` or `queueEdgeChange`. The certificate lists
-  referral and edge parameter changes as voiding it. Treat them as recertification triggers until the
-  certificate review confirms that values inside the checked ranges cannot move the bound.
+
+`GameHub.createReferralConfig`, `setActiveReferralConfig` and `queueEdgeChange` are not triggers: the independent
+review of certificate v5 (2026-10-15, FZ-7) confirmed that their values cannot move the bound. They still go
+through the timelock, and K0-4 reports them as governance changes.
 
 Release verification replays every `GameRegistered` event and checks the live USDC implementation and VRF
 provider parameters. After release, however, only this runbook and alerting stand between governance and an

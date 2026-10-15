@@ -7,14 +7,15 @@ Every run works up to a confirmed block, the last one at least DRIFT_CONFIRMATIO
    ReferralRegistry, SettlementRouter, VRFHub, each Bank and Vault, and the USDC proxy. Logs after the last delivered
    block are classified as
    - recertification triggers (ADR-0006 "Validity and recertification"): GameRegistered; MinBetAmountSet;
-     PoolRegistered, and PoolActiveSet, HubRegistered or HubAllowedForPoolSet set to true; edge and referral changes;
-     RiskReserveBpsSet and WithdrawalBufferBpsSet away from the Owner policy; USDC Upgraded and AdminChanged;
+     PoolRegistered, and PoolActiveSet, HubRegistered or HubAllowedForPoolSet set to true; RiskReserveBpsSet and
+     WithdrawalBufferBpsSet away from the Owner policy; USDC Upgraded and AdminChanged;
    - settlement anomalies: CallbackSettlementFailed, an undelivered CallbackAttempt, PositionApplied with released = 0
      (the k = 0 path), BetVoided, VoidWindowOpened, an issuer pause of USDC and a blacklisted Bank or Vault;
    - unbooked results: VRFHub's ResultReceived, ResultAcknowledged and ResultVoided, which move unbookedResultCount, and
      the void windows (step 7);
    - governance or authority changes: governance transfers, SentinelSet, GuardianSet, timelock roles and delay, pauses,
-     GameDisabled, pools, hubs and routes set to false, the other Bank and GameHub setters and the one-shot wiring;
+     GameDisabled, pools, hubs and routes set to false, edge and referral changes (the certificate v5 review confirmed
+     that their values cannot move the certified bound), the other Bank and GameHub setters and the one-shot wiring;
    - timelock operations: CallScheduled, CallExecuted and Cancelled.
    The events that the release's own wiring or activation emits as it executes are counted with that execution.
 2. Timelock operations (ADR-0037 D5). Each scheduled call is decoded (target, function, arguments, value) with the
@@ -698,18 +699,18 @@ def describe(ctx, name, row):
         return 'governance', f'{short} {need(dat, 1)}'
     if short == 'EdgeChangeQueued':
         old, new, at = need(dat, 3)
-        return 'recertify', f'EdgeChangeQueued {old} -> {new} bps, activates at {utc(at)}'
+        return 'governance', f'EdgeChangeQueued {old} -> {new} bps, activates at {utc(at)}'
     if short == 'EdgeChangeApplied':
         old, new = need(dat, 2)
-        return 'recertify', f'EdgeChangeApplied {old} -> {new} bps'
+        return 'governance', f'EdgeChangeApplied {old} -> {new} bps'
     if short == 'EdgeChangeCancelled':
         active, cancelled = need(dat, 2)
         return 'governance', f'EdgeChangeCancelled {cancelled} bps (the edge stays {active})'
     if short == 'ReferralConfigCreated':
-        return 'recertify', f'ReferralConfigCreated {need(ind, 1)}: ' + ' '.join(str(v) for v in need(dat, 4))
+        return 'governance', f'ReferralConfigCreated {need(ind, 1)}: ' + ' '.join(str(v) for v in need(dat, 4))
     if short == 'ActiveReferralConfigSet':
         old, new = need(dat, 2)
-        return 'recertify', f'ActiveReferralConfigSet {old} -> {new}'
+        return 'governance', f'ActiveReferralConfigSet {old} -> {new}'
     raise VerificationError(f'no description for {name}')
 
 
@@ -1048,8 +1049,6 @@ def review_call(ctx, call_, planned, declared):
     elif name == 'setRiskInPaused':
         notes.append('pauses the Bank; the sentinel or guardian can do that at once' if args[0]
                      else 'unpauses the Bank')
-    elif name in ('queueEdgeChange', 'createReferralConfig', 'setActiveReferralConfig'):
-        recertify('an edge or referral change')
     elif name in ('disableGame', 'cancelEdgeChange'):
         notes.append('risk-reducing; the sentinel can do it at once'
                      + ('; irreversible' if name == 'disableGame' else ''))
