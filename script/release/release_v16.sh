@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set +xv # a trace or echoed input would print a secret unredacted (an inherited SHELLOPTS, bash -x): both off first
 set -uo pipefail
 
 # Sign and package one v1.6 release. The Owner runs it from a clean checkout of the release commit, through the

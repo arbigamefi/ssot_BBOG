@@ -5,6 +5,7 @@
 # Set ALERT_WEBHOOK_URL, or TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID, in
 # /opt/arbigamefi/ops/alert.env to get pushed alerts. A status is pushed only
 # after ALERT_AFTER_FAILURES consecutive probes, so one-off timeouts stay in the journal.
+set +xv # a trace or echoed input would print a secret unredacted (an inherited SHELLOPTS, bash -x): both off first
 set -uo pipefail
 umask 077
 

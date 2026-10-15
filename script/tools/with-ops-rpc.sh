@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set +xv # a trace or echoed input would print a secret unredacted (an inherited SHELLOPTS, bash -x): both off first
 set -uo pipefail
 
 # Run one command with an operator RPC endpoint built from the repository .env, without ever showing the key.

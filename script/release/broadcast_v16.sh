@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set +xv # a trace or echoed input would print a secret unredacted (an inherited SHELLOPTS, bash -x): both off first
 set -uo pipefail
 
 # The Owner's broadcast of a v1.6 deployment (ADR-0037 §9, decision D1: contract creations only, the governance

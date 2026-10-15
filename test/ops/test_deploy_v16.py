@@ -248,6 +248,15 @@ class DeployGateTests(unittest.TestCase):
         self.assertIn('was broadcast already', output)
         self.assertEqual(self.broadcasts(), 1)
 
+    def test_a_trace_never_shows_the_keystore_password(self):
+        self.ready()
+        code, output, _ = self.broadcast('BROADCAST', PASSWORD, env={'SHELLOPTS': 'xtrace'})
+        self.assertEqual(code, 0, output)
+        self.assertIn('set +xv', output)   # traced until the script turned it off
+        # A trace goes to the script's stderr. The terminal can show the answer this harness types ahead of read -s
+        # turning echo off, traced or not, so only the script's own output is checked.
+        self.assertNotIn(PASSWORD, output)
+
     def assert_no_key_in_the_copy(self, files):
         recorded = [path for path in (self.copy / 'cache').rglob('*.json')]
         self.assertEqual(len(recorded), files)

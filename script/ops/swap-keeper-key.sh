@@ -5,6 +5,7 @@
 #                                             (script/ops/send-keeper-rpc.sh sends them from the Owner's machine)
 # Every named line is replaced in one atomic write, or none is. No backup of the old values is created; rollback uses
 # operator custody.
+set +xv # a trace or echoed input would print a secret unredacted (an inherited SHELLOPTS, bash -x): both off first
 set -euo pipefail
 [[ $# -ge 1 ]] || { echo 'usage: swap-keeper-key.sh [--rpc] <env-filename>' >&2; exit 64; }
 exec 3<&0

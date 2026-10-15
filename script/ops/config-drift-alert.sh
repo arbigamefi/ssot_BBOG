@@ -23,6 +23,7 @@
 # Arguments pass through: --dry-run prints what would be sent and changes no state; --from-block N arms a new state
 # file at block N. Output goes to the system log under the tag arbigamefi-config-drift and to stderr. Nothing printed
 # contains the RPC URL, a webhook URL or the bot token.
+set +xv # a trace or echoed input would print a secret unredacted (an inherited SHELLOPTS, bash -x): both off first
 set -uo pipefail
 umask 077
 

@@ -41,6 +41,13 @@ class SwapKeeperKeyTests(unittest.TestCase):
         self.assertFalse(list(self.directory.glob("*.bak*")))
         self.assertFalse(list(self.directory.glob(".*.swap-*")))
 
+    def test_a_trace_never_shows_either_key(self):
+        result = self.run_swap(extra_env={"SHELLOPTS": "xtrace"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(b"set +xv", result.stderr)  # traced until the script turned it off
+        self.assertNotIn(OLD.encode(), result.stdout + result.stderr)
+        self.assertNotIn(NEW.encode(), result.stdout + result.stderr)
+
     def test_success_has_no_old_key_copy_and_mode_600(self):
         result = self.run_swap(key=" \t" + NEW + "\n")
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -230,8 +237,9 @@ class SendKeeperRpcTests(unittest.TestCase):
         self.env = {**os.environ, "PATH": f"{stubs}{os.pathsep}{os.environ['PATH']}", "OPS_ENV_FILE": str(self.dotenv),
                     "STUB_SSH_ARGS": str(self.ssh_args), "STUB_ENV_DIR": str(self.env_dir), "STUB_SWAP": str(SCRIPT)}
 
-    def send(self, *args):
-        return subprocess.run(["bash", str(self.DRIVER), *args], capture_output=True, env=self.env, timeout=10)
+    def send(self, *args, env=None):
+        return subprocess.run(["bash", str(self.DRIVER), *args], capture_output=True, env={**self.env, **(env or {})},
+                              timeout=10)
 
     def test_the_prod_keeper_keys_reach_the_env_file_and_nowhere_else(self):
         result = self.send("root@prod.invalid", "base-sepolia")
@@ -243,6 +251,13 @@ class SendKeeperRpcTests(unittest.TestCase):
         for secret in (INFURA_KEY, ALCHEMY_KEY, "e" * 32, "f" * 32):
             self.assertNotIn(secret.encode(), result.stdout + result.stderr)
         self.assertIn(b"now use the PROD_KEEPER keys (base-sepolia)", result.stdout)
+
+    def test_a_trace_never_shows_the_keys(self):
+        result = self.send("root@prod.invalid", "base-sepolia", env={"SHELLOPTS": "xtrace"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(b"set +xv", result.stderr)  # traced until the script turned it off
+        for secret in (INFURA_KEY, ALCHEMY_KEY, "e" * 32, "f" * 32):
+            self.assertNotIn(secret.encode(), result.stdout + result.stderr)
 
     def test_mainnet_uses_the_mainnet_hosts(self):
         self.keeper.write_text(self.keeper.read_text().replace("base-sepolia", "base-mainnet"))

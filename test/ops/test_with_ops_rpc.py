@@ -54,6 +54,21 @@ class WithOpsRpcTest(unittest.TestCase):
         code = [line for line in SCRIPT.read_text().splitlines() if not line.lstrip().startswith('#')]
         self.assertNotIn('PROD_KEEPER', '\n'.join(code))
 
+    def test_a_trace_or_echoed_input_never_shows_the_key(self):
+        for name, result in self.traced_runs('infura', 'base-sepolia', 'true').items():
+            self.assertEqual(result.returncode, 0, name)
+            self.assertIn('set +xv', result.stderr, name)   # the option was on until the script turned it off
+            self.assertNotIn('infuraOpsTestKey123', result.stdout + result.stderr, name)
+
+    def traced_runs(self, *args):
+        """An inherited SHELLOPTS reaches the script through its shebang; bash -x and -v set the options explicitly."""
+        env = {'PATH': os.environ['PATH'], 'HOME': os.environ.get('HOME', '/tmp'), 'OPS_ENV_FILE': str(self.env_file)}
+        runs = {'inherited xtrace': ([str(SCRIPT), *args], {'SHELLOPTS': 'xtrace'}),
+                'inherited verbose': ([str(SCRIPT), *args], {'SHELLOPTS': 'verbose'}),
+                'bash -x': (['bash', '-x', str(SCRIPT), *args], {}), 'bash -v': (['bash', '-v', str(SCRIPT), *args], {})}
+        return {name: subprocess.run(argv, capture_output=True, text=True, env={**env, **extra}, check=False)
+                for name, (argv, extra) in runs.items()}
+
     def test_usage_missing_key_and_exit_status(self):
         self.assertEqual(self.run_wrapper('infura', 'mainnet', 'true').returncode, 64)
         self.assertEqual(self.run_wrapper('infura', 'base').returncode, 64)

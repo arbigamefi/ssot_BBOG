@@ -108,6 +108,15 @@ class AlertNotifyTests(unittest.TestCase):
 
 class AlertWrapperTelegramTests(unittest.TestCase):
     def test_wrapper_delivers_alerts_to_telegram_without_argv_or_log_leaks(self):
+        self.check_delivery()
+
+    def test_a_trace_or_echoed_input_never_shows_the_token(self):
+        # The wrapper sources the alert configuration: a trace prints its assignments, echoed input its lines.
+        for options in ("xtrace", "verbose"):
+            with self.subTest(options=options):
+                self.check_delivery({"SHELLOPTS": options})
+
+    def check_delivery(self, extra_env=None):
         received = []
 
         class Handler(BaseHTTPRequestHandler):
@@ -142,7 +151,8 @@ class AlertWrapperTelegramTests(unittest.TestCase):
                 logger.chmod(0o700)
                 env = {**os.environ, "PATH": str(root) + os.pathsep + os.environ["PATH"],
                        "ALERT_CONFIG_FILE": str(config), "HEALTHZ_URL": base + "/public",
-                       "HEALTHZ_LOCAL_URL": base + "/local", "LOG_CAPTURE": str(root / "journal")}
+                       "HEALTHZ_LOCAL_URL": base + "/local", "LOG_CAPTURE": str(root / "journal"),
+                       **(extra_env or {})}
                 result = subprocess.run(["bash", str(ROOT / "script/ops/healthz-alert.sh")], env=env, text=True,
                                         capture_output=True, check=True, timeout=20)
                 self.assertIn("[ALERT]", result.stdout)
@@ -154,6 +164,8 @@ class AlertWrapperTelegramTests(unittest.TestCase):
                 self.assertNotIn("secret", payload["text"])
                 journal = (root / "journal").read_text()
                 self.assertNotIn(TOKEN, journal + result.stdout + result.stderr)
+                if extra_env:
+                    self.assertIn("set +xv", result.stderr)  # the option was on until the script turned it off
         finally:
             server.shutdown()
             server.server_close()

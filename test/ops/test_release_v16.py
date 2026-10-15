@@ -189,6 +189,14 @@ class ReleaseScriptTests(unittest.TestCase):
         self.assertFalse((self.repo / 'deployments/release-latest-v16.json').exists())
         self.assert_no_password_left()
 
+    def test_a_trace_never_shows_the_keystore_password(self):
+        code, output, _ = self.release(PASSWORD, env={'SHELLOPTS': 'xtrace'})
+        self.assertEqual(code, 0, output)
+        self.assertIn('set +xv', output)   # traced until the script turned it off
+        # A trace goes to the script's stderr. The terminal can show the answer this harness types ahead of read -s
+        # turning echo off, traced or not, so only the script's own output is checked.
+        self.assertNotIn(PASSWORD, output)
+
     def test_prompt_goes_to_the_terminal_and_the_release_is_signed_once(self):
         code, output, terminal = self.release('guess one', PASSWORD)
         self.assertEqual(code, 0, output)

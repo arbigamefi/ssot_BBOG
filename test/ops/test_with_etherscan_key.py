@@ -54,6 +54,21 @@ class WithEtherscanKeyTest(unittest.TestCase):
         self.env_file.write_text('INFURA_API_KEY_OPS=x\n')
         self.assertEqual(self.run_wrapper('true').returncode, 65)
 
+    def test_a_trace_or_echoed_input_never_shows_the_key(self):
+        for name, result in self.traced_runs('true').items():
+            self.assertEqual(result.returncode, 0, name)
+            self.assertIn('set +xv', result.stderr, name)   # the option was on until the script turned it off
+            self.assertNotIn('etherscanTestKey4567890', result.stdout + result.stderr, name)
+
+    def traced_runs(self, *args):
+        """An inherited SHELLOPTS reaches the script through its shebang; bash -x and -v set the options explicitly."""
+        env = {'PATH': os.environ['PATH'], 'HOME': os.environ.get('HOME', '/tmp'), 'OPS_ENV_FILE': str(self.env_file)}
+        runs = {'inherited xtrace': ([str(SCRIPT), *args], {'SHELLOPTS': 'xtrace'}),
+                'inherited verbose': ([str(SCRIPT), *args], {'SHELLOPTS': 'verbose'}),
+                'bash -x': (['bash', '-x', str(SCRIPT), *args], {}), 'bash -v': (['bash', '-v', str(SCRIPT), *args], {})}
+        return {name: subprocess.run(argv, capture_output=True, text=True, env={**env, **extra}, check=False)
+                for name, (argv, extra) in runs.items()}
+
     def test_the_script_is_executable(self):
         self.assertTrue(SCRIPT.stat().st_mode & stat.S_IXUSR)
 

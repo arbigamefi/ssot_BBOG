@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set +xv # a trace or echoed input would print a secret unredacted (an inherited SHELLOPTS, bash -x): both off first
 set -uo pipefail
 
 # The Owner's step that gives the production keeper its RPC endpoints (key allocation of 2026-10-11): reads

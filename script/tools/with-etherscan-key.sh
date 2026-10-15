@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set +xv # a trace or echoed input would print a secret unredacted (an inherited SHELLOPTS, bash -x): both off first
 set -uo pipefail
 
 # Run one command with the Etherscan V2 API key from the repository .env, without ever showing the key. The Owner
@@ -9,7 +10,8 @@ set -uo pipefail
 #
 # Only ETHERSCAN_V2_API_KEY is read; the command sees it under that name. Only this script reads the key line, and
 # every output line, stdout and stderr together, is printed with the key replaced. Files the command writes are not
-# redacted: keep its output outside the repository and check it before sharing.
+# redacted: keep its output outside the repository and check it before sharing. The caller's own environment still
+# reaches the command: this is not an environment cleaner.
 
 usage() {
   echo "usage: $0 <command> [args...]" >&2

@@ -34,8 +34,9 @@ start block and exact web/keeper image digests. All listed identities must agree
 ## Base Denim (plan A13)
 
 Base Sepolia makes five blocks a second from 2026-10-21 18:00 UTC; `block.timestamp` stays in whole seconds. The
-off-chain tools measure durations in seconds and use block counts only to bound one RPC query. Local tests model this
-cadence; they are not the live runs below.
+off-chain tools measure durations (confirmations, rereads) in seconds; RPC pages and bounded search budgets, such as
+the receipt fallback's 10,000 blocks over several queries, stay in blocks. Local tests model this cadence; they are
+not the live runs below.
 
 - Before the preflight, run `script/ops/denim-activation-check.sh` on the activated chain and seal its directory. It
   must report Denim active, a block gas limit that still fits a void transaction, the `pending` block, the provider
