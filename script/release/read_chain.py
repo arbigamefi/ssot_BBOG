@@ -129,7 +129,9 @@ def readback(rpc, roles, domain):
     checks['deployerHasNoPendingTransaction'] = latest == pending
     checks['deployerIsFunded'] = balances['DEPLOYER'] > 0
     checks['rolesAreDistinct'] = len(set(named.values())) == len(named)
-    checks['exposedGovernanceKeyIsNotUsed'] = not set(named.values()) & EXPOSED
+    # Nor may it sign for the Safe or the guardian: a signer acts for its multisig.
+    checks['exposedGovernanceKeyIsNotUsed'] = not (set(named.values()) | set(safe['owners'])
+                                                   | set(guardian['owners'])) & EXPOSED
     snap = {'chainId': chain, 'numPools': 1, 'poolDomain_0': 1, 'poolAsset_0': address(domain['token']['proxy']),
             'vrfWrapper': address(domain['providerReference']['wrapper'])}
     try:

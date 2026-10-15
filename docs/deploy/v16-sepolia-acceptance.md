@@ -17,9 +17,11 @@ accounting evidence.
   - the governance Safe, exactly the reviewed 2-of-3 of the listed owners with no module or guard (intended
     `0x7F0c244e1701B069727670745FD047179Ef8691d`; re-read owners, threshold, modules, guard and code hashes before
     signing);
-  - the guardian, an independent multisig of at least two signers, none of them a Safe signer;
-  - the deployer, the release signer and the keeper: distinct accounts with no code (no EIP-7702 delegation), none of
-    them the governance key exposed on the old production host; the deployer funded for the deployment.
+  - the guardian, an independent multisig of at least two signers and a threshold of at least two, none of them a
+    Safe signer;
+  - the deployer, the release signer and the keeper: distinct accounts with no code (no EIP-7702 delegation); the
+    deployer funded for the deployment;
+  - neither a role nor a signer of the Safe or the guardian is the governance key exposed on the old production host.
 - Public chain parameters from the [configuration template](v16/chain-84532.env.example), which the preflight fills
   in. USDC minimum per round is 0.01, with at most 25 rounds (0.25 USDC at that minimum); qualify each game's full
   callback gas.

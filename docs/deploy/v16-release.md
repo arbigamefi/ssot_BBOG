@@ -48,8 +48,8 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
      2-of-3 of the listed owners with no module or guard; the guardian is a multisig of at least two signers, none of
      them a Safe signer; the deployer, keeper and signer have no code (no EIP-7702 delegation); the deployer is funded
      and its latest and pending nonces are equal (which shows only that the RPC node sees no pending transaction, not
-     that none waits elsewhere); the roles are distinct and none is the governance key exposed on the old production
-     host; and the token, the VRF provider and the domain file are the certified ones. It fills
+     that none waits elsewhere); the roles are distinct, and neither a role nor a signer of the Safe or the guardian is
+     the governance key exposed on the old production host; and the token, the VRF provider and the domain file are the certified ones. It fills
      `chain/deploy-params.env` from `v16/chain-<chainId>.env.example`.
    - `dry-run` runs `DeployV16` at that block with the deployer as sender. `verify-plan` (`verify_dryrun_plan.py`)
      accepts only the expected creations, in order: nonces, addresses, init code and constructor arguments, the Vault

@@ -142,6 +142,12 @@ class ReadChainTests(unittest.TestCase):
         self.assertEqual(self.failing(self.read(role_changes={'KEEPER_ADDRESS': DEPLOYER})), ['rolesAreDistinct'])
         exposed = '0xc8eC9920d573893E888db5D30b2B3B3824B1b684'
         self.assertEqual(self.failing(self.read(role_changes={'RELEASE_SIGNER': exposed})), ['exposedGovernanceKeyIsNotUsed'])
+        # Nor a signer of either multisig.
+        for multisig, owners_role, others in ((GUARDIAN, 'GUARDIAN_OWNERS', [addr(22), addr(23)]),
+                                               (SAFE, 'GOV_OWNERS', [addr(12), addr(13)])):
+            chain = Chain(); chain.owners[multisig] = [exposed, *others]
+            failed = self.failing(self.read(chain, role_changes={owners_role: [exposed, *others]}))
+            self.assertEqual(failed, ['exposedGovernanceKeyIsNotUsed'], multisig)
 
     def test_the_certified_provider_and_domain_are_required(self):
         result = self.read(provider_error='token implementation differs from the certified one')
