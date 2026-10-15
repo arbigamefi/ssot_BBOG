@@ -45,15 +45,16 @@ contract CallbackDomainV16Test is Test {
         "moduleBaccarat"
     ];
     VerifyCallbackDomainV16 internal verifier;
+    /// The committed domain, certified since the independent review accepted certificate v5 (2026-10-15).
     string internal committed;
-    /// The committed domain as it will read once a certificate for this build is accepted, to exercise the rules.
-    string internal certified;
+    /// The committed domain as it read before that review, to exercise the refusal of an unaccepted certificate.
+    string internal pending;
     uint256 internal nonce;
 
     function setUp() public {
         verifier = new VerifyCallbackDomainV16();
         committed = vm.readFile("script/release/first-callback-domain-84532.json");
-        certified = vm.replace(committed, "PENDING_INDEPENDENT_REVIEW", "CERTIFIED");
+        pending = vm.replace(committed, '"status": "CERTIFIED"', '"status": "PENDING_INDEPENDENT_REVIEW"');
     }
 
     function _runtimeHashes() internal pure returns (bytes32[8] memory h) {
@@ -118,9 +119,8 @@ contract CallbackDomainV16Test is Test {
 
     function test_committedDomainPinsCurrentModuleRuntimesAndParameters() public view {
         assertEq(committed.readUint(".chainId"), 84532);
-        // The launch candidate changed the core runtimes after certificate v4 (launch candidate B9), so every release
-        // attempt fails until a certificate for this build is accepted.
-        assertEq(committed.readString(".status"), "PENDING_INDEPENDENT_REVIEW");
+        // Certificate v5 covers the launch candidate's runtimes; its independent review accepted it on 2026-10-15.
+        assertEq(committed.readString(".status"), "CERTIFIED");
         assertEq(
             committed.readString(".certificateSeal.sha256"),
             "5726389a84ea2348d3801328914e2cbf85354314bde83466cbce9d078f79f674"
@@ -225,67 +225,77 @@ contract CallbackDomainV16Test is Test {
         return a;
     }
 
-    /// The seal the domain file cites is copied into the repository, so the citation is checkable without dist/.
-    /// Until the certificate review accepts v5 the file cites no review and stays pending.
-    function test_committedDomainCitesTheSealedCertificate() public view {
+    /// The seals the domain file cites, the certificate's and its independent review's, are copied into the
+    /// repository, so the citations are checkable without dist/.
+    function test_committedDomainCitesTheSealedCertificateAndItsReview() public view {
         string memory seal = vm.readFile("script/release/certificates/first-callback-v5/CERTIFICATE-v5.sha256");
         assertEq(
             sha256(bytes(seal)), vm.parseBytes32(string.concat("0x", committed.readString(".certificateSeal.sha256")))
         );
         assertEq(committed.readString(".certificateSeal.version"), "v5");
-        assertFalse(vm.keyExistsJson(committed, ".certificateSeal.reviewSha256"));
+        string memory review =
+            vm.readFile("script/release/certificates/first-callback-v5/independent-review.MANIFEST.sha256");
+        assertEq(
+            sha256(bytes(review)),
+            vm.parseBytes32(string.concat("0x", committed.readString(".certificateSeal.reviewSha256")))
+        );
+        assertEq(
+            committed.readString(".certificateSeal.review"),
+            "independent-review-certificate-v5-2026-10-15/MANIFEST.sha256"
+        );
+        assertEq(committed.readString(".certificateSeal.certifiedOn"), "2026-10-15");
     }
 
     function test_snapshotInsideCertifiedDomainPasses() public {
-        verifier.verify(_json(_good()), certified);
+        verifier.verify(_json(_good()), committed);
         Snap memory s = _good();
         s.kenoRounds = 1;
-        verifier.verify(_json(s), certified);
+        verifier.verify(_json(s), committed);
     }
 
     function test_pendingCertificateFailsReleaseVerification() public {
-        _rejects(_good(), committed, "first-callback certificate not accepted");
+        _rejects(_good(), pending, "first-callback certificate not accepted");
     }
 
     function test_rejectsEveryDomainViolation() public {
         Snap memory s = _good();
         s.chainId = 8453; // the Sepolia certificate does not carry over to Base mainnet
-        _rejects(s, certified, "certificate is for another chain");
+        _rejects(s, committed, "certificate is for another chain");
         s = _good();
         s.gasLimit = 2_447_745;
-        _rejects(s, certified, "callback gas limit is not the certified value");
+        _rejects(s, committed, "callback gas limit is not the certified value");
         s = _good();
         s.kenoRounds = 26;
-        _rejects(s, certified, "round count outside the certified range");
+        _rejects(s, committed, "round count outside the certified range");
         s = _good();
         s.kenoRounds = 0;
-        _rejects(s, certified, "round count outside the certified range");
+        _rejects(s, committed, "round count outside the certified range");
         s = _good();
         s.kenoCode = keccak256("replacement module");
-        _rejects(s, certified, "module runtime is not the certified code");
+        _rejects(s, committed, "module runtime is not the certified code");
         s = _good();
         s.casinoMinBet = 98;
-        _rejects(s, certified, "casino minimum bet below the certified floor");
+        _rejects(s, committed, "casino minimum bet below the certified floor");
         s = _good();
         s.casinoMinBet = 99; // k > 0 still holds, but the Owner fixed 0.01 USDC per round (audit F-02)
-        _rejects(s, certified, "casino minimum bet is not the Owner policy value");
+        _rejects(s, committed, "casino minimum bet is not the Owner policy value");
         s = _good();
         s.riskReserveBps = 0;
-        _rejects(s, certified, "risk reserve is not the Owner policy value");
+        _rejects(s, committed, "risk reserve is not the Owner policy value");
         s = _good();
         s.withdrawalBufferBps = 999;
-        _rejects(s, certified, "withdrawal buffer is not the Owner policy value");
+        _rejects(s, committed, "withdrawal buffer is not the Owner policy value");
         s = _good();
         s.wrapper = address(0xBAD);
-        _rejects(s, certified, "VRF wrapper is not the certified provider");
+        _rejects(s, committed, "VRF wrapper is not the certified provider");
         s = _good();
         s.casinoAsset = address(0xBAD);
-        _rejects(s, certified, "casino asset is not the certified token");
+        _rejects(s, committed, "casino asset is not the certified token");
         s = _good();
         s.secondDomain = 0; // every pool must be a casino pool, so none escapes these checks
-        _rejects(s, certified, "pool is not a casino pool");
+        _rejects(s, committed, "pool is not a casino pool");
         s = _good();
         s.secondMinBet = 99;
-        _rejects(s, certified, "casino minimum bet is not the Owner policy value");
+        _rejects(s, committed, "casino minimum bet is not the Owner policy value");
     }
 }

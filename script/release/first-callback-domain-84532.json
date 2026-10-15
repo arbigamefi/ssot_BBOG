@@ -1,13 +1,17 @@
 {
   "schema": "ARBIGAMEFI_FIRST_CALLBACK_DOMAIN_V1",
   "chainId": 84532,
-  "status": "PENDING_INDEPENDENT_REVIEW",
+  "status": "CERTIFIED",
   "certificateSeal": {
     "version": "v5",
     "manifest": "freeze-2026-10-12/certificate/MANIFEST.sha256",
     "sha256": "5726389a84ea2348d3801328914e2cbf85354314bde83466cbce9d078f79f674",
     "computedAt": "1a5e9df0057a0dd12a54114d000b0da70f546699",
-    "computedOn": "2026-10-12"
+    "computedOn": "2026-10-12",
+    "review": "independent-review-certificate-v5-2026-10-15/MANIFEST.sha256",
+    "reviewSha256": "2a7b8591b72147b1a45e8769e79b8bc5cc1cef758ee3e66f10d99d3c90266441",
+    "ownerAcceptance": "docs/adr/0006-vrf-callback-settlement.md#owner-risk-acceptance-f6-submitted-2026-10-08",
+    "certifiedOn": "2026-10-15"
   },
   "certificate": "docs/audit/first-callback-gas-certificate-2026-10-07.md",
   "consumerCallbackGasLimit": 2447746,

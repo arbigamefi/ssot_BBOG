@@ -80,7 +80,7 @@ roles = {'chainId': 84532, 'DEPLOYER': deployer, 'GOV': safe, 'GOV_OWNERS': [own
          'GUARDIAN_THRESHOLD': 2, 'RELEASE_SIGNER': '0x' + os.urandom(20).hex(), 'KEEPER_ADDRESS': '0x' + os.urandom(20).hex()}
 json.dump(roles, open(f'{S}/roles.json', 'w'), indent=2)
 domain = json.load(open(f'{R}/script/release/first-callback-domain-84532.json'))
-domain['status'] = 'CERTIFIED'   # test only: the real file stays PENDING_INDEPENDENT_REVIEW until certificate v5
+domain['status'] = 'CERTIFIED'   # test only: the rehearsal does not depend on the real file's status
 json.dump(domain, open(f'{S}/domain.json', 'w'), indent=2)
 PY
 echo "== preflight"
