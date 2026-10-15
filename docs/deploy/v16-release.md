@@ -92,8 +92,13 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    forge records there for each transaction has its key replaced on exit. A broadcast is never resumed: if forge fails
    partway, inspect `broadcast.log` and the transactions sent before anything else; a new preflight starts from the
    deployer's current nonce.
-   Verify the sources from the copy, which compiles the deployed commit:
-   `SNAPSHOT_PATH=deployments/latest-v16.json make -C <copy directory> verify-v16`, with `ETHERSCAN_V2_API_KEY` set.
+   Verify the sources from the copy, which compiles the deployed commit. `script/tools/with-etherscan-key.sh` passes
+   `ETHERSCAN_V2_API_KEY` from the repository `.env` and replaces it in every output line (Owner, 2026-10-15):
+
+   ```bash
+   script/tools/with-etherscan-key.sh env SNAPSHOT_PATH=deployments/latest-v16.json make -C <copy directory> verify-v16
+   ```
+
    It generates the verification helper from the snapshot using `script/tools/gen_verify_helpers.py`; the helper uses
    the Etherscan V2 endpoint for the snapshot's chain and the default compilation profile. Include LiquidityVault
    source/constructor verification and authenticate Bank↔Vault/asset addresses and both codehashes in the signed
@@ -218,7 +223,9 @@ line.
 | `INFURA_API_KEY_OPS` (`infura`)                             | broadcast, release signing (`release_v16.sh`), governance replay, K0-4 on the operator's machine, and the mainnet backup keeper's HTTP endpoint (Owner, 2026-10-14)                                                                   |
 | `INFURA_API_KEY_PROD_KEEPER`, `ALCHEMY_API_KEY_PROD_KEEPER` | the production keeper's HTTP and WebSocket endpoints, on the server only; the Owner writes them there with `script/ops/send-keeper-rpc.sh` ([production rebuild](../ops/runbooks/production-rebuild.md)), and no local step uses them |
 
-The browser and the web server use the Base public RPCs, and so does CI, with no key.
+The browser and the web server use the Base public RPCs, and so do CI and the K0-4 monitor on the production host
+for Base Sepolia (Owner, 2026-10-15; a dedicated key before mainnet), with no key. Source verification uses
+`ETHERSCAN_V2_API_KEY` through `script/tools/with-etherscan-key.sh` only.
 
 ## From deployment to betting
 

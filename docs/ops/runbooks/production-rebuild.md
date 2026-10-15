@@ -85,8 +85,9 @@ Install the ops scripts into `/opt/arbigamefi/ops/` (owner root, mode 0700): `sw
 `healthz-probe.py`, `alert-notify.py`, `bet-index-backup.sh` and `bet-index-restore-drill.sh` from `script/ops/` of the
 release commit. Install `script/ops/systemd/arbigamefi-healthz.{service,timer}` and
 `arbigamefi-db-backup.{service,timer}` into `/etc/systemd/system/` and run `systemctl daemon-reload`; they are enabled
-in step 5. The K0-4 monitor runs on this host only if the Owner chooses it as the always-on host
-([K0-4 runbook](config-drift-alerts.md), "On a Linux host").
+in step 5. The Owner chose this host for the K0-4 monitor (2026-10-15): install it as the
+[K0-4 runbook](config-drift-alerts.md) says under "On a Linux host", on Base Sepolia with the public RPC
+(`RPC_URL=https://sepolia.base.org`), never the keeper's keys.
 
 ## 4. Secrets (Owner)
 

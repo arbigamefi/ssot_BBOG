@@ -9,9 +9,10 @@ certified domain, which governance and the USDC issuer can both leave after rele
 before any network that carries real funds.
 
 [`config-drift-monitor.py`](../../../script/ops/config-drift-monitor.py) runs every 5 minutes through
-[`config-drift-alert.sh`](../../../script/ops/config-drift-alert.sh). The RPC key allocation assigns K0-4 to the
-operator's own machine, which runs it under launchd with `INFURA_API_KEY_OPS`; a Linux host can run it under systemd
-instead ([Install](#install)). It pushes to the ops channel of the health notifier ([alerts](../alerts.md)). Timelock
+[`config-drift-alert.sh`](../../../script/ops/config-drift-alert.sh). The Owner chose the production host as its
+always-on host (2026-10-15): it runs there under systemd and, on Base Sepolia, through the public RPC; a dedicated key
+is to be chosen before mainnet. The operator's own machine can also run it, under launchd with `INFURA_API_KEY_OPS`
+([Install](#install)). It pushes to the ops channel of the health notifier ([alerts](../alerts.md)). Timelock
 operations, admission reviews, void windows and bets settled after a void on the same path also go to a public channel
 that LPs and players can read (ADR-0037 D5 and R-5).
 
@@ -240,7 +241,8 @@ slept. Keep the machine awake while the monitor is the K0-4 control, or also run
 
 Use `/opt/arbigamefi/ops/` as the directory and `/opt/arbigamefi/ops/alert.env` as the alert configuration, with the
 same settings as above, `DRIFT_STATE_FILE=/var/lib/arbigamefi/config-drift.state.json` and `RPC_URL` set to an
-endpoint that the RPC key allocation provides for the host. Run `/opt/arbigamefi/ops/config-drift-alert.sh --dry-run`,
+endpoint that the RPC key allocation provides for the host: on the production host for Base Sepolia, the public
+`RPC_URL=https://sepolia.base.org` (Owner, 2026-10-15), never the keeper's keys. Run `/opt/arbigamefi/ops/config-drift-alert.sh --dry-run`,
 then `/opt/arbigamefi/ops/config-drift-alert.sh` to arm, check the armed message, then install
 `script/ops/systemd/arbigamefi-config-drift.{service,timer}` into `/etc/systemd/system/` and run
 `systemctl enable --now arbigamefi-config-drift.timer`. `journalctl -t arbigamefi-config-drift` shows each run.
@@ -257,10 +259,13 @@ run every 300 seconds finds about 1,500 new blocks. Through `with-ops-rpc.sh inf
 makes about 14 calls: chain id, block number, about 9 block headers to find the confirmed block, one `eth_getLogs`,
 `openHolds()` and `unbookedResultCount()`. That is about 4,000 calls a day, 288 of them `eth_getLogs`. The hourly domain
 check adds about 40 calls and the hourly live verification about 25, with two `eth_getLogs` pages for its 18,000
-blocks: about 5,600 calls a day. While results stay unbooked, each run reads one or two block headers more, and each
+blocks: about 5,600 calls a day. Through the public RPC a page is 200 blocks: a routine run reads 8 pages and the
+hourly live verification 90, about 9,700 calls a day, and at about 1.7 s a page that verification takes about 2.5
+minutes. While results stay unbooked, each run reads one or two block headers more, and each
 newly tracked result costs three reads. A scheduled operation adds a few code reads and calls per reviewed call.
-Catching up after downtime takes up to 5 pages per run (`DRIFT_MAX_BLOCKS_PER_RUN`, 50,000 blocks, about 2.8 hours).
-The first verification after arming replays from the signed checkpoint, about 44 pages per day since signing. Do not
+Catching up after downtime takes up to 5 pages per run (`DRIFT_MAX_BLOCKS_PER_RUN`, 50,000 blocks, about 2.8 hours;
+250 pages through the public RPC). The first verification after arming replays from the signed checkpoint, about 44
+pages per day since signing (2,160 through the public RPC): arm the monitor soon after signing. Do not
 put the monitor on the keeper's RPC quota.
 
 ## Before relying on it
