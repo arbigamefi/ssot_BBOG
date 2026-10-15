@@ -29,6 +29,7 @@ Store and share the archives accordingly.
 | `2026-10-14-audit-addendum-1/` | Freeze delta 3 (`dist/freeze-2026-10-12-delta-3/`, commits `15470d28c`–`39da7a67a`: off-chain code, workflows and documents only), the source audit package of `39da7a67a` and external audit addendum 1 (`dist/external-audit-addendum-1-2026-10-14/` and its tarball), 30 files |
 | `2026-10-14-denim-baseline/` | The Base Denim check on Base Sepolia before the activation (`dist/denim-activation-check-2026-10-14/`, `script/ops/denim-activation-check.sh` at `f7e3f4823`): two-second blocks, a 1.2B block gas limit, the provider and USDC as certified, the direct-wrapper fork test at block 48106654, 5 files |
 | `2026-10-15-audit-addendum-1-r2/` | Freeze delta 4 (`dist/freeze-2026-10-12-delta-4/`, commits `c434b8cfe`–`55eca2cee`), the three independent reviews of addendum 1 (`dist/addendum-1-reviews-2026-10-14/`), the source audit package of `55eca2cee`, external audit addendum 1 revision 2 (`dist/external-audit-addendum-1-r2-2026-10-15/` and its tarball), its cover note and the two re-review requests, 105 files |
+| `2026-10-15-ops-tools-reviews/` | The four independent reviews of the operator tools, the Denim activation check and the deploy rehearsal (`dist/ops-tools-reviews-2026-10-15/`, targets `01f6073d6`, `44e80b235`, `2e4d5082a`, `57de1332d`), and the four review requests, 1172 files |
 
 ## Verify
 
@@ -67,6 +68,7 @@ only with `tar -xzf <archive> <member path>`. The bundle: `git bundle verify <bu
 | `2026-10-14-audit-addendum-1/dist.tar.gz` (2026-10-14) | extracted into a new directory, `shasum -c` | 30 OK |
 | `2026-10-14-denim-baseline/dist.tar.gz` (2026-10-14) | extracted into a new directory, `shasum -c` | 5 OK |
 | `2026-10-15-audit-addendum-1-r2/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 105 OK |
+| `2026-10-15-ops-tools-reviews/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 1172 OK |
 | `2026-10-11-clean-slate/deployments.tar.gz`, `deploy-copy-1b7419bca.tar.gz` | members hashed in memory against their manifests, never written to disk (they hold environment files) | 28 and 3,605 equal, none unlisted      |
 | `2026-10-11-clean-slate/all-refs-2026-10-11.bundle`                         | `git bundle verify`                                                                                   | complete history, 25 refs              |
 
@@ -107,6 +109,7 @@ are archive member paths.
 | Freeze delta 4 (`55eca2cee`) | 2026-10-15-audit-addendum-1-r2 `dist.tar.gz` | `dist/freeze-2026-10-12-delta-4/EVIDENCE.sha256` | `c6f79d74b348483418273f12186328faf76f554aaa8ebdbd54c9c102594d4bb5` |
 | Independent reviews of addendum 1 (three rounds) | 2026-10-15-audit-addendum-1-r2 `dist.tar.gz` | `dist/addendum-1-reviews-2026-10-14/MANIFEST.sha256` | `8ac9e2fbc542846d04cdab403d654b1bb7eda03ecdc7c240834e515d614f735d` |
 | External audit addendum 1, revision 2 | 2026-10-15-audit-addendum-1-r2 `dist.tar.gz` | `dist/external-audit-addendum-1-r2-2026-10-15.tar.gz` | `1d277ad0c3322fa2c68c7edc104fbb7646bef96db5a6503b8f2769da02f1d1b6` |
+| Independent reviews of the operator tools (four rounds) | 2026-10-15-ops-tools-reviews `dist.tar.gz` | `dist/ops-tools-reviews-2026-10-15/MANIFEST.sha256` | `be0da2be0a8675a5551ba0633503c3148793a74db17a07914b30142ddf8c7f05` |
 
 Certificate v5 reproduces with `python3 script/certificate/certify.py <new directory>` on a checkout of `1a5e9df00`
 (`docs/audit/first-callback-gas-certificate-2026-10-07.md`, section 8). Certificate v4 reproduces from these archives
