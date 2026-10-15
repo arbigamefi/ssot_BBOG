@@ -2,12 +2,12 @@
 (plan A5).
 
 A real run needs anvil and the public RPC (about two minutes a path), so these checks stop short of that. Statically:
-the script drives the repository's own scripts without any key, and the preflight line its failure injection rewrites
-is still where the injection expects it. Executably, with every tool and release script a stub: inherited endpoints,
-wallets and Foundry settings never reach a step, every step that reads an endpoint gets the local fork under both
-names, Foundry runs outside the repository, an output inside the repository is refused, and a fork that ignores TERM
-is still stopped. The terminal driver: prompts, exit codes, the timeout under continuous output and the cleanup of the
-command's process group.
+the script drives the repository's own scripts with no operator or production key (only the fixtures' public test key
+and a throwaway keystore), and the preflight line its failure injection rewrites is still where the injection expects
+it. Executably, with every tool and release script a stub: inherited endpoints, wallets and Foundry settings never
+reach a step, every step that reads an endpoint gets the local fork under both names, Foundry runs outside the
+repository, an output inside the repository is refused, and a fork that ignores TERM is still stopped. The terminal
+driver: prompts, exit codes, the timeout under continuous output and the cleanup of the command's process group.
 """
 import importlib.util
 import json

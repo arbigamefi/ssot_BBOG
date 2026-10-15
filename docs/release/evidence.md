@@ -33,6 +33,7 @@ Store and share the archives accordingly.
 | `2026-10-15-certificate-v5-review-send/` | What goes to the certificate reviewer: the certificate v5 review package, the four reused evidence archives, the certificate and domain file as reviewed and the cover note (`dist/certificate-v5-review-send-2026-10-15/` and its tarball), and the cover note with the tarball's digest, 12 files |
 | `2026-10-15-certificate-v5-independent-review/` | The independent review of certificate v5, ACCEPT (`dist/independent-review-certificate-v5-2026-10-15/`, the reviewer's folder unchanged), and the reviewer's delivery archive with its two records (`dist/independent-review-certificate-v5-2026-10-15-delivery/`), 195 files |
 | `2026-10-15-audit-addendum-2/` | Freeze delta 5 (`dist/freeze-2026-10-12-delta-5/`, commits `01f6073d6`–`78276b1bf`), the source audit package of `78276b1bf`, external audit addendum 2 (`dist/external-audit-addendum-2-2026-10-15/` and its tarball) and its cover note, 27 files |
+| `2026-10-15-addenda-incremental-review/` | The independent incremental review of addenda 1 revision 2 and 2, RECOMMEND_ACCEPT, which also reviewed the CERTIFIED switch (`dist/independent-review-addenda-1r2-2-2026-10-15/`, the reviewer's folder unchanged), the reviewer's archive with its delivery record (`dist/independent-review-addenda-1r2-2-2026-10-15-delivery/`), and the cover note for sending both addenda together with the review's two corrections, 66 files |
 
 ## Verify
 
@@ -75,6 +76,7 @@ only with `tar -xzf <archive> <member path>`. The bundle: `git bundle verify <bu
 | `2026-10-15-certificate-v5-review-send/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 12 OK |
 | `2026-10-15-certificate-v5-independent-review/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 195 OK |
 | `2026-10-15-audit-addendum-2/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 27 OK |
+| `2026-10-15-addenda-incremental-review/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 66 OK |
 | `2026-10-11-clean-slate/deployments.tar.gz`, `deploy-copy-1b7419bca.tar.gz` | members hashed in memory against their manifests, never written to disk (they hold environment files) | 28 and 3,605 equal, none unlisted      |
 | `2026-10-11-clean-slate/all-refs-2026-10-11.bundle`                         | `git bundle verify`                                                                                   | complete history, 25 refs              |
 
@@ -120,6 +122,7 @@ are archive member paths.
 | Certificate v5 independent review (ACCEPT) | 2026-10-15-certificate-v5-independent-review `dist.tar.gz` | `dist/independent-review-certificate-v5-2026-10-15/MANIFEST.sha256` | `2a7b8591b72147b1a45e8769e79b8bc5cc1cef758ee3e66f10d99d3c90266441` |
 | Freeze delta 5 (`78276b1bf`) | 2026-10-15-audit-addendum-2 `dist.tar.gz` | `dist/freeze-2026-10-12-delta-5/EVIDENCE.sha256` | `280da78a0d8bbb31a14f6aa6ca932cab058357995a5e4d11adbc7682511f32d6` |
 | External audit addendum 2 | 2026-10-15-audit-addendum-2 `dist.tar.gz` | `dist/external-audit-addendum-2-2026-10-15.tar.gz` | `814574e260ee60de4bc1618554c6116b5e77e2e1755bbc55ae5e960533adb29c` |
+| Independent incremental review of addenda 1 r2 and 2 (RECOMMEND_ACCEPT) | 2026-10-15-addenda-incremental-review `dist.tar.gz` | `dist/independent-review-addenda-1r2-2-2026-10-15/MANIFEST.sha256` | `1bb55c98a7f4b82b0b2d0bb9ec3bc3df03ce6cdaf8904e880e34166b9b2647ec` |
 
 Certificate v5 reproduces with `python3 script/certificate/certify.py <new directory>` on a checkout of `1a5e9df00`
 (`docs/audit/first-callback-gas-certificate-2026-10-07.md`, section 8). Certificate v4 reproduces from these archives
