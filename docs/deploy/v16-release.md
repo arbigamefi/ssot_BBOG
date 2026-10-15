@@ -34,7 +34,8 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
 
 1. Run the preflight on the commit to deploy, with a roles file of public addresses (the deployer, the Safe with its
    owners and threshold, the guardian multisig with its owners and threshold, the release signer and the keeper; the
-   format is in `script/release/read_chain.py`) and an output directory that does not exist yet:
+   format is in `script/release/read_chain.py`; Base Sepolia's is `docs/deploy/v16/roles-84532.json`) and an output
+   directory that does not exist yet:
 
    ```bash
    script/tools/with-ops-rpc.sh alchemy base-sepolia \
