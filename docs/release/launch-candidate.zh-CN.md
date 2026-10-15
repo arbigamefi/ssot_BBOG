@@ -273,7 +273,7 @@ ABI 重新生成；keeper 处理作废、停用游戏与持仓上限；索引 sc
      推荐与边际参数在解释器中一律未知，上界对任意取值成立；M4 后置算术源码未变）。域文件 `certificateSeal` 改引 v5（不引复核，状态仍为
      `PENDING_INDEPENDENT_REVIEW`），封存副本 `script/release/certificates/first-callback-v5/`；v4 的封存副本与复现器删除（复现器在 `4a5762aa3` 中保留）。
      冻结后对跟踪文件的这些改动按规程第 3 条记录为冻结 delta（`freeze-2026-10-12-delta-1/`）。
-  5. **复核包**：**已完成**。`dist/certificate-v5-review-2026-10-12.tar.gz`（SHA-256 `267e4de5…`，包内清单 `81b9ad15…`）：冻结证据与 v5 证书、delta 1、冻结提交的源码快照、v4 组合与逐项对照、H1 字节码上的方法交叉核对（GameHub 子帧 12,645 ≤ 13,092、外层 4,456 ≤ 4,541，Bank getter 与人工界逐值相同，Bank 结算在 H1 的分支域下 28,171 ≤ 30,189，引擎 9,577 ≤ 10,312），以及请复核方确认的六项；与 delta 1 一起归档为 `2026-10-12-certificate-v5-review/`。复核包由 Owner 交给证书复核方；复核接受后域文件才改为 `CERTIFIED`。
+  5. **复核包**：**已完成**。`dist/certificate-v5-review-2026-10-12.tar.gz`（SHA-256 `267e4de5…`，包内清单 `81b9ad15…`）：冻结证据与 v5 证书、delta 1、冻结提交的源码快照、v4 组合与逐项对照、H1 字节码上的方法交叉核对（GameHub 子帧 12,645 ≤ 13,092、外层 4,456 ≤ 4,541，Bank getter 与人工界逐值相同，Bank 结算在 H1 的分支域下 28,171 ≤ 30,189，引擎 9,577 ≤ 10,312），以及请复核方确认的六项；与 delta 1 一起归档为 `2026-10-12-certificate-v5-review/`。复核包由 Owner 交给证书复核方；复核接受后域文件才改为 `CERTIFIED`。**发送包已备好**（2026-10-15，Owner 发送）：`dist/certificate-v5-review-send-2026-10-15.tar.gz`（SHA-256 `c2541c0e…`）含复核包（`267e4de5…`，自封存后证书的输入未变）、证书复用组件的四份原始证据（2026-10-04 回调成本证书、H1 证书、v4 落地、v4 复核，摘要与 `script/certificate/reused.json` 的登记及外审交付清单一致）、复核对象（证书正文与域文件，与 delta 1 中的相同）和中文说明信（复核事项、复用组件的出处、封存后的情况含 Denim、复现所需与交回的材料）；邮件用的说明信 `dist/certificate-v5-review-cover-note-2026-10-15.md` 带发送包的摘要；归档 `2026-10-15-certificate-v5-review-send/`，恢复核对 12 项 OK，已入证据索引。
 - **部署与接管**（D1，ADR-0037 §9）：时间锁最先部署，其余合约构造时治理方就是时间锁，部署者从头到尾没有权限；接线批次先在 fork 上用实际地址回放，
   再由 Safe 排队并公开 calldata，72 小时后任何人执行，执行后池未激活、LP 可以入金；激活另排一笔 72 小时的操作，计入测试网与主网时间表。
 - **发布核验新增检查**（`verify_governance.py`、`V16Snapshot`，复核 §3.3.3）：
