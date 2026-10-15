@@ -182,8 +182,9 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    ADR-0006 sets it back to `PENDING_INDEPENDENT_REVIEW`, after which every release attempt fails by design until a
    new certificate is accepted. Work package B changes certified runtimes, so since B9 (2026-10-11) the file is
    `PENDING_INDEPENDENT_REVIEW` with pins regenerated from the current build. The launch candidate's certificate v5
-   (seal `5726389a…`, computed on freeze commit `1a5e9df00`) replaces v4 and waits for its independent
-   review; the file cites no review until then. Each chain needs its own certificate.
+   (seal `5726389a…`, computed on freeze commit `1a5e9df00`) replaces v4. Its independent review accepted it on
+   2026-10-15 (`independent-review-certificate-v5-2026-10-15/MANIFEST.sha256`, `2a7b8591…`), and the file is
+   `CERTIFIED` again, citing both seals. Each chain needs its own certificate.
 
 4. Run the authenticated **Frontend Docker Images** workflow on the same source commit with the
    signed bundle's release tag, exact filename, approved SHA-256, and `chain_id=84532`. Configure the

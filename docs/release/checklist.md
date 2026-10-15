@@ -1,8 +1,8 @@
 # Release acceptance
 
 The launch candidate ([ADR-0037](../adr/0037-launch-candidate-authority-pause-capacity-void.md)) is implemented and
-locally verified, frozen at `1a5e9df00` and certified by certificate v5 pending its independent review; the review,
-the external audit and network acceptance are pending ([plan](launch-candidate.zh-CN.md)).
+locally verified, frozen at `1a5e9df00` and certified for Base Sepolia by certificate v5, which its independent review
+accepted on 2026-10-15; the external audit and network acceptance are pending ([plan](launch-candidate.zh-CN.md)).
 Use the [detailed plan](../design/lp-accounting-and-callback-implementation.md) for scenario evidence.
 
 - Pin the original Azuro V3 tree/interface/math sources, provenance and license. Review every adapter

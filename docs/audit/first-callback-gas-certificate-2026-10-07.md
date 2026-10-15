@@ -2,7 +2,7 @@
 
 日期：2026-10-12（v5）。编写方：实施接替方。本文不是独立审计结论，也不是发布批准。
 
-**状态：v5，待证书复核方独立复核；域文件 `script/release/first-callback-domain-84532.json` 为 `PENDING_INDEPENDENT_REVIEW`。**
+**状态：v5，2026-10-15 经证书复核方独立复核 ACCEPT（第 7 节）；域文件 `script/release/first-callback-domain-84532.json` 为 `CERTIFIED`，引用本证书与复核的封存。**
 
 - v5 覆盖上线候选版（[`launch-candidate.zh-CN.md`](../release/launch-candidate.zh-CN.md) §10）。工作包 B 改了 GameHub、Bank、Router、VRFHub、
   PoolRegistry 与 Vault 的 runtime，v4 不再适用（ADR-0006 的重新认证触发）。
@@ -43,7 +43,7 @@ wrapper → VRFHub → GameHub（外层与自调用子帧）→ SettlementRouter
 **推荐与边际参数（架构复审 A-1，冻结签核 FZ-7）。** 回调路径上的这些参数都来自存储读取或引擎的入参：下注时记录的 `houseEdgeBps`、
 `_refCfg[referralConfigId]` 的 L0/L1/L2/holdback 比例、Bank 的 `minPlayerTurnoverForUnlock` 与 `holdbackVestingSeconds`。v5 的每一帧都由解释器在
 未知值上穷举分支得到，所以上界对这些参数的**任意取值**都成立，不止已校验的范围；它们也不影响任何循环次数（奖励份数由引擎结构限定为至多 3，
-轮数由 `registerGame` 限定为至多 25）。请证书复核方确认这一读法（FZ-7）；确认之后，`createReferralConfig`、`setActiveReferralConfig` 与
+轮数由 `registerGame` 限定为至多 25）。请证书复核方确认这一读法（FZ-7；2026-10-15 已确认，第 7 节）；确认之后，`createReferralConfig`、`setActiveReferralConfig` 与
 `queueEdgeChange` 不再是重新认证触发，确认之前仍按重新认证处理。
 
 ## 4. 组件上界
@@ -52,17 +52,20 @@ wrapper → VRFHub → GameHub（外层与自调用子帧）→ SettlementRouter
 
 | 项 | v5 上界 | v4 | 来源 | 状态 |
 | --- | ---: | ---: | --- | --- |
-| 树与选域，根节点已暖 | 994,531 | 994,571 | `tree/suffix-skip-tree-component.json`，分析器与 v4 相同、锚点改为函数相对（B4 删去 `k == 0` 分支，−40） | 新算，方法已复核 |
-| Vault 帧 | 25,118 | 25,118 | 本帧指令（`frame-bounds.json`）+ PositionApplied + 6 次暖调用 600 + 存储 8,900 + 4 个冷键 8,000 | 新算 + 复用常数 |
-| Vault getter | 2,274 | 2,274 | `getReserve`、`lockedLiquidity`、`MAX_TREE_CAPITAL` | 新算，方法已复核 |
-| token 被调用方合计 | 78,394 | 78,394 | 2026-10-04 token 交叉检查，绑定域文件钉住的 USDC runtime；调用拓扑在构建上机械计数（第 6 节） | 复用（已复核） |
-| Bank 本帧 / getter | 34,377 / 2,344 | 30,189 / 2,172 | 解释器，`settleBet` 至多 3 份奖励 | 新算，待复核 |
-| 推荐引擎 | 9,577 | 10,312 | 解释器，`allocate` 全部入参未知（可执行码未变） | 新算，待复核 |
-| GameHub 子帧 / 外层 | 12,667 / 4,565 | 13,092 / 4,541 | 带环境模型的解释器（第 6 节） | 新算，待复核 |
-| VRFHub 与 Router 各帧 | 见 `frame-bounds.json` | | 2,843 + 349；getRequest 2,161；acknowledge 3,006；getPosition 2,691；settlePosition（3 份奖励）5,104 | 新算，方法已复核 |
-| 模块（主口径） | 206,201 | 206,201 | 解释器，25 轮完全展开、全部参数长度类（`modules/module-bounds.json`），M7 见第 6 节 | 新算，方法已复核 |
+| 树与选域，根节点已暖 | 994,531 | 994,571 | `tree/suffix-skip-tree-component.json`，分析器与 v4 相同、锚点改为函数相对（B4 删去 `k == 0` 分支，−40） | 已确认（v5 复核） |
+| Vault 帧 | 25,118 | 25,118 | 本帧指令（`frame-bounds.json`）+ PositionApplied + 6 次暖调用 600 + 存储 8,900 + 4 个冷键 8,000 | 已确认（v5 复核） |
+| Vault getter | 2,274 | 2,274 | `getReserve`、`lockedLiquidity`、`MAX_TREE_CAPITAL` | 已确认（v5 复核） |
+| token 被调用方合计 | 78,394 | 78,394 | 2026-10-04 token 交叉检查，绑定域文件钉住的 USDC runtime；调用拓扑在构建上机械计数（第 6 节） | 复用，已确认（v5 复核） |
+| Bank 本帧 / getter | 34,377 / 2,344 | 30,189 / 2,172 | 解释器，`settleBet` 至多 3 份奖励 | 已确认（v5 复核） |
+| 推荐引擎 | 9,577 | 10,312 | 解释器，`allocate` 全部入参未知（可执行码未变） | 已确认（v5 复核） |
+| GameHub 子帧 / 外层 | 12,667 / 4,565 | 13,092 / 4,541 | 带环境模型的解释器（第 6 节） | 已确认（v5 复核） |
+| VRFHub 与 Router 各帧 | 见 `frame-bounds.json` | | 2,843 + 349；getRequest 2,161；acknowledge 3,006；getPosition 2,691；settlePosition（3 份奖励）5,104 | 已确认（v5 复核） |
+| 模块（主口径） | 206,201 | 206,201 | 解释器，25 轮完全展开、全部参数长度类（`modules/module-bounds.json`），M7 见第 6 节 | 已确认（v5 复核） |
 | 模块（次口径） | 324,094 | 324,094 | 2026-10-04 静态界，绑定未变的模块可执行码 | 复用（已复核） |
-| 固定账本（拆分合计） | 769,082 | 786,082 | `ledger/ledger.json`；Bank 存储 453,000 → 436,000（第 6 节） | 新算，待复核 |
+| 固定账本（拆分合计） | 769,082 | 786,082 | `ledger/ledger.json`；Bank 存储 453,000 → 436,000（第 6 节） | 已确认（v5 复核） |
+
+“已确认（v5 复核）”指 2026-10-15 证书 v5 独立复核中主口径的组件确认记录（与复核报告一同封存，第 7 节）；次口径的静态模块界不属主口径，
+沿用 2026-10-04 的复核。
 
 八个模块的解释器界与 v4 逐值相同：CoinToss 24,857；Dice 36,007；Roulette 37,108；Slots 55,168；SicBo 83,747；Plinko 128,852；Baccarat 131,917；
 Keno 206,201。
@@ -110,7 +113,7 @@ Keno 206,201。
   逐调用点的返回字（规范编码：模块 2 字、getter 1 字、引擎 6 字加偏移 0xe0、奖励份数与每份 6 字、getRequest 8 字）、bet 参数长度槽（32–64 字节
   按长格式存储，槽值 2·len + 1）、immutable 一律视为未知——其余语义与价格不变。没有模型的调用使分析中止。子帧对奖励 0–3 份与参数长度 32–64
   字节取最大。交叉核对：同一模型在 H1（2026-10-04）字节码上给出子帧 12,645、外层 4,456，不超过当时复核过的人工界 13,092、4,541；Bank 两个 getter
-  与人工界 525 + 1,647 逐值相同；immutable 视为未知与视为 0 的结果逐值相同。请复核方确认环境模型与引擎、模块、getter 的实际编码一致。
+  与人工界 525 + 1,647 逐值相同；immutable 视为未知与视为 0 的结果逐值相同。请复核方确认环境模型与引擎、模块、getter 的实际编码一致（2026-10-15 已确认，第 7 节）。
 - **Bank 本帧比 v4 宽**：解释器不使用"引擎至多产生两个锁定/延付分支"的语义，三份奖励都可走全部分支，所以 34,377 高于人工界 30,189。
   在 H1 的分支域下（第一份奖励没有锁定与延付部分），同一方法在 H1 字节码上给出 28,171，不超过人工界；在本构建上为 28,901（多出的 730 是持仓计数的代码）。
 - **token 调用拓扑（机械）**：在 Bank 与 Vault 的帧上把资产 immutable 设为标记地址，按调用入参长度（36、68、100 字节）计数每条成功路径上的
@@ -127,17 +130,37 @@ Keno 206,201。
   通过（冻结运行的回归阶段）；范围按勘误 E8 理解。
 - **k=0 范围（K0-1 至 K0-5）**：与 v4 相同。
 
-## 7. 复核要求
+## 7. 复核
 
-v5 待证书复核方独立复核。除常规复算（`certify.py` 在冻结提交的全新检出上重跑，与封存件比较；四个口径用复核方自己的组合实现复算）外，请特别确认：
+**结论：ACCEPT**（2026-10-15，证书复核方独立复核）。报告与证据封存于 `independent-review-certificate-v5-2026-10-15/`：`MANIFEST.sha256`
+的 SHA-256 为 `2a7b8591b72147b1a45e8769e79b8bc5cc1cef758ee3e66f10d99d3c90266441`，副本在
+`script/release/certificates/first-callback-v5/independent-review.MANIFEST.sha256`，归档为 `2026-10-15-certificate-v5-independent-review/`
+（[证据索引](../release/evidence.md)）。
 
-1. 环境模型（第 6 节）与各被调用方的实际返回编码、参数长度域一致；
-2. Bank 玩家槽的账本论证（结算时该槽必非零）；
-3. token 调用拓扑的计数方法；
-4. M7 的抽点与"每轮执行同一段循环体"的结构理由；
-5. 第 3 节对推荐与边际参数的读法（FZ-7）。
+复核做了什么：
+- 在冻结提交的全新检出上完整重跑 `certify.py`：模块 324/324，78 项输出的计价结果全部一致；
+- 用自己的组合实现复算四个口径与 O1、O2；
+- 逐项确认第 6 节的环境模型、Bank 玩家槽的账本论证、token 调用拓扑与 78,394 的复用、M7，以及第 3 节推荐与边际参数的读法（FZ-7，A-1 的 (a) 读法）；
+- 接受冻结运行中 ops 偶发失败“保留首次失败、另列重跑”的处理。
 
-复核通过前，域文件保持 `PENDING_INDEPENDENT_REVIEW`，任何发布核验都失败。
+主口径余量 142,199 满足 ADR-0006 的 50,000。
+
+复核写明的范围：
+- 确认的是 gas 充分性：以健康的 token 与 provider、有效账目、合法且可结算的状态等非 gas 前提为条件，不是无条件存活保证；
+- 受证域：Base Sepolia（84532）、k > 0、固定代码与模块、1–25 轮、参数长度域、固定的 token 与 provider 模型；
+- 不是主网认证，也不是发布或部署批准；没有 Denim 激活后的实跑；
+- FZ-7 的“任意取值”指未知值模型下成功路径的 gas 上界，不涵盖非法配置、算术越界或违反 token 与资金前提的情形。
+
+按第 3 节，复核确认 FZ-7 之后，`createReferralConfig`、`setActiveReferralConfig` 与 `queueEdgeChange` 的数值变化，在源码、域与其他有效期条件
+不变时，不再是重新认证的触发；权限、时间锁与发布治理照旧。
+
+勘误（复核提出，原文不改）：
+- **E1（第 6 节）：** Bank 玩家槽两次写入的普遍表述是“合计不超过 3,000”。在含其他动作的交易前缀中，单次可能先脏后净，不必逐笔是 2,900
+  加 100。账本按合计 3,000 计，数值不变。
+- **E2（复核包 README 第 4 节）：** 冻结运行中直连 wrapper 的 4/4 实际在区块 47,638,466（测试的默认区块），不是 47,657,524。复核方在 47,657,524
+  上以显式目标重跑，4/4。
+
+复核接受后，域文件于 2026-10-15 改为 `CERTIFIED`，引用本证书与复核的封存；Owner 2026-10-08 的风险接受（ADR-0006 F6）照常适用。
 
 ## 8. 复现
 

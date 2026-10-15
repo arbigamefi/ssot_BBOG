@@ -31,6 +31,7 @@ Store and share the archives accordingly.
 | `2026-10-15-audit-addendum-1-r2/` | Freeze delta 4 (`dist/freeze-2026-10-12-delta-4/`, commits `c434b8cfe`–`55eca2cee`), the three independent reviews of addendum 1 (`dist/addendum-1-reviews-2026-10-14/`), the source audit package of `55eca2cee`, external audit addendum 1 revision 2 (`dist/external-audit-addendum-1-r2-2026-10-15/` and its tarball), its cover note and the two re-review requests, 105 files |
 | `2026-10-15-ops-tools-reviews/` | The four independent reviews of the operator tools, the Denim activation check and the deploy rehearsal (`dist/ops-tools-reviews-2026-10-15/`, targets `01f6073d6`, `44e80b235`, `2e4d5082a`, `57de1332d`), and the four review requests, 1172 files |
 | `2026-10-15-certificate-v5-review-send/` | What goes to the certificate reviewer: the certificate v5 review package, the four reused evidence archives, the certificate and domain file as reviewed and the cover note (`dist/certificate-v5-review-send-2026-10-15/` and its tarball), and the cover note with the tarball's digest, 12 files |
+| `2026-10-15-certificate-v5-independent-review/` | The independent review of certificate v5, ACCEPT (`dist/independent-review-certificate-v5-2026-10-15/`, the reviewer's folder unchanged), and the reviewer's delivery archive with its two records (`dist/independent-review-certificate-v5-2026-10-15-delivery/`), 195 files |
 
 ## Verify
 
@@ -71,6 +72,7 @@ only with `tar -xzf <archive> <member path>`. The bundle: `git bundle verify <bu
 | `2026-10-15-audit-addendum-1-r2/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 105 OK |
 | `2026-10-15-ops-tools-reviews/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 1172 OK |
 | `2026-10-15-certificate-v5-review-send/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 12 OK |
+| `2026-10-15-certificate-v5-independent-review/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 195 OK |
 | `2026-10-11-clean-slate/deployments.tar.gz`, `deploy-copy-1b7419bca.tar.gz` | members hashed in memory against their manifests, never written to disk (they hold environment files) | 28 and 3,605 equal, none unlisted      |
 | `2026-10-11-clean-slate/all-refs-2026-10-11.bundle`                         | `git bundle verify`                                                                                   | complete history, 25 refs              |
 
@@ -113,6 +115,7 @@ are archive member paths.
 | External audit addendum 1, revision 2 | 2026-10-15-audit-addendum-1-r2 `dist.tar.gz` | `dist/external-audit-addendum-1-r2-2026-10-15.tar.gz` | `1d277ad0c3322fa2c68c7edc104fbb7646bef96db5a6503b8f2769da02f1d1b6` |
 | Independent reviews of the operator tools (four rounds) | 2026-10-15-ops-tools-reviews `dist.tar.gz` | `dist/ops-tools-reviews-2026-10-15/MANIFEST.sha256` | `be0da2be0a8675a5551ba0633503c3148793a74db17a07914b30142ddf8c7f05` |
 | Certificate v5 review, as sent | 2026-10-15-certificate-v5-review-send `dist.tar.gz` | `dist/certificate-v5-review-send-2026-10-15.tar.gz` | `c2541c0ed81990ae5ff5bbc9e98275230cd82fa83ed84f6a26b39251e928c7a3` |
+| Certificate v5 independent review (ACCEPT) | 2026-10-15-certificate-v5-independent-review `dist.tar.gz` | `dist/independent-review-certificate-v5-2026-10-15/MANIFEST.sha256` | `2a7b8591b72147b1a45e8769e79b8bc5cc1cef758ee3e66f10d99d3c90266441` |
 
 Certificate v5 reproduces with `python3 script/certificate/certify.py <new directory>` on a checkout of `1a5e9df00`
 (`docs/audit/first-callback-gas-certificate-2026-10-07.md`, section 8). Certificate v4 reproduces from these archives
