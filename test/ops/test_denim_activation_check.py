@@ -25,7 +25,8 @@ HEAD = 48_200_000
 class DenimChain(Chain):
     """Chain's certified token and provider reads, plus Base blocks: one every two seconds before Denim, five a second
     after it, with the BaseTime deposit at tx[1]. "pending" is the latest block after Denim and, before it, the block
-    being built: number HEAD + 1 with a hash no sealed block has. Blocks above HEAD are not sealed yet.
+    being built: number HEAD + 1 with a hash no sealed block has. Blocks above HEAD are not sealed yet: asked for one,
+    the chain raises EmptyResult, as the real Rpc does for a node's explicit null result.
 
     `reorgs` moves the chain to a new branch (new hashes and gas limit) just before answering the first request that
     the next predicate accepts."""
@@ -69,7 +70,9 @@ class DenimChain(Chain):
             if tag == 'pending':
                 return self.block(HEAD) if self.denim else {**self.block(HEAD + 1), 'hash': word(7 * 10 ** 9 + HEAD + 1)}
             number = int(tag, 16)
-            return self.block(number, params[1]) if number <= HEAD else None
+            if number > HEAD:
+                raise CHECK.EmptyResult(f'RPC eth_getBlockByNumber failed: empty JSON-RPC result after 1 attempt(s)')
+            return self.block(number, params[1])
         if method == 'eth_getCode' and params[0] == CHECK.BASETIME:
             return '0x' + '60' * 2059
         if method == 'eth_call' and params[0]['to'] == CHECK.BASETIME:
@@ -212,7 +215,8 @@ class DenimActivationCheckTests(unittest.TestCase):
 class Transport:
     """urlopen for the real verify_governance.Rpc, answered from a chain as a node would: a null result for a block it
     does not have, a JSON-RPC error where the chain reverts, and `faults` (a predicate on method and params, then the
-    JSON-RPC error code) for the requests it fails."""
+    JSON-RPC error code, None for a response with neither result nor error, or a dict of response fields) for the
+    requests it fails."""
 
     def __init__(self, chain, faults=()):
         self.chain, self.faults, self.requests = chain, list(faults), []
@@ -222,10 +226,16 @@ class Transport:
         self.requests.append((body['method'], body['params']))
         payload = {'jsonrpc': '2.0', 'id': body['id']}
         if self.faults and self.faults[0][0](body['method'], body['params']):
-            payload['error'] = {'code': self.faults.pop(0)[1], 'message': 'node fault'}
+            fault = self.faults.pop(0)[1]
+            if isinstance(fault, dict):
+                payload.update(fault)
+            elif fault is not None:
+                payload['error'] = {'code': fault, 'message': 'node fault'}
         else:
             try:
                 payload['result'] = self.chain(body['method'], body['params'])
+            except CHECK.EmptyResult:
+                payload['result'] = None
             except CHECK.VerificationError:
                 payload['error'] = {'code': 3, 'message': 'execution reverted'}
         return io.BytesIO(json.dumps(payload).encode())
@@ -267,6 +277,24 @@ class RealRpcTests(unittest.TestCase):
         fault = (lambda method, params: params == [hex(HEAD + 1), False], -32603)
         with self.assertRaisesRegex(CHECK.VerificationError, 'JSON-RPC error -32603'):
             self.run_main(Transport(chain, [fault]))
+
+    def test_a_response_without_a_result_on_the_sealed_block_query_still_fails_the_check(self):
+        # Only an explicit null result means "no block yet"; a response with neither result nor error is invalid.
+        chain = DenimChain(denim=False)
+        fault = (lambda method, params: params == [hex(HEAD + 1), False], None)
+        with self.assertRaisesRegex(CHECK.VerificationError, 'empty JSON-RPC result') as raised:
+            self.run_main(Transport(chain, [fault]))
+        self.assertNotIsInstance(raised.exception, GOVERNANCE.EmptyResult)
+
+    def test_an_answer_that_is_not_the_block_asked_for_fails_the_check(self):
+        chain = DenimChain(denim=False)
+        valid = chain.block(HEAD)['hash']
+        for result in (False, [], 'not a block', 7, {}, {'number': hex(HEAD + 1), 'hash': 'not-a-hash'},
+                       {'number': hex(HEAD + 999), 'hash': valid}):
+            with self.subTest(result=result):
+                fault = (lambda method, params: params == [hex(HEAD + 1), False], {'result': result})
+                with self.assertRaises(CHECK.VerificationError):
+                    self.run_main(Transport(DenimChain(denim=False), [fault]))
 
     def test_a_node_behind_the_head_it_reported_makes_the_reading_start_again(self):
         # A load-balanced endpoint may answer the head from one node and a block of it from another, lagging one.

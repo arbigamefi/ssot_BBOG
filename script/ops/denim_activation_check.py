@@ -54,12 +54,15 @@ def block_hash(value):
 
 
 def numbered_block(rpc, number):
-    """The canonical block of this number, or None when the node has none (a null result, not an error here)."""
+    """The canonical block of this number, or None when the node has none: an explicit null result, not an error here.
+    Any other answer must be that block, with its number and a valid hash; otherwise the response is invalid and the
+    check fails."""
     try:
         block = rpc('eth_getBlockByNumber', [hex(number), False])
     except EmptyResult:
         return None
-    return block if isinstance(block, dict) else None
+    require(isinstance(block, dict) and quantity(block.get('number')) == number, f'invalid response for block {number}')
+    return {**block, 'hash': block_hash(block.get('hash'))}
 
 
 def block_at(rpc, number):
@@ -68,7 +71,7 @@ def block_at(rpc, number):
     block = numbered_block(rpc, number)
     if block is None:
         raise HeadChanged
-    return {**block, 'hash': block_hash(block.get('hash'))}
+    return block
 
 
 def reading(rpc, domain):
@@ -117,8 +120,8 @@ def reading(rpc, domain):
     sealed = numbered_block(rpc, pending_number)
     pending = {
         'number': pending_number,
-        'pendingIsALatestBlock': isinstance(sealed, dict) and isinstance(pending_block.get('hash'), str)
-                                 and (sealed.get('hash') or '').lower() == pending_block['hash'].lower(),
+        'pendingIsALatestBlock': sealed is not None and isinstance(pending_block.get('hash'), str)
+                                 and sealed['hash'] == pending_block['hash'].lower(),
     }
     snap = {'chainId': BASE_SEPOLIA, 'numPools': 1, 'poolDomain_0': 1, 'poolAsset_0': domain['token']['proxy'],
             'vrfWrapper': domain['providerReference']['wrapper']}
@@ -165,7 +168,7 @@ def confirm(rpc, report):
     """True if the report's block number still names the report's hash."""
     block = report['block']
     current = numbered_block(rpc, block['number'])
-    return current is not None and (current.get('hash') or '').lower() == block_hash(block['hash'])
+    return current is not None and current['hash'] == block_hash(block['hash'])
 
 
 def main():

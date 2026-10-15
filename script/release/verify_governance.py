@@ -76,7 +76,8 @@ class VerificationError(ValueError):
 
 
 class EmptyResult(VerificationError):
-    """The node answered with a null result: for a block query, no block of that number or hash yet."""
+    """The node answered with an explicit null result: for a block query, no block of that number or hash yet. A
+    response with neither a result nor an error stays an ordinary VerificationError."""
 
 
 def require(condition, message):
@@ -174,7 +175,10 @@ class Rpc:
             code = data['error'].get('code') if isinstance(data['error'], dict) else None
             code = code if type(code) is int else None
             return ('retry' if code in RETRY_JSONRPC else 'final'), f'JSON-RPC error {code}'
-        if data.get('result') is None:
+        if 'result' not in data:
+            # Neither result nor error: an invalid response, not a missing block.
+            return 'final', 'empty JSON-RPC result'
+        if data['result'] is None:
             return 'empty', 'empty JSON-RPC result'
         return 'ok', data['result']
 

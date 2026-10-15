@@ -438,6 +438,15 @@ class PermissionHistoryTests(unittest.TestCase):
             with self.assertRaisesRegex(CHECK.VerificationError, r'^RPC eth_getCode failed: HTTP 403 after 1 attempt\(s\)$'):
                 CHECK.Rpc('https://secret.invalid')('eth_getCode', [])
 
+    def test_only_an_explicit_null_result_is_an_empty_result(self):
+        # A null result says the node has no such block; a response with neither result nor error is invalid.
+        for response, empty in (({'jsonrpc': '2.0', 'id': 1, 'result': None}, True), ({'jsonrpc': '2.0', 'id': 1}, False)):
+            with patch.object(CHECK.urllib.request, 'urlopen', return_value=io.BytesIO(json.dumps(response).encode())):
+                with self.assertRaisesRegex(CHECK.VerificationError,
+                                            r'^RPC eth_getBlockByNumber failed: empty JSON-RPC result after 1 attempt\(s\)$') as raised:
+                    CHECK.Rpc('https://secret.invalid')('eth_getBlockByNumber', ['0x1', False])
+            self.assertIs(isinstance(raised.exception, CHECK.EmptyResult), empty, response)
+
     def test_entrypoint_pins_existing_forge_check_passes_the_mode_and_hides_its_rpc_diagnostics(self):
         chain = Chain()
         real_run = subprocess.run
