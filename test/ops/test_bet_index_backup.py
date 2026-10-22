@@ -125,6 +125,18 @@ class BetIndexBackupTests(unittest.TestCase):
         self.assertIn("connection to server failed", payload["text"])
         self.assertNotIn(TOKEN, self.journal() + result.stdout + result.stderr)
 
+    def test_a_trace_or_echoed_input_never_shows_the_token(self):
+        # The script sources the alert configuration: a trace prints its assignments, echoed input its lines, and a
+        # failure hands the token to the notifier in a traced command.
+        self.seed_old_dumps(2)
+        for options in ("xtrace", "verbose"):
+            for extra in ({}, {"FAKE_DUMP_FAIL": "1"}):
+                with self.subTest(options=options, failing=bool(extra)):
+                    result = self.run_backup(SHELLOPTS=options, **extra)
+                    self.assertEqual(result.returncode, 1 if extra else 0, result.stderr)
+                    self.assertIn("set +xv", result.stderr)  # the option was on until the script turned it off
+                    self.assertNotIn(TOKEN, self.journal() + result.stdout + result.stderr)
+
     def test_dump_without_data_for_a_live_table_is_not_kept(self):
         result = self.run_backup(FAKE_TOC_TABLES="bets gamehub_events")
 

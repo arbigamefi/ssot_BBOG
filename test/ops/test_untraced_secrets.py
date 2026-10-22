@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ('script/tools/with-etherscan-key.sh', 'script/tools/with-ops-rpc.sh', 'script/release/broadcast_v16.sh',
            'script/release/release_v16.sh', 'script/ops/send-keeper-rpc.sh', 'script/ops/swap-keeper-key.sh',
-           'script/ops/config-drift-alert.sh', 'script/ops/healthz-alert.sh')
+           'script/ops/config-drift-alert.sh', 'script/ops/healthz-alert.sh', 'script/ops/bet-index-backup.sh')
 TOKEN = 'canary-bot-token-for-trace-tests'
 
 

@@ -8,6 +8,7 @@
 # Each dump is written under a temporary name and renamed only after pg_restore can read back table
 # data for every table in the live database, so a file named *.dump is always complete. The newest
 # BACKUP_KEEP dumps are kept. A failure is logged and, when alert.env configures Telegram, pushed.
+set +xv # a trace or echoed input would print a secret unredacted (an inherited SHELLOPTS, bash -x): both off first
 set -uo pipefail
 umask 077
 
