@@ -34,6 +34,7 @@ Store and share the archives accordingly.
 | `2026-10-15-certificate-v5-independent-review/` | The independent review of certificate v5, ACCEPT (`dist/independent-review-certificate-v5-2026-10-15/`, the reviewer's folder unchanged), and the reviewer's delivery archive with its two records (`dist/independent-review-certificate-v5-2026-10-15-delivery/`), 195 files |
 | `2026-10-15-audit-addendum-2/` | Freeze delta 5 (`dist/freeze-2026-10-12-delta-5/`, commits `01f6073d6`–`78276b1bf`), the source audit package of `78276b1bf`, external audit addendum 2 (`dist/external-audit-addendum-2-2026-10-15/` and its tarball) and its cover note, 27 files |
 | `2026-10-15-addenda-incremental-review/` | The independent incremental review of addenda 1 revision 2 and 2, RECOMMEND_ACCEPT, which also reviewed the CERTIFIED switch (`dist/independent-review-addenda-1r2-2-2026-10-15/`, the reviewer's folder unchanged), the reviewer's archive with its delivery record (`dist/independent-review-addenda-1r2-2-2026-10-15-delivery/`), and the cover note for sending both addenda together with the review's two corrections, 66 files |
+| `2026-10-22-denim-activation/` | The Base Denim check on Base Sepolia after the activation (`dist/denim-activation-check-20261022T044603Z/`, `script/ops/denim-activation-check.sh` at `20525ca83`): 4.75 blocks a second, a 120M block gas limit, BaseTime live and its tx[1] deposit, `pending` equal to the latest block, the provider and USDC as certified, the direct-wrapper fork test at block 48612482, 6 files |
 
 ## Verify
 
@@ -77,6 +78,7 @@ only with `tar -xzf <archive> <member path>`. The bundle: `git bundle verify <bu
 | `2026-10-15-certificate-v5-independent-review/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 195 OK |
 | `2026-10-15-audit-addendum-2/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 27 OK |
 | `2026-10-15-addenda-incremental-review/dist.tar.gz` (2026-10-15) | extracted into a new directory, `shasum -c` | 66 OK |
+| `2026-10-22-denim-activation/dist.tar.gz` (2026-10-22) | extracted into a new directory, `shasum -c` | 6 OK |
 | `2026-10-11-clean-slate/deployments.tar.gz`, `deploy-copy-1b7419bca.tar.gz` | members hashed in memory against their manifests, never written to disk (they hold environment files) | 28 and 3,605 equal, none unlisted      |
 | `2026-10-11-clean-slate/all-refs-2026-10-11.bundle`                         | `git bundle verify`                                                                                   | complete history, 25 refs              |
 
@@ -123,6 +125,7 @@ are archive member paths.
 | Freeze delta 5 (`78276b1bf`) | 2026-10-15-audit-addendum-2 `dist.tar.gz` | `dist/freeze-2026-10-12-delta-5/EVIDENCE.sha256` | `280da78a0d8bbb31a14f6aa6ca932cab058357995a5e4d11adbc7682511f32d6` |
 | External audit addendum 2 | 2026-10-15-audit-addendum-2 `dist.tar.gz` | `dist/external-audit-addendum-2-2026-10-15.tar.gz` | `814574e260ee60de4bc1618554c6116b5e77e2e1755bbc55ae5e960533adb29c` |
 | Independent incremental review of addenda 1 r2 and 2 (RECOMMEND_ACCEPT) | 2026-10-15-addenda-incremental-review `dist.tar.gz` | `dist/independent-review-addenda-1r2-2-2026-10-15/MANIFEST.sha256` | `1bb55c98a7f4b82b0b2d0bb9ec3bc3df03ce6cdaf8904e880e34166b9b2647ec` |
+| Denim check after the activation (Base Sepolia) | 2026-10-22-denim-activation `dist.tar.gz` | `dist/denim-activation-check-20261022T044603Z/EVIDENCE.sha256` | `09c18d4bfdad7f908d7b7450db63316bf18c91d3ff1a37405c396025d133c20e` |
 
 Certificate v5 reproduces with `python3 script/certificate/certify.py <new directory>` on a checkout of `1a5e9df00`
 (`docs/audit/first-callback-gas-certificate-2026-10-07.md`, section 8). Certificate v4 reproduces from these archives
