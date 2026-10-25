@@ -300,7 +300,10 @@ The inputs:
   the tree the professional external audit accepted, after its fix review, as recorded in the freeze commit record.
   It must equal the repository variable `V16_AUDITED_TREE`, which the Owner sets from that record, and every job
   refuses a tag whose tree differs from either. Unset since the 2026-10-11 clean slate, the variable makes every
-  gate fail until the Owner records the accepted tree.
+  gate fail until the Owner records the accepted tree. One exception, decided by the Owner on 2026-10-25: the Base
+  Sepolia release that runs alongside the external audit uses its deployed tree, since the gate must run within about
+  three days of signing and before the activation executes; that tree is not an audit-accepted tree, and Base mainnet
+  still requires one.
 
 Accept the run only when `headSha` is the tag's commit, `event` is `workflow_dispatch`, and the jobs are exactly
 `tree-equivalence-gate`, `proof-gates (unit)`, `proof-gates (diff)`, `proof-gates (invariants)`, `release-gate` and

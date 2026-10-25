@@ -66,6 +66,13 @@ Owner 于 2026-10-15 追加六项决定：
 | 第 0 天的生产主机 | 授权实施方写入原生产主机，安装并启动 K0-4（广播之后、Safe 排入接线之前）；其余服务的重建另行授权 |
 | 多签签名人 | 治理 Safe 与 guardian 的每个签名人都必须是普通账户，不带代码，也不带 EIP-7702 委托（委托框架可让他人以签名人身份调用 `approveHash`）；preflight 增加 `multisigSignersHaveNoCode` 检查。治理 Safe 现有三个签名人带 MetaMask 的委托，由 Owner 在第 0 天前撤销 |
 
+Owner 于 2026-10-25 追加两项决定：
+
+| 事项 | 决定 |
+| --- | --- |
+| 测试网发布 | 授权实施方建标签 `v1.6.0-base-sepolia-3cb42dbaf`（部署提交 `3cb42dbaf`）与同名 GitHub prerelease，上传签名发布包，并派发 Frontend Docker Images（chain 84532，casino 与 LP 存入关闭） |
+| 测试网 Release Gate 的树 | 外审尚无结论，而 Gate 从签名检查点回放，240 分钟上限只够签名后约 3 天，release 模式又要求激活尚未执行，等不到外审接受的树。本次测试网发布的 `V16_AUDITED_TREE` 取部署树 `b3ad4ff9…`：它是部署的树，**不是**外审接受的树；第 3 轮部署前工具复核接受后由 Owner 设置，2026-10-28 之前派发。主网仍须外审（含修复复核）接受的树 |
+
 ## 4. 清理记录（2026-10-11）
 
 归档目录：`~/arbigamefi-archive/2026-10-11-clean-slate/`（另有 `~/arbigamefi-archive/2026-10-11-superseded/`）。原件移入废纸篓
@@ -95,7 +102,7 @@ Owner 于 2026-10-15 追加六项决定：
 2. **工具链与工具**：A7（Foundry）先行，然后工作包 A 的其余各项；同时做 C2 文档清理。
 3. **合约**：工作包 B（含体育移出）；**应用**：工作包 D；**文档**：工作包 C。
 4. **冻结**，全部门槛全量重跑；**证书 v5**（§10）；**独立复核**；**专业外审**，外审后修复按 v5.x → 增量复核 → 外审复核的回路处理。
-5. **全新部署**到 Base Sepolia（D1，§10；Owner 2026-10-15：Denim 激活并完成激活核对后即部署，不等外审结论，与外审并行）。**第 0 天已完成**（2026-10-22，提交 `3cb42dbaf`）：preflight 通过（区块 48,647,063）；16 笔创建全部上链（区块 48,649,184–48,649,332），时间锁 `0xFf4b…A954`、GameHub `0xEca9…416D`、Bank `0x53b2…1f7C`、Vault `0xE239…bb99`；17 个合约在 Basescan 验证通过；K0-4 装在原生产主机（systemd，公共 RPC，`cast` 1.8.5）并武装于区块 48,650,315；Safe 在区块 48,652,987 排入接线（`0x607f05fb…`），K0-4 公告且准入审查通过，2026-10-25 07:01 UTC 起可执行。证据 `base-sepolia-deployment-2026-10-22/`（`EVIDENCE.sha256` `46cedfb8…`），归档 `2026-10-22-base-sepolia-day0/`（恢复 47 项 OK）：部署后 Safe 排接线批次并公开，72 小时后执行，池已注册未激活、LP 可存入；
+5. **全新部署**到 Base Sepolia（D1，§10；Owner 2026-10-15：Denim 激活并完成激活核对后即部署，不等外审结论，与外审并行）。**第 0 天已完成**（2026-10-22，提交 `3cb42dbaf`）：preflight 通过（区块 48,647,063）；16 笔创建全部上链（区块 48,649,184–48,649,332），时间锁 `0xFf4b…A954`、GameHub `0xEca9…416D`、Bank `0x53b2…1f7C`、Vault `0xE239…bb99`；17 个合约在 Basescan 验证通过；K0-4 装在原生产主机（systemd，公共 RPC，`cast` 1.8.5）并武装于区块 48,650,315；Safe 在区块 48,652,987 排入接线（`0x607f05fb…`），K0-4 公告且准入审查通过，2026-10-25 07:01 UTC 起可执行。证据 `base-sepolia-deployment-2026-10-22/`（`EVIDENCE.sha256` `46cedfb8…`），归档 `2026-10-22-base-sepolia-day0/`（恢复 47 项 OK）：部署后 Safe 排接线批次并公开，72 小时后执行，池已注册未激活、LP 可存入；**第 3 天进行中**（2026-10-25）：部署者执行接线（区块 50,003,250，tx `0x205cd035…`，22 个调用），操作状态 Done，池 1 已注册、未激活，GameHub 已注册并允许，K0-4 播报 `TIMELOCK OPERATION EXECUTED`；在仓库外 `3cb42dbaf` 的干净检出上（三个依赖库摘要与 `deps.lock` 一致）经 `with-ops-rpc.sh infura` 签发布：治理与回调域检查通过，摘要 `0x85fc6ac6…`，检查点区块 50,006,189（`0x0cd2e885…`），包 `ssot-release-chain-84532-48648945-0x85fc6ac6.tar.gz`（SHA-256 `1d98f014…`，密钥扫描无命中）；标签与 prerelease `v1.6.0-base-sepolia-3cb42dbaf`，Frontend Docker Images run 40185344627 通过（web `sha256:08b4229a…`，keeper `sha256:f9ec6d6c…`）。证据在 `base-sepolia-deployment-2026-10-25/`（未封存）。剩余：第 3 轮部署前工具复核、Release Gate（2026-10-28 前，§3）、服务器重建（另行授权）、Safe 排入激活；
    签名发布，Release Gate `release-ready`（FZ-5）。
 6. **测试网验收**：Safe 经时间锁排激活操作，72 小时后执行并记录 → 按 `docs/deploy/v16-sepolia-acceptance.md` 逐项验收，记录通过、失败或未执行
    （含暂停、解除、guardian 撤换演练）→ 发现的问题回到第 3 步。
