@@ -20,6 +20,16 @@ Router/Bank/Vault, complete 40-level tree allocation and acknowledgment. A stand
 bounded attempt; failure preserves the seed outside the reverting subcall. Acknowledgment failure rolls
 back terminalization too, so the original result remains retryable.
 
+Of the two public recovery calls, `GameHub.finalize(betId)` reverts when settlement fails, while
+`VRFHub.retry(requestId)` succeeds even when delivery or settlement fails: it only records the attempt. For `retry`,
+an `eth_estimateGas` result is the cheapest gas that does not revert. That gas is too little to settle, so the
+transaction succeeds and changes nothing. In the 2026-10-28 fork run, the estimate was 38,669 and the request
+stayed Received.
+
+Send either call with an explicit gas limit, never an estimate. Use the keeper's fixed 3,050,000
+(`CASINO_TRANSACTION_GAS`), which covers the admitted 2,447,746 callback budget. Prefer `finalize`. Judge success by
+the bet reaching Settled and the request Terminal, never by the receipt status.
+
 Unknown module reverts, invalid results, OOG and allocation failures do not become refunds. Use the
 module snapshotted at acceptance. Preserve the winner's entitlement; do not remove a cap or rerequest
 randomness to force progress. A genuine invalid implementation requires diagnosis, not an economic rewrite.

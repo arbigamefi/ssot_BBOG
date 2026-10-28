@@ -15,8 +15,9 @@ unauthorized callback callers. First authenticated receipt stores the seed and i
 Bank result count before attempting Hub delivery; duplicates do not overwrite it. A failed delivery can
 leave GameHub PendingVRF while the canonical seed already exists.
 
-Retry through the permissionless saved-result path. Do not refund a received result, even after its old
-deadline. Only truly missing randomness becomes eligible for timeout refund at the fixed deadline; a later
+Retry through the permissionless saved-result path. Give it an explicit gas limit, never an estimate:
+`retry` succeeds without settling when its gas runs short (see
+[casino finalization](game-finalization-diffs.md)). Do not refund a received result, even after its old deadline. Only truly missing randomness becomes eligible for timeout refund at the fixed deadline; a later
 callback cannot reopen that terminal position. Terminal acknowledgment and accounting are atomic and clear
 the result count exactly once. Never spoof a provider, replace randomness or clear a counter to unblock LPs.
 
