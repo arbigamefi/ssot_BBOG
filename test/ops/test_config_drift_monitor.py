@@ -64,6 +64,12 @@ MODULE_CODE = {key: '0x60' + format(0x10 + i, '02x') + '5b' * 40 for i, (_, key)
 WIRING, ACTIVATION, OTHER, THIRD = ('0x' + byte * 32 for byte in ('a1', 'a2', 'b0', 'b1'))
 SCHEDULE_TX, WIRING_TX = word(0x5c4ed110), word(0xe8ec150)
 IMPL_SLOT = '0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3'
+# The Safe and the guardian: Safe 1.4.1 proxies sharing one singleton and fallback handler, 2 of 3 plain signers each.
+SAFE_OWNERS, GUARDIAN_OWNERS = [addr(0x160 + i) for i in range(3)], [addr(0x170 + i) for i in range(3)]
+SINGLETON, HANDLER, DELEGATE = addr(0x180), addr(0x181), addr(0x182)
+PROXY_CODE, SINGLETON_CODE, HANDLER_CODE = '0x6006', '0x6007', '0x6008'
+GUARD_SLOT, HANDLER_SLOT = (signature(name) for name in ('guard_manager.guard.address',
+                                                          'fallback_manager.handler.address'))
 ADMIN = '0x' + '0' * 64
 PROPOSER, CANCELLER, EXECUTOR = (signature(name) for name in ('PROPOSER_ROLE', 'CANCELLER_ROLE', 'EXECUTOR_ROLE'))
 OPS_HOOK = 'https://hooks.example.invalid/OPS-SECRET-WEBHOOK'
@@ -120,6 +126,25 @@ def domain_file():
     return copy.deepcopy(_DOMAIN)
 
 
+def abi_encode(types, *values):
+    return subprocess.check_output(['cast', 'abi-encode', f'f({types})', *map(str, values)], text=True).strip()
+
+
+_PINNED = {}
+
+
+def pinned_hashes():
+    """The snapshot's Safe and guardian hashes, as SafeGovernance.sol computes them (abi.encode through cast)."""
+    if not _PINNED:
+        control = keccak_hex(abi_encode('address,bytes32,address,address,bytes32', SINGLETON,
+                                        keccak_hex(SINGLETON_CODE), MON.ZERO, HANDLER, keccak_hex(HANDLER_CODE)))
+        for prefix, owners in (('safe', SAFE_OWNERS), ('guardian', GUARDIAN_OWNERS)):
+            _PINNED[prefix + 'OwnersHash'] = keccak_hex(abi_encode('address[],uint256', '[' + ','.join(owners) + ']', 2))
+            _PINNED[prefix + 'CodeHash'] = keccak_hex(PROXY_CODE)
+            _PINNED[prefix + 'ControlHash'] = control
+    return dict(_PINNED)
+
+
 def snapshot():
     snap = {'architectureVersion': 'v1.6-nft-liquidity', 'chainId': CHAIN, 'blockNumber': SNAP_BLOCK, 'timestamp': 1,
             'governanceTimelock': TIMELOCK, 'timelockMinDelay': DELAY, 'poolRegistry': REGISTRY, 'gameHub': HUB,
@@ -130,7 +155,8 @@ def snapshot():
             'refL0Bps': 1000, 'refL1Bps': 500, 'refL2Bps': 250, 'refHoldbackBps': 2000, 'numPools': 1, 'poolId_0': 1,
             'poolDomain_0': 1, 'poolAsset_0': TOKEN, 'poolBank_0': BANK, 'poolVault_0': VAULT, 'poolAssetDecimals_0': 6,
             'poolBankMinBetAmount_0': 10_000, 'poolBankRiskReserveBps_0': 6000, 'poolBankWithdrawalBufferBps_0': 1000,
-            'poolBankMinTurnoverForUnlock_0': 20_000_000, 'poolBankHoldbackVestingSeconds_0': 86_400, **MODULES}
+            'poolBankMinTurnoverForUnlock_0': 20_000_000, 'poolBankHoldbackVestingSeconds_0': 86_400, **MODULES,
+            **pinned_hashes()}
     for name, _ in MON.GAMES:
         snap['gameMaxBetCount_' + name], snap['gameCallbackGasLimit_' + name] = ROUNDS, GAS
     return snap
@@ -176,6 +202,9 @@ class FakeChain:
                           REFERRAL: runtime('ReferralRegistry'), HUB: HUB_CODE, BANK: BANK_CODE, VAULT: VAULT_CODE,
                           ROUTER: '0x6003', VRFHUB: '0x6004', ENGINE: '0x6005', TOKEN: '0x6001', IMPL: '0x6002'})
         self.code.update({module: MODULE_CODE[key] for key, module in MODULES.items()})
+        self.code.update({SAFE: PROXY_CODE, GUARDIAN: PROXY_CODE, SINGLETON: SINGLETON_CODE, HANDLER: HANDLER_CODE})
+        for multisig, owners in ((SAFE, SAFE_OWNERS), (GUARDIAN, GUARDIAN_OWNERS)):
+            self.multisig(multisig, owners)
         self.put(WRAPPER, 's_vrfCoordinator()', [], COORDINATOR)
         self.put_words(WRAPPER, 'getConfig()', [0, 0, 0, 0, 13_400] + [0] * 7)
         self.put_words(COORDINATOR, 's_config()', [0, 2_500_000] + [0] * 7)
@@ -219,6 +248,19 @@ class FakeChain:
         effects.append((REGISTRY, 'PoolActiveSet(uint64,bool)', [1], [0]))
         for target, name, indexed, data in effects:
             self.emit(target, name, indexed, data, block=150, tx=WIRING_TX)
+
+    def multisig(self, multisig, owners, threshold=2, modules=(), guard=0, handler=HANDLER):
+        """The views of a Safe 1.4.1 proxy: owners, threshold, the first module page and the singleton, guard and
+        fallback handler slots (getStorageAt returns bytes)."""
+        self.calls[(multisig, encode('getOwners()'))] = '0x' + ''.join(
+            format(value(w), '064x') for w in [32, len(owners), *owners])
+        self.put(multisig, 'getThreshold()', [], threshold)
+        page = [64, value(modules[0]) if modules else 1, len(modules), *modules[:1]]
+        self.calls[(multisig, encode('getModulesPaginated(address,uint256)', 1, 1))] = '0x' + ''.join(
+            format(value(w), '064x') for w in page)
+        for slot, held in ((0, SINGLETON), (GUARD_SLOT, guard), (HANDLER_SLOT, handler)):
+            self.calls[(multisig, encode('getStorageAt(uint256,uint256)', slot, 1))] = '0x' + ''.join(
+                format(value(w), '064x') for w in (32, 32, held))
 
     def block_hash(self, number):
         return self.hashes.get(number, word(0xb10c << 64 | number))
@@ -735,6 +777,88 @@ class DeliveryAndStateTest(MonitorFixture):
             self.assertEqual(MON.run(self.config, real, self.env, now=self.now, opener=self.hook), 1)
         self.assertNotIn('SECRET', out.getvalue() + err.getvalue())
         self.assertIn('RPC eth_chainId failed', err.getvalue())
+
+
+class MultisigControlTest(MonitorFixture):
+    TITLE = 'SAFE OR GUARDIAN DIFFERS FROM THE RELEASE'
+
+    def test_the_released_safe_and_guardian_raise_nothing(self):
+        self.assertEqual(self.run_once(), 0)
+        self.assertNotIn(self.TITLE, self.ops()[-1])
+        self.assertIn('the Safe and guardian controls and signers', self.ops()[-1])
+        self.assertEqual(self.state()['conditions']['multisig'], {})
+
+    def test_a_signer_delegation_is_alerted_every_run_reminded_and_cleared(self):
+        self.armed()
+        self.chain.code[SAFE_OWNERS[1]] = '0xef0100' + DELEGATE[2:]
+        self.now += 300  # the next run, with no event and no domain or verification due
+        self.reconfigure(DRIFT_DOMAIN_CHECK_SECONDS='3600', DRIFT_GOVERNANCE_CHECK_SECONDS='3600')
+        self.assertEqual(self.run_once(), 0)
+        [message] = self.ops()
+        self.assertIn(self.TITLE, message)
+        self.assertIn(f'- NEW Safe {SAFE}: signer {SAFE_OWNERS[1]} has code, an EIP-7702 delegation to {DELEGATE}; '
+                      'clear it and sign from a plain account', message)
+        self.assertEqual(self.public(), [])  # the operator's matter: the public channel gets none of it
+        self.now += 600
+        self.assertEqual(self.run_once(), 0)
+        self.assertEqual(len(self.ops()), 1)  # not reminded inside the interval
+        self.now += 21_600
+        self.assertEqual(self.run_once(), 0)
+        self.assertIn(f'- Safe {SAFE}: signer {SAFE_OWNERS[1]} has code', self.ops()[-1])
+        self.chain.code[SAFE_OWNERS[1]] = '0x'  # the delegation cleared with an authorization to the zero address
+        self.assertEqual(self.run_once(), 0)
+        self.assertIn('The Safe and the guardian match the release again; previously reported:\n- Safe', self.ops()[-1])
+        self.assertEqual(self.state()['conditions']['multisig'], {})
+
+    def test_a_guardian_signer_with_contract_code_is_alerted(self):
+        self.armed()
+        self.chain.code[GUARDIAN_OWNERS[0]] = '0x6009'
+        self.assertEqual(self.run_once(), 0)
+        self.assertIn(f'- NEW guardian {GUARDIAN}: signer {GUARDIAN_OWNERS[0]} has code, contract code', self.ops()[-1])
+
+    def test_owner_module_and_control_changes_are_alerted(self):
+        self.armed()
+        self.chain.multisig(SAFE, SAFE_OWNERS[:2] + [STRANGER])
+        self.chain.multisig(GUARDIAN, GUARDIAN_OWNERS, threshold=1, modules=[MODULE2], guard=STRANGER)
+        self.assertEqual(self.run_once(), 0)
+        message = self.ops()[-1]
+        self.assertIn(f'- NEW Safe {SAFE}: owners or threshold differ from the release (2 of 3: '
+                      f'{SAFE_OWNERS[0]}, {SAFE_OWNERS[1]}, {STRANGER})', message)
+        self.assertIn(f'- NEW guardian {GUARDIAN}: owners or threshold differ from the release (1 of 3', message)
+        self.assertIn(f'- NEW guardian {GUARDIAN}: a module is enabled, which acts without the signers', message)
+        self.assertIn(f'- NEW guardian {GUARDIAN}: singleton, guard or fallback handler differs from the release '
+                      f'(guard {STRANGER})', message)
+        self.assertNotIn(f'Safe {SAFE}: a module', message)
+
+    def test_a_changed_fallback_handler_or_singleton_code_is_alerted(self):
+        self.armed()
+        self.chain.code[HANDLER] = '0x600a'
+        self.assertEqual(self.run_once(), 0)
+        message = self.ops()[-1]
+        for label, multisig in (('Safe', SAFE), ('guardian', GUARDIAN)):
+            self.assertIn(f'- NEW {label} {multisig}: singleton, guard or fallback handler differs', message)
+
+    def test_other_proxy_code_is_one_finding(self):
+        self.armed()
+        self.chain.code[SAFE] = '0x600b'
+        self.chain.multisig(SAFE, SAFE_OWNERS, threshold=1)
+        self.assertEqual(self.run_once(), 0)
+        lines = [line for line in self.ops()[-1].splitlines() if f'Safe {SAFE}' in line]
+        self.assertEqual(lines, [f'- NEW Safe {SAFE}: proxy code differs from the release'])
+
+    def test_a_failed_read_fails_the_run_and_raises_nothing(self):
+        self.armed()
+        self.chain.code[SAFE_OWNERS[0]] = '0xef0100' + DELEGATE[2:]
+        self.chain.fail = 'eth_getCode'
+        self.assertEqual(self.run_once(), 1)
+        self.assertEqual(self.ops(), [])
+        self.assertEqual(self.state()['conditions']['multisig'], {})
+
+    def test_a_snapshot_without_the_pinned_hashes_is_refused(self):
+        del self.snap['guardianControlHash']
+        Path(self.env['SNAPSHOT_PATH']).write_text(json.dumps(self.snap))
+        with self.assertRaisesRegex(MON.VerificationError, 'snapshot lacks the Safe and guardian hashes'):
+            MON.Config(self.env)
 
 
 class TimelockOperationTest(MonitorFixture):

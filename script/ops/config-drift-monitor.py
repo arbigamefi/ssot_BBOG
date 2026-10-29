@@ -12,7 +12,7 @@ Every run works up to a confirmed block, the last one at least DRIFT_CONFIRMATIO
    - settlement anomalies: CallbackSettlementFailed, an undelivered CallbackAttempt, PositionApplied with released = 0
      (the k = 0 path), BetVoided, VoidWindowOpened, an issuer pause of USDC and a blacklisted Bank or Vault;
    - unbooked results: VRFHub's ResultReceived, ResultAcknowledged and ResultVoided, which move unbookedResultCount, and
-     the void windows (step 7);
+     the void windows (step 8);
    - governance or authority changes: governance transfers, SentinelSet, GuardianSet, timelock roles and delay, pauses,
      GameDisabled, pools, hubs and routes set to false, edge and referral changes (the certificate v5 review confirmed
      that their values cannot move the certified bound), the other Bank and GameHub setters and the one-shot wiring;
@@ -51,7 +51,12 @@ Every run works up to a confirmed block, the last one at least DRIFT_CONFIRMATIO
    certified game's module, callback gas and round limit once the wiring has executed; each pool's minimum bet.
 6. Capacity, every run: each Bank's openHolds() against DRIFT_OPEN_HOLDS_ALERT, because a rejected bet emits no log
    (ADR-0037 §5).
-7. Unbooked results and voids (ADR-0037 §7.3 rule 4). A result that stays unbooked after the transaction that received
+7. Multisig control, every run: the Safe and the guardian against the release snapshot, which pins each one's proxy code,
+   owners and threshold, and controls (singleton and its code, guard, fallback handler and its code), as
+   SafeGovernance.sol hashes them; no module; and every signer a plain account with no code (Owner, 2026-10-15). A
+   signer with code, an EIP-7702 delegation included, acts through that code as well as its key, and a Safe emits no log
+   the scan reads, so only a read sees it.
+8. Unbooked results and voids (ADR-0037 §7.3 rule 4). A result that stays unbooked after the transaction that received
    it is kept in the state file, with its bet, hub and receipt time from VRFHub.getRequest and the block header and its
    vrfRequestedAt from GameHub.getBet (at most DRIFT_RESULT_READS_PER_RUN results are loaded per run, oldest first).
    Eligibility follows GameHub.voidBet: VOID_DELAY after the request for a bet in the cohort of a void window, not
@@ -142,6 +147,12 @@ DONE_TIMESTAMP = 1  # TimelockController.getTimestamp of an executed operation
 OPERATION_STATES = ('unset', 'waiting', 'ready', 'done')  # TimelockController.OperationState
 VOID_DELAY = 24 * 3600  # GameHub.VOID_DELAY: a bet in a void window's cohort is eligible this long after its request
 PUBLIC_VOID_DELAY = 7 * 24 * 3600  # GameHub.PUBLIC_VOID_DELAY: any bet is eligible this long after its request
+SAFE_LIST_END = 1  # Safe's linked-list sentinel, address(1): an empty module list starts and ends there
+MULTISIGS = (('Safe', 'gov', 'safe'), ('guardian', 'guardian', 'guardian'))  # label, snapshot address key, hash prefix
+# Safe 1.4.1 storage: the singleton at slot 0, then the GuardManager and FallbackManager slots (SafeGovernance.sol).
+SAFE_SLOTS = (0, int(signature('guard_manager.guard.address'), 16),
+              int(signature('fallback_manager.handler.address'), 16))
+DELEGATION = '0xef0100'  # EIP-7702 delegation designator: this prefix and the delegate's 20-byte address
 # Word positions in the static return tuples of VRFHub.getRequest (IVRFHub.RequestInfo) and GameHub.getBet
 # (SSOTTypes.Bet); the tests check them against the sources.
 REQUEST_WORDS, REQUEST_BANK, REQUEST_HUB, REQUEST_BET = 8, 0, 1, 2
@@ -241,10 +252,12 @@ CLASS_TITLE = {
 # Event classes that also go to the public channel: a void window is the operator's discretion that ADR-0037 R-5
 # discloses, so LPs and players see it as it happens.
 PUBLIC_CLASSES = frozenset({'voidwindow'})
-GROUPS = ('governance', 'domain', 'capacity', 'unattempted', 'unbooked', 'untracked')
+GROUPS = ('governance', 'domain', 'multisig', 'capacity', 'unattempted', 'unbooked', 'untracked')
 GROUP_TITLE = {
     'governance': 'LIVE RELEASE VERIFICATION FAILED (the deployed release no longer matches the signed release)',
     'domain': 'CERTIFIED DOMAIN VIOLATED (release verification would fail now)',
+    'multisig': ('SAFE OR GUARDIAN DIFFERS FROM THE RELEASE (owners, threshold, code and controls as pinned; every '
+                 'signer a plain account, since a signer with code acts through that code as well as its key)'),
     'capacity': 'BANK CAPACITY (bets revert once a Bank holds 128 open positions)',
     'unattempted': ('ELIGIBLE BET NOT ATTEMPTED (anyone may void it; the operator\'s keeper attempts every eligible '
                     'bet in request order, ADR-0037 §7.3 rule 3)'),
@@ -255,6 +268,7 @@ GROUP_TITLE = {
 GROUP_RECOVERED = {
     'governance': 'Live release verification passes again; previously reported:',
     'domain': 'Certified domain restored; previously reported:',
+    'multisig': 'The Safe and the guardian match the release again; previously reported:',
     'capacity': 'Bank capacity is below the alert level again; previously reported:',
     'unattempted': 'Settled or voided since; previously reported as not attempted:',
     'unbooked': 'Booked or voided since; previously reported as unbooked:',
@@ -265,7 +279,7 @@ PUBLIC_STALLED = ('The monitor that posts these alerts is failing. Until it reco
                   'governance timelock are not announced here; read the timelock directly.')
 PUBLIC_RESUMED = ('The monitor runs again. Operations scheduled while it was down are announced as it catches up.')
 # Message sections in severity order.
-ORDER = ('failed', 'group:governance', 'group:domain', 'group:unattempted', 'group:unbooked', 'voidorder', 'voidsoon',
+ORDER = ('failed', 'group:governance', 'group:domain', 'group:multisig', 'group:unattempted', 'group:unbooked', 'voidorder', 'voidsoon',
          'recertify', 'armed', 'scheduled', 'soon', 'ready', 'executed', 'cancelled', 'voidwindow', 'settlement',
          'governance',
          'group:capacity', 'group:untracked', 'notes', 'recovered')
@@ -381,6 +395,9 @@ class Config:
                                                    'maxBetCountCeiling', 'casinoMinBetAmountFloor', 'ownerPolicy',
                                                    'token', 'providerReference')),
                 'domain file lacks the admission review inputs')
+        require(all(re.fullmatch(r'0x[0-9a-fA-F]{64}', str(self.snapshot.get(f'{prefix}{part}Hash'))) is not None
+                    for _, _, prefix in MULTISIGS for part in ('Owners', 'Code', 'Control')),
+                'snapshot lacks the Safe and guardian hashes')
         require(all(type(self.snapshot.get(key)) is int for key in (
             'defaultHouseEdgeBps', 'refundTimeoutSeconds', 'refL0Bps', 'refL1Bps', 'refL2Bps', 'refHoldbackBps')),
             'snapshot lacks the release parameters')
@@ -867,12 +884,13 @@ class Call:
         return {'line': f'{index}. {self.text}', 'problems': self.problems, 'notes': self.notes}
 
 
-def call_words(ctx, target, fn, args, count):
+def call_words(ctx, target, fn, args, count=None):
+    """The first `count` words of an eth_call result, or all of them."""
     data = signature(fn)[:10] + ''.join(format(value, '064x') for value in args)
     result = ctx.rpc('eth_call', [{'to': target, 'data': data}, hex(ctx.block)])
     require(isinstance(result, str) and re.fullmatch(r'0x(?:[0-9a-fA-F]{64})+', result) is not None
-            and len(result) >= 2 + 64 * count, f'invalid {fn} result')
-    return [int(result[2 + 64 * i:66 + 64 * i], 16) for i in range(count)]
+            and len(result) >= 2 + 64 * (count or 0), f'invalid {fn} result')
+    return [int(result[2 + 64 * i:66 + 64 * i], 16) for i in range(count or (len(result) - 2) // 64)]
 
 
 def check_hub(ctx, hub, problems):
@@ -1452,6 +1470,61 @@ def capacity_conditions(ctx):
     return found
 
 
+def abi_words(*values):
+    return '0x' + ''.join(format(value, '064x') for value in values)
+
+
+def multisig_conditions(ctx):
+    """Each deviation of the Safe and the guardian from the release snapshot, as {key: text} (step 7)."""
+    found = {}
+    for label, key, prefix in MULTISIGS:
+        multisig = address(ctx.snap[key])
+
+        def pinned(part):
+            return ctx.snap[f'{prefix}{part}Hash'].lower()
+
+        def slot(position):
+            # Safe.getStorageAt returns bytes: offset, length 32, then the word.
+            words = call_words(ctx, multisig, 'getStorageAt(uint256,uint256)', [position, 1], 3)
+            require(words[1] == 32, f'invalid {label} storage read')
+            return words[2] % 2**160
+
+        def problem(what, text):
+            found[f'{label} {what}'] = f'{label} {multisig}: {text}'
+
+        code = ctx.code(multisig)
+        if code == '0x' or keccak(code) != pinned('Code'):
+            problem('code', 'proxy code differs from the release')
+            continue  # not a Safe of the reviewed version: its other reads mean nothing
+        listed = call_words(ctx, multisig, 'getOwners()', [])
+        require(len(listed) >= 2 and listed[0] == 32 and len(listed) == 2 + listed[1], f'invalid {label} owners')
+        owners = [as_address(owner) for owner in listed[2:]]
+        threshold = call_words(ctx, multisig, 'getThreshold()', [], 1)[0]
+        if keccak(abi_words(64, threshold, len(owners), *(int(owner, 16) for owner in owners))) != pinned('Owners'):
+            problem('owners', f'owners or threshold differ from the release ({threshold} of {len(owners)}: '
+                    + ', '.join(owners) + ')')
+        page = call_words(ctx, multisig, 'getModulesPaginated(address,uint256)', [SAFE_LIST_END, 1])
+        require(len(page) >= 3 and page[0] == 64, f'invalid {label} module page')
+        if page[1] != SAFE_LIST_END or page[2] != 0:
+            problem('modules', 'a module is enabled, which acts without the signers')
+        singleton, guard, handler = (slot(position) for position in SAFE_SLOTS)
+        singleton_code = ctx.code(as_address(singleton))
+        handler_hash = int(keccak(ctx.code(as_address(handler))), 16) if handler else 0
+        # The pinned control hash holds a zero guard, so any guard changes it.
+        if singleton_code == '0x' or keccak(abi_words(
+                singleton, int(keccak(singleton_code), 16), guard, handler, handler_hash)) != pinned('Control'):
+            problem('controls', f'singleton, guard or fallback handler differs from the release (guard '
+                    f'{as_address(guard)})')
+        for owner in owners:
+            signer = ctx.code(owner)
+            if signer != '0x':
+                delegate = ('an EIP-7702 delegation to ' + ctx.names.address('0x' + signer[8:])
+                            if signer.startswith(DELEGATION) and len(signer) == 2 + 2 * 23 else 'contract code')
+                problem(f'signer {owner}', f'signer {ctx.names.address(owner)} has code, {delegate}; clear it and '
+                        'sign from a plain account')
+    return found
+
+
 def checkpoint_base(config, rpc, state):
     """The checkpoint the next live verification starts from: the monitor's own last checkpoint, if it descends from
     the installed signed checkpoint and its block is still on the chain, otherwise the signed one."""
@@ -1620,8 +1693,8 @@ def error_detail(error):
 
 
 def armed_text(config, verification, safe):
-    lines = ['Events after this block are watched; scheduled timelock operations are reviewed; the certified domain '
-             'and the live release state are checked.']
+    lines = ['Events after this block are watched; scheduled timelock operations are reviewed; the certified domain, '
+             'the Safe and guardian controls and signers, and the live release state are checked.']
     if config.checkpoint is None:
         lines.append('Live release verification is off: no signed release record is configured.')
     elif verification is None:
@@ -1690,6 +1763,7 @@ def run(config, rpc, env, now=None, dry_run=False, from_block=None, opener=OPEN)
                       or 'recertify' in classes)
         violations = domain_violations(ctx) if domain_due else state['conditions']['domain']
         capacity = capacity_conditions(ctx)
+        multisig = multisig_conditions(ctx)
         unbooked, unattempted, untracked = result_conditions(ctx, voids, end == safe, report)
     except Exception as error:  # noqa: BLE001 - reported without its message unless a verifier wrote it
         detail = error_detail(error)
@@ -1714,7 +1788,8 @@ def run(config, rpc, env, now=None, dry_run=False, from_block=None, opener=OPEN)
     governance = state['conditions']['governance']
     if verification is not None:
         governance = {verification['problem']: verification['problem']} if verification['problem'] else {}
-    current = {'governance': governance, 'domain': violations, 'capacity': capacity, 'unattempted': unattempted,
+    current = {'governance': governance, 'domain': violations, 'multisig': multisig, 'capacity': capacity,
+               'unattempted': unattempted,
                'unbooked': unbooked, 'untracked': untracked}
     advance = {group: standing(report, state, group, current[group], now, config) for group in GROUPS}
     for cls in CLASS_TITLE:
