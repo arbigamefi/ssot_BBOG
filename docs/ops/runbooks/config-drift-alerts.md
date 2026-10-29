@@ -254,8 +254,8 @@ While the wiring waits in the queue, the monitor can run without `RELEASE_PATH` 
 then reviews the wiring as it is scheduled, and the live verification is off. Add both settings after signing and keep
 the state file.
 
-**RPC budget.** Base makes five blocks a second since Denim (Base Sepolia 2026-10-21, mainnet November 2026), so a
-run every 300 seconds finds about 1,500 new blocks. Through `with-ops-rpc.sh infura` a log page is 10,000 blocks
+**RPC budget.** Base makes five blocks a second since Denim (Base Sepolia 2026-10-21, mainnet 2026-11-05 18:00 UTC), so
+a run every 300 seconds finds about 1,500 new blocks. Through `with-ops-rpc.sh infura` a log page is 10,000 blocks
 (`GOVERNANCE_LOG_PAGE_BLOCKS`; 200 on any other endpoint, under the 201 of Base's public RPC). With one pool a routine run
 makes about 36 calls: chain id, block number, about 9 block headers to find the confirmed block, one `eth_getLogs`,
 `openHolds()`, `unbookedResultCount()` and 22 reads of the Safe and the guardian (their code, owners, threshold, first
