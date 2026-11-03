@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@ssot/ui";
 
-import { diceTargetBounds, type DiceDirection } from "../../room/params";
+import { diceTargetBounds, type DiceDirection } from "../../room/payouts";
 
 /**
  * DiceBar — the threshold control beneath the hero die.

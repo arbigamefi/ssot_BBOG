@@ -68,23 +68,30 @@ above the action that fixes it (`02-voice-and-copy.md` §4).
 
 ## 4. Typography
 
-| Utility        | Phone | From 48rem | Line height        | Use                                |
-| -------------- | ----- | ---------- | ------------------ | ---------------------------------- |
-| `text-note`    | 14    | 14         | 1.45               | footnotes, receipt details         |
-| `text-body`    | 16    | 17         | 1.55 (Chinese 1.8) | body text                          |
-| `text-lede`    | 18    | 20         | 1.5                | ledes, h3                          |
-| `text-heading` | 34    | 48         | 1.05               | section headings                   |
-| `text-display` | 52    | 88         | 1                  | the page's one h1                  |
-| `text-price`   | 30    | 30         | 1                  | multipliers on ticket stubs (Doto) |
-| `text-total`   | 52    | 52         | 1                  | the net result on a receipt (Doto) |
+| Utility        | Phone | From 48rem | Line height         | Use                                |
+| -------------- | ----- | ---------- | ------------------- | ---------------------------------- |
+| `text-note`    | 14    | 14         | 1.45                | footnotes, receipt details         |
+| `text-body`    | 16    | 17         | 1.55 (Chinese 1.8)  | body text                          |
+| `text-lede`    | 18    | 20         | 1.5 (Chinese 1.8)   | ledes, h3                          |
+| `text-heading` | 34    | 48         | 1.05 (Chinese 1.25) | section headings                   |
+| `text-display` | 52    | 88         | 0.95 (Chinese 1.15) | the page's one h1; Chinese 40 / 60 |
+| `text-price`   | 26    | 30         | 1                   | multipliers on ticket stubs (Doto) |
+| `text-total`   | 44    | 52         | 1                   | the net result on a receipt (Doto) |
 
-- `font-text` is Schibsted Grotesk (Noto Sans SC for Chinese); weights 400, 600 and 800 only
-  (`font-normal`, `font-semibold`, `font-extrabold`).
+- `font-text` is Schibsted Grotesk (the system's Chinese face for Chinese, Inter for Cyrillic,
+  which Schibsted lacks); weights 400, 600 and 800 only (`font-normal`, `font-semibold`,
+  `font-extrabold`).
+- Headings and the display size track tighter (−0.025em, −0.035em) except in Chinese, which
+  keeps 0. Line heights and tracking are tokens (`--line-*`, `--track-*`) that
+  `:root:lang(zh-Hans)` overrides; headings use `break-keep` so Chinese breaks at punctuation.
 - `font-print` is Doto at 800, for printed figures only.
 - Amounts and hashes in text use `font-semibold tabular-nums`.
 - Sizes step at one breakpoint and never scale with the viewport width.
-- The fonts are self-hosted through `next/font` in `apps/web`, which sets `--font-schibsted`,
-  `--font-noto-sc` (subset) and `--font-doto`. Only the weights above are loaded.
+- The fonts are files in the repo (`apps/web/src/features/home/fonts/`, SIL OFL 1.1 with
+  their licences), loaded through `next/font/local` in `features/home/fonts.ts`, which sets
+  `--font-schibsted` and `--font-doto`. Schibsted is one variable file (400–800, Latin and Latin
+  Extended, 58 kB); Doto is Latin at 800 (4 kB). A build never fetches fonts from Google, and
+  Chinese loads no web font: a CJK web font costs megabytes, and every platform ships one.
 
 ## 5. Space And Grid
 

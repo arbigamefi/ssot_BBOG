@@ -11,7 +11,8 @@ import {
   type RecentBetSummary
 } from "./history-widget";
 import type { CasinoOutcome } from "./outcome";
-import type { BaccaratSide, CoinSide, DiceDirection, PlinkoRisk, SicBoKind } from "./params";
+import type { BaccaratSide, CoinSide, PlinkoRisk, SicBoKind } from "./params";
+import type { DiceDirection } from "./payouts";
 import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
 
 export type { GameHistoryEntry, RecentBetSummary } from "./history-widget";

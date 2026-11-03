@@ -327,283 +327,172 @@
       }
     }
   },
-  "marketing": {
-    "errors": {
-      "recentBetsFailed": "Falha ao carregar a atividade recente"
-    },
-    "format": {
-      "syncing": "Sincronizando",
-      "awaitingReserveSync": "Aguardando sincronização da reserva",
-      "pending": "Pendente",
-      "walletPending": "Carteira pendente",
-      "assetFallback": "Ativo",
-      "roomFallback": "Sala",
-      "placedFallback": "Apostado"
-    },
-    "timeAgo": {
-      "now": "agora mesmo",
-      "seconds": "há {count}s",
-      "minutes": "há {count}min",
-      "hours": "há {count}h",
-      "days": "há {count}d"
-    },
+  "home": {
     "hero": {
-      "channel": "Cassino on-chain",
-      "title": "Jogos on-chain. Resultados verificáveis.",
-      "description": "Salas de cassino com aleatoriedade Chainlink VRF, recibos públicos e pagamentos que liquidam direto na sua carteira.",
-      "enterCasino": "Entrar no cassino",
-      "viewBank": "Ver bankroll",
-      "scrollHint": "Rolar para a prova ao vivo",
-      "visual": {
-        "status": "Pago",
-        "wallet": "para carteira",
-        "receipt": "Recibo público",
-        "proof": "Prova"
+      "title": "Cada aposta imprime um recibo.",
+      "lede": "Jogos de cassino na Base. O Chainlink VRF escolhe cada resultado, um ganho vai direto para a sua carteira e o recibo fica on-chain, onde qualquer pessoa pode conferir.",
+      "browse": "Conheça os jogos",
+      "preview": {
+        "note": "As apostas abrem na Base depois que o relatório de auditoria for publicado.",
+        "channel": "Telegram",
+        "join": "Entrar no canal",
+        "fine": "Também no X: <x>@arbi_game_fi</x>. Indisponível em regiões restritas.",
+        "dock": "Entrar no Telegram"
       },
-      "consoleLabel": "Status ao vivo",
-      "live": "Ao vivo",
-      "metrics": {
-        "freeReserve": "Reserva livre",
-        "bankAssets": "Bankroll",
-        "rooms": "Salas"
+      "testnet": {
+        "note": "As apostas na {chain} usam USDC de teste, que não tem valor. As apostas com USDC real abrem na Base depois que o relatório de auditoria for publicado.",
+        "play": "Jogar na testnet",
+        "faucet": "Obter USDC de teste"
       },
-      "proofRows": {
-        "vrf": {
-          "title": "Cada resultado tem recibo",
-          "detail": "ID da aposta, solicitação VRF, hash aleatório e transação de liquidação ficam públicos."
-        },
-        "bytecode": {
-          "title": "O bankroll da casa fica visível",
-          "detail": "Capacidade de pagamento e taxas do protocolo vêm dos contratos ativos."
-        }
-      },
-      "exploreGames": "Explorar os jogos"
-    },
-    "stats": {
-      "vault": {
-        "label": "Banca da rede",
-        "detail": "Capital total do ativo selecionado em Banks ativos — lido direto da chain."
-      },
-      "turnover": {
-        "label": "Turnover da rede",
-        "detail": "Fluxo vitalício do ativo selecionado em Banks ativos — lido direto da chain."
-      },
-      "protocolFee": {
-        "label": "Taxas da rede",
-        "detail": "Taxas acumuladas do ativo selecionado em Banks ativos — lidas da chain."
-      },
-      "verifiable": "On-chain",
-      "indexed": "Indexado · pode atrasar",
-      "assetContext": "Contexto do ativo"
-    },
-    "rooms": {
-      "eyebrow": "Todos os jogos",
-      "title": "Salas de jogo. Uma carteira.",
-      "detail": "Cada jogo liquida no próprio contrato. Escolha um e entre — sem cadastro.",
-      "actionLabel": "Ver todos"
-    },
-    "roomCards": {
-      "dice": {
-        "title": "Dados",
-        "badge": "Sala de precisão",
-        "summary": "Defina o alvo, escolha a aposta e entre numa sala de dados rápida.",
-        "facts": {
-          "0": "Aposta rápida",
-          "1": "Recibo público",
-          "2": "Ativo único"
-        }
-      },
-      "coinToss": {
-        "title": "Cara ou Coroa",
-        "badge": "Sala binária",
-        "summary": "Escolha cara ou coroa e acompanhe o resultado on-chain.",
-        "facts": {
-          "0": "Entrada rápida",
-          "1": "Jogo binário",
-          "2": "Resultado único"
-        }
-      },
-      "roulette": {
-        "title": "Roleta",
-        "badge": "Mesa europeia",
-        "summary": "Entre numa mesa de roleta europeia padrão com tabuleiro real, slip de aposta claro e revisão de recibo legível.",
-        "facts": {
-          "0": "Mesa 0-36",
-          "1": "Slip claro",
-          "2": "Apostas padrão"
-        }
-      },
-      "keno": {
-        "title": "Keno",
-        "badge": "Sala matriz",
-        "summary": "Escolha o tabuleiro, defina a aposta e mantenha o sorteio no centro da sala.",
-        "facts": {
-          "0": "Tabuleiro primeiro",
-          "1": "Sorteio ao vivo",
-          "2": "Jogadas repetidas"
-        }
-      },
-      "plinko": {
-        "title": "Plinko",
-        "badge": "Tabuleiro arcade",
-        "summary": "Solte por um tabuleiro de risco compacto e revele o balde a partir da aleatoriedade on-chain.",
-        "facts": {
-          "0": "Perfis de risco",
-          "1": "Revelação do balde",
-          "2": "Replay rápido"
-        }
-      },
-      "slots": {
-        "title": "Caça-níqueis",
-        "badge": "Sala de rolos",
-        "summary": "Gire uma sala simples de três símbolos com multiplicadores legíveis e prova final.",
-        "facts": {
-          "0": "3 rolos",
-          "1": "Símbolos visíveis",
-          "2": "Recibo de prova"
-        }
-      },
-      "baccarat": {
-        "title": "Bacará",
-        "badge": "Sala de mesa",
-        "summary": "Escolha jogador, banca ou empate e inspecione as cartas abertas depois que o VRF responde.",
-        "facts": {
-          "0": "Revelação de cartas",
-          "1": "Jogador banca empate",
-          "2": "Recibo final"
-        }
-      },
-      "sic-bo": {
-        "title": "Sic Bo",
-        "badge": "Três dados",
-        "summary": "Escolha uma aposta de mesa, role três dados e revise total, trinca e pagamento.",
-        "facts": {
-          "0": "3 dados",
-          "1": "Apostas de total",
-          "2": "Rolagem aberta"
-        }
+      "live": {
+        "play": "Jogar agora"
       }
     },
-    "bank": {
-      "eyebrow": "Reserva de bankroll",
-      "title": "Livro de reserva antes do rendimento de marketing.",
-      "description": "Os saldos do banco e os passivos reservados vêm de leituras do protocolo. A página não inventa APY nem esconde obrigações pendentes atrás de um número promocional.",
-      "freeReserve": "Reserva livre",
-      "totalBankAssets": "Bankroll total",
-      "releaseDigest": "Build",
-      "inspectBank": "Inspecionar bankroll"
-    },
-    "activity": {
-      "eyebrow": "Ao vivo",
-      "title": "Últimas apostas",
-      "viewAll": "Toda a atividade",
-      "headers": {
-        "player": "Jogador",
-        "room": "Jogo",
-        "state": "Status",
-        "age": "Quando",
-        "payout": "Pagamento"
+    "receipt": {
+      "label": "Recibo da aposta {id}",
+      "bet": "Aposta {id}",
+      "where": "{chain}, bloco {block}",
+      "stampPaid": "Pago na carteira",
+      "stampSettled": "Liquidada",
+      "net": "Resultado líquido",
+      "lines": {
+        "stake": "Aposta",
+        "won": "Ganho",
+        "houseEdge": "Vantagem da casa, {rate}",
+        "paid": "Pago na carteira",
+        "unused": "Aposta não usada devolvida"
       },
-      "empty": "Seja o primeiro.",
-      "live": "Ao vivo"
-    },
-    "proof": {
-      "traceLabel": "Rastro on-chain",
-      "proofSurface": "ao vivo on-chain",
-      "eyebrow": "Como se mantém justo",
-      "title": "Cada aposta deixa um rastro que você pode seguir.",
-      "description": "Sua carteira, o jogo e a aleatoriedade são contratos separados. Qualquer um pode reproduzir a mesma aposta a partir da blockchain e obter a mesma resposta.",
-      "actionLabel": "Ver recibos"
+      "proof": {
+        "request": "Pedido VRF",
+        "hash": "Hash aleatório",
+        "settled": "Liquidada em"
+      },
+      "open": "Abrir este recibo",
+      "reprint": "Imprimir outro recibo",
+      "announce": "Aposta {id}, {game}. Resultado líquido {net} {symbol}.",
+      "caption": "As últimas apostas liquidadas, ganhos e perdas.",
+      "captionTestnet": "As últimas apostas liquidadas na testnet, ganhos e perdas. Fundos de teste não têm valor.",
+      "loading": "Lendo os últimos recibos…",
+      "error": "Não foi possível ler os últimos recibos. Todo recibo fica on-chain; tente de novo em um minuto.",
+      "empty": "Nenhuma aposta foi liquidada ainda. A primeira será impressa aqui."
     },
     "verify": {
-      "eyebrow": "Código aberto",
-      "title": "Não confie. Verifique.",
-      "description": "As regras de cada jogo são uma função on-chain pública. Nada de botões ocultos: qualquer mudança de parâmetro fica publicamente na fila por pelo menos 72 horas antes de entrar em vigor. Leia o bytecode exato e rode você mesmo.",
-      "sourceNote": "Trecho representativo. O contrato implantado é a fonte da verdade — verifique o código completo on-chain.",
-      "verifyCta": "Verificar no explorer"
-    },
-    "footerCta": {
-      "eyebrow": "Quando você quiser",
-      "title": "Conecte uma carteira. Escolha um jogo. Gire.",
-      "description": "Seu dinheiro fica na sua carteira até você apostar. Os prêmios voltam do mesmo jeito.",
-      "primary": "Começar a jogar",
-      "secondary": "Ver jogos"
-    },
-    "landing": {
-      "scrollHint": "Explorar os jogos",
-      "bankHint": "Consulte saldos e fundos reservados na rede selecionada.",
-      "visual": {
-        "status": "Ilustração",
-        "wallet": "Sua carteira · seu histórico",
-        "receipt": "Prévia do recibo",
-        "proof": "Liquidação",
-        "title": "Cada resultado, rastreável.",
-        "request": "Pedido de aleatoriedade",
-        "transaction": "Recibo da transação"
+      "title": "Confira antes de apostar",
+      "lede": "Nada aqui pede que você confie na nossa palavra. Cada linha abre o registro público.",
+      "results": {
+        "title": "Resultados",
+        "detail": "O Chainlink VRF escolhe cada resultado. Ninguém, nem nós, pode escolhê-lo ou sorteá-lo de novo.",
+        "action": "Ver o contrato de aleatoriedade"
       },
-      "mechanisms": {
-        "rules": {
-          "label": "Regras do jogo",
-          "value": "Código aberto",
-          "detail": "Confira as regras e as taxas atuais de cada jogo antes de apostar."
-        },
-        "randomness": {
-          "label": "Aleatoriedade",
-          "value": "Chainlink VRF",
-          "detail": "Acompanhe o pedido de aleatoriedade e a prova de cada aposta."
-        },
-        "receipts": {
-          "label": "Histórico de transações",
-          "value": "Recibos públicos",
-          "detail": "Acompanhe a aposta desde o envio até a liquidação on-chain."
-        }
+      "rules": {
+        "title": "Regras dos jogos",
+        "detail": "Cada jogo é um contrato verificado. A conta do pagamento está no código-fonte.",
+        "action": "Ler um contrato de jogo"
       },
-      "steps": {
-        "eyebrow": "Como funciona",
-        "title": "Da escolha ao recibo final.",
-        "items": {
-          "0": {
-            "title": "Escolha um jogo",
-            "detail": "Explore os jogos, leia as regras e confira a rede e o ativo aceito."
-          },
-          "1": {
-            "title": "Revise e assine",
-            "detail": "Conecte a carteira. Confira o valor, a cotação do pagamento e as taxas antes de confirmar."
-          },
-          "2": {
-            "title": "Acompanhe o resultado",
-            "detail": "Aguarde a aleatoriedade e a confirmação da liquidação. Abra o recibo para conferir o resultado e o pagamento."
-          }
-        }
+      "houseEdge": {
+        "title": "Vantagem da casa",
+        "detail": "Cada jogo fica com {rate} de um ganho. Isso já está nos multiplicadores abaixo.",
+        "action": "Ver onde é definida"
       },
-      "verifyDescription": "Leia a lógica do jogo e confira o contrato implantado. O pagamento também depende dos parâmetros da aposta e das taxas configuradas no protocolo.",
-      "activityEyebrow": "Atividade recente",
-      "receiptCta": "Ver recibos",
-      "bank": {
-        "title": "Confira a banca antes de jogar.",
-        "description": "Os saldos são lidos dos contratos da rede selecionada, separados por ativo. Os fundos não reservados equivalem ao patrimônio líquido menos as reservas para apostas abertas; não são garantia de pagamento.",
-        "freeLabel": "Fundos não reservados",
-        "freeDetail": "Patrimônio líquido do ativo menos obrigações reservadas, com mínimo de zero.",
-        "loading": "Lendo os saldos…",
-        "error": "Não foi possível ler os saldos. Tente novamente ou consulte a banca.",
-        "empty": "Esta versão não tem saldos de banca disponíveis.",
-        "unavailable": "Não há implantação disponível para a rede selecionada.",
-        "retry": "Tentar novamente"
+      "changes": {
+        "title": "Mudanças de regras",
+        "detail": "Toda mudança espera pelo menos 72 horas em um timelock público antes de valer.",
+        "action": "Ver o timelock"
+      },
+      "status": {
+        "title": "Status do sistema",
+        "detail": "Se a liquidação, a aleatoriedade e o índice de apostas estão funcionando agora.",
+        "action": "Abrir a página de status"
+      },
+      "audit": {
+        "title": "Auditoria",
+        "detail": "O relatório da auditoria externa será publicado aqui antes de as apostas abrirem.",
+        "pending": "Ainda não publicado"
       }
     },
-    "preview": {
-      "note": "As apostas ainda não estão abertas: elas abrem na Base depois que o relatório de auditoria for publicado.",
-      "follow": "Novidades do lançamento no Telegram",
-      "footerTitle": "As apostas abrem depois que o relatório de auditoria for publicado.",
-      "footerDescription": "Seu dinheiro fica na sua carteira até você apostar. A data de lançamento será publicada no canal oficial.",
-      "join": "Entrar no Telegram"
+    "games": {
+      "title": "Jogos e quanto pagam",
+      "lede": "O lado direito de cada canhoto é o máximo que uma aposta pode render, já com a vantagem da casa de {rate} descontada. O máximo ao vivo também depende do capital livre do pool da casa e aparece antes de você assinar.",
+      "pays": "paga",
+      "upTo": "até",
+      "note": "Uma transação pode jogar até {rounds} rodadas. A cotação que você assina mostra a aposta, o multiplicador, a chance de ganhar e as taxas.",
+      "items": {
+        "coinToss": {
+          "name": "Cara ou Coroa",
+          "desc": "Cara ou coroa."
+        },
+        "dice": {
+          "name": "Dados",
+          "desc": "Defina uma linha e escolha um lado. Chance de ganhar de 2% a 97%."
+        },
+        "roulette": {
+          "name": "Roleta Europeia",
+          "desc": "Uma roda com um único zero."
+        },
+        "baccarat": {
+          "name": "Bacará",
+          "desc": "Aposte no jogador, na banca ou no empate."
+        },
+        "sicBo": {
+          "name": "Sic Bo",
+          "desc": "Aposte no lançamento de três dados."
+        },
+        "slots": {
+          "name": "Caça-níqueis",
+          "desc": "Três rolos. Pares, trincas e três setes pagam."
+        },
+        "plinko": {
+          "name": "Plinko",
+          "desc": "Escolha um nível de risco e solte a bola por oito fileiras."
+        },
+        "keno": {
+          "name": "Keno",
+          "desc": "Escolha até cinco números e acerte o sorteio."
+        }
+      }
     },
-    "testnet": {
-      "note": "Esta é a testnet {chain}. As apostas usam USDC de teste, que não tem valor; apostas com USDC real abrem na Base depois que o relatório de auditoria for publicado.",
-      "faucet": "Obter USDC de teste",
-      "play": "Jogar na testnet",
-      "footerTitle": "Experimente todos os jogos com USDC de teste.",
-      "footerDescription": "Fundos de teste não têm valor. Conte no Telegram o que falhar ou confundir você."
+    "steps": {
+      "title": "Como funciona uma aposta",
+      "items": [
+        {
+          "title": "Escolha um jogo e um valor",
+          "detail": "Você vê o multiplicador, a chance de ganhar e as taxas antes de assinar qualquer coisa."
+        },
+        {
+          "title": "Assine uma transação",
+          "detail": "Sua aposta vai para o contrato público do pool da casa, e o Chainlink recebe o pedido de um número aleatório."
+        },
+        {
+          "title": "Receba e guarde o recibo",
+          "detail": "A aposta é liquidada quando o número chega. Um ganho vai direto para a sua carteira na mesma transação."
+        }
+      ],
+      "late": "<lead>Se o número aleatório nunca chegar,</lead> você pode recuperar sua aposta depois de {wait}. A taxa de aleatoriedade desse pedido não é devolvida.",
+      "hours": "{count, plural, one {uma hora} other {# horas}}",
+      "minutes": "{count, plural, one {um minuto} other {# minutos}}"
+    },
+    "liquidity": {
+      "title": "Ou fique do outro lado de cada aposta",
+      "lede": "Os provedores de liquidez financiam o pool da casa que paga os vencedores. Antes de depositar, estas são as três respostas que importam.",
+      "earn": {
+        "title": "O que você ganha",
+        "detail": "Uma parte da vantagem da casa em cada aposta liquidada, dividida pelo pool. Nenhum retorno é prometido."
+      },
+      "lose": {
+        "title": "O que você pode perder",
+        "detail": "Seu depósito paga os vencedores, então uma sequência de ganhos dos jogadores pode reduzi-lo, no pior caso a zero."
+      },
+      "leave": {
+        "title": "Com que rapidez você pode sair",
+        "detail": "Cada depósito é desbloqueado após 24 horas. Depois disso, você pode sacar até o capital livre do pool, por ordem de chegada."
+      },
+      "figures": {
+        "label": "Pool da casa em {symbol}",
+        "pool": "No pool da casa",
+        "free": "Livre para pagar vencedores",
+        "turnover": "Apostado desde o lançamento"
+      },
+      "more": "Como a liquidez funciona"
     }
   },
   "legal": {

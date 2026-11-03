@@ -11,19 +11,21 @@ import {
 import { describe, expect, it } from "vitest";
 
 import {
-  applyHouseEdgeToMultiplier,
   buildGameParams,
   buildKenoMask,
   buildRouletteBitmask,
   calculateGameReserveMultiplier,
   calculateGameWinChance,
-  clampDiceTarget,
   createRouletteParamsInput,
-  diceTargetBounds,
-  kenoMaxMultiplier,
   rouletteCoveredNumbers,
   rouletteWinChance
 } from "./params";
+import {
+  applyHouseEdgeToMultiplier,
+  clampDiceTarget,
+  diceTargetBounds,
+  kenoMaxMultiplier
+} from "./payouts";
 
 describe("game room params", () => {
   it("returns Keno's hit-all (top-tier) multiplier per spot count", () => {

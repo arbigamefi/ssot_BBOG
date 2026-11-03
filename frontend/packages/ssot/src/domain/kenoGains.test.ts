@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { KENO_GAIN_TABLE, kenoGainFactor, kenoMultiplier } from "./casinoOutcome";
+import { KENO_GAIN_TABLE, kenoGainFactor, kenoMultiplier } from "./kenoGains";
 
 // `C(n, r)` — exact enough in IEEE-754 for the N=15 keno domain.
 function comb(n: number, r: number): number {
