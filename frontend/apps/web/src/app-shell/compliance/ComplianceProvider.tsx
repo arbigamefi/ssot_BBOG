@@ -18,10 +18,6 @@ export const TERMS_VERSION = "2026-05-28";
 export type CookieConsent = "accepted" | "rejected";
 
 export type ResponsibleGamblingLimits = {
-  /** Player-set daily deposit ceiling in USDC. Enforcement is server-side. */
-  dailyDepositLimit?: number;
-  /** Player-set daily loss ceiling in USDC. Enforcement is server-side. */
-  dailyLossLimit?: number;
   /** Minutes between in-session "reality check" reminders. 0 = off. */
   sessionReminderMinutes?: number;
   /** Epoch ms until which the player has excluded themselves. */

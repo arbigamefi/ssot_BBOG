@@ -155,13 +155,10 @@
     "responsible": {
       "title": "Sorumlu oyun",
       "close": "Kapat",
-      "dailyDeposit": "Günlük yatırma limiti",
-      "dailyLoss": "Günlük kayıp limiti",
       "sessionReminder": "Oturum hatırlatıcısı",
       "minutes": "dk",
-      "noLimit": "Limit yok",
       "off": "Kapalı",
-      "saveLimits": "Limitleri kaydet",
+      "saveReminder": "Hatırlatıcıyı kaydet",
       "selfExclude": {
         "title": "Kendini hariç tut",
         "d1": "1 gün",
@@ -271,7 +268,7 @@
       },
       {
         "q": "Oyunumun kontrolünü nasıl elimde tutarım?",
-        "a": "Oturum hatırlatıcısı belirlemek, günlük yatırma ve kayıp limitlerini kaydetmek veya belirli bir süre kendinizi hariç tutmak için alt bilgiden Sorumlu Oyun'u açın. Bu ayarlar yalnızca bu tarayıcıda saklanır: günlük limitler bahis veya yatırma sırasında henüz kontrol edilmez ve kendini hariç tutma diğer tarayıcılar, cihazlar veya uygulamalar için geçerli değildir. Oynamak için yargı bölgenizde yasal yaşta olmalısınız."
+        "a": "Oturum hatırlatıcısı belirlemek veya belirli bir süre kendinizi hariç tutmak için alt bilgiden Sorumlu Oyun'u açın. İkisi de yalnızca bu tarayıcıda saklanır: kendini hariç tutma diğer tarayıcılar, cihazlar veya uygulamalar için geçerli değildir. Oynamak için yargı bölgenizde yasal yaşta olmalısınız."
       }
     ]
   },
