@@ -60,9 +60,7 @@
       "notOpened": "Didn't open {wallet}? Retry, or download it if you don't have it.",
       "retryOpen": "Open wallet again",
       "downloadWallet": "Download wallet",
-      "unavailableHint": "Mainnet betting is not yet available.",
-      "choose": "Choose wallet",
-      "dismiss": "Close wallet prompt"
+      "unavailableHint": "Mainnet betting is not yet available."
     },
     "txErrors": {
       "canceled": "You canceled the request in your wallet.",
@@ -93,7 +91,7 @@
     "pages": {
       "casino": {
         "title": "Casino",
-        "description": "Wallet-native casino games, every spin verifiable on-chain. No signup, no custody."
+        "description": "Casino games on Base with each game's win chance and top payout. Chainlink VRF picks every result, and every settled bet has a public receipt."
       },
       "casinoRoom": {
         "title": "{game}",
@@ -185,7 +183,7 @@
         "dice": "Dice",
         "roulette": "European Roulette",
         "coinToss": "Coin Toss",
-        "keno": "Keno Draft",
+        "keno": "Keno",
         "plinko": "Plinko",
         "slots": "Slots",
         "baccarat": "Baccarat",
@@ -1035,105 +1033,42 @@
         "browse": "Browse open games"
       }
     },
-    "directory": {
-      "loading": "Loading games...",
-      "empty": {
-        "noRelease": "Casino isn't live on the chain you're connected to.",
-        "noGames": "No games available right now.",
-        "noResults": "No games matched",
-        "noResultsDetail": "Nothing matched \"{query}\". Try clearing the search.",
-        "clearSearch": "Clear search"
+    "lobby": {
+      "title": "Pick a game.",
+      "lede": "Casino games on Base. Chainlink VRF picks every result, a win pays straight to your wallet, and every settled bet has a receipt anyone can check.",
+      "preview": {
+        "note": "Betting opens on Base after the audit report is published. Until then you can read each game's rules and odds."
       },
-      "hero": {
-        "eyebrow": "Game lobby",
-        "title": "Pick a game.",
-        "description": "Verifiable game rooms. Connect your wallet, jump straight in. Every spin lands on-chain."
+      "testnet": {
+        "note": "Bets on {chain} use test USDC, which has no value, plus a little test ETH for gas. Betting with real USDC opens on Base after the audit report is published.",
+        "faucet": "Get test USDC"
       },
-      "stats": {
-        "rooms": "Games available",
-        "asset": "Plays in",
-        "volume": "Total volume",
-        "bets": "Total bets",
-        "players": "Players"
-      },
-      "filters": {
-        "all": "All games",
-        "table": "Table",
-        "dice": "Dice",
-        "binary": "Coin flip",
-        "lottery": "Lottery",
-        "arcade": "Arcade"
-      },
-      "search": {
-        "placeholder": "Search games...",
-        "aria": "Search games"
-      },
-      "tags": {
-        "binary": "Binary",
-        "table": "Table",
-        "lottery": "Lottery",
-        "arcade": "Arcade",
-        "dice": "Dice",
-        "module": "Game"
-      },
-      "rooms": {
-        "dice": {
-          "title": "Dice",
-          "promise": "1-99 sizing in seconds.",
-          "badge": "Fast rolls"
-        },
-        "roulette": {
-          "title": "European Roulette",
-          "promise": "Classic 37-slot physical mechanics.",
-          "badge": "Max Payout 36x"
-        },
-        "coinToss": {
-          "title": "Coin Toss",
-          "promise": "High-speed 50/50 resolution.",
-          "badge": "50/50 play"
-        },
-        "keno": {
-          "title": "Keno Draft",
-          "promise": "Pick multi-spots for massive multipliers.",
-          "badge": "Up to 500.5x"
-        },
-        "plinko": {
-          "title": "Plinko",
-          "promise": "Drop through eight rows and chase edge buckets.",
-          "badge": "Up to 24.6x"
-        },
-        "slots": {
-          "title": "Slots",
-          "promise": "Match pairs, triples, or the triple-seven jackpot.",
-          "badge": "Up to 64x"
-        },
-        "baccarat": {
-          "title": "Baccarat",
-          "promise": "Player vs banker hands with tie upside.",
-          "badge": "Up to 10.4x"
-        },
-        "sicBo": {
-          "title": "Sic Bo",
-          "promise": "Three dice, classic table bets, and triple upside.",
-          "badge": "Up to 216x"
+      "noRelease": "Games aren't available on this network yet.",
+      "games": {
+        "title": "What each game pays",
+        "lede": "The right side of each stub is the most one bet can return, with the {rate} house edge already counted. The live maximum also depends on the house pool's free capital and is shown before you sign.",
+        "pays": "pays",
+        "upTo": "up to",
+        "range": "{from} to {to}",
+        "note": "One transaction can play up to {rounds} rounds. The quote you sign shows the stake, the multiplier, your win chance and the fees.",
+        "empty": "No game is taking bets right now.",
+        "items": {
+          "coinToss": "Call heads or tails. Win chance {chance}.",
+          "dice": "Set a line from 1 to 100 and pick a side. Win chance {chance}.",
+          "roulette": "A single-zero wheel. Cover 1 to 36 numbers; win chance {chance}.",
+          "baccarat": "Back the player, the banker or a tie. Win chance {chance}.",
+          "sicBo": "Bet on the roll of three dice. Win chance {chance}.",
+          "slots": "Three reels; pairs, triples and triple sevens pay. Win chance {chance}.",
+          "plinko": "Pick a risk level and drop a ball through eight rows. Win chance {chance}.",
+          "keno": "Pick 1 to 5 of 15 numbers against a draw of five. Win chance {chance}."
         }
       },
-      "card": {
-        "releaseAnchored": "Live",
-        "playNow": "Play Now",
-        "preview": "Preview",
-        "testnet": "Testnet"
-      },
-      "reserve": {
-        "title": "House bankroll, on-chain",
-        "subtitle": "Bank {bank}",
-        "status": "Live",
-        "cta": "Check on-chain",
-        "preview": "Preview",
-        "testnet": "Testnet"
-      },
-      "bets": "Bets",
-      "clearAll": "Clear all"
+      "stats": {
+        "label": "Bets so far",
+        "bets": "Bets placed",
+        "players": "Players",
+        "turnover": "Total staked"
+      }
     },
     "availability": {
       "title": "Betting isn't open yet",

@@ -1,14 +1,13 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useQueries } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import type { BetRow } from "@ssot/ssot/indexer";
 
-import { PrintedFigure } from "../../home/printed-figure";
 import { buildHomeReceipt } from "../../home/receipts";
 import { readCasinoOutcome } from "../room/outcome";
+import { TicketStub } from "../ticket-stub";
 import type { GameRoom } from "../room/use-game-room";
 import { formatRolls } from "./dice-receipt";
 import { diceWinRange } from "./slip-model";
@@ -111,21 +110,14 @@ export function DiceReceipts({
               }
               return (
                 <li key={receipt.betId}>
-                  <Link
+                  <TicketStub
                     href={receipt.href}
-                    className="group grid min-h-26 grid-cols-[minmax(0,1fr)_160px] rounded-sheet border border-(--stub-edge) text-ink [--stub-edge:hsl(var(--thermal))] hover:[--stub-edge:hsl(var(--ink))] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink md:min-h-28 md:grid-cols-[minmax(0,1fr)_184px]"
-                  >
-                    <span className="flex flex-col justify-center gap-1 px-5 py-4 md:px-6 md:py-5">
-                      <span className="text-lede font-semibold decoration-1 underline-offset-4 group-hover:underline">
-                        {t("bet", { id: receipt.betId })}
-                      </span>
-                      <span className="text-note text-faded">{desc}</span>
-                    </span>
-                    <span className="print-perforation flex flex-col items-center justify-center gap-1">
-                      <small className="text-note leading-tight text-faded">{t("net")}</small>
-                      <PrintedFigure value={receipt.net} className="text-price" />
-                    </span>
-                  </Link>
+                    title={t("bet", { id: receipt.betId })}
+                    detail={desc}
+                    label={t("net")}
+                    value={receipt.net}
+                    figure="amount"
+                  />
                 </li>
               );
             })}

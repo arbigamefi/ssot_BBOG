@@ -1,5 +1,5 @@
-import type { CasinoModuleSlug } from "../casino/modules";
-import type { SignedAmount } from "./receipts";
+import type { CasinoModuleSlug } from "./modules";
+import type { SignedAmount } from "../home/receipts";
 import {
   applyHouseEdgeToMultiplier,
   baccaratMultiplier,
@@ -8,7 +8,7 @@ import {
   plinkoMaxMultiplier,
   sicBoMultiplier,
   slotsMaxMultiplier
-} from "../casino/room/payouts";
+} from "./room/payouts";
 
 /** The most one bet can return, before the house edge, from the module rules the rooms use. */
 function grossTopMultiplier(slug: CasinoModuleSlug): number {

@@ -8,8 +8,7 @@ import { CASINO_MODULE_SLUGS } from "../../features/casino/modules";
 const render = (kind: OgGlyphKind) => renderToStaticMarkup(<OgGlyph kind={kind} size={120} />);
 
 describe("OG game glyphs", () => {
-  // Drift guard: the OG hero visual for each game is hand-ported from the
-  // product CasinoMiniIcons. Unknown kinds fall back to the generic receipt
+  // Drift guard: every game needs its own OG hero visual. Unknown kinds fall back to the generic receipt
   // mark, so a newly registered game must have its own glyph or this fails.
   it("renders a dedicated mark for every registered casino game", () => {
     const fallback = render("__missing__" as OgGlyphKind);

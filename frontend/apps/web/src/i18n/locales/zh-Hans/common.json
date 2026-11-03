@@ -60,9 +60,7 @@
       "notOpened": "没有打开 {wallet}？可重试，或在尚未安装时下载。",
       "retryOpen": "再次打开钱包",
       "downloadWallet": "下载钱包",
-      "unavailableHint": "主网投注暂未开放。",
-      "choose": "选择钱包",
-      "dismiss": "关闭钱包提示"
+      "unavailableHint": "主网投注暂未开放。"
     },
     "txErrors": {
       "canceled": "你已在钱包中取消了这次请求。",
@@ -92,8 +90,8 @@
     "description": "非托管链上游戏协议，提供可验证随机数与透明结算。",
     "pages": {
       "casino": {
-        "title": "赌场",
-        "description": "原生钱包赌场游戏 —— 每一局都能在链上核对。不用注册、不用托管。"
+        "title": "游戏",
+        "description": "Base 上的链上游戏，列出每个游戏的中奖概率和最高赔付。每个结果由 Chainlink VRF 决定，每一注结算后都有公开凭证。"
       },
       "casinoRoom": {
         "title": "{game}",
@@ -1035,105 +1033,42 @@
         "browse": "浏览开放中的游戏"
       }
     },
-    "directory": {
-      "loading": "正在加载游戏...",
-      "empty": {
-        "noRelease": "你连的链上没有赌场。",
-        "noGames": "目前没有游戏可玩。",
-        "noResults": "没找到匹配的游戏",
-        "noResultsDetail": "\"{query}\" 没有匹配。试试清空搜索。",
-        "clearSearch": "清空搜索"
+    "lobby": {
+      "title": "选一个游戏。",
+      "lede": "Base 上的链上游戏。每个结果由 Chainlink VRF 决定，赢了直接打到你的钱包，每一注结算后都有一张任何人都能查的凭证。",
+      "preview": {
+        "note": "审计报告公布后，Base 上即开放下注。在此之前，你可以先看每个游戏的规则和赔率。"
       },
-      "hero": {
-        "eyebrow": "游戏大厅",
-        "title": "挑一款游戏",
-        "description": "可验证的游戏房间。连上钱包直接开玩。每一局都落在链上。"
+      "testnet": {
+        "note": "{chain} 上的下注使用测试 USDC，没有价值，另需少量测试 ETH 付 gas。审计报告公布后，Base 上开放真实 USDC 下注。",
+        "faucet": "领取测试 USDC"
       },
-      "stats": {
-        "rooms": "在线游戏",
-        "asset": "结算资产",
-        "volume": "总投注额",
-        "bets": "总下注数",
-        "players": "玩家数"
-      },
-      "filters": {
-        "all": "全部",
-        "table": "桌面",
-        "dice": "骰子",
-        "binary": "二选一",
-        "lottery": "彩票",
-        "arcade": "街机"
-      },
-      "search": {
-        "placeholder": "搜索游戏...",
-        "aria": "搜索游戏"
-      },
-      "tags": {
-        "binary": "二选一",
-        "table": "桌面",
-        "lottery": "彩票",
-        "arcade": "街机",
-        "dice": "骰子",
-        "module": "游戏"
-      },
-      "rooms": {
-        "dice": {
-          "title": "骰子",
-          "promise": "1 到 99 的范围选择，数秒内完成。",
-          "badge": "快速开局"
-        },
-        "roulette": {
-          "title": "欧式轮盘",
-          "promise": "经典 37 格物理机制。",
-          "badge": "最高 36x 赔付"
-        },
-        "coinToss": {
-          "title": "抛硬币",
-          "promise": "高速 50/50 结算。",
-          "badge": "50/50 玩法"
-        },
-        "keno": {
-          "title": "Keno 选号",
-          "promise": "选择多个号码，争取更高倍率。",
-          "badge": "最高 500.5x"
-        },
-        "plinko": {
-          "title": "Plinko 弹珠盘",
-          "promise": "穿过 8 行钉板，冲击两侧高倍率槽。",
-          "badge": "最高 24.6x"
-        },
-        "slots": {
-          "title": "Slots 拉霸",
-          "promise": "匹配对子、三连或 777 Jackpot。",
-          "badge": "最高 64x"
-        },
-        "baccarat": {
-          "title": "百家乐",
-          "promise": "闲家对庄家，和局提供更高赔率。",
-          "badge": "最高 10.4x"
-        },
-        "sicBo": {
-          "title": "骰宝",
-          "promise": "三颗骰子、经典桌面投注和围骰高赔率。",
-          "badge": "最高 216x"
+      "noRelease": "当前网络上还没有可玩的游戏。",
+      "games": {
+        "title": "每个游戏赔多少",
+        "lede": "每张票根右侧是一注最多能拿回的倍数，已扣除 {rate} 的庄家优势。实际上限还取决于庄池的可用资金，会在你签名前显示。",
+        "pays": "赔付",
+        "upTo": "最高",
+        "range": "{from} 至 {to}",
+        "note": "一笔交易最多可玩 {rounds} 轮。你签名的报价会列出下注额、倍数、中奖概率和费用。",
+        "empty": "目前没有游戏接受下注。",
+        "items": {
+          "coinToss": "猜正面或反面。中奖概率 {chance}。",
+          "dice": "在 1 到 100 之间设一条线，选一边。中奖概率 {chance}。",
+          "roulette": "单零轮盘。押 1 到 36 个号码，中奖概率 {chance}。",
+          "baccarat": "押闲、押庄或押和。中奖概率 {chance}。",
+          "sicBo": "押三颗骰子的点数。中奖概率 {chance}。",
+          "slots": "三个转轴，对子、三连和三个 7 有赔付。中奖概率 {chance}。",
+          "plinko": "选一个风险档位，让小球落过八排钉子。中奖概率 {chance}。",
+          "keno": "从 15 个号码里选 1 到 5 个，对上开出的 5 个号。中奖概率 {chance}。"
         }
       },
-      "card": {
-        "releaseAnchored": "在线",
-        "playNow": "开玩",
-        "preview": "预览",
-        "testnet": "测试网"
-      },
-      "reserve": {
-        "title": "庄家金库,链上可查",
-        "subtitle": "金库 {bank}",
-        "status": "在线",
-        "cta": "链上查看",
-        "preview": "预览",
-        "testnet": "测试网"
-      },
-      "bets": "下注",
-      "clearAll": "清空"
+      "stats": {
+        "label": "目前的下注",
+        "bets": "已下注",
+        "players": "玩家",
+        "turnover": "累计下注额"
+      }
     },
     "availability": {
       "title": "下注尚未开放",
