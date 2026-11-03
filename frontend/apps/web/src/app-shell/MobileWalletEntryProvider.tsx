@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
-import { WalletIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useActiveChain } from "./ActiveChainProvider";
 import { useCompliance } from "./compliance";
 import { isCasinoRiskInEnabledForChain } from "./casino-access";
@@ -123,14 +123,11 @@ export function MobileWalletEntryProvider({ children }: { children: React.ReactN
       {showFloating ? (
         <aside
           aria-label={t("title")}
-          className="fixed inset-x-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[50] grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-xl border border-brand/50 bg-surface-1 p-4 shadow-e3 md:hidden"
+          className="fixed inset-x-0 bottom-0 z-[50] grid grid-cols-[1fr_auto] items-start gap-x-3 border-t border-thermal bg-paper px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] font-text text-note text-carbon md:hidden"
         >
-          <WalletIcon className="h-6 w-6 shrink-0 text-brand" aria-hidden />
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-bold text-fg">{t("title")}</p>
-            <p className="text-xs text-fg-muted">
-              {t(mainnetUnavailable ? "unavailableHint" : "hint")}
-            </p>
+          <div className="min-w-0">
+            <p className="font-semibold">{t("title")}</p>
+            <p className="text-faded">{t(mainnetUnavailable ? "unavailableHint" : "hint")}</p>
           </div>
           <button
             type="button"
@@ -139,14 +136,14 @@ export function MobileWalletEntryProvider({ children }: { children: React.ReactN
               setDismissed(true);
               writeSession(DISMISS_KEY, "1");
             }}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-fg-muted"
+            className="grid size-11 shrink-0 place-items-center rounded-print text-faded hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <XMarkIcon aria-hidden className="size-5" />
           </button>
           <button
             type="button"
             onClick={connect}
-            className="col-span-3 min-h-12 rounded-lg bg-brand px-4 text-base font-bold text-fg-inverse hover:bg-brand-hover"
+            className="col-span-2 mt-3 grid min-h-12 place-items-center rounded-print bg-ink px-5 font-semibold text-paper hover:bg-ink-bright focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ink"
           >
             {t("choose")}
           </button>

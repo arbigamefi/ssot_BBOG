@@ -2,7 +2,7 @@
 
 | Owner | Frontend Lead + Product |
 | Status | Active |
-| Last Updated | 2026-11-03 |
+| Last Updated | 2026-11-04 |
 | Depends on | `../strategy/fullstack-product-architecture.md`, `10-design-tokens.md` |
 | Supersedes | The 2026-05-18 dark-dashboard direction |
 
@@ -121,11 +121,13 @@ Liquidity, Portfolio, the receipt page, the entry card and the other game rooms.
 not moved keeps the old dark tokens, and nothing new is built on them. The old tokens are
 deleted with the last page.
 
-Moved so far: the home page (`app/(marketing)`, `features/home`) and the dice room
-(`features/casino/dice-room`). The other game rooms keep the shared room shell; every room reads
-the same controller (`features/casino/room/use-game-room.ts`), so a room moves by rendering its
-own table and slip. The site header and footer still use the old tokens and move with the
-navigation change (`03-information-architecture.md`).
+Moved so far: the home page (`app/(marketing)`, `features/home`), the dice room
+(`features/casino/dice-room`) and the site header and footer (`app-shell/SiteHeader.tsx`,
+`SiteFooter.tsx`, with the one navigation of `03-information-architecture.md` §4). The header sits
+on carbon above every page, including pages that have not moved; the root layout loads the
+Carbon copy faces for it. `isCarbonCopyPage` in `app-shell/AppShell.tsx` lists the moved pages.
+The other game rooms keep the shared room shell; every room reads the same controller
+(`features/casino/room/use-game-room.ts`), so a room moves by rendering its own table and slip.
 
 ## 12. Verification
 

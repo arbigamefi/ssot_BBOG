@@ -62,7 +62,7 @@ export function AffiliatePageClient() {
   );
 
   return (
-    <div className="min-w-0 space-y-8 overflow-x-hidden pb-20 pt-28 md:space-y-10 md:pt-32">
+    <div className="min-w-0 space-y-8 overflow-x-hidden pb-20 md:space-y-10">
       <section className="grid min-w-0 gap-8 overflow-hidden lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
         <div className="min-w-0 max-w-4xl">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand">

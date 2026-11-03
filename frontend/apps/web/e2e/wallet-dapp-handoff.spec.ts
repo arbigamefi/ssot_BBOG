@@ -59,7 +59,10 @@ for (const device of ["iPhone 13", "Pixel 7"]) {
             navigations.push(url);
         });
         await page.goto(`${origin}/casino?ref=a%2Bb&chainId=84532#games`);
-        await page.getByRole("button", { name: "Connect", exact: true }).first().click();
+        await page
+          .getByRole("banner")
+          .getByRole("button", { name: "Connect wallet", exact: true })
+          .click();
         await expect(page.getByTestId("wallet-dapp-handoff")).toBeVisible();
         await page.getByTestId(`rk-wallet-option-${id}`).click({ noWaitAfter: true });
         await expect.poll(() => navigations.length).toBe(1);

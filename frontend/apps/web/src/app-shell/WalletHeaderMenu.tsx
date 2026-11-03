@@ -1,26 +1,23 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useConnectModal } from "./wallet-entry-context";
 import { mainnet } from "wagmi/chains";
-import { useAccount, useDisconnect, useEnsAvatar, useEnsName, useSwitchChain } from "wagmi";
-import { normalize } from "viem/ens";
-import { cn } from "@ssot/ui";
+import { useAccount, useDisconnect, useEnsName, useSwitchChain } from "wagmi";
 import {
-  ArrowsRightLeftIcon,
   ArrowTopRightOnSquareIcon,
   CheckIcon,
   ChevronDownIcon,
   ClipboardIcon,
-  ExclamationTriangleIcon,
-  PowerIcon
+  ExclamationTriangleIcon
 } from "@heroicons/react/24/outline";
 
-import { Popover, Sheet } from "../components/overlay";
 import { useActiveChain } from "./ActiveChainProvider";
-import { ChainOptionList, ChainSwitcher } from "./ChainSwitcher";
 import { getExplorerAddressUrl } from "./chain-registry";
+import { FOCUS_ON_CARBON, MENU_PANEL, MENU_ROW, WALLET_NAV } from "./site-nav";
+import { useHeaderMenu } from "./use-header-menu";
+import { useConnectModal } from "./wallet-entry-context";
 
 const ENS_LOOKUP_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ENS_LOOKUP === "true";
 
@@ -28,273 +25,188 @@ function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
+/** The one filled button on carbon is paper; ink never sits on carbon. */
+const CONNECT_BUTTON = `inline-grid min-h-11 place-items-center rounded-print bg-paper px-4 font-semibold whitespace-nowrap text-ink hover:bg-on-carbon-muted disabled:cursor-default disabled:opacity-60 ${FOCUS_ON_CARBON}`;
+const ICON_BUTTON = `grid size-11 shrink-0 place-items-center rounded-print text-on-carbon-muted hover:text-paper ${FOCUS_ON_CARBON}`;
+
 /**
- * Wallet connection, account and network controls
- * pair. One trigger button summarises the current state; the popover
- * exposes the full surface area (identity, chain switching, explorer link,
- * wallet-chain mismatch warning, disconnect).
+ * The header's wallet control. Disconnected, it opens the wallet selector. Connected, it
+ * shows the address and opens the player's own pages (Portfolio, Bets, Claims), a fix
+ * when the wallet sits on another chain, and Disconnect.
  */
-export function WalletHeaderMenu({
-  hideDisconnectedChainSwitcher = false,
-  mode = "popover",
-  compactDisconnectedLabel = false,
-  onConnectRequested
-}: {
-  hideDisconnectedChainSwitcher?: boolean;
-  mode?: "popover" | "sheet";
-  compactDisconnectedLabel?: boolean;
-  onConnectRequested?: () => void;
-}) {
-  const t = useTranslations("app");
-  const rootT = useTranslations();
+export function WalletHeaderMenu() {
+  const t = useTranslations("app.walletMenu");
   const { address, isConnected, connector, chainId: walletChainId } = useAccount();
   const { disconnect } = useDisconnect();
   const { openConnectModal } = useConnectModal();
-  const { selectedChainId, selectedChain } = useActiveChain();
-  const { switchChain, isPending: isSwitchingWalletChain } = useSwitchChain();
-
-  // ENS reverse resolution is nice-to-have identity chrome, not a product
-  // dependency. Keep it opt-in so the header does not add Ethereum mainnet RPC
-  // calls to every connected wallet session by default.
-  const shouldResolveEns = ENS_LOOKUP_ENABLED && Boolean(address);
+  const { selectedChainId, selectedChain, supportedChains, setSelectedChainId } = useActiveChain();
+  const { switchChain, isPending: switching } = useSwitchChain();
+  // Reverse ENS is opt-in so the header adds no Ethereum mainnet reads by default.
   const { data: ensName } = useEnsName({
     address,
     chainId: mainnet.id,
-    query: { enabled: shouldResolveEns, retry: false }
+    query: { enabled: ENS_LOOKUP_ENABLED && Boolean(address), retry: false }
   });
-  const { data: ensAvatar } = useEnsAvatar({
-    name: ensName ? normalize(ensName) : undefined,
-    chainId: mainnet.id,
-    query: { enabled: ENS_LOOKUP_ENABLED && Boolean(ensName), retry: false }
-  });
-  const displayName = ensName ?? (address ? shortAddress(address) : "");
-
-  const walletMismatch = isConnected && walletChainId !== selectedChainId;
-
-  const [open, setOpen] = React.useState(false);
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const isSheet = mode === "sheet";
-
-  // Close on outside click / Escape — no Radix dep, just light handlers.
-  React.useEffect(() => {
-    if (!open || isSheet) return;
-    const onClick = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [isSheet, open]);
+  const menu = useHeaderMenu();
 
   if (!isConnected || !address) {
-    const connectLabel = compactDisconnectedLabel
-      ? t("connectWalletShort")
-      : t("connectWalletButton");
-
     return (
-      <div className="flex items-center gap-2">
-        {/* Lets a visitor browse a different chain's games before connecting. */}
-        {!hideDisconnectedChainSwitcher && <ChainSwitcher />}
-        <button
-          type="button"
-          data-tour="wallet"
-          onClick={() => {
-            onConnectRequested?.();
-            openConnectModal?.();
-          }}
-          disabled={!openConnectModal}
-          className={cn(
-            "inline-flex min-h-10 items-center justify-center gap-2 rounded-md py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60",
-            compactDisconnectedLabel
-              ? "border border-brand/45 bg-surface-2 px-3.5 text-fg shadow-e1 hover:border-brand hover:bg-surface-3"
-              : "bg-brand px-4 text-fg-inverse shadow-glow hover:bg-brand-hover"
-          )}
-        >
-          {connectLabel}
-        </button>
-      </div>
+      <button
+        type="button"
+        data-tour="wallet"
+        onClick={() => openConnectModal?.()}
+        disabled={!openConnectModal}
+        className={CONNECT_BUTTON}
+      >
+        {t("connect")}
+      </button>
     );
   }
 
+  const mismatch = walletChainId !== selectedChainId;
   const explorerUrl = getExplorerAddressUrl(selectedChainId, address);
-  const identityBlock = (
-    <div className="border-b border-border-soft px-4 py-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          {ensName && <span className="block truncate text-sm font-bold text-fg">{ensName}</span>}
-          <span
-            className={cn(
-              "block truncate font-mono text-fg",
-              ensName ? "text-[11px] text-fg-muted" : "text-sm font-bold"
-            )}
-          >
-            {shortAddress(address)}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <CopyButton value={address} t={t} />
-          {explorerUrl && (
+  const chainName = selectedChain?.name ?? String(selectedChainId);
+
+  return (
+    <div ref={menu.rootRef} onBlur={menu.onBlur} className="relative" data-tour="wallet">
+      <button
+        {...menu.triggerProps}
+        aria-label={t("open", { address: ensName ?? shortAddress(address) })}
+        className={`inline-flex min-h-11 items-center gap-2 rounded-print border border-current px-3 font-semibold tabular-nums text-paper hover:bg-paper hover:text-ink aria-expanded:bg-paper aria-expanded:text-ink ${FOCUS_ON_CARBON}`}
+      >
+        {mismatch ? <ExclamationTriangleIcon aria-hidden className="size-4" /> : null}
+        <span className="max-w-[9rem] truncate">{ensName ?? shortAddress(address)}</span>
+        <ChevronDownIcon aria-hidden className="size-4" />
+      </button>
+
+      <div
+        id={menu.panelId}
+        hidden={!menu.open}
+        className={`${MENU_PANEL} w-[min(20rem,calc(100vw-2rem))]`}
+      >
+        <div className="flex items-center gap-1 pr-2 pb-2 pl-4">
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold tabular-nums">
+              {ensName ?? shortAddress(address)}
+            </p>
+            {connector?.name ? (
+              <p className="truncate text-on-carbon-muted">
+                {t("connectedVia", { wallet: connector.name })}
+              </p>
+            ) : null}
+          </div>
+          <CopyAddress value={address} />
+          {explorerUrl ? (
             <a
               href={explorerUrl}
               target="_blank"
               rel="noreferrer noopener"
-              aria-label={t("walletMenu.viewOnExplorer")}
-              className="flex h-7 w-7 items-center justify-center rounded-md border border-border-soft text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
+              aria-label={t("viewOnExplorer")}
+              className={ICON_BUTTON}
             >
-              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              <ArrowTopRightOnSquareIcon aria-hidden className="size-5" />
             </a>
-          )}
+          ) : null}
         </div>
-      </div>
-      {connector?.name && (
-        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
-          {t("walletMenu.connectedVia", { wallet: connector.name })}
-        </p>
-      )}
-    </div>
-  );
-  const actionContent = (
-    <>
-      {/* Mobile sheet already uses the identity as its title; desktop popover
-          keeps the full identity block above the actions. */}
-      {!isSheet ? identityBlock : null}
 
-      {/* Wallet-chain mismatch banner — shown ONLY when wallet differs
-          from the app's selected chain. Single-click fix. */}
-      {walletMismatch && (
-        <div className="flex items-center gap-3 border-b border-border-soft bg-warn/8 px-4 py-3">
-          <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-warn" />
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-fg">{t("walletMenu.mismatch.title")}</p>
-            <p className="mt-0.5 text-[11px] text-fg-muted">
-              {t("walletMenu.mismatch.description", {
-                target: selectedChain?.name ?? `chainId=${selectedChainId}`
-              })}
+        {mismatch ? (
+          <div role="status" className="border-t border-rule-carbon px-4 py-3">
+            <p className="font-semibold">{t("mismatch.title")}</p>
+            <p className="mt-1 text-on-carbon-muted">
+              {t("mismatch.description", { target: chainName })}
             </p>
+            <button
+              type="button"
+              disabled={switching}
+              onClick={() => switchChain({ chainId: selectedChainId })}
+              className={`mt-3 inline-grid min-h-11 place-items-center rounded-print border border-current px-3 font-semibold hover:bg-paper hover:text-ink disabled:cursor-default disabled:opacity-60 ${FOCUS_ON_CARBON}`}
+            >
+              {switching ? t("mismatch.switching") : t("mismatch.switch")}
+            </button>
           </div>
+        ) : null}
+
+        {supportedChains.length > 1 ? (
+          <div className="border-t border-rule-carbon pt-2">
+            <p className="px-4 pb-1 text-on-carbon-muted">{t("network")}</p>
+            <ul>
+              {supportedChains.map((chain) => (
+                <li key={chain.id}>
+                  <button
+                    type="button"
+                    aria-current={chain.id === selectedChainId ? "true" : undefined}
+                    onClick={() => {
+                      setSelectedChainId(chain.id);
+                      menu.close();
+                    }}
+                    className={`${MENU_ROW} justify-between aria-[current]:font-semibold`}
+                  >
+                    {chain.name}
+                    {chain.id === selectedChainId ? (
+                      <span aria-hidden className="size-2 rounded-full bg-paper" />
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <nav aria-label={t("pages")} className="mt-2 border-t border-rule-carbon pt-2">
+          <ul>
+            {WALLET_NAV.map((item) => (
+              <li key={item.key}>
+                <Link href={item.href} onClick={menu.close} className={MENU_ROW}>
+                  {t(item.key)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="mt-2 border-t border-rule-carbon pt-2">
           <button
             type="button"
-            disabled={isSwitchingWalletChain}
-            onClick={() => switchChain({ chainId: selectedChainId })}
-            className="shrink-0 rounded-md border border-warn/60 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-warn transition-colors hover:bg-warn/10 disabled:opacity-60"
+            onClick={() => {
+              disconnect();
+              menu.close();
+            }}
+            className={MENU_ROW}
           >
-            {isSwitchingWalletChain ? t("network.switching") : t("walletMenu.mismatch.switch")}
+            {t("disconnect")}
           </button>
         </div>
-      )}
-
-      {/* Chain switcher — mainnet first, testnets after.
-          Selecting changes the app's active chain (which triggers
-          ReleaseProvider to reload). If the wallet is also on a
-          different chain, the mismatch banner above appears next. */}
-      <div className="border-b border-border-soft px-4 py-3">
-        <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-          <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
-          {t("walletMenu.chainSection")}
-        </div>
-        <ChainOptionList onSelect={() => setOpen(false)} />
       </div>
-
-      {/* Disconnect — destructive style, no double-confirm (cheap to
-          re-connect, expensive to nag). */}
-      <button
-        type="button"
-        role="menuitem"
-        onClick={() => {
-          disconnect();
-          setOpen(false);
-        }}
-        className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-danger"
-      >
-        <PowerIcon className="h-4 w-4" />
-        {t("walletMenu.disconnect")}
-      </button>
-    </>
-  );
-  const sheetTitle = <span className={cn("font-mono", ensName && "font-sans")}>{displayName}</span>;
-
-  return (
-    <div ref={containerRef} className="relative" data-tour="wallet">
-      {/* Trigger ─ chain dot + short address + caret. Mismatch ribbon takes
-          over the dot color so the warning is impossible to miss. */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        className={cn(
-          "inline-flex min-h-10 items-center gap-2 rounded-md border bg-surface-1 px-3 py-2 text-sm font-semibold text-fg transition hover:bg-surface-2",
-          walletMismatch ? "border-warn/60" : "border-border-soft"
-        )}
-      >
-        {ensAvatar ? (
-          <img src={ensAvatar} alt="" className="h-5 w-5 rounded-full object-cover" aria-hidden />
-        ) : (
-          <span
-            aria-hidden
-            className={cn(
-              "h-2 w-2 rounded-full",
-              walletMismatch
-                ? "bg-warn"
-                : selectedChain?.environment === "mainnet"
-                  ? "bg-brand"
-                  : "bg-accent"
-            )}
-          />
-        )}
-        <span className={cn(ensName ? "" : "font-mono")}>{displayName}</span>
-        <ChevronDownIcon className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
-      </button>
-
-      {open && !isSheet && (
-        <Popover open={open} placement="below" className="w-[20rem] rounded-xl p-0">
-          {actionContent}
-        </Popover>
-      )}
-
-      {isSheet ? (
-        <Sheet
-          closeLabel={rootT("nav.closeMenu")}
-          contentClassName="px-0"
-          onClose={() => setOpen(false)}
-          open={open}
-          subtitle={t("walletMenu.connectedVia", { wallet: connector?.name ?? "wallet" })}
-          title={sheetTitle}
-        >
-          {actionContent}
-        </Sheet>
-      ) : null}
     </div>
   );
 }
 
-function CopyButton({ value, t }: { value: string; t: ReturnType<typeof useTranslations> }) {
+function CopyAddress({ value }: { value: string }) {
+  const t = useTranslations("app.walletMenu");
   const [copied, setCopied] = React.useState(false);
+  React.useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
   return (
     <button
       type="button"
-      aria-label={t("walletMenu.copyAddress")}
+      aria-label={copied ? t("copied") : t("copyAddress")}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(value);
           setCopied(true);
-          setTimeout(() => setCopied(false), 1200);
         } catch {
-          // Clipboard may be denied — fail silently.
+          // A denied clipboard leaves the address on screen to copy by hand.
         }
       }}
-      className="flex h-7 w-7 items-center justify-center rounded-md border border-border-soft text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
+      className={ICON_BUTTON}
     >
       {copied ? (
-        <CheckIcon className="h-4 w-4 text-success" />
+        <CheckIcon aria-hidden className="size-5" />
       ) : (
-        <ClipboardIcon className="h-4 w-4" />
+        <ClipboardIcon aria-hidden className="size-5" />
       )}
     </button>
   );

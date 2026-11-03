@@ -2,7 +2,7 @@
 
 [MobileWalletEntryProvider](../../frontend/apps/web/src/app-shell/MobileWalletEntryProvider.tsx)
 routes connection requests to the existing RainbowKit selector. The homepage,
-header, mobile menu, and eligible floating prompt share that entry. The prompt
+the header's wallet button and the eligible floating prompt share that entry. The prompt
 yields to dialogs and is suppressed for connected/reconnecting users, desktop
 browsers, and detected wallet providers.
 
@@ -25,7 +25,7 @@ dependency. Both Docker dependency stages copy `patches/` before installation.
 The patch avoids the installed encoder's rejection of a zero-width QR border.
 
 ```bash
-pnpm -C frontend/apps/web test -- src/app-shell/WalletDappHandoff.test.tsx src/app-shell/wallet-dapp-links.test.ts src/app-shell/MobileWalletDeepLinkBanner.test.tsx
+pnpm -C frontend/apps/web test -- src/app-shell/WalletDappHandoff.test.tsx src/app-shell/wallet-dapp-links.test.ts
 # With the local web server running:
 pnpm -C frontend/apps/web e2e -- e2e/wallet-dapp-handoff.spec.ts
 ```
