@@ -176,6 +176,11 @@ const BUNDLE_FILES = [
   `deployments/golden-vectors-latest-${suffix}.json`,
   "abis/index.json"
 ];
+// A later checkpoint the release signer signed for the same record: both or neither (script/release/package_release.sh).
+const REFRESH_FILES = [
+  `deployments/governance-checkpoint-refresh-latest-${suffix}.json`,
+  `deployments/governance-checkpoint-refreshed-latest-${suffix}.json`
+];
 
 // Copy the bundle once into a private directory before anything reads it, so validation and activation see the same
 // bytes however the source changes meanwhile. Only regular files in real directories are taken: a link could point
@@ -194,7 +199,16 @@ async function stageBundle(source) {
   for (const directory of ["deployments", "abis"]) {
     await fs.mkdir(path.join(stagedDirectory, directory));
   }
-  for (const relative of [...BUNDLE_FILES, ...abiFiles]) {
+  const refreshFiles = [];
+  for (const relative of REFRESH_FILES) {
+    if (await fs.lstat(path.join(source, relative)).catch(() => null)) refreshFiles.push(relative);
+  }
+  if (refreshFiles.length === 1) {
+    throw new Error(
+      "Release bundle has a checkpoint refresh without its record or its checkpoint."
+    );
+  }
+  for (const relative of [...BUNDLE_FILES, ...refreshFiles, ...abiFiles]) {
     const info = await fs.lstat(path.join(source, relative)).catch(() => null);
     if (!info?.isFile()) {
       throw new Error(`Release bundle ${relative} is missing or not a regular file.`);
@@ -225,6 +239,13 @@ async function main() {
   const releaseLockPath = path.join(deploymentsDir, `release-latest-${suffix}.json`);
   const checkpointPath = path.join(deploymentsDir, `governance-checkpoint-latest-${suffix}.json`);
   const latestSnapshotPath = path.join(deploymentsDir, `latest-${suffix}.json`);
+  const [refreshPath, refreshedCheckpointPath] = REFRESH_FILES.map((relative) =>
+    path.join(bundleRoot, relative)
+  );
+  const refresh = await readJson(refreshPath).catch((error) => {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  });
   const abiIndexPath = path.join(abisDir, "index.json");
 
   const manifest = await readJson(manifestPath);
@@ -266,11 +287,20 @@ async function main() {
   await fs.copyFile(latestSnapshotPath, path.join(verificationDir, "snapshot.json"));
   await fs.copyFile(releaseLockPath, path.join(verificationDir, "release.json"));
   await fs.copyFile(checkpointPath, path.join(verificationDir, "checkpoint.json"));
+  if (refresh) {
+    await fs.copyFile(refreshPath, path.join(verificationDir, "refresh.json"));
+    await fs.copyFile(
+      refreshedCheckpointPath,
+      path.join(verificationDir, "refreshed-checkpoint.json")
+    );
+  }
   const verificationEnv = {
     ...process.env,
     SNAPSHOT_PATH: path.join(verificationDir, "snapshot.json"),
     RELEASE_PATH: path.join(verificationDir, "release.json"),
-    GOVERNANCE_CHECKPOINT_PATH: path.join(verificationDir, "checkpoint.json")
+    GOVERNANCE_CHECKPOINT_PATH: path.join(verificationDir, "checkpoint.json"),
+    CHECKPOINT_REFRESH_PATH: path.join(verificationDir, "refresh.json"),
+    REFRESHED_CHECKPOINT_PATH: path.join(verificationDir, "refreshed-checkpoint.json")
   };
   let verificationStage = "current build";
   try {
@@ -327,16 +357,29 @@ async function main() {
       ],
       { cwd: repoRoot, env: verificationEnv }
     );
-    // A deployed release, launched or not, replayed from the checkpoint the record signs (ADR-0037 §9; the
-    // artifact validation above checked the checkpoint against the record).
+    // A refresh the release signer signed for this record moves the replay's start to its later checkpoint.
+    if (refresh) {
+      verificationStage = "checkpoint refresh";
+      await execFileAsync(
+        "forge",
+        ["script", "script/release/VerifyCheckpointRefreshV16.s.sol:VerifyCheckpointRefreshV16"],
+        { cwd: repoRoot, env: verificationEnv }
+      );
+    }
+    // A deployed release, launched or not, replayed from the checkpoint the record signs or its refresh (ADR-0037
+    // §9; the artifact validation above checked the record's checkpoint, the step above the refresh).
     verificationStage = "live governance";
     await execFileAsync(process.env.PYTHON ?? "python3", ["script/release/verify_governance.py"], {
       cwd: repoRoot,
       env: {
         ...verificationEnv,
         GOVERNANCE_VERIFY_MODE: "live",
-        GOVERNANCE_CHECKPOINT: verificationEnv.GOVERNANCE_CHECKPOINT_PATH,
-        GOVERNANCE_CHECKPOINT_SHA256: String(releaseLock.checkpointSha256)
+        GOVERNANCE_CHECKPOINT: refresh
+          ? verificationEnv.REFRESHED_CHECKPOINT_PATH
+          : verificationEnv.GOVERNANCE_CHECKPOINT_PATH,
+        GOVERNANCE_CHECKPOINT_SHA256: String(
+          refresh ? refresh.checkpointSha256 : releaseLock.checkpointSha256
+        )
       }
     });
   } catch (error) {

@@ -15,11 +15,11 @@ from import_release_bundle import unpack
 REVISION = 'a' * 40
 
 
-def archive(path, *, revision=REVISION, extra=None):
+def archive(path, *, revision=REVISION, extra=None, optional=()):
     files = {name: b'{}' for name in (
         'deployments/latest-v16.json', 'deployments/release-latest-v16.json',
         'deployments/governance-checkpoint-latest-v16.json', 'deployments/release-notes-latest-v16.md', 'deployments/frontend-manifest-latest-v16.json',
-        'deployments/golden-vectors-latest-v16.json', 'abis/index.json')}
+        'deployments/golden-vectors-latest-v16.json', 'abis/index.json', *optional)}
     files['SOURCE_REVISION'] = revision.encode() + b'\n'
     files['MANIFEST.sha256'] = ''.join(f'{hashlib.sha256(data).hexdigest()}  {name}\n' for name, data in files.items()).encode()
     with tarfile.open(path, 'w:gz') as out:
@@ -46,6 +46,19 @@ class ReleaseBundleTests(unittest.TestCase):
             self.assertTrue((target / 'abis/index.json').is_file())
             with self.assertRaisesRegex(ValueError, 'must not exist'):
                 unpack(bundle, digest, target, REVISION)
+
+    def test_a_checkpoint_refresh_comes_with_its_checkpoint(self):
+        refresh = 'deployments/governance-checkpoint-refresh-latest-v16.json'
+        refreshed = 'deployments/governance-checkpoint-refreshed-latest-v16.json'
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); bundle = root / 'bundle.tar.gz'
+            for optional in [(refresh,), (refreshed,)]:
+                digest = archive(bundle, optional=optional)
+                with self.subTest(optional=optional), self.assertRaisesRegex(ValueError, 'checkpoint refresh'):
+                    unpack(bundle, digest, root / 'stage', REVISION)
+                self.assertFalse((root / 'stage').exists())
+            unpack(bundle, archive(bundle, optional=(refresh, refreshed)), root / 'stage', REVISION)
+            self.assertTrue((root / 'stage' / refresh).is_file() and (root / 'stage' / refreshed).is_file())
 
     def test_path_traversal_links_and_unlisted_files_are_rejected(self):
         with tempfile.TemporaryDirectory() as temp:

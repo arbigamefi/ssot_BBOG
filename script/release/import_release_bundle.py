@@ -50,6 +50,10 @@ def unpack(bundle: Path, expected_digest: str, destination: Path, revision: str)
                 'deployments/golden-vectors-latest-v16.json', 'abis/index.json'}
     if not required.issubset(files):
         raise ValueError('release bundle is incomplete')
+    refresh = {'deployments/governance-checkpoint-refresh-latest-v16.json',
+               'deployments/governance-checkpoint-refreshed-latest-v16.json'}
+    if len(refresh & files.keys()) == 1:
+        raise ValueError('a checkpoint refresh needs both its record and its checkpoint')
     # All archive checks precede writes. Strict signature/snapshot/ABI validation
     # follows against this staging directory, before any frontend activation.
     for name, data in files.items():

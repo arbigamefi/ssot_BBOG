@@ -66,8 +66,28 @@ fi
 bundle=$fixture/bundle
 python3 script/release/export_frontend_abis.py --manifest "$bundle/deployments/frontend-manifest-latest-v16.json" \
   --dest "$bundle/abis"
+# A checkpoint refresh, as script/release/repackage_release_v16.sh signs one: the live state replayed from the record's
+# checkpoint to a later block, signed by the record's signer (the fixture's public test key 0xA11CE).
+for _ in 1 2 3; do cast rpc --rpc-url "$rpc" evm_mine > /dev/null; done
+record_sha=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["checkpointSha256"])' \
+  "$bundle/deployments/release-latest-v16.json")
+refreshed=$bundle/deployments/governance-checkpoint-refreshed-latest-v16.json
+SNAPSHOT_PATH=$bundle/deployments/latest-v16.json RPC_URL=$rpc GOVERNANCE_VERIFY_MODE=live \
+  GOVERNANCE_CHECKPOINT=$bundle/deployments/governance-checkpoint-latest-v16.json \
+  GOVERNANCE_CHECKPOINT_SHA256=$record_sha GOVERNANCE_CHECKPOINT_OUT=$refreshed \
+  python3 script/release/verify_governance.py > "$work/refresh-governance.json"
+refreshed_sha=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["checkpointSha256"])' \
+  "$work/refresh-governance.json")
+RELEASE_PATH=$bundle/deployments/release-latest-v16.json SNAPSHOT_PATH=$bundle/deployments/latest-v16.json \
+  REFRESHED_CHECKPOINT_PATH=$refreshed REFRESHED_CHECKPOINT_SHA256=0x$refreshed_sha \
+  CHECKPOINT_REFRESH_PATH=$bundle/deployments/governance-checkpoint-refresh-latest-v16.json \
+  RELEASE_SIGNER=$(cast wallet address --private-key "0x$(printf '%064x' 0xA11CE)") \
+  forge script script/release/SignCheckpointRefreshV16.s.sol:SignCheckpointRefreshV16 \
+  --private-key "0x$(printf '%064x' 0xA11CE)" > "$work/refresh-signing.log" 2>&1 ||
+  { tail -n 20 "$work/refresh-signing.log"; fail "refresh signing failed"; }
 archive=$work/release-path-fixture.tar.gz
-python3 - "$bundle" "$archive" "$revision" << 'PY'
+pack() { # bundle directory, archive
+python3 - "$1" "$2" "$revision" << 'PY'
 import hashlib, io, sys, tarfile
 from pathlib import Path
 bundle, archive, revision = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
@@ -81,7 +101,21 @@ with tarfile.open(archive, 'w:gz') as tar:
         member.size = len(data)
         tar.addfile(member, io.BytesIO(data))
 PY
+}
+pack "$bundle" "$archive"
 sha=$(shasum -a 256 "$archive" | cut -d ' ' -f 1)
+# The same bundle with a refresh that names a block it does not sign: the import must reject it.
+tampered=$work/tampered
+cp -R "$bundle" "$tampered"
+python3 - "$tampered/deployments/governance-checkpoint-refresh-latest-v16.json" << 'PY'
+import json, sys
+refresh = json.load(open(sys.argv[1]))
+refresh['checkpointBlockNumber'] += 1
+json.dump(refresh, open(sys.argv[1], 'w'))
+PY
+tampered_archive=$work/release-path-tampered.tar.gz
+pack "$tampered" "$tampered_archive"
+tampered_sha=$(shasum -a 256 "$tampered_archive" | cut -d ' ' -f 1)
 snapshot=$bundle/deployments/latest-v16.json
 signer=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["releaseSigner"])' "$snapshot")
 digest=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["digest"])' \
@@ -137,4 +171,10 @@ RELEASE_BUNDLE=$archive RELEASE_BUNDLE_SHA256=$sha DEPLOY_CHAIN_ID=84532 RPC_URL
 embedded=frontend/packages/ssot/src/release/embedded/chain-84532.json
 imported=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["releaseDigest"])' "$embedded")
 [[ "$imported" == "$digest" ]] || fail "$embedded holds $imported, not the fixture release $digest"
-echo "release path: ok (gate and image built out/ themselves on fresh checkouts)"
+if RELEASE_BUNDLE=$tampered_archive RELEASE_BUNDLE_SHA256=$tampered_sha DEPLOY_CHAIN_ID=84532 RPC_URL=$rpc \
+  RELEASE_SIGNER=$signer bash script/release/prepare_image_release.sh > "$work/tampered-import.log" 2>&1; then
+  fail "the import accepted a checkpoint refresh that does not verify"
+fi
+grep -q "checkpoint refresh failed" "$work/tampered-import.log" ||
+  { tail -n 20 "$work/tampered-import.log"; fail "the tampered refresh was rejected at the wrong stage"; }
+echo "release path: ok (gate and image built out/ themselves on fresh checkouts; the image replayed from the signed refresh and rejected a tampered one)"

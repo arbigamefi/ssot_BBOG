@@ -18,6 +18,7 @@ library V16ReleaseDigest {
 
     bytes32 internal constant SCHEMA = keccak256("SSOT_RELEASE_DIGEST_V16");
     bytes32 internal constant RECORD_SCHEMA = keccak256("SSOT_RELEASE_RECORD_V16");
+    bytes32 internal constant REFRESH_SCHEMA = keccak256("SSOT_GOVERNANCE_CHECKPOINT_REFRESH_V16");
 
     struct Checkpoint {
         uint256 blockNumber;
@@ -28,6 +29,15 @@ library V16ReleaseDigest {
     function digest(bytes32 snapshotDigest_, Checkpoint memory checkpoint) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(RECORD_SCHEMA, snapshotDigest_, checkpoint.blockNumber, checkpoint.blockHash, checkpoint.sha256)
+        );
+    }
+
+    /// The value a checkpoint refresh signs: a later governance checkpoint of the release `releaseDigest` names, which
+    /// the release signer replayed in live mode from the record's checkpoint or an earlier refresh. The record and its
+    /// digest stay as signed; only the block later verifications replay from moves.
+    function refreshDigest(bytes32 releaseDigest, Checkpoint memory checkpoint) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(REFRESH_SCHEMA, releaseDigest, checkpoint.blockNumber, checkpoint.blockHash, checkpoint.sha256)
         );
     }
 

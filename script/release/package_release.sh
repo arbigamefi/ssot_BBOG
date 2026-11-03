@@ -5,6 +5,9 @@ set -euo pipefail
 # *all* frontend-facing artifacts:
 #   - release-latest-v16.json (lock)
 #   - governance-checkpoint-latest-v16.json (the governance state the lock signs, for incremental replay)
+#   - governance-checkpoint-refresh-latest-v16.json and governance-checkpoint-refreshed-latest-v16.json, when present:
+#     a later checkpoint the release signer signed for the same record (SignCheckpointRefreshV16), so a release
+#     packaged again for a later source commit replays from it (script/release/repackage_release_v16.sh)
 #   - frontend-manifest-latest-v16.json (mapping)
 #   - golden-vectors-latest-v16.json (provable encoding)
 #   - abis-v16/ (frontend-only trimmed ABIs)
@@ -23,6 +26,8 @@ PYTHON="${PYTHON:-python}"
 SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v16.json}"
 NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v16.md}"
 GOVERNANCE_CHECKPOINT_PATH="${GOVERNANCE_CHECKPOINT_PATH:-deployments/governance-checkpoint-latest-v16.json}"
+CHECKPOINT_REFRESH_PATH="${CHECKPOINT_REFRESH_PATH:-deployments/governance-checkpoint-refresh-latest-v16.json}"
+REFRESHED_CHECKPOINT_PATH="${REFRESHED_CHECKPOINT_PATH:-deployments/governance-checkpoint-refreshed-latest-v16.json}"
 
 FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v16.json}"
 GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest-v16.json}"
@@ -38,6 +43,8 @@ NOTES_LATEST_NAME="${NOTES_LATEST_NAME:-release-notes-latest-v16.md}"
 FRONTEND_MANIFEST_LATEST_NAME="${FRONTEND_MANIFEST_LATEST_NAME:-frontend-manifest-latest-v16.json}"
 GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest-v16.json}"
 CHECKPOINT_LATEST_NAME="${CHECKPOINT_LATEST_NAME:-governance-checkpoint-latest-v16.json}"
+REFRESH_LATEST_NAME=governance-checkpoint-refresh-latest-v16.json
+REFRESHED_LATEST_NAME=governance-checkpoint-refreshed-latest-v16.json
 
 [[ -f "$RELEASE_PATH" ]] || { echo "missing $RELEASE_PATH (run: make release-v16)"; exit 1; }
 [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing $SNAPSHOT_PATH (the deployment snapshot)"; exit 1; }
@@ -71,9 +78,24 @@ fi
 export RELEASE_PATH SNAPSHOT_PATH NOTES_PATH FRONTEND_MANIFEST_PATH GOLDEN_VECTORS_PATH GOVERNANCE_CHECKPOINT_PATH
 export ABI_INDEX_PATH="$ABIS_INDEX_PATH"
 STRICT=1 PYTHON="$PYTHON" bash script/release/check_release.sh
-# The release state again, replayed from the signed checkpoint (check_release.sh verified its digest).
-CHECKPOINT_SHA256=$("$PYTHON" -c 'import json, sys; print(json.load(open(sys.argv[1]))["checkpointSha256"])' "$RELEASE_PATH")
-GOVERNANCE_VERIFY_MODE=release GOVERNANCE_CHECKPOINT="$GOVERNANCE_CHECKPOINT_PATH" \
+refresh=0
+if [[ -f "$CHECKPOINT_REFRESH_PATH" || -f "$REFRESHED_CHECKPOINT_PATH" ]]; then
+  [[ -f "$CHECKPOINT_REFRESH_PATH" && -f "$REFRESHED_CHECKPOINT_PATH" ]] ||
+    { echo "a checkpoint refresh needs both $CHECKPOINT_REFRESH_PATH and $REFRESHED_CHECKPOINT_PATH" >&2; exit 1; }
+  refresh=1
+fi
+if ((refresh)); then
+  # A release packaged again after launch: its state in live mode, replayed from the refreshed checkpoint.
+  export CHECKPOINT_REFRESH_PATH REFRESHED_CHECKPOINT_PATH
+  FOUNDRY_PROFILE="${VERIFY_PROFILE:-default}" \
+    forge script script/release/VerifyCheckpointRefreshV16.s.sol:VerifyCheckpointRefreshV16 -vvv
+  MODE=live REPLAY_FROM=$REFRESHED_CHECKPOINT_PATH SIGNED=$CHECKPOINT_REFRESH_PATH
+else
+  # The release state again, replayed from the signed checkpoint (check_release.sh verified its digest).
+  MODE=release REPLAY_FROM=$GOVERNANCE_CHECKPOINT_PATH SIGNED=$RELEASE_PATH
+fi
+CHECKPOINT_SHA256=$("$PYTHON" -c 'import json, sys; print(json.load(open(sys.argv[1]))["checkpointSha256"])' "$SIGNED")
+GOVERNANCE_VERIFY_MODE=$MODE GOVERNANCE_CHECKPOINT="$REPLAY_FROM" \
   GOVERNANCE_CHECKPOINT_SHA256="$CHECKPOINT_SHA256" FOUNDRY_PROFILE="${VERIFY_PROFILE:-default}" \
   "$PYTHON" script/release/verify_governance.py
 
@@ -111,6 +133,10 @@ printf '%s\n' "$SOURCE_REVISION" > "$STAGE/SOURCE_REVISION"
 cp "$SNAPSHOT_PATH" "$STAGE/deployments/$SNAPSHOT_LATEST_NAME"
 cp "$RELEASE_PATH" "$STAGE/deployments/$RELEASE_LATEST_NAME"
 cp "$GOVERNANCE_CHECKPOINT_PATH" "$STAGE/deployments/$CHECKPOINT_LATEST_NAME"
+if ((refresh)); then
+  cp "$CHECKPOINT_REFRESH_PATH" "$STAGE/deployments/$REFRESH_LATEST_NAME"
+  cp "$REFRESHED_CHECKPOINT_PATH" "$STAGE/deployments/$REFRESHED_LATEST_NAME"
+fi
 cp "$NOTES_PATH" "$STAGE/deployments/$NOTES_LATEST_NAME"
 cp "$FRONTEND_MANIFEST_PATH" "$STAGE/deployments/$FRONTEND_MANIFEST_LATEST_NAME"
 cp "$GOLDEN_VECTORS_PATH" "$STAGE/deployments/$GOLDEN_VECTORS_LATEST_NAME"

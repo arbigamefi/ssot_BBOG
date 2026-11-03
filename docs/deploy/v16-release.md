@@ -152,7 +152,20 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    2,160 on the public RPC. The Release Gate and the image import replay on the public RPC from the signed checkpoint:
    each day after signing adds about 2,160 pages, about an hour at the 1.7 seconds a page measured on Base Sepolia's
    public RPC (2026-10-14). Dispatch both on the day of signing; the Release Gate's 240-minute limit leaves about three
-   days and the image workflow's 180 minutes about two. Transient
+   days and the image workflow's 180 minutes about two.
+   Later images, and every image for a later source commit, come from a repackaged bundle
+   (`script/release/repackage_release_v16.sh`, run by the Owner through `with-ops-rpc.sh infura`). It takes the signed
+   bundle, its approved SHA-256 and its commit; it refuses when `src`, `foundry.toml`, `deps.lock` or
+   `remappings.txt` differ at the new commit. It verifies the record, replays the deployed release in live mode from
+   the record's checkpoint (or the bundle's earlier refresh) to the current block, and has the release signer sign a
+   **checkpoint refresh** (`SignCheckpointRefreshV16`: schema `SSOT_GOVERNANCE_CHECKPOINT_REFRESH_V16`, the record
+   digest, and the new checkpoint's block, hash and SHA-256). The record and its digest do not change, so every pin
+   (`EXPECTED_RELEASE_DIGEST`, K0-4, health) stays. The new bundle carries
+   `governance-checkpoint-refresh-latest-v16.json` and `governance-checkpoint-refreshed-latest-v16.json` (both or
+   neither); the package and the image import verify the refresh (`VerifyCheckpointRefreshV16`: same record, a later
+   block, the record's signer, the trusted `RELEASE_SIGNER`) and replay in live mode from it. Tag the new commit,
+   upload the new bundle to its prerelease and dispatch the image workflow the same day. The Release Gate checks the
+   pre-launch state and is not run for a repackaged bundle. Transient
    provider failures (HTTP 408, 425, 429 and 5xx, dropped connections) are retried with backoff (`RPC_MAX_ATTEMPTS`,
    default 6; `RPC_BACKOFF_SECONDS`, default 1); errors name the HTTP status or JSON-RPC code, never the URL. Each run
    prints `checkpointSha256` and, with `GOVERNANCE_CHECKPOINT_OUT`, writes the replayed state. A later run starts from
