@@ -54,8 +54,9 @@ not the live runs below.
     edge and referral changes reported as governance events.
   - **governance replay:** `verify_governance.py` in live mode from the signed checkpoint over the deployment's
     blocks, paging by the endpoint.
-- Web and browser: the receipt fallback shows a settled bet's placement and terminal transactions; the browser index
-  confirms after 24 seconds and rereads 48 seconds; the operations page judges indexer lag in seconds.
+- Web and browser: the receipt fallback shows a settled bet's placement block and terminal transaction, within its
+  8-second budget for a bet days old; a fresh browser index starts an hour before the safe head, reaches it, confirms
+  after 24 seconds and rereads 48 seconds; the operations page judges indexer lag in seconds.
 
 ## LP acceptance
 

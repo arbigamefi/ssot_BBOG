@@ -17,6 +17,11 @@ export interface GameHubIndexerConfig {
   batchSize: number;
   /** Each pass rereads this much chain before its cursor, replacing what a shallow reorg changed. */
   rewindSeconds: number;
+  /**
+   * A browser without a cursor starts this long before the target, not at the release block: the server's bet index
+   * holds the history, and this index only adds the newest events for the player's own view.
+   */
+  initialLookbackSeconds: number;
 }
 
 export interface GameHubIndexerStatus {
@@ -42,7 +47,9 @@ export const GAME_HUB_INDEXER_DEFAULTS: GameHubIndexerConfig = {
   confirmationSeconds: 24,
   pollIntervalMs: 10_000,
   batchSize: 200,
-  rewindSeconds: 48
+  rewindSeconds: 48,
+  // The refund timeout: a bet placed within it can still change state.
+  initialLookbackSeconds: 3_600
 };
 
 const GAME_HUB_EVENTS: GameHubEventName[] = [
@@ -96,10 +103,19 @@ export function createGameHubIndexer(params: {
       const cursorId = `${release.chainId}:${gameHub}`;
       const cursor = await db.cursors.get(cursorId);
 
-      // Prefer release meta.blockNumber as the starting point for a fresh DB.
       const releaseStartBlock = Number(release.meta?.blockNumber ?? 0);
 
       let fromBlock = cursor ? cursor.lastProcessedBlock + 1 : releaseStartBlock;
+      if (!cursor && config.initialLookbackSeconds > 0) {
+        const start = await clock.atOrBefore(
+          target.timestamp - BigInt(config.initialLookbackSeconds),
+          BigInt(
+            Math.max(releaseStartBlock, targetBlock - clock.blocks(config.initialLookbackSeconds))
+          ),
+          BigInt(releaseStartBlock)
+        );
+        if (start) fromBlock = Math.max(releaseStartBlock, Number(start.number));
+      }
       if (cursor && config.rewindSeconds > 0) {
         // Reread from a block at least rewindSeconds older than the cursor's, checked like the target.
         const cursorTime =
@@ -125,23 +141,19 @@ export function createGameHubIndexer(params: {
         return;
       }
 
-      // Batch to avoid provider limits
+      // Batch to avoid provider limits. The cursor follows each batch, so a long first pass resumes after a reload.
       for (let start = fromBlock; start <= targetBlock; start += config.batchSize) {
         const end = Math.min(targetBlock, start + config.batchSize - 1);
         await syncRange(start, end);
-        status.lastSyncedBlock = end;
-      }
-
-      // Cursor update in its own transaction for atomicity
-      await db.transaction("rw", db.cursors, async () => {
         await db.cursors.put({
           id: cursorId,
           chainId: release.chainId,
           source: gameHub,
-          lastProcessedBlock: targetBlock,
+          lastProcessedBlock: end,
           updatedAt: Date.now()
         });
-      });
+        status.lastSyncedBlock = end;
+      }
       lastTarget = target;
     } catch (e: any) {
       status.lastError = e?.message ? String(e.message) : String(e);
@@ -154,38 +166,37 @@ export function createGameHubIndexer(params: {
 
     const logsAll: GameHubEventNormalized[] = [];
 
-    for (const eventName of GAME_HUB_EVENTS) {
-      const eventAbi = getEventAbi(gameHubAbi, eventName);
-      const logs = await publicClient.getLogs({
-        address: gameHub,
-        event: eventAbi,
-        fromBlock: BigInt(fromBlock),
-        toBlock: BigInt(toBlock)
-      });
-
-      for (const log of logs as any[]) {
-        const logIndex = Number(log.logIndex ?? 0);
-        const args = { ...(log.args ?? {}) };
-        if (eventName === "BetFinalized") {
-          const betId = args.positionId;
-          if (betId == null) throw new Error("finalized event missing bet ID");
-          args.refundAmount = await readSettledBetRefund({
-            client: publicClient,
-            gameHub,
-            betId: BigInt(betId),
-            args
-          });
-        }
-        logsAll.push({
-          chainId: release.chainId,
+    // One query for all five events: the RPC matches any of their topics.
+    const logs = await publicClient.getLogs({
+      address: gameHub,
+      events: GAME_HUB_EVENTS.map((eventName) => getEventAbi(gameHubAbi, eventName)),
+      fromBlock: BigInt(fromBlock),
+      toBlock: BigInt(toBlock)
+    });
+    for (const log of logs as any[]) {
+      const eventName = log.eventName as GameHubEventName;
+      if (!GAME_HUB_EVENTS.includes(eventName)) continue;
+      const logIndex = Number(log.logIndex ?? 0);
+      const args = { ...(log.args ?? {}) };
+      if (eventName === "BetFinalized") {
+        const betId = args.positionId;
+        if (betId == null) throw new Error("finalized event missing bet ID");
+        args.refundAmount = await readSettledBetRefund({
+          client: publicClient,
           gameHub,
-          blockNumber: Number(log.blockNumber),
-          logIndex,
-          txHash: log.transactionHash,
-          eventName,
+          betId: BigInt(betId),
           args
         });
       }
+      logsAll.push({
+        chainId: release.chainId,
+        gameHub,
+        blockNumber: Number(log.blockNumber),
+        logIndex,
+        txHash: log.transactionHash,
+        eventName,
+        args
+      });
     }
 
     // deterministic order

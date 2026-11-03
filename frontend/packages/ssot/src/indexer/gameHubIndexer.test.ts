@@ -125,10 +125,11 @@ describe("gameHubIndexer.syncOnce()", () => {
         protocolFeeAccrual: 2_000n
       };
       const client = createMockPublicClient({ blockNumber: 200n });
-      client.getLogs.mockImplementation(async ({ event }: any) =>
-        event.name === "BetFinalized"
+      client.getLogs.mockImplementation(async ({ events }: any) =>
+        events.some((event: any) => event.name === "BetFinalized")
           ? [
               {
+                eventName: "BetFinalized",
                 blockNumber: 150n,
                 logIndex: 1,
                 transactionHash: "0xabc1",
@@ -166,10 +167,11 @@ describe("gameHubIndexer.syncOnce()", () => {
       protocolFeeAccrual: 2_000n
     };
     const client = createMockPublicClient({ blockNumber: 200n });
-    client.getLogs.mockImplementation(async ({ event }: any) =>
-      event.name === "BetFinalized"
+    client.getLogs.mockImplementation(async ({ events }: any) =>
+      events.some((event: any) => event.name === "BetFinalized")
         ? [
             {
+              eventName: "BetFinalized",
               blockNumber: 150n,
               logIndex: 1,
               transactionHash: "0xabc1",
@@ -198,21 +200,33 @@ describe("gameHubIndexer.syncOnce()", () => {
     expect((await db.cursors.toArray())[0]?.lastProcessedBlock).toBe(200);
   });
 
-  it("fetches block number and getLogs for each event type", async () => {
+  it("reads all five events with one getLogs per batch", async () => {
     const client = createMockPublicClient({ blockNumber: 200n });
     indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmationSeconds: 0, rewindSeconds: 0, batchSize: 10000, pollIntervalMs: 999999 }
+      config: {
+        confirmationSeconds: 0,
+        rewindSeconds: 0,
+        batchSize: 10000,
+        pollIntervalMs: 999999,
+        initialLookbackSeconds: 0
+      }
     });
 
     await indexer.syncOnce();
 
     // The latest block, and once a sample behind it for the block rate.
     expect(client.getBlock).toHaveBeenCalledTimes(2);
-    // 5 event types → 5 getLogs calls
-    expect(client.getLogs).toHaveBeenCalledTimes(5);
+    expect(client.getLogs).toHaveBeenCalledTimes(1);
+    expect(client.getLogs.mock.calls[0][0].events.map((event: any) => event.name)).toEqual([
+      "BetPlaced",
+      "BetRandomReady",
+      "BetFinalized",
+      "BetRefunded",
+      "BetVoided"
+    ]);
   });
 
   it("inserts cursor after sync", async () => {
@@ -252,6 +266,7 @@ describe("gameHubIndexer.syncOnce()", () => {
   it("stores GameHub events and creates bet rows from logs", async () => {
     const mockLogs = [
       {
+        eventName: "BetPlaced",
         blockNumber: 150n,
         logIndex: 0,
         transactionHash: "0xabc1" as Hex,
@@ -260,13 +275,7 @@ describe("gameHubIndexer.syncOnce()", () => {
     ];
 
     const client = createMockPublicClient({ blockNumber: 200n });
-    // Only return logs for BetPlaced, empty for others
-    client.getLogs
-      .mockResolvedValueOnce(mockLogs) // BetPlaced
-      .mockResolvedValueOnce([]) // BetRandomReady
-      .mockResolvedValueOnce([]) // BetFinalized
-      .mockResolvedValueOnce([]) // BetRefunded
-      .mockResolvedValueOnce([]); // BetVoided
+    client.getLogs.mockResolvedValueOnce(mockLogs);
 
     indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
@@ -354,6 +363,7 @@ describe("gameHubIndexer.syncOnce()", () => {
   it("idempotent: duplicate events overwrite without error", async () => {
     const mockLogs = [
       {
+        eventName: "BetPlaced",
         blockNumber: 150n,
         logIndex: 0,
         transactionHash: "0xabc1" as Hex,
@@ -362,15 +372,7 @@ describe("gameHubIndexer.syncOnce()", () => {
     ];
 
     const client = createMockPublicClient({ blockNumber: 200n });
-    client.getLogs
-      .mockResolvedValueOnce(mockLogs)
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(mockLogs)
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+    client.getLogs.mockResolvedValue(mockLogs);
 
     indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
@@ -457,5 +459,40 @@ describe("gameHubIndexer.syncOnce()", () => {
     }
     // Once the rate has settled the target is exactly 24 seconds old.
     expect(stamp(10_400n) - stamp(BigInt(indexer.getStatus().targetBlock!))).toBe(24n);
+  });
+
+  it("starts a fresh browser an hour before the target, not at the release block (2026-11-03 acceptance)", async () => {
+    // Five blocks a second; the release block is 100, the head 100,000 blocks later.
+    const client = createMockPublicClient({ blockNumber: 100_000n, timestampOf: (n) => n / 5n });
+    indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
+    await indexer.syncOnce();
+    expect(indexer.getStatus()).toMatchObject({ targetBlock: 99_880, lastSyncedBlock: 99_880 });
+    const from = (client.getLogs.mock.calls as [{ fromBlock: bigint }][]).map(
+      ([call]) => call.fromBlock
+    );
+    // A block 3,600 seconds before the target: 18,001 blocks in 91 queries, not 99,781 in 499.
+    expect(from[0]).toBe(81_880n);
+    expect(client.getLogs).toHaveBeenCalledTimes(91);
+  });
+
+  it("saves the cursor after each batch, so a failed or interrupted first pass resumes where it stopped", async () => {
+    const client = createMockPublicClient({ blockNumber: 1_000n, timestampOf: (n) => n / 5n });
+    client.getLogs
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("rate limited"));
+    indexer = createGameHubIndexer({
+      release: MOCK_RELEASE,
+      publicClient: client,
+      db,
+      config: { rewindSeconds: 0 }
+    });
+    await indexer.syncOnce();
+    expect(indexer.getStatus().lastError).toBe("rate limited");
+    expect((await db.cursors.toArray())[0]?.lastProcessedBlock).toBe(499);
+    client.getLogs.mockClear();
+    await indexer.syncOnce();
+    expect(indexer.getStatus().lastError).toBeUndefined();
+    expect(client.getLogs.mock.calls[0][0].fromBlock).toBe(500n);
   });
 });

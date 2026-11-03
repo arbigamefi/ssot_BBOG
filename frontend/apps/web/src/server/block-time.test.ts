@@ -43,6 +43,19 @@ describe("lastBlockAtOrBefore", () => {
     expect(c.getBlock.mock.calls.length).toBeLessThanOrEqual(6);
   });
 
+  it("reads few blocks for a second days before the head at five blocks a second", async () => {
+    // A head 2.25 million blocks past the rate change, as a five-day-old bet on Base Sepolia (2026-11-03).
+    const far = { number: 2_250_000n, timestamp: timestampOf(2_250_000n) };
+    for (const back of [5n, 86_400n, 400_000n]) {
+      const c = chain();
+      const timestamp = far.timestamp - back;
+      const found = await lastBlockAtOrBefore(c.client, timestamp, far, 0n);
+      expect(timestampOf(found)).toBeLessThanOrEqual(timestamp);
+      expect(timestampOf(found + 1n)).toBeGreaterThan(timestamp);
+      expect(c.getBlock.mock.calls.length).toBeLessThanOrEqual(8);
+    }
+  });
+
   it("reads nothing when the head is old enough or below the floor", async () => {
     const c = chain();
     expect(await lastBlockAtOrBefore(c.client, head.timestamp, head, 0n)).toBe(HEAD);
