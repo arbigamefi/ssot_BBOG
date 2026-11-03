@@ -6,6 +6,7 @@ import {
   AgeTermsGate,
   ComplianceProvider,
   CookieConsentBanner,
+  ResponsibleGamblingDialog,
   SelfExclusionGate,
   useCompliance
 } from "./index";
@@ -180,5 +181,33 @@ describe("compliance", () => {
     );
 
     expect(screen.getByTestId("game")).toBeDefined();
+  });
+
+  it("offers only what it applies: a session reminder and self-exclusion, no daily limits", () => {
+    function OpenDialog() {
+      const { openRgDialog } = useCompliance();
+      return (
+        <button type="button" onClick={openRgDialog}>
+          open
+        </button>
+      );
+    }
+    render(
+      <Harness>
+        <OpenDialog />
+        <ResponsibleGamblingDialog />
+      </Harness>
+    );
+    fireEvent.click(screen.getByText("open"));
+
+    expect(screen.queryByText("dailyDeposit")).toBeNull();
+    expect(screen.queryByText("dailyLoss")).toBeNull();
+    expect(screen.getByText("d180")).toBeDefined();
+
+    fireEvent.change(screen.getByPlaceholderText("off"), { target: { value: "45" } });
+    fireEvent.click(screen.getByText("saveReminder"));
+    expect(JSON.parse(window.localStorage.getItem("arbigamefi.compliance.rg.v1") ?? "{}")).toEqual({
+      sessionReminderMinutes: 45
+    });
   });
 });

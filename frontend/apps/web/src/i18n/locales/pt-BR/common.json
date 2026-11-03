@@ -155,13 +155,10 @@
     "responsible": {
       "title": "Jogo responsável",
       "close": "Fechar",
-      "dailyDeposit": "Limite diário de depósito",
-      "dailyLoss": "Limite diário de perda",
       "sessionReminder": "Lembrete de sessão",
       "minutes": "min",
-      "noLimit": "Sem limite",
       "off": "Desligado",
-      "saveLimits": "Salvar limites",
+      "saveReminder": "Salvar lembrete",
       "selfExclude": {
         "title": "Autoexclusão",
         "d1": "1 dia",
@@ -271,7 +268,7 @@
       },
       {
         "q": "Como mantenho o controle do meu jogo?",
-        "a": "Abra Jogo Responsável no rodapé para definir um lembrete de sessão, registrar limites diários de depósito e perda ou se autoexcluir por um período fixo. Essas configurações ficam salvas apenas neste navegador: os limites diários ainda não são verificados quando você aposta ou deposita, e a autoexclusão não vale para outros navegadores, dispositivos ou apps. Você precisa ter a idade legal na sua jurisdição para jogar."
+        "a": "Abra Jogo Responsável no rodapé para definir um lembrete de sessão ou se autoexcluir por um período fixo. Os dois ficam salvos apenas neste navegador: a autoexclusão não vale para outros navegadores, dispositivos ou apps. Você precisa ter a idade legal na sua jurisdição para jogar."
       }
     ]
   },

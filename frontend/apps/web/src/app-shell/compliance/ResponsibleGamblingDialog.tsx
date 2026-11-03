@@ -12,17 +12,15 @@ import { overlayZ } from "../../components/overlay/z";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Player-facing responsible-gambling controls: deposit/loss ceilings, an
- * in-session reality-check cadence, and self-exclusion. The limit values are
- * persisted locally and surfaced to the server/contract layer for actual
- * enforcement — the UI never claims to enforce on its own.
+ * Player-facing responsible-gambling controls: an in-session reality-check
+ * cadence and self-exclusion, both kept in this browser. Daily deposit and loss
+ * limits are left out until something enforces them: a limit the site shows but
+ * does not apply would let a player believe they are protected.
  */
 export function ResponsibleGamblingDialog() {
   const t = useTranslations("compliance.responsible");
   const { rgDialogOpen, closeRgDialog, limits, setLimits, selfExclude } = useCompliance();
 
-  const [deposit, setDeposit] = React.useState("");
-  const [loss, setLoss] = React.useState("");
   const [reminder, setReminder] = React.useState("");
   const trapRef = useFocusTrap<HTMLDivElement>(rgDialogOpen);
 
@@ -38,17 +36,13 @@ export function ResponsibleGamblingDialog() {
 
   React.useEffect(() => {
     if (!rgDialogOpen) return;
-    setDeposit(limits.dailyDepositLimit != null ? String(limits.dailyDepositLimit) : "");
-    setLoss(limits.dailyLossLimit != null ? String(limits.dailyLossLimit) : "");
     setReminder(limits.sessionReminderMinutes != null ? String(limits.sessionReminderMinutes) : "");
   }, [rgDialogOpen, limits]);
 
   if (!rgDialogOpen) return null;
 
-  const saveLimits = () => {
+  const saveReminder = () => {
     setLimits({
-      dailyDepositLimit: parseOptionalNonNegative(deposit),
-      dailyLossLimit: parseOptionalNonNegative(loss),
       sessionReminderMinutes: parseOptionalNonNegative(reminder)
     });
     closeRgDialog();
@@ -85,21 +79,7 @@ export function ResponsibleGamblingDialog() {
         <div className="flex flex-col gap-4 px-6 py-5">
           <p className="text-xs leading-5 text-fg-muted">{t("intro")}</p>
 
-          <LimitField
-            label={t("dailyDeposit")}
-            suffix="USDC"
-            value={deposit}
-            onChange={setDeposit}
-            placeholder={t("noLimit")}
-          />
-          <LimitField
-            label={t("dailyLoss")}
-            suffix="USDC"
-            value={loss}
-            onChange={setLoss}
-            placeholder={t("noLimit")}
-          />
-          <LimitField
+          <ReminderField
             label={t("sessionReminder")}
             suffix={t("minutes")}
             value={reminder}
@@ -109,10 +89,10 @@ export function ResponsibleGamblingDialog() {
 
           <button
             type="button"
-            onClick={saveLimits}
+            onClick={saveReminder}
             className="rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-fg-inverse transition hover:bg-brand-hover"
           >
-            {t("saveLimits")}
+            {t("saveReminder")}
           </button>
         </div>
 
@@ -147,7 +127,7 @@ export function ResponsibleGamblingDialog() {
   );
 }
 
-function LimitField({
+function ReminderField({
   label,
   suffix,
   value,
@@ -182,10 +162,9 @@ function LimitField({
 }
 
 /**
- * Parse a player-typed limit. Returns undefined for blank/zero/invalid (=
- * "no limit"). We deliberately do NOT use parseFloat on asset *amounts*
- * elsewhere, but these advisory limits are not on-chain values, so a guarded
- * numeric parse is acceptable here.
+ * Parse the typed reminder interval in minutes. Returns undefined for
+ * blank/zero/invalid (= off). It is not an asset amount, so a guarded numeric
+ * parse is acceptable here.
  */
 function parseOptionalNonNegative(raw: string): number | undefined {
   const trimmed = raw.trim();
