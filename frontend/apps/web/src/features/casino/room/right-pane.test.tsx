@@ -11,15 +11,7 @@ vi.mock("@ssot/ui", () => ({
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
     ({
-      "casino.room.selection.dice.rollUnder": "Roll Under",
-      "casino.room.selection.dice.rollOver": "Roll Over",
-      "casino.room.selection.dice.targetRange": "Target Range",
-      "casino.room.selection.dice.targetAria": "Dice target",
-      "casino.room.selection.dice.target": "Target",
-      "casino.room.selection.dice.multiplier": "Mult",
-      "casino.room.selection.dice.winChance": "Win",
       "casino.room.stage.loading": "Loading stage",
-      "casino.room.history.recent.rolls": "RECENT ROLLS",
       "casino.room.history.recent.numbers": "RECENT NUMBERS",
       "casino.room.history.recent.draws": "RECENT DRAWS",
       "casino.room.history.recent.buckets": "RECENT BUCKETS",
@@ -72,8 +64,6 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.resolvedTime": "Resolved time",
       "casino.room.result.facts.vrfFee": "RNG fees (VRF)",
       "casino.room.result.facts.pending": "Pending",
-      "casino.room.result.facts.diceTarget": "Dice target",
-      "casino.room.result.facts.diceNumber": "Number drawn",
       "casino.room.result.facts.coinChoice": "Chosen side",
       "casino.room.result.facts.coinDrawn": "Side drawn",
       "casino.room.result.facts.rouletteBet": "Roulette bet",
@@ -165,8 +155,6 @@ const baseProps = {
   isPending: false,
   showResult: false,
   resultNum: null,
-  diceDirection: "under" as const,
-  diceTarget: 50,
   multiplier: 1.98,
   houseEdgeBps: 200,
   winChance: 50,
@@ -185,8 +173,6 @@ const baseProps = {
   assetSymbol: "USDC",
   assetDecimals: 6,
   onResultClose: vi.fn(),
-  onDiceDirectionChange: vi.fn(),
-  onDiceTargetChange: vi.fn(),
   onCoinSideChange: vi.fn(),
   onRouletteChange: vi.fn(),
   onKenoChange: vi.fn(),
@@ -221,12 +207,11 @@ describe("GameRoomRightPane", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the empty live tracker and dice stage", async () => {
-    render(<GameRoomRightPane {...baseProps} gameSlug="dice" />);
+  it("renders the empty live tracker", () => {
+    render(<GameRoomRightPane {...baseProps} gameSlug="coin-toss" />);
 
-    expect(screen.getByText("RECENT ROLLS")).toBeDefined();
+    expect(screen.getByText("RECENT FLIPS")).toBeDefined();
     expect(screen.getByText("Waiting for first play...")).toBeDefined();
-    expect(await screen.findByText("Roll Under")).toBeDefined();
   });
 
   it("renders chain bet status and result overlay", async () => {
@@ -335,7 +320,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="dice"
+        gameSlug="roulette"
         showResult
         resultNum={17}
         resultProof={{
@@ -349,9 +334,8 @@ describe("GameRoomRightPane", () => {
           resolvedAt: 1_778_888_888
         }}
         casinoOutcome={{
-          kind: "dice",
-          direction: "under",
-          target: 50,
+          kind: "roulette",
+          selectedNumbers: [17],
           rolls: [{ value: 17, won: true }],
           payoutGross: 20_000_000n,
           payoutNet: 19_600_000n,
@@ -366,7 +350,6 @@ describe("GameRoomRightPane", () => {
     expect(screen.queryByText("Bet details")).toBeNull();
     expect(screen.queryByText("Expected payout")).toBeNull();
     expect(screen.queryByText("Settlement pending")).toBeNull();
-    expect(screen.getAllByText("17").length).toBeGreaterThan(0);
   });
 
   it("shows slots symbols, multiplier, and jackpot detail in the result overlay", async () => {
@@ -588,7 +571,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="dice"
+        gameSlug="coin-toss"
         showResult
         resultNum={17}
         resultProof={{
@@ -619,7 +602,7 @@ describe("casino result payment evidence", () => {
       render(
         <GameRoomRightPane
           {...baseProps}
-          gameSlug="dice"
+          gameSlug="coin-toss"
           showResult
           resultProof={{
             kind: "settled",

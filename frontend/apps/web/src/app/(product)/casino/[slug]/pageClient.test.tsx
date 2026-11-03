@@ -161,13 +161,6 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
       "casino.room.betPanel.placeBet.placeBet": "PLACE BET",
-      "casino.room.selection.dice.rollUnder": "Roll Under",
-      "casino.room.selection.dice.rollOver": "Roll Over",
-      "casino.room.selection.dice.targetRange": "Target Range",
-      "casino.room.selection.dice.targetAria": "Dice target",
-      "casino.room.selection.dice.target": "Target",
-      "casino.room.selection.dice.multiplier": "Mult",
-      "casino.room.selection.dice.winChance": "Win",
       "casino.room.selection.roulette.bets": "Bets",
       "casino.room.selection.roulette.clearAll": "Clear All",
       "casino.room.selection.roulette.empty": "No bets placed. Click the felt to bet.",
@@ -234,7 +227,12 @@ vi.mock("next-intl", () => ({
       "casino.room.closed.body":
         "Bets placed before it closed still settle, and their receipts stay available.",
       "casino.room.closed.viewBets": "View your bets",
-      "casino.room.closed.browse": "Browse open games"
+      "casino.room.closed.browse": "Browse open games",
+      "casino.dice.head.title": "Dice",
+      "casino.dice.strip.preview":
+        "Preview. Betting opens on Base after the audit report is published.",
+      "casino.dice.action.telegram": "Join on Telegram",
+      "casino.dice.slip.label": "Bet slip"
     })[namespace ? `${namespace}.${relativeKey}` : relativeKey] ?? relativeKey
 }));
 
@@ -374,6 +372,16 @@ const MOCK_BETS = [
   }
 ];
 
+// The app provides a query client; the shared room's audit ledger loads lazily and needs it once it arrives.
+function renderRoom(slug: string) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <GamePageClient slug={slug} />
+    </QueryClientProvider>
+  );
+}
+
 describe("GamePageClient", () => {
   afterEach(() => {
     cleanup();
@@ -390,7 +398,7 @@ describe("GamePageClient", () => {
   it("shows placeholder when release is unavailable", () => {
     state.release = null;
     state.readOnlyReason = "No release";
-    render(<GamePageClient slug="dice" />);
+    renderRoom("dice");
     expect(screen.getByTestId("placeholder")).toBeDefined();
     expect(screen.getByText("No release")).toBeDefined();
   });
@@ -476,13 +484,14 @@ describe("GamePageClient", () => {
     });
   });
 
-  it("renders release-driven game room and recent bets", () => {
+  it("renders the shared room shell for a game that has not moved to Carbon copy", async () => {
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
 
-    render(<GamePageClient slug="dice" />);
+    renderRoom("roulette");
 
-    expect(screen.getByText("Precision Dice")).toBeDefined();
+    // The shared shell loads as its own chunk.
+    expect(await screen.findByText("European Roulette")).toBeDefined();
     // Betting is not enabled for the website in tests, so the room is labelled a preview.
     expect(screen.getByText("Preview SSOT Module")).toBeDefined();
     expect(screen.queryByText("Live SSOT Module")).toBeNull();
@@ -490,35 +499,53 @@ describe("GamePageClient", () => {
     expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("labels the room testnet on an open test chain and live on an open main chain", () => {
+  it("labels the room testnet on an open test chain and live on an open main chain", async () => {
     vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
-    const { unmount } = render(<GamePageClient slug="dice" />);
-    expect(screen.getByText("Testnet SSOT Module")).toBeDefined();
+    const { unmount } = renderRoom("roulette");
+    expect(await screen.findByText("Testnet SSOT Module")).toBeDefined();
     expect(screen.queryByText("Live SSOT Module")).toBeNull();
     expect(screen.queryByText("Preview SSOT Module")).toBeNull();
     unmount();
 
     state.chainId = 8453;
-    render(<GamePageClient slug="dice" />);
-    expect(screen.getByText("Live SSOT Module")).toBeDefined();
+    renderRoom("roulette");
+    expect(await screen.findByText("Live SSOT Module")).toBeDefined();
     expect(screen.queryByText("Testnet SSOT Module")).toBeNull();
     state.chainId = 84532;
     vi.unstubAllEnvs();
   });
 
-  it("renders roulette as a standard European table room", () => {
+  it("renders dice as the Carbon copy room, with no shared shell", () => {
+    state.release = MOCK_RELEASE;
+    state.bets = MOCK_BETS;
+
+    renderRoom("dice");
+
+    expect(screen.getByRole("heading", { level: 1, name: "Dice" })).toBeDefined();
+    expect(
+      screen.getByText("Preview. Betting opens on Base after the audit report is published.")
+    ).toBeDefined();
+    expect(screen.getByRole("article", { name: "Bet slip" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "Join on Telegram" }).getAttribute("href")).toBe(
+      "https://t.me/arbigamefi"
+    );
+    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
+    expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
+  });
+
+  it("renders roulette as a standard European table room", async () => {
     state.release = MOCK_RELEASE;
 
-    render(<GamePageClient slug="roulette" />);
+    renderRoom("roulette");
 
-    expect(screen.getByText("European Roulette")).toBeDefined();
+    expect(await screen.findByText("European Roulette")).toBeDefined();
     expect(screen.getByLabelText("Wallet Balance")).toBeDefined();
     expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders coin toss as a canonical room shell", () => {
+  it("renders coin toss as a canonical room shell", async () => {
     state.release = {
       ...MOCK_RELEASE,
       gamesMeta: [
@@ -533,16 +560,16 @@ describe("GamePageClient", () => {
       ]
     };
 
-    render(<GamePageClient slug="coin-toss" />);
+    renderRoom("coin-toss");
 
-    expect(screen.getByText("Coin Toss")).toBeDefined();
+    expect(await screen.findByText("Coin Toss")).toBeDefined();
     expect(screen.getByLabelText("Wallet Balance")).toBeDefined();
     expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows placeholder when slug is not present in release", () => {
     state.release = MOCK_RELEASE;
-    render(<GamePageClient slug="keno" />);
+    renderRoom("keno");
     expect(screen.getByTestId("placeholder")).toBeDefined();
     expect(screen.getByText("Game not found.")).toBeDefined();
   });
@@ -566,12 +593,7 @@ describe("GamePageClient", () => {
       }
     };
 
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={queryClient}>
-        <GamePageClient slug="dice" />
-      </QueryClientProvider>
-    );
+    renderRoom("dice");
 
     expect(await screen.findByTestId("game-closed")).toBeDefined();
     expect(screen.getByText("This game is closed.")).toBeDefined();

@@ -12,7 +12,6 @@ import {
 } from "./history-widget";
 import type { CasinoOutcome } from "./outcome";
 import type { BaccaratSide, CoinSide, PlinkoRisk, SicBoKind } from "./params";
-import type { DiceDirection } from "./payouts";
 import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
 
 export type { GameHistoryEntry, RecentBetSummary } from "./history-widget";
@@ -31,11 +30,6 @@ function StageLoading() {
     </div>
   );
 }
-
-const DiceStage = dynamic(() => import("../modules/dice/stage").then((mod) => mod.DiceStage), {
-  loading: StageLoading,
-  ssr: false
-});
 
 const CoinTossStage = dynamic(
   () => import("../modules/coin-toss/stage").then((mod) => mod.CoinTossStage),
@@ -94,8 +88,6 @@ export function GameRoomRightPane({
   isRevealing,
   showResult,
   resultNum,
-  diceDirection,
-  diceTarget,
   houseEdgeBps,
   rouletteSpots,
   kenoSpots,
@@ -114,11 +106,8 @@ export function GameRoomRightPane({
   assetDecimals,
   onResultClose,
   onResultPlayAgain,
-  onDiceRevealComplete,
   onCoinRevealComplete,
   onRouletteRevealComplete,
-  onDiceDirectionChange,
-  onDiceTargetChange,
   onCoinSideChange,
   onRouletteChange,
   onKenoChange,
@@ -141,8 +130,6 @@ export function GameRoomRightPane({
   isRevealing?: boolean;
   showResult: boolean;
   resultNum: number | null;
-  diceDirection: DiceDirection;
-  diceTarget: number;
   houseEdgeBps: number;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
@@ -161,11 +148,8 @@ export function GameRoomRightPane({
   assetDecimals?: number;
   onResultClose?: () => void;
   onResultPlayAgain?: () => void;
-  onDiceRevealComplete?: () => void;
   onCoinRevealComplete?: () => void;
   onRouletteRevealComplete?: () => void;
-  onDiceDirectionChange: (direction: DiceDirection) => void;
-  onDiceTargetChange: (target: number) => void;
   onCoinSideChange: (side: CoinSide) => void;
   onRouletteChange: (spots: string[]) => void;
   onKenoChange: (spots: number[]) => void;
@@ -190,13 +174,9 @@ export function GameRoomRightPane({
             ? "lg:min-h-[34rem]"
             : gameSlug === "roulette"
               ? "lg:min-h-[38rem]"
-              : gameSlug === "dice"
-                ? "lg:min-h-[34rem]"
-                : gameSlug === "plinko"
-                  ? "lg:min-h-[38rem]"
-                  : gameSlug === "slots"
-                    ? "lg:min-h-[34rem]"
-                    : "lg:min-h-[34rem]";
+              : gameSlug === "plinko"
+                ? "lg:min-h-[38rem]"
+                : "lg:min-h-[34rem]";
   return (
     <div
       className={cn(
@@ -209,21 +189,6 @@ export function GameRoomRightPane({
         gameHistory={gameHistory}
         recentBets={recentBets}
       />
-
-      {gameSlug === "dice" && (
-        <DiceStage
-          isPending={isPending}
-          controlsLocked={controlsLocked}
-          isRevealing={Boolean(isRevealing)}
-          showResult={showResult}
-          resultNum={resultNum}
-          diceDirection={diceDirection}
-          diceTarget={diceTarget}
-          onDirectionChange={onDiceDirectionChange}
-          onTargetChange={onDiceTargetChange}
-          onRevealComplete={onDiceRevealComplete}
-        />
-      )}
 
       {gameSlug === "coin-toss" && (
         <CoinTossStage
@@ -331,8 +296,6 @@ export function GameRoomRightPane({
           gameSlug={gameSlug}
           houseEdgeBps={houseEdgeBps}
           resultNum={resultNum}
-          diceDirection={diceDirection}
-          diceTarget={diceTarget}
           coinSide={coinSide}
           rouletteSpots={rouletteSpots}
           kenoSpots={kenoSpots}

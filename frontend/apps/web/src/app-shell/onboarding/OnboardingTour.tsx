@@ -18,8 +18,9 @@ const STORAGE_KEY = "arbigamefi.onboarding.v1";
  * tip beside it; when absent we fall back to a centered card. Degrades safely
  * if the DOM shifts, so it never blocks the player.
  *
- * Only runs on /casino/[slug] (the first surface where all anchors exist),
- * after the compliance gate clears, and only once per device.
+ * Only runs in the shared game rooms on /casino/[slug], where all anchors exist,
+ * after the compliance gate clears, and only once per device. The Carbon copy
+ * dice room explains itself in its head and rules, so the tour skips it.
  */
 type TourStep = {
   key: string;
@@ -38,6 +39,7 @@ const STEPS: TourStep[] = [
 type Rect = { top: number; left: number; width: number; height: number };
 
 function isGameRoom(pathname: string) {
+  if (pathname === "/casino/dice") return false;
   const match = /^\/casino\/([^/?#]+)$/.exec(pathname);
   return match ? isCasinoModuleSlug(match[1] ?? "") : false;
 }

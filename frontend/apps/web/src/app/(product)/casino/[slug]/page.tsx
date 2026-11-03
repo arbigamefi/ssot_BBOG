@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { isCasinoModuleSlug } from "../../../../features/casino/modules";
 import { SITE_URL } from "../../../../config/site";
+import { carbonCopyFontVariables } from "../../../../features/home/fonts";
 import { buildPageMetadata } from "../../../../i18n/metadata";
 import { getRequestI18n } from "../../../../i18n/request";
 import { GamePageClient } from "./pageClient";
@@ -61,7 +62,7 @@ export default async function GameRoomPage({ params }: { params: Promise<{ slug:
   // schema.org structured data for the game room — improves crawlability and
   // links the page into the site's knowledge graph (publisher → homepage org).
   // Description is reused from page metadata so there is no duplicated copy.
-  const { messages } = await getRequestI18n();
+  const { messages, locale } = await getRequestI18n();
   const name = localizedGameName(messages, slug);
   const metadata = buildPageMetadata(
     messages,
@@ -84,7 +85,7 @@ export default async function GameRoomPage({ params }: { params: Promise<{ slug:
     }
   };
 
-  return (
+  const room = (
     <>
       <script
         type="application/ld+json"
@@ -93,4 +94,6 @@ export default async function GameRoomPage({ params }: { params: Promise<{ slug:
       <GamePageClient key={slug} slug={slug} />
     </>
   );
+  // The dice room is rebuilt in Carbon copy and loads its faces.
+  return slug === "dice" ? <div className={carbonCopyFontVariables(locale)}>{room}</div> : room;
 }

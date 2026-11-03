@@ -80,8 +80,8 @@ The slip is one sheet of paper through the whole bet, with no overlays:
    shown as printing.
 3. **Stamp.** On settlement the receipt is stamped "Paid to wallet" or "Settled" and gets a torn
    edge.
-4. **Tear off.** "Place another bet" moves the receipt into the room's recent receipts and gives
-   the slip a fresh sheet.
+4. **Tear off.** "Bet again" or "Change bet" tears the receipt off and gives the slip a fresh
+   sheet; the room's recent receipts list the bet once the bet index has it.
 
 Rules:
 
