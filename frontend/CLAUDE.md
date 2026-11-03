@@ -46,10 +46,32 @@ AI-assisted changes must not:
 - create a new shell when `AppShell` variants are enough;
 - edit generated deployment artifacts directly;
 - edit audit reports as normal mutable docs;
-- add a subgraph for MVP indexing.
+- add a subgraph for MVP indexing;
+- mix old-palette utilities (`surface-*`, `fg-*`, `brand`, `accent`, state
+  colours) into a page rebuilt in Carbon copy.
 
 If a user asks for one of these, explain the issue and propose the conforming
 alternative.
+
+## Brand: Carbon Copy
+
+The brand is Carbon copy (`../docs/design/01-brand.md`): every bet prints a
+receipt, and the receipt is the visual language. Pages move to it one at a
+time (`01-brand.md` §11).
+
+- A rebuilt page uses only Carbon copy utilities from
+  `packages/ui/src/tokens/carbon-copy.css` (`bg-carbon`, `bg-paper`, `text-ink`,
+  `text-faded`, `text-display`, `font-print`, `rounded-sheet`, …).
+- Ink never sits on carbon. Input edges on paper use `faded`, never `thermal`.
+- `font-print` (Doto) prints figures only. Rebuilt pages use no monospace face.
+- Only printed objects are boxed (receipt, slip, ticket stub, stamp, scale):
+  no cards, no decorative shadows, no win or lose colours, no confetti.
+- Use the terms in `../docs/design/02-voice-and-copy.md` §2 in every locale
+  (Liquidity, House pool, Rewards, Stake, Win chance, …). Contract names appear
+  only under technical details.
+- Copy follows the site state from `getCasinoAccess`: preview, testnet or live.
+- When the last page moves, delete `arbi-dark.css`, `arbi-light.css` and the old
+  theme entries in the same change.
 
 ## Preferred Checks
 
