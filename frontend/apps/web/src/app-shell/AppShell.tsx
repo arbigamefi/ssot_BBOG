@@ -51,6 +51,11 @@ function isCasinoGameRoom(pathname: string) {
   return match ? isCasinoModuleSlug(match[1] ?? "") : false;
 }
 
+/** Pages rebuilt in Carbon copy run edge to edge and print their own site state (01-brand §11). */
+export function isCarbonCopyPage(pathname: string) {
+  return pathname === "/" || pathname === "/casino/dice";
+}
+
 function getShellVariant(pathname: string) {
   if (pathname === "/" || pathname === "/affiliate") return "marketing";
   if (
@@ -76,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <MobileWalletEntryProvider>
       <AppShellFrame
         skipLinkLabel={t("app.skipToContent")}
-        fullBleed={pathname === "/"}
+        fullBleed={isCarbonCopyPage(pathname)}
         footer={<SiteFooter />}
         header={<AppHeader activeRoute={getActiveRoute(pathname)} variant={headerVariant} />}
         readOnlyBanner={

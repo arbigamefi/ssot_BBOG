@@ -127,7 +127,7 @@
   --spacing-section: var(--space-section);
   --spacing-head: var(--space-head);
   --spacing-gutter: var(--space-gutter);
-  --spacing-grid: var(--grid-gap);
+  --spacing-columns: var(--grid-gap);
   --container-page: var(--page-max);
 
   --radius-print: var(--corner-print);
@@ -138,6 +138,11 @@
   --animate-stamp: stamp 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.4)
     calc(var(--print-delay, 0.5s) + var(--print-time, 2.4s) + 0.1s) both;
   --animate-tear: tear 0.34s ease-in forwards;
+  /* The dice room: a result prints line by line, the feed bar runs while the
+     random number is awaited, and a roll is punched into the scale. */
+  --animate-reveal: reveal 1.2s steps(12, end) both;
+  --animate-feed: feed 1.8s steps(30, end) infinite;
+  --animate-punch: punch 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
 
   /* ── Radius ─────────────────────────────────────────────────────── */
   --radius-sm: var(--radius-sm);
@@ -200,6 +205,31 @@
 @keyframes tear {
   to {
     transform: translateY(24px) rotate(1.6deg);
+    opacity: 0;
+  }
+}
+
+@keyframes reveal {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 -16px 0);
+  }
+}
+
+@keyframes feed {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes punch {
+  from {
+    scale: 1.6;
     opacity: 0;
   }
 }
@@ -356,6 +386,28 @@
   transform: rotate(-14deg);
   opacity: 0.8;
   mix-blend-mode: multiply;
+}
+
+/* Ink dots: the winning side of the dice scale. */
+@utility print-dots {
+  background: radial-gradient(circle, hsl(var(--ink)) 1.3px, transparent 1.7px) 0 0 / 6px 6px;
+}
+
+/* One row of ink dots: the feed bar of a receipt that is still printing. */
+@utility print-feed {
+  background: radial-gradient(circle, hsl(var(--ink)) 1.3px, transparent 1.7px) 0 50% / 6px 12px
+    repeat-x;
+}
+
+/* The ticks of the dice scale: a long tick every tenth, a short one every hundredth.
+   Phones set --tick-major and --tick-minor to 25% and 5%. */
+@utility print-ticks {
+  border-right: 1px solid hsl(var(--faded));
+  background:
+    linear-gradient(90deg, hsl(var(--faded)) 1px, transparent 1px) 0 0 / var(--tick-major, 10%) 10px
+      repeat-x,
+    linear-gradient(90deg, hsl(var(--thermal)) 1px, transparent 1px) 0 0 / var(--tick-minor, 1%) 6px
+      repeat-x;
 }
 
 /* A ticket stub's tear-off part: a dashed perforation with a half-disc notch at each end. */

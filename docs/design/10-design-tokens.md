@@ -98,8 +98,9 @@ above the action that fixes it (`02-voice-and-copy.md` §4).
 - Spacing is a multiple of 8px; small components use 4 and 12 inside.
 - `py-section`: 64 on phones, 96 from 48rem. `mb-head` (title to content): 32, then 48.
 - `px-gutter`: 16, then 56. `max-w-page`: 1200px.
-- 12 columns with a 24px gap (`gap-grid`). Every section head spans 7 columns; every list in a
-  section sits on the same columns.
+- 12 columns with a 24px gap (`gap-columns`). Every section head spans 7 columns; every list in a
+  section sits on the same columns. A spacing token is never named after a display value: Tailwind
+  makes `inline-<token>` an inline size, so a token named `grid` would size every `inline-grid`.
 
 ## 6. Radius, Lines And Elevation
 

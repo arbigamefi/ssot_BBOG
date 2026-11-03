@@ -38,12 +38,15 @@ Prefer transform and opacity. Avoid layout-affecting animation.
 
 The receipt is the one orchestrated motion on the site:
 
-- **Print.** The receipt feeds out of the slip in steps, like a thermal printer: a stepped
-  vertical reveal over about 2.4s while the bet waits for randomness. It tracks real state: it
-  starts when the bet is placed and holds on the last step until the result is read.
+- **Feed.** While the bet waits for randomness, a row of dots feeds across the slip in steps
+  (`animate-feed`, 1.8s a pass). It tracks real state: it runs from the moment the bet is placed
+  until the result is read, and stops for a refund or a stuck bet.
+- **Print.** When the result is read, the receipt's result prints downwards in steps, like a
+  thermal printer (`animate-reveal`, about 1.2s).
 - **Stamp.** On settlement the stamp lands once (about 0.3s).
-- **Punch.** Each roll is punched into the dice scale once (about 0.3s).
-- **Tear.** "Place another bet" tears the receipt off (about 0.35s) before the slip resets.
+- **Punch.** Each roll is punched into the dice scale once (`animate-punch`, about 0.3s).
+- **Tear.** "Bet again" and "Change bet" tear the receipt off (about 0.35s) before the slip
+  resets.
 
 On the home page the rotating receipt prints the same way, and only when the visitor asks for
 the next one.

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { createSSOTSDK } from "@ssot/ssot/sdk";
-import { useAccount, useChainId, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, useChainId, usePublicClient, useSwitchChain, useWalletClient } from "wagmi";
 
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { SDKContext, type SDKContextValue } from "../ssot/sdk";
@@ -16,6 +16,10 @@ export function SSOTSDKProvider({ children }: { children: React.ReactNode }) {
   const { data: walletClient } = useWalletClient({ chainId: releaseChainId });
   const { address, chainId: walletChainId } = useAccount();
   const runtime = useSSOTRuntime();
+  const { switchChain } = useSwitchChain();
+  const wrongNetwork = Boolean(
+    address && walletChainId != null && walletChainId !== releaseChainId
+  );
 
   const walletMatches = Boolean(
     address &&
@@ -62,8 +66,14 @@ export function SSOTSDKProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo<SDKContextValue>(
     // Reconnection restores the address before the signing client. Do not enable
     // wallet actions with an SDK that still captures an absent walletClient.
-    () => ({ readOnly: rel.readOnly, ready: Boolean(sdk && (!address || walletMatches)), sdk }),
-    [sdk, rel.readOnly, address, walletMatches]
+    () => ({
+      readOnly: rel.readOnly,
+      ready: Boolean(sdk && (!address || walletMatches)),
+      sdk,
+      wrongNetwork,
+      switchNetwork: () => switchChain({ chainId: releaseChainId })
+    }),
+    [sdk, rel.readOnly, address, walletMatches, wrongNetwork, switchChain, releaseChainId]
   );
 
   return <SDKContext.Provider value={value}>{children}</SDKContext.Provider>;

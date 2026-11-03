@@ -32,7 +32,7 @@ function toBigInt(value?: string) {
 }
 
 /** Fraction digits needed to show `value` exactly. */
-function fractionDigits(value: bigint, decimals: number) {
+export function fractionDigits(value: bigint, decimals: number) {
   const abs = value < 0n ? -value : value;
   let digits = decimals;
   while (digits > 0 && abs % 10n ** BigInt(decimals - digits + 1) === 0n) digits -= 1;
@@ -51,7 +51,8 @@ export function splitAmount(value: bigint, decimals: number, digits: number): Si
   };
 }
 
-function joined(amount: SignedAmount) {
+/** An amount as text, without its sign. */
+export function joined(amount: SignedAmount) {
   return amount.fraction ? `${amount.whole}.${amount.fraction}` : amount.whole;
 }
 

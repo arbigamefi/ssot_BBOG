@@ -25,3 +25,6 @@ export const OFFICIAL_CHANNELS = {
 
 /** Circle's faucet hands out the test USDC (0x036C…CF7e on Base Sepolia) the testnet release uses. */
 export const TESTNET_USDC_FAUCET = "https://faucet.circle.com";
+
+/** Coinbase's faucet hands out the Base Sepolia ETH that pays the randomness fee and gas. */
+export const TESTNET_ETH_FAUCET = "https://portal.cdp.coinbase.com/products/faucet";

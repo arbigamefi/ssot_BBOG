@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { kenoMultiplier } from "@ssot/ssot/domain";
 
 import { CoinTossStage } from "./coin-toss/stage";
-import { DiceStage } from "./dice/stage";
 import { KenoStage } from "./keno/stage";
 import { PlinkoStage } from "./plinko/stage";
 import { SlotsStage } from "./slots/stage";
@@ -24,13 +23,6 @@ vi.mock("@ssot/ui", () => ({
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, number | string>) =>
     ({
-      "casino.room.selection.dice.rollUnder": "Roll Under",
-      "casino.room.selection.dice.rollOver": "Roll Over",
-      "casino.room.selection.dice.targetRange": "Target Range",
-      "casino.room.selection.dice.targetAria": "Dice target",
-      "casino.room.selection.dice.target": "Target",
-      "casino.room.selection.dice.multiplier": "Mult",
-      "casino.room.selection.dice.winChance": "Win",
       "casino.room.selection.coin.heads": "HEADS",
       "casino.room.selection.coin.tails": "TAILS",
       "casino.room.selection.keno.spotsLabel": "/ 5 Spots",
@@ -92,55 +84,6 @@ vi.mock("next-intl", () => ({
 
 describe("game room stages", () => {
   afterEach(() => cleanup());
-
-  it("renders Dice stage controls and emits target changes", () => {
-    const onDirectionChange = vi.fn();
-    const onTargetChange = vi.fn();
-    render(
-      <DiceStage
-        isPending={false}
-        showResult={false}
-        resultNum={null}
-        diceDirection="under"
-        diceTarget={50}
-        onDirectionChange={onDirectionChange}
-        onTargetChange={onTargetChange}
-      />
-    );
-
-    fireEvent.click(screen.getByText("Roll Over"));
-    expect(onDirectionChange).toHaveBeenCalledWith("over");
-
-    fireEvent.change(screen.getByRole("slider"), { target: { value: "60" } });
-    expect(onTargetChange).toHaveBeenCalledWith(60);
-  });
-
-  it("runs Dice reveal before completing the stage", () => {
-    const onRevealComplete = vi.fn();
-    vi.useFakeTimers();
-    try {
-      render(
-        <DiceStage
-          isPending={false}
-          isRevealing
-          showResult
-          resultNum={42}
-          diceDirection="under"
-          diceTarget={50}
-          onDirectionChange={vi.fn()}
-          onTargetChange={vi.fn()}
-          onRevealComplete={onRevealComplete}
-        />
-      );
-
-      act(() => {
-        vi.advanceTimersByTime(1_700);
-      });
-      expect(onRevealComplete).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
 
   it("renders Coin Toss stage selected side and pending state", () => {
     const onSideChange = vi.fn();

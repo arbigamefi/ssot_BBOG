@@ -136,7 +136,8 @@ function ownKnowledge<T extends { betId?: bigint; checkedAt: number }>(known: T,
   return known.betId === betId ? known : { betId, checkedAt: 0 };
 }
 
-function toUnixMs(value: number | undefined) {
+/** A chain time in seconds or a browser time in milliseconds, as milliseconds. */
+export function toUnixMs(value: number | undefined) {
   if (!value || !Number.isFinite(value)) return undefined;
   return value > 1_000_000_000_000 ? value : value * 1_000;
 }

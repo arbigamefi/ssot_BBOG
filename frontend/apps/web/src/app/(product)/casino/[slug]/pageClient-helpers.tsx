@@ -47,27 +47,3 @@ export const GameRoomAuditLedger = dynamic(
     ssr: false
   }
 );
-
-export function getCasinoRoomPendingStates({
-  isLocalPending,
-  isTransactionActive,
-  isOutcomeTracking,
-  hasStageReveal,
-  hasCasinoOutcome,
-  isResultVisible = false
-}: {
-  isLocalPending: boolean;
-  isTransactionActive: boolean;
-  isOutcomeTracking: boolean;
-  hasStageReveal: boolean;
-  hasCasinoOutcome: boolean;
-  isResultVisible?: boolean;
-}) {
-  const isRoundInputLocked =
-    isLocalPending || isTransactionActive || isOutcomeTracking || hasStageReveal || isResultVisible;
-
-  return {
-    isBetPanelPending: isRoundInputLocked,
-    isStagePending: isOutcomeTracking && !hasStageReveal && !hasCasinoOutcome
-  };
-}

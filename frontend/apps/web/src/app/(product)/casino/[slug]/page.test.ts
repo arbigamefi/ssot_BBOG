@@ -39,15 +39,24 @@ vi.mock("../../../../i18n/request", () => ({
   }))
 }));
 
+vi.mock("../../../../features/home/fonts", () => ({
+  carbonCopyFontVariables: "carbon-copy-faces"
+}));
+
 vi.mock("../../../../i18n/metadata", () => ({
   buildPageMetadata: vi.fn(() => ({ description: "Test casino room description" }))
 }));
 
 import GameRoomPage from "./page";
 
-/** The page renders a fragment: [<script ld+json>, <GamePageClient>]. */
+/** The room as a fragment: [<script ld+json>, <GamePageClient>]. The dice room wraps it in its faces. */
+function room(page: unknown) {
+  const element = page as React.ReactElement<{ children?: unknown; className?: string }>;
+  return element.type === "div" ? (element.props.children as React.ReactElement) : element;
+}
+
 function findGameClient(page: unknown): React.ReactElement | undefined {
-  const children = (page as React.ReactElement).props.children;
+  const children = (room(page).props as { children?: unknown }).children;
   const list = Array.isArray(children) ? children : [children];
   return list.find(
     (child): child is React.ReactElement =>
@@ -71,9 +80,23 @@ describe("GameRoomPage", () => {
     }
   );
 
+  it("loads the Carbon copy faces for the dice room only", async () => {
+    const dice = (await GameRoomPage({
+      params: Promise.resolve({ slug: "dice" })
+    })) as React.ReactElement<{ className?: string }>;
+    expect(dice.type).toBe("div");
+    expect(dice.props.className).toBe("carbon-copy-faces");
+    expect(findGameClient(dice)?.props.slug).toBe("dice");
+
+    const roulette = (await GameRoomPage({
+      params: Promise.resolve({ slug: "roulette" })
+    })) as React.ReactElement;
+    expect(roulette.type).not.toBe("div");
+  });
+
   it("emits game-room JSON-LD structured data", async () => {
     const page = await GameRoomPage({ params: Promise.resolve({ slug: "dice" }) });
-    const children = (page as React.ReactElement).props.children;
+    const children = (room(page).props as { children?: unknown }).children;
     const list = Array.isArray(children) ? children : [children];
     const script = list.find(
       (child): child is React.ReactElement =>

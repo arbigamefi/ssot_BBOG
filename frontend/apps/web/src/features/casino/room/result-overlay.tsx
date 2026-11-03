@@ -21,7 +21,6 @@ import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
 import { applyHouseEdgeToMultiplier } from "./payouts";
 import type { BaccaratSide, CoinSide, SicBoKind } from "./params";
-import type { DiceDirection } from "./payouts";
 import type { CasinoRoundResult, CasinoTerminalRoundResult } from "./resolution";
 
 function shortHash(value: string | undefined) {
@@ -208,8 +207,6 @@ type GameResultContext = {
   gameSlug: string;
   houseEdgeBps: number;
   resultNum: number | null;
-  diceDirection: DiceDirection;
-  diceTarget: number;
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
@@ -274,20 +271,6 @@ function formatSlotsSymbols(symbols: readonly number[], t: Translate) {
 }
 
 function getGameResultRows(context: GameResultContext, t: Translate) {
-  if (context.casinoOutcome?.kind === "dice") {
-    return [
-      {
-        label: t("casino.room.result.facts.diceTarget"),
-        value: `${context.casinoOutcome.direction === "under" ? "≤" : ">"} ${context.casinoOutcome.target}`
-      },
-      {
-        label: t("casino.room.result.facts.diceNumber"),
-        value: context.casinoOutcome.rolls.map((roll) => roll.value).join(", "),
-        tone: context.casinoOutcome.rolls.some((roll) => roll.won) ? "win" : "loss"
-      }
-    ] satisfies GameResultRow[];
-  }
-
   if (context.casinoOutcome?.kind === "coin-toss") {
     return [
       {
@@ -471,23 +454,6 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
     ] satisfies GameResultRow[];
   }
 
-  if (context.gameSlug === "dice") {
-    const rows: GameResultRow[] = [
-      {
-        label: t("casino.room.result.facts.diceTarget"),
-        value: `${context.diceDirection === "under" ? "<" : ">"} ${context.diceTarget}`
-      }
-    ];
-    if (context.resultNum != null) {
-      rows.push({
-        label: t("casino.room.result.facts.diceNumber"),
-        value: context.resultNum.toString(),
-        tone: "accent" as const
-      });
-    }
-    return rows;
-  }
-
   if (context.gameSlug === "coin-toss") {
     const rows: GameResultRow[] = [
       {
@@ -636,8 +602,6 @@ export function GameRoomResultOverlay({
   gameSlug,
   houseEdgeBps,
   resultNum,
-  diceDirection,
-  diceTarget,
   coinSide,
   rouletteSpots,
   kenoSpots,
@@ -653,8 +617,6 @@ export function GameRoomResultOverlay({
   gameSlug: string;
   houseEdgeBps: number;
   resultNum: number | null;
-  diceDirection: DiceDirection;
-  diceTarget: number;
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
@@ -699,8 +661,6 @@ export function GameRoomResultOverlay({
             gameSlug,
             houseEdgeBps,
             resultNum,
-            diceDirection,
-            diceTarget,
             coinSide,
             rouletteSpots,
             kenoSpots,
