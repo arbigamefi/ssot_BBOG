@@ -78,8 +78,8 @@ above the action that fixes it (`02-voice-and-copy.md` §4).
 | `text-price`   | 26    | 30         | 1                   | multipliers on ticket stubs (Doto) |
 | `text-total`   | 44    | 52         | 1                   | the net result on a receipt (Doto) |
 
-- `font-text` is Schibsted Grotesk (Noto Sans SC for Chinese, Inter for Cyrillic, which
-  Schibsted lacks); weights 400, 600 and 800 only (`font-normal`, `font-semibold`,
+- `font-text` is Schibsted Grotesk (the system's Chinese face for Chinese, Inter for Cyrillic,
+  which Schibsted lacks); weights 400, 600 and 800 only (`font-normal`, `font-semibold`,
   `font-extrabold`).
 - Headings and the display size track tighter (−0.025em, −0.035em) except in Chinese, which
   keeps 0. Line heights and tracking are tokens (`--line-*`, `--track-*`) that
@@ -87,10 +87,11 @@ above the action that fixes it (`02-voice-and-copy.md` §4).
 - `font-print` is Doto at 800, for printed figures only.
 - Amounts and hashes in text use `font-semibold tabular-nums`.
 - Sizes step at one breakpoint and never scale with the viewport width.
-- The fonts are self-hosted through `next/font` in `apps/web` (`features/home/fonts.ts`), which
-  sets `--font-schibsted`, `--font-doto` and, on the Chinese site only, `--font-noto-sc` (not
-  preloaded; the browser fetches the character slices a page uses). Only the weights above are
-  loaded.
+- The fonts are files in the repo (`apps/web/src/features/home/fonts/`, SIL OFL 1.1 with
+  their licences), loaded through `next/font/local` in `features/home/fonts.ts`, which sets
+  `--font-schibsted` and `--font-doto`. Schibsted is one variable file (400–800, Latin and Latin
+  Extended, 58 kB); Doto is Latin at 800 (4 kB). A build never fetches fonts from Google, and
+  Chinese loads no web font: a CJK web font costs megabytes, and every platform ships one.
 
 ## 5. Space And Grid
 

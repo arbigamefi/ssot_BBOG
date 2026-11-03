@@ -1,32 +1,25 @@
-import { Doto, Noto_Sans_SC, Schibsted_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 
 // Carbon copy faces (docs/design/10-design-tokens.md §4). They fill the variables
 // carbon-copy.css names, so only pages that set them on a wrapper load them.
-const schibsted = Schibsted_Grotesk({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "600", "800"],
+// The files are in the repo (SIL OFL 1.1, licences beside them) so a build never
+// depends on what Google Fonts returns that day. Chinese uses the system's own
+// Chinese face; see the stacks in packages/ui globals.css.
+
+// Variable weight 400–800, Latin and Latin Extended (Portuguese, Turkish).
+const schibsted = localFont({
+  src: "./fonts/SchibstedGrotesk-latin-wght.woff2",
+  weight: "400 800",
   variable: "--font-schibsted",
   display: "swap"
 });
 
-// Doto prints figures only.
-const doto = Doto({
-  subsets: ["latin"],
+// Doto prints figures only: Latin at 800.
+const doto = localFont({
+  src: "./fonts/Doto-latin-800.woff2",
   weight: "800",
   variable: "--font-doto",
   display: "swap"
 });
 
-// Google serves Chinese in unicode-range slices, so nothing is preloaded and the
-// browser fetches only the slices a page uses.
-const notoSansSC = Noto_Sans_SC({
-  variable: "--font-noto-sc",
-  display: "swap",
-  preload: false
-});
-
-export function carbonCopyFontVariables(locale: string) {
-  const variables = [schibsted.variable, doto.variable];
-  if (locale === "zh-Hans") variables.push(notoSansSC.variable);
-  return variables.join(" ");
-}
+export const carbonCopyFontVariables = `${schibsted.variable} ${doto.variable}`;

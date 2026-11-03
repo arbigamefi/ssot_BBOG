@@ -96,16 +96,16 @@
      rebuilt in Carbon copy (apps/web features/home/fonts.ts), so these stacks
      stay inline and resolve on each element. The names after each variable
      are what Storybook and tests get; every var() needs a fallback or the
-     whole list is void. Schibsted has no Cyrillic, so Russian falls through
-     to Inter, which the root layout loads. */
+     whole list is void. Chinese uses the system's Chinese face (PingFang SC,
+     Microsoft YaHei, Noto Sans CJK SC, …). Schibsted has no Cyrillic, so
+     Russian falls through to Inter, which the root layout loads. */
   --font-text:
-    var(--font-schibsted, "Schibsted Grotesk"), var(--font-noto-sc, "Noto Sans SC"), "PingFang SC",
-    "Hiragino Sans GB", "Microsoft YaHei", var(--font-inter, "Inter"), ui-sans-serif, system-ui,
-    sans-serif;
+    var(--font-schibsted, "Schibsted Grotesk"), "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", var(--font-inter, "Inter"),
+    ui-sans-serif, system-ui, sans-serif;
   --font-print:
-    var(--font-doto, "Doto"), var(--font-schibsted, "Schibsted Grotesk"),
-    var(--font-noto-sc, "Noto Sans SC"), var(--font-inter, "Inter"), ui-sans-serif, system-ui,
-    sans-serif;
+    var(--font-doto, "Doto"), var(--font-schibsted, "Schibsted Grotesk"), "PingFang SC",
+    "Microsoft YaHei", var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
 
   --text-note: var(--type-note);
   --text-note--line-height: 1.45;
