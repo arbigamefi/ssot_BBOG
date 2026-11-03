@@ -163,9 +163,16 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    (`EXPECTED_RELEASE_DIGEST`, K0-4, health) stays. The new bundle carries
    `governance-checkpoint-refresh-latest-v16.json` and `governance-checkpoint-refreshed-latest-v16.json` (both or
    neither); the package and the image import verify the refresh (`VerifyCheckpointRefreshV16`: same record, a later
-   block, the record's signer, the trusted `RELEASE_SIGNER`) and replay in live mode from it. Tag the new commit,
-   upload the new bundle to its prerelease and dispatch the image workflow the same day. The Release Gate checks the
-   pre-launch state and is not run for a repackaged bundle. Transient
+   block, the record's signer, the trusted `RELEASE_SIGNER`) and replay in live mode from it. From then on the imports
+   trust the release signer for the governance history before the refresh block: they no longer replay it and cannot
+   check what it leaves out, such as an operation already scheduled, executed or cancelled, or a member of a set the
+   contracts do not enumerate (the live state check covers only the release's own games, so a game registered
+   besides them before the refresh goes unseen). The signer answers for that history being complete and correct. The
+   repackage script replays it before signing, but a holder of the key can sign without it, so a leaked key could
+   sign a refresh that hides part of the history; resisting that needs a separate design, such as an independent
+   history proof or a second approval, which this one does not provide. Tag the new commit, upload the new bundle to
+   its prerelease and dispatch the image workflow the same day. The Release Gate checks the pre-launch state and is
+   not run for a repackaged bundle. Transient
    provider failures (HTTP 408, 425, 429 and 5xx, dropped connections) are retried with backoff (`RPC_MAX_ATTEMPTS`,
    default 6; `RPC_BACKOFF_SECONDS`, default 1); errors name the HTTP status or JSON-RPC code, never the URL. Each run
    prints `checkpointSha256` and, with `GOVERNANCE_CHECKPOINT_OUT`, writes the replayed state. A later run starts from

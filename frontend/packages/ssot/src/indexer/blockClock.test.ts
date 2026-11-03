@@ -96,5 +96,48 @@ describe("block clock", () => {
       const clock = createBlockClock(chain(stamp, 10_400n).client);
       expect(await clock.atOrBefore(stamp(9_000n) - 1n, 9_500n, 9_000n)).toBeUndefined();
     });
+
+    it("finds the last block of a second four days back in eight reads at five blocks a second", async () => {
+      // A bet's placement second, searched from an event days later: bisecting the whole way would take 23 reads.
+      const c = chain((n) => n / 5n, 2_500_000n);
+      const found = await createBlockClock(c.client).atOrBefore(152_000n, 2_500_000n, 100n);
+      expect(found).toEqual({ number: 760_004n, timestamp: 152_000n });
+      expect(c.getBlock).toHaveBeenCalledTimes(8);
+    });
+
+    it("agrees with a linear search over uneven seconds, several blocks to a second", async () => {
+      let seed = 2026;
+      const random = (below: number) => {
+        seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0;
+        return seed % below;
+      };
+      for (let scenario = 0; scenario < 40; scenario++) {
+        // Runs of one second, skipped seconds, and an occasional long gap.
+        const stamps = [1_000n];
+        for (let n = 1; n < 400; n++)
+          stamps.push(stamps[n - 1]! + BigInt([0, 0, 0, 1, 1, 2, 3, 90][random(8)]!));
+        for (let query = 0; query < 40; query++) {
+          const estimate = 1 + random(399);
+          const floor = random(estimate + 1);
+          const timestamp = stamps[random(400)]! + BigInt(random(5)) - 2n;
+          let expected: bigint | undefined;
+          if (stamps[estimate]! <= timestamp) expected = BigInt(estimate);
+          else
+            for (let n = floor; n <= estimate; n++)
+              if (stamps[n]! <= timestamp) expected = BigInt(n);
+          const c = chain((n) => stamps[Number(n)]!, 399n);
+          const found = await createBlockClock(c.client).atOrBefore(
+            timestamp,
+            BigInt(estimate),
+            BigInt(floor)
+          );
+          expect(found?.number).toBe(expected);
+          for (const [args] of c.getBlock.mock.calls) {
+            expect(args!.blockNumber).toBeGreaterThanOrEqual(BigInt(floor));
+            expect(args!.blockNumber).toBeLessThanOrEqual(BigInt(estimate));
+          }
+        }
+      }
+    });
   });
 });

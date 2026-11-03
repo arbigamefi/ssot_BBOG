@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { BetRow } from "@ssot/ssot/indexer";
+import type { BetRow, SSOTDb } from "@ssot/ssot/indexer";
 import { useQuery } from "@tanstack/react-query";
 
 import { useRelease } from "../../ssot/release/ReleaseProvider";
@@ -58,11 +58,7 @@ export function usePlayerBets({
     ],
     queryFn: async () => {
       if (!db || !normalizedPlayer) return [];
-      const rows = await db.bets.where("chainId").equals(chainId).toArray();
-      return rows
-        .filter((row) => row.player?.toLowerCase() === normalizedPlayer)
-        .sort(compareBetRows)
-        .slice(0, limit);
+      return readLocalPlayerBets({ db, chainId, player: normalizedPlayer, limit });
     },
     refetchInterval: 2_000,
     staleTime: 1_000
@@ -85,6 +81,26 @@ export function usePlayerBets({
       void localQuery.refetch();
     }
   };
+}
+
+/** The player's rows in the browser index, newest first; the index gives every row its bet's player. */
+export async function readLocalPlayerBets({
+  db,
+  chainId,
+  player,
+  limit
+}: {
+  db: Pick<SSOTDb, "bets">;
+  chainId: number;
+  player: string;
+  limit: number;
+}) {
+  const normalizedPlayer = player.toLowerCase();
+  const rows = await db.bets.where("chainId").equals(chainId).toArray();
+  return rows
+    .filter((row) => row.player?.toLowerCase() === normalizedPlayer)
+    .sort(compareBetRows)
+    .slice(0, limit);
 }
 
 /**

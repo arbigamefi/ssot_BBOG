@@ -163,6 +163,9 @@ importers:
       eslint-config-next:
         specifier: ^15.1.0
         version: 15.5.12(eslint@9.39.2(jiti@2.7.0))(typescript@5.9.3)
+      fake-indexeddb:
+        specifier: ^6.2.5
+        version: 6.2.5
       jsdom:
         specifier: 25.0.1
         version: 25.0.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)

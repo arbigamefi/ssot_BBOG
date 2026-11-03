@@ -56,7 +56,8 @@ not the live runs below.
     blocks, paging by the endpoint.
 - Web and browser: the receipt fallback shows a settled bet's placement block and terminal transaction, within its
   8-second budget for a bet days old; a fresh browser index starts an hour before the safe head, reaches it, confirms
-  after 24 seconds and rereads 48 seconds; the operations page judges indexer lag in seconds.
+  after 24 seconds and rereads 48 seconds, and lists a bet placed before that hour whose refund, settlement or void
+  falls inside it under its own player; the operations page judges indexer lag in seconds.
 
 ## LP acceptance
 

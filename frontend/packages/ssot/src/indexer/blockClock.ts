@@ -18,8 +18,9 @@ export interface BlockClock {
   readonly blocksPerSecond: number | undefined;
   /**
    * A block no later than `timestamp`, starting from an estimate: the estimate itself when it is old enough (one
-   * read), otherwise the last such block, found by stepping back at five blocks a second, doubling, and bisecting.
-   * Undefined when even `floor` is later. The measured rate alone can count too few blocks across a rate change.
+   * read), otherwise the last such block, found by stepping back at five blocks a second, doubling, then forward from
+   * the old enough block, doubling, and bisecting. Undefined when even `floor` is later. The measured rate alone can
+   * count too few blocks across a rate change.
    */
   atOrBefore(timestamp: bigint, estimate: bigint, floor: bigint): Promise<BlockHead | undefined>;
 }
@@ -81,6 +82,20 @@ export function createBlockClock(publicClient: Pick<PublicClient, "getBlock">): 
         }
         late = probe;
         step *= 2n;
+      }
+      // At five blocks a second the step lands next to the answer: bisecting from there to an estimate days later
+      // would cost a read per halving of the whole distance, so a short range is found first.
+      for (
+        let forward = BigInt(MAX_BLOCKS_PER_SECOND);
+        forward * 8n < late.number - early.number;
+        forward *= 2n
+      ) {
+        const probe = await read(early.number + forward);
+        if (probe.timestamp > timestamp) {
+          late = probe;
+          break;
+        }
+        early = probe;
       }
       while (late.number - early.number > 1n) {
         const middle = await read((early.number + late.number) / 2n);

@@ -83,6 +83,22 @@ function createMockPublicClient(opts: {
   } as any;
 }
 
+// Bet 9 is placed and settled within one batch.
+const PLACED_9 = {
+  eventName: "BetPlaced",
+  blockNumber: 140n,
+  logIndex: 0,
+  transactionHash: "0xabc0",
+  args: { positionId: 9n, player: "0x00000000000000000000000000000000000000A1" }
+};
+const FINALIZED_9 = {
+  eventName: "BetFinalized",
+  blockNumber: 150n,
+  logIndex: 1,
+  transactionHash: "0xabc1",
+  args: { positionId: 9n }
+};
+
 let db: SSOTDb;
 let indexer: GameHubIndexer;
 
@@ -127,15 +143,7 @@ describe("gameHubIndexer.syncOnce()", () => {
       const client = createMockPublicClient({ blockNumber: 200n });
       client.getLogs.mockImplementation(async ({ events }: any) =>
         events.some((event: any) => event.name === "BetFinalized")
-          ? [
-              {
-                eventName: "BetFinalized",
-                blockNumber: 150n,
-                logIndex: 1,
-                transactionHash: "0xabc1",
-                args: { positionId: 9n, ...amounts }
-              }
-            ]
+          ? [PLACED_9, { ...FINALIZED_9, args: { ...FINALIZED_9.args, ...amounts } }]
           : []
       );
       client.readContract = vi.fn(async () => {
@@ -154,7 +162,7 @@ describe("gameHubIndexer.syncOnce()", () => {
         payout: "196000",
         refundAmount: refundAmount.toString()
       });
-      const [event] = await db.gameHubEvents.toArray();
+      const event = await db.gameHubEvents.get(`84532:${FINALIZED_9.transactionHash}:1`);
       expect(JSON.parse(event!.argsJson).refundAmount).toBe(refundAmount.toString());
     }
   );
@@ -169,15 +177,7 @@ describe("gameHubIndexer.syncOnce()", () => {
     const client = createMockPublicClient({ blockNumber: 200n });
     client.getLogs.mockImplementation(async ({ events }: any) =>
       events.some((event: any) => event.name === "BetFinalized")
-        ? [
-            {
-              eventName: "BetFinalized",
-              blockNumber: 150n,
-              logIndex: 1,
-              transactionHash: "0xabc1",
-              args: { positionId: 9n, ...amounts }
-            }
-          ]
+        ? [PLACED_9, { ...FINALIZED_9, args: { ...FINALIZED_9.args, ...amounts } }]
         : []
     );
     client.readContract = vi
@@ -494,5 +494,214 @@ describe("gameHubIndexer.syncOnce()", () => {
     await indexer.syncOnce();
     expect(indexer.getStatus().lastError).toBeUndefined();
     expect(client.getLogs.mock.calls[0][0].fromBlock).toBe(500n);
+  });
+});
+
+describe("bets placed before a fresh browser's first range (2026-11-03 review A1)", () => {
+  const A = "0x00000000000000000000000000000000000000A1";
+  const B = "0x00000000000000000000000000000000000000B2";
+  const AMOUNTS = { payoutGross: 200n, payoutNet: 196n, feeOnPayout: 4n, protocolFeeAccrual: 2n };
+
+  function log(
+    eventName: string,
+    block: bigint,
+    betId: bigint,
+    args: Record<string, unknown> = {}
+  ) {
+    return {
+      eventName,
+      blockNumber: block,
+      logIndex: 0,
+      transactionHash: `0x${block.toString(16).padStart(64, "0")}`,
+      args: { positionId: betId, ...args }
+    };
+  }
+
+  /**
+   * Five blocks a second. getLogs answers the query's range, events and bet; getBet gives the second of the bet's
+   * placement, as the contract records it.
+   */
+  function chainOf(head: bigint, logs: ReturnType<typeof log>[]) {
+    const placedAt = (betId: bigint) => {
+      const placed = logs.find((l) => l.eventName === "BetPlaced" && l.args.positionId === betId);
+      return placed ? placed.blockNumber / 5n : 0n;
+    };
+    return {
+      getBlock: vi.fn(async (args?: { blockNumber?: bigint }) => {
+        const number = args?.blockNumber ?? head;
+        return { number, timestamp: number / 5n };
+      }),
+      getLogs: vi.fn(async (q: any) => {
+        const names = (q.events ?? [q.event]).map((event: any) => event.name);
+        return logs.filter(
+          (l) =>
+            l.blockNumber >= q.fromBlock &&
+            l.blockNumber <= q.toBlock &&
+            names.includes(l.eventName) &&
+            (q.args?.positionId == null || q.args.positionId === l.args.positionId)
+        );
+      }),
+      readContract: vi.fn(async (q: any) =>
+        q.functionName === "getBet"
+          ? { placedAt: placedAt(q.args[0]) }
+          : { state: 4, ...AMOUNTS, refundAmount: 0n }
+      )
+    } as any;
+  }
+
+  const getBetCalls = (client: any, betId: bigint) =>
+    client.readContract.mock.calls.filter(
+      ([q]: any[]) => q.functionName === "getBet" && q.args[0] === betId
+    ).length;
+  const ranges = (client: any) =>
+    (client.getLogs.mock.calls as [{ fromBlock: bigint; toBlock: bigint }][]).map(
+      ([q]) => q.toBlock - q.fromBlock + 1n
+    );
+
+  it("binds a refund an hour later to the bet's player, placed 176 seconds before the first range", async () => {
+    // The target is 99,880 and the first range starts 3,600 seconds before it, at 81,880.
+    const client = chainOf(100_000n, [
+      log("BetPlaced", 81_000n, 1n, { player: A, stake: 100n }),
+      log("BetRefunded", 99_000n, 1n, { refundAmount: 100n })
+    ]);
+    indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
+    await indexer.syncOnce();
+    expect(indexer.getStatus().lastError).toBeUndefined();
+    expect(client.getLogs.mock.calls[0][0].fromBlock).toBe(81_880n);
+    expect(await db.bets.get("84532:1")).toMatchObject({
+      player: A,
+      stake: "100",
+      placedBlock: 81_000,
+      state: "refunded",
+      refundAmount: "100",
+      updatedBlock: 99_000
+    });
+    // The placement is stored as the event it is.
+    expect((await db.gameHubEvents.toArray()).map((event) => event.eventName).sort()).toEqual([
+      "BetPlaced",
+      "BetRefunded"
+    ]);
+    expect(Math.max(...ranges(client).map(Number))).toBeLessThanOrEqual(200);
+  });
+
+  it("binds a refund after a day's timeout, a refund three days late and a void after seven days", async () => {
+    // The target is 3,999,880 (799,976 s) and the first range starts at 3,981,880 (796,376 s).
+    const client = chainOf(4_000_000n, [
+      // Refunded at 799,000 s after the longest refund timeout, 86,400 s.
+      log("BetPlaced", 3_563_000n, 1n, { player: A }),
+      log("BetRefunded", 3_995_000n, 1n, { refundAmount: 100n }),
+      // A refund has no deadline: this one comes three days after the placement.
+      log("BetPlaced", 2_694_000n, 2n, { player: A }),
+      log("BetRefunded", 3_990_000n, 2n, { refundAmount: 100n }),
+      // Another player's bet, voided seven days after it was placed.
+      log("BetPlaced", 961_000n, 3n, { player: B }),
+      log("BetVoided", 3_985_000n, 3n, { stake: 100n, caller: B }),
+      // Placed two seconds before the first range; its result and settlement fall inside it.
+      log("BetPlaced", 3_981_870n, 4n, { player: A }),
+      log("BetRandomReady", 3_981_885n, 4n, { requestId: 4n }),
+      log("BetFinalized", 3_981_890n, 4n, AMOUNTS)
+    ]);
+    indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
+    await indexer.syncOnce();
+    expect(indexer.getStatus()).toMatchObject({ lastError: undefined, lastSyncedBlock: 3_999_880 });
+    const rows = await db.bets.toArray();
+    expect(rows.map((row) => [row.betId, row.player, row.state])).toEqual([
+      ["1", A, "refunded"],
+      ["2", A, "refunded"],
+      ["3", B, "voided"],
+      ["4", A, "finalized"]
+    ]);
+    // Bet 4 is looked up once, at its random; its settlement in the same batch finds the row.
+    for (const betId of [1n, 2n, 3n, 4n]) expect(getBetCalls(client, betId)).toBe(1);
+    expect(Math.max(...ranges(client).map(Number))).toBeLessThanOrEqual(200);
+    // A few block reads a bet, however old: 91 batches and four placements.
+    expect(client.getLogs).toHaveBeenCalledTimes(91 + 4);
+    expect(client.getBlock.mock.calls.length).toBeLessThanOrEqual(4 + 4 * 9);
+  });
+
+  it("keeps the cursor and stores nothing of the batch while the placement cannot be read, then retries", async () => {
+    const client = chainOf(100_000n, [
+      log("BetPlaced", 60_000n, 1n, { player: A }),
+      log("BetRefunded", 99_400n, 1n, { refundAmount: 100n })
+    ]);
+    const read = client.readContract.getMockImplementation();
+    client.readContract.mockImplementationOnce(async () => {
+      throw new Error("getBet unavailable");
+    });
+    indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
+    await indexer.syncOnce();
+    // The refund's batch is 99,280–99,479: the cursor stays at the batch before it.
+    expect(indexer.getStatus()).toMatchObject({
+      lastError: "getBet unavailable",
+      lastSyncedBlock: 99_279
+    });
+    expect((await db.cursors.toArray())[0]?.lastProcessedBlock).toBe(99_279);
+    expect(await db.bets.count()).toBe(0);
+    expect(await db.gameHubEvents.count()).toBe(0);
+    client.readContract.mockImplementation(read);
+    await indexer.syncOnce();
+    expect(indexer.getStatus().lastError).toBeUndefined();
+    expect(await db.bets.get("84532:1")).toMatchObject({ player: A, state: "refunded" });
+    expect((await db.cursors.toArray())[0]?.lastProcessedBlock).toBe(99_880);
+  });
+
+  it("never takes another bet's placement, or one without a player, for a bet", async () => {
+    for (const wrong of [
+      log("BetPlaced", 60_000n, 2n, { player: B }),
+      log("BetPlaced", 60_000n, 1n, {})
+    ]) {
+      const client = chainOf(100_000n, [
+        log("BetPlaced", 60_000n, 1n, { player: A }),
+        log("BetRefunded", 99_400n, 1n, { refundAmount: 100n })
+      ]);
+      const answer = client.getLogs.getMockImplementation();
+      // An RPC that answers the placement query with the wrong log.
+      client.getLogs.mockImplementation(async (q: any) => (q.event ? [wrong] : answer(q)));
+      const local = new SSOTDb(`test-gameHub-wrong-${Date.now()}-${wrong.args.positionId}`);
+      const ix = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db: local });
+      await ix.syncOnce();
+      expect(ix.getStatus().lastError).toBe("bet 1 placement not found");
+      expect(await local.bets.count()).toBe(0);
+      expect((await local.cursors.toArray())[0]?.lastProcessedBlock).toBe(99_279);
+      await local.delete();
+    }
+  });
+
+  it("keeps placements found before a batch failed, so the retry does not search for them again", async () => {
+    const client = chainOf(100_000n, [
+      log("BetPlaced", 60_000n, 1n, { player: A }),
+      log("BetPlaced", 61_000n, 2n, { player: B }),
+      log("BetRefunded", 99_400n, 1n, { refundAmount: 100n }),
+      log("BetRefunded", 99_401n, 2n, { refundAmount: 100n })
+    ]);
+    const read = client.readContract.getMockImplementation();
+    client.readContract.mockImplementation(async (q: any) => {
+      if (q.functionName === "getBet" && q.args[0] === 2n && getBetCalls(client, 2n) === 1)
+        throw new Error("getBet unavailable");
+      return read(q);
+    });
+    indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
+    await indexer.syncOnce();
+    expect(indexer.getStatus().lastError).toBe("getBet unavailable");
+    await indexer.syncOnce();
+    expect(indexer.getStatus().lastError).toBeUndefined();
+    expect((await db.bets.toArray()).map((row) => [row.player, row.state])).toEqual([
+      [A, "refunded"],
+      [B, "refunded"]
+    ]);
+    expect(getBetCalls(client, 1n)).toBe(1);
+    expect(getBetCalls(client, 2n)).toBe(2);
+  });
+
+  it("joins a pass already running instead of starting a second over the same blocks", async () => {
+    const client = chainOf(100_000n, []);
+    indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
+    const first = indexer.syncOnce();
+    expect(indexer.syncOnce()).toBe(first);
+    await first;
+    expect(client.getLogs).toHaveBeenCalledTimes(91);
+    // The next call is a new pass, from the cursor.
+    await indexer.syncOnce();
+    expect(client.getLogs.mock.calls.length).toBeGreaterThan(91);
   });
 });
