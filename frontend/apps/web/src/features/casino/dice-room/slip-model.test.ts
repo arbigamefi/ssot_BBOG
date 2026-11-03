@@ -10,6 +10,7 @@ import {
   diceWinRange,
   diceWins,
   formatQuote,
+  formatStake,
   quoteRaw,
   slipMaxStake,
   stakeText,
@@ -66,9 +67,18 @@ describe("quoted amounts", () => {
     expect(formatQuote(1_250_000_000n, USDC)).toBe("1,250.00");
   });
 
-  it("writes a stake the field can read back", () => {
+  it("round a minimum the player must pay up to the same grid", () => {
+    expect(quoteRaw(123_456n, USDC, "up")).toBe(123_500n);
+    expect(quoteRaw(10_000n, USDC, "up")).toBe(10_000n);
+    expect(quoteRaw(1_234_000n, USDC, "up")).toBe(1_240_000n);
+    expect(quoteRaw(999_950n, USDC, "up")).toBe(1_000_000n);
+  });
+
+  it("writes a stake exactly, so the field holds what the wallet signs", () => {
     expect(stakeText(1_250_000_000n, USDC)).toBe("1250.00");
     expect(stakeText(30_400n, USDC)).toBe("0.0304");
+    expect(stakeText(123_490n, USDC)).toBe("0.12349");
+    expect(formatStake(1_250_000_000n, USDC)).toBe("1,250.00");
   });
 });
 
@@ -150,6 +160,30 @@ describe("deriveSlipQuote", () => {
       action: { kind: "blocked", why: "noCapacity" },
       notice: { kind: "noCapacity" }
     });
+    // A limit under the minimum blocks before the slip asks for a higher stake.
+    expect(
+      deriveSlipQuote({ ...READY, perRound: 1_000n, poolMaxPerRound: unit(0.005) }).action
+    ).toEqual({ kind: "blocked", why: "noCapacity" });
+  });
+
+  it("raises a minimum off the quote's grid to a stake the pool accepts, then places it", () => {
+    const offGrid = { ...READY, minPerRound: 123_456n };
+    const raise = deriveSlipQuote({ ...offGrid, perRound: 100_000n });
+    expect(raise).toEqual({
+      action: { kind: "setStake", to: 123_500n, why: "min" },
+      notice: { kind: "min", min: 123_500n }
+    });
+    expect(stakeText(123_500n, USDC)).toBe("0.1235");
+    expect(deriveSlipQuote({ ...offGrid, perRound: 123_500n }).action.kind).toBe("place");
+  });
+
+  it("lowers to the exact limit when the quoted limit falls under the minimum", () => {
+    const tight = { ...READY, minPerRound: 123_456n, poolMaxPerRound: 123_490n };
+    expect(deriveSlipQuote({ ...tight, perRound: 123_500n })).toEqual({
+      action: { kind: "setStake", to: 123_490n, why: "overMax" },
+      notice: { kind: "overMax", max: 123_490n }
+    });
+    expect(deriveSlipQuote({ ...tight, perRound: 123_490n }).action.kind).toBe("place");
   });
 
   it("points to a faucet on the testnet and blocks on a live chain", () => {
@@ -191,14 +225,15 @@ describe("deriveSlipQuote", () => {
 
 describe("slipMaxStake", () => {
   it("takes the lower of the pool's limit and the balance shared by the rounds", () => {
-    const base = { minPerRound: unit(0.01), decimals: USDC };
+    const base = { decimals: USDC };
     expect(
       slipMaxStake({ ...base, poolMaxPerRound: unit(4.05), balance: unit(12.4), rounds: 1 })
     ).toBe(unit(4.05));
     expect(
       slipMaxStake({ ...base, poolMaxPerRound: unit(4.05), balance: unit(12.4), rounds: 5 })
     ).toBe(unit(2.48));
-    expect(slipMaxStake({ ...base, balance: 0n, rounds: 1 })).toBe(unit(0.01));
+    expect(slipMaxStake({ ...base, balance: 0n, rounds: 1 })).toBe(0n);
+    expect(slipMaxStake({ ...base, poolMaxPerRound: 123_490n, rounds: 1 })).toBe(123_400n);
     expect(slipMaxStake({ ...base, rounds: 1 })).toBeUndefined();
   });
 });

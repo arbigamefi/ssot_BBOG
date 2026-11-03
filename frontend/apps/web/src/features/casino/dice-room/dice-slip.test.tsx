@@ -143,6 +143,14 @@ describe("DiceSlip", () => {
     expect(room.setBetAmount).toHaveBeenCalledWith("1.06");
   });
 
+  it("raises a stake under a minimum off the quote's grid to one the pool accepts", () => {
+    const room = makeRoom({ betAmount: "0.1", poolSnapshot: { minBetAmount: 123_456n } as never });
+    renderSlip(room);
+    expect(slip().getByText("Bets start at 0.1235 USDC a round.")).toBeDefined();
+    fireEvent.click(slip().getByRole("button", { name: /Raise to 0\.1235/ }));
+    expect(room.setBetAmount).toHaveBeenCalledWith("0.1235");
+  });
+
   it("sets the stake from the chips, Max being the pool's limit or the balance", () => {
     const room = makeRoom();
     renderSlip(room);

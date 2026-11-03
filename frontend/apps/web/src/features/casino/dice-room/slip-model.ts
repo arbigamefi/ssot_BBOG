@@ -34,14 +34,16 @@ export function diceMultiplier(wins: number, houseEdgeBps: number): SignedAmount
 }
 
 /**
- * An amount the player can receive or is offered, cut (never rounded up) to two decimals from one
- * unit, four below it.
+ * An amount on the quote's grid: two decimals from one unit, four below it. What the player can
+ * receive or is offered is cut (`down`); what the player must pay at least, such as the minimum
+ * stake, is rounded `up`, so the stake it sets is never under the minimum.
  */
-export function quoteRaw(raw: bigint, decimals: number) {
+export function quoteRaw(raw: bigint, decimals: number, round: "down" | "up" = "down") {
   const keep = raw >= 10n ** BigInt(decimals) ? 2 : 4;
   if (decimals <= keep) return raw;
   const step = 10n ** BigInt(decimals - keep);
-  return (raw / step) * step;
+  const cut = (raw / step) * step;
+  return round === "up" && cut < raw ? cut + step : cut;
 }
 
 /** A quoted amount for reading: `1.06`, `0.0304`, `1,250.00`. */
@@ -52,16 +54,19 @@ export function formatQuote(raw: bigint, decimals: number) {
   );
 }
 
-/** A quoted amount for the stake field: no grouping, at least two decimals. */
-export function stakeText(raw: bigint, decimals: number) {
-  const cut = quoteRaw(raw, decimals);
-  const { whole, fraction } = splitAmount(
-    cut,
-    decimals,
-    Math.min(decimals, Math.max(2, fractionDigits(cut, decimals)))
+/**
+ * A stake the slip sets, exact: what the field holds is what the wallet signs. At least two
+ * decimals, as many more as the amount has.
+ */
+export function formatStake(raw: bigint, decimals: number) {
+  return joined(
+    splitAmount(raw, decimals, Math.min(decimals, Math.max(2, fractionDigits(raw, decimals))))
   );
-  const plain = whole.replace(/,/g, "");
-  return fraction ? `${plain}.${fraction}` : plain;
+}
+
+/** The same stake for the field: no grouping. */
+export function stakeText(raw: bigint, decimals: number) {
+  return formatStake(raw, decimals).replace(/,/g, "");
 }
 
 export type SlipNotice =
@@ -147,19 +152,24 @@ export function deriveSlipQuote(input: SlipQuoteInput): SlipQuote {
     };
 
   const rounds = BigInt(Math.max(1, Math.floor(input.rounds)));
-  if (input.perRound < input.minPerRound)
+  const poolMax = input.poolMaxPerRound;
+  if (poolMax != null && (poolMax === 0n || poolMax < input.minPerRound))
+    return { action: { kind: "blocked", why: "noCapacity" }, notice: { kind: "noCapacity" } };
+  if (input.perRound < input.minPerRound) {
+    const min = quoteRaw(input.minPerRound, input.decimals, "up");
     return {
-      action: { kind: "setStake", to: input.minPerRound, why: "min" },
-      notice: { kind: "min", min: input.minPerRound }
+      action: { kind: "setStake", to: min, why: "min" },
+      notice: { kind: "min", min }
     };
-  if (input.poolMaxPerRound != null && input.perRound > input.poolMaxPerRound) {
-    const max = quoteRaw(input.poolMaxPerRound, input.decimals);
-    return max >= input.minPerRound && max > 0n
-      ? {
-          action: { kind: "setStake", to: max, why: "overMax" },
-          notice: { kind: "overMax", max }
-        }
-      : { action: { kind: "blocked", why: "noCapacity" }, notice: { kind: "noCapacity" } };
+  }
+  if (poolMax != null && input.perRound > poolMax) {
+    // Cut to the quote, unless the cut falls under the minimum: then the exact limit.
+    const cut = quoteRaw(poolMax, input.decimals);
+    const max = cut >= input.minPerRound ? cut : poolMax;
+    return {
+      action: { kind: "setStake", to: max, why: "overMax" },
+      notice: { kind: "overMax", max }
+    };
   }
   if (input.balance != null && input.perRound * rounds > input.balance) {
     const left = quoteRaw(input.balance / rounds, input.decimals);
@@ -186,19 +196,18 @@ export function deriveSlipQuote(input: SlipQuoteInput): SlipQuote {
 
 /**
  * "Max": the most the house pool takes per round at these odds and the balance shared across the
- * rounds, whichever is lower, cut to the quote's decimals. Unknown until both are read.
+ * rounds, whichever is lower, cut to the quote's decimals. Unknown until either is read. Below the
+ * minimum it stays below it, so the slip says why nothing can be staked.
  */
 export function slipMaxStake({
   poolMaxPerRound,
   balance,
   rounds,
-  minPerRound,
   decimals
 }: {
   poolMaxPerRound?: bigint;
   balance?: bigint | null;
   rounds: number;
-  minPerRound: bigint;
   decimals: number;
 }) {
   const caps = [
@@ -208,7 +217,7 @@ export function slipMaxStake({
   const known = caps.filter((cap): cap is bigint => cap != null);
   if (known.length === 0) return undefined;
   const cap = known.reduce((low, cap) => (cap < low ? cap : low));
-  return quoteRaw(cap > minPerRound ? cap : minPerRound, decimals);
+  return quoteRaw(cap, decimals);
 }
 
 export type SlipReceiptLine = {

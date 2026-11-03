@@ -62,7 +62,7 @@ export default async function GameRoomPage({ params }: { params: Promise<{ slug:
   // schema.org structured data for the game room — improves crawlability and
   // links the page into the site's knowledge graph (publisher → homepage org).
   // Description is reused from page metadata so there is no duplicated copy.
-  const { messages, locale } = await getRequestI18n();
+  const { messages } = await getRequestI18n();
   const name = localizedGameName(messages, slug);
   const metadata = buildPageMetadata(
     messages,
@@ -95,5 +95,5 @@ export default async function GameRoomPage({ params }: { params: Promise<{ slug:
     </>
   );
   // The dice room is rebuilt in Carbon copy and loads its faces.
-  return slug === "dice" ? <div className={carbonCopyFontVariables(locale)}>{room}</div> : room;
+  return slug === "dice" ? <div className={carbonCopyFontVariables}>{room}</div> : room;
 }

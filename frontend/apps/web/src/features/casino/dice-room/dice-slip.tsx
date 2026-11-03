@@ -19,6 +19,8 @@ import {
   diceWinRange,
   diceWins,
   formatQuote,
+  formatStake,
+  quoteRaw,
   slipMaxStake,
   stakeText,
   type SlipAction,
@@ -162,7 +164,8 @@ function QuoteSlip({
     balance,
     decimals
   });
-  const maxStake = slipMaxStake({ poolMaxPerRound, balance, rounds, minPerRound, decimals });
+  const minStake = quoteRaw(minPerRound, decimals, "up");
+  const maxStake = slipMaxStake({ poolMaxPerRound, balance, rounds, decimals });
   const locked = signing || access === "preview";
   const amount = (raw: bigint) => formatQuote(raw, decimals);
   const setStake = (raw: bigint) => room.setBetAmount(stakeText(raw, decimals));
@@ -259,7 +262,9 @@ function QuoteSlip({
           <button
             type="button"
             disabled={locked}
-            onClick={() => setStake(clampStake(perRound / 2n, minPerRound, maxStake))}
+            onClick={() =>
+              setStake(clampStake(quoteRaw(perRound / 2n, decimals), minStake, maxStake))
+            }
             className={LINE_BUTTON}
           >
             {t("slip.half")}
@@ -267,7 +272,9 @@ function QuoteSlip({
           <button
             type="button"
             disabled={locked}
-            onClick={() => setStake(clampStake(perRound * 2n, minPerRound, maxStake))}
+            onClick={() =>
+              setStake(clampStake(quoteRaw(perRound * 2n, decimals), minStake, maxStake))
+            }
             className={LINE_BUTTON}
           >
             {t("slip.double")}
@@ -384,13 +391,24 @@ function SlipNoticeText({
           t(`pool.${notice.status}.body`, { rounds: maxRounds })
         ];
       case "min":
-        return [t("min.lead"), t("min.body", { amount: amount(notice.min), symbol })];
+        return [
+          t("min.lead"),
+          t("min.body", { amount: formatStake(notice.min, room.assetDecimals), symbol })
+        ];
       case "overMax":
         return [
           t("overMax.lead"),
           room.betCount > 1
-            ? t("overMax.bodyPerRound", { chance: wins, amount: amount(notice.max), symbol })
-            : t("overMax.body", { chance: wins, amount: amount(notice.max), symbol })
+            ? t("overMax.bodyPerRound", {
+                chance: wins,
+                amount: formatStake(notice.max, room.assetDecimals),
+                symbol
+              })
+            : t("overMax.body", {
+                chance: wins,
+                amount: formatStake(notice.max, room.assetDecimals),
+                symbol
+              })
         ];
       case "noCapacity":
         return [t("noCapacity.lead"), t("noCapacity.body")];
@@ -473,8 +491,8 @@ function MainButton({
     case "setStake":
       return button(
         action.why === "min"
-          ? t("raise", { amount: amount(action.to) })
-          : t("lower", { amount: amount(action.to) }),
+          ? t("raise", { amount: formatStake(action.to, room.assetDecimals) })
+          : t("lower", { amount: formatStake(action.to, room.assetDecimals) }),
         () => onSetStake(action.to),
         t(`setStakeSub.${action.why}`)
       );

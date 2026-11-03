@@ -20,7 +20,6 @@ vi.mock("next/navigation", () => ({
 // so the server component can be invoked outside a Next request scope.
 vi.mock("../../../../i18n/request", () => ({
   getRequestI18n: vi.fn(async () => ({
-    locale: "en",
     messages: {
       casino: {
         room: {
@@ -41,7 +40,7 @@ vi.mock("../../../../i18n/request", () => ({
 }));
 
 vi.mock("../../../../features/home/fonts", () => ({
-  carbonCopyFontVariables: (locale: string) => `carbon-copy-faces-${locale}`
+  carbonCopyFontVariables: "carbon-copy-faces"
 }));
 
 vi.mock("../../../../i18n/metadata", () => ({
@@ -86,7 +85,7 @@ describe("GameRoomPage", () => {
       params: Promise.resolve({ slug: "dice" })
     })) as React.ReactElement<{ className?: string }>;
     expect(dice.type).toBe("div");
-    expect(dice.props.className).toBe("carbon-copy-faces-en");
+    expect(dice.props.className).toBe("carbon-copy-faces");
     expect(findGameClient(dice)?.props.slug).toBe("dice");
 
     const roulette = (await GameRoomPage({

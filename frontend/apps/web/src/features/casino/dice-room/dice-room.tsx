@@ -11,7 +11,7 @@ import type { GameRoom } from "../room/use-game-room";
 import { DiceSlip } from "./dice-slip";
 import { DiceReceipts, DiceRules, SECTION_GRID } from "./dice-sections";
 import { DiceTable, type DiceRoll } from "./dice-table";
-import { diceMultiplier, formatQuote } from "./slip-model";
+import { diceMultiplier, formatQuote, quoteRaw } from "./slip-model";
 import { FOCUS_ON_CARBON } from "./styles";
 
 /**
@@ -55,7 +55,10 @@ export function DiceRoom({ room }: { room: GameRoom }) {
         ? "—"
         : (({ whole, fraction }) => `${whole}.${fraction}`)(diceMultiplier(50, houseEdgeBps)),
     minStake: room.poolSnapshot
-      ? formatQuote(room.poolSnapshot.minBetAmount, room.assetDecimals)
+      ? formatQuote(
+          quoteRaw(room.poolSnapshot.minBetAmount, room.assetDecimals, "up"),
+          room.assetDecimals
+        )
       : "—",
     maxRounds: casinoRound.maxBetCount ? String(casinoRound.maxBetCount) : "—",
     feeBudget: fee == null ? "—" : formatNativeFee(fee, "ETH", "up"),
