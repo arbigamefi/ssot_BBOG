@@ -11,12 +11,17 @@
  *      utilities like `bg-surface-0`, `shadow-e1`, `rounded-md`, etc.
  *      We use `inline` so Tailwind doesn't re-declare the variables — the
  *      single source of truth stays in arbi-{dark,light}.css.
+ *   3. `carbon-copy.css` is the brand palette pages move to as they are
+ *      rebuilt (docs/design/10-design-tokens.md). Its utilities have their
+ *      own names (`bg-paper`, `text-ink`, `text-display`, `font-print`), so a
+ *      rebuilt page never mixes in the old surface/brand tokens.
  */
 
 @import "tailwindcss";
 
 @import "../tokens/arbi-dark.css";
 @import "../tokens/arbi-light.css";
+@import "../tokens/carbon-copy.css";
 
 /* Scan the monorepo for class names used in apps/web + this package. */
 @source "../../**/*.{ts,tsx}";
@@ -74,6 +79,46 @@
   --color-card-foreground: hsl(var(--card-foreground));
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
+
+  /* ── Carbon copy ────────────────────────────────────────────────── */
+  --color-carbon: hsl(var(--carbon));
+  --color-carbon-deep: hsl(var(--carbon-deep));
+  --color-paper: hsl(var(--paper));
+  --color-ink: hsl(var(--ink));
+  --color-ink-bright: hsl(var(--ink-bright));
+  --color-faded: hsl(var(--faded));
+  --color-thermal: hsl(var(--thermal));
+  --color-on-carbon-muted: hsl(var(--on-carbon-muted));
+  --color-rule-carbon: hsl(var(--paper) / 0.22);
+
+  --font-text: var(--font-family-text);
+  --font-print: var(--font-family-print);
+
+  --text-note: var(--type-note);
+  --text-note--line-height: 1.45;
+  --text-body: var(--type-body);
+  --text-body--line-height: 1.55;
+  --text-lede: var(--type-lede);
+  --text-lede--line-height: 1.5;
+  --text-heading: var(--type-heading);
+  --text-heading--line-height: 1.05;
+  --text-heading--letter-spacing: -0.025em;
+  --text-display: var(--type-display);
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.03em;
+  --text-price: var(--type-price);
+  --text-price--line-height: 1;
+  --text-total: var(--type-total);
+  --text-total--line-height: 1;
+
+  --spacing-section: var(--space-section);
+  --spacing-head: var(--space-head);
+  --spacing-gutter: var(--space-gutter);
+  --spacing-grid: var(--grid-gap);
+  --container-page: var(--page-max);
+
+  --radius-print: var(--corner-print);
+  --radius-sheet: var(--corner-sheet);
 
   /* ── Radius ─────────────────────────────────────────────────────── */
   --radius-sm: var(--radius-sm);

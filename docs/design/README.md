@@ -5,9 +5,11 @@ The current product uses one wallet-native casino interface.
 - [Product architecture](../strategy/fullstack-product-architecture.md)
 - [Casino transaction UX](casino-placebet-ux.md)
 - [Durable index and source ownership](durable-bet-index.md)
+- [Brand: Carbon copy](01-brand.md), [voice and terms](02-voice-and-copy.md),
+  [information architecture](03-information-architecture.md), [page blueprints](04-page-blueprints.md)
 - [Design tokens](10-design-tokens.md), [components](11-component-library.md), [wallet UX](13-web3-ux.md)
 - [Data and state](14-data-and-state.md), [forms](15-forms.md), [mobile](16-mobile.md)
-- [Earn console](earn-provider-console-spec.md)
+- [Liquidity console](earn-provider-console-spec.md)
 - [NFT deposits and callback implementation plan](lp-accounting-and-callback-implementation.md)
 - [Accepted LP ordering tradeoff](../adr/0034-nft-liquidity-deposits.md#pre-inclusion-ordering-owner-decision-2026-10-04)
 
