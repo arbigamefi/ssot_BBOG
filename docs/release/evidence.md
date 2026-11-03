@@ -42,6 +42,7 @@ Store and share the archives accordingly.
 | `2026-11-01-base-sepolia-governance-72h/` | The 72-hour governance acceptance on the Base Sepolia release, 26 files in `dist/acceptance-governance-72h-2026-10-29/` (`EVIDENCE.sha256` `c91d9e97…`): schedules U, G and D, the Safe's cancellation of D, the Safe's pause, execution of U and G, a fork rehearsal, K0-4 logs, and the EIP-7702 delegations of three multisig signers with their revocation |
 | `2026-11-02-base-sepolia-lp-betting/` | The LP acceptance items that need betting open, on the Base Sepolia release, 43 files in `dist/acceptance-lp-betting-2026-11-01/` (`EVIDENCE.sha256` `3d8229b1…`): a partial fill while capital is locked, game capital and maximum bet refresh after the withdrawal, a mature zero-value NFT closed without cash, a fork rehearsal and the keeper LP ledger |
 | `2026-11-03-base-sepolia-app/` | Application acceptance of the web on the Base Sepolia release, 6 files in `dist/acceptance-app-2026-11-03/` (`EVIDENCE.sha256` `a9ec6632…`): the receipt with and without the bet index, the browser index and the operations page, and three findings |
+| `2026-11-03-base-sepolia-app-recheck/` | Recheck of the three application findings after the fix, 12 files in `dist/acceptance-app-recheck-2026-11-03/` (`EVIDENCE.sha256` `a561163b…`): the signed checkpoint refresh and the repackaged bundle `v1.6.0-base-sepolia-191df9646` (SHA-256 `f318b660…`), the image build, the production redeploy, the receipt without the bet index and the browser index on the operations page |
 
 ## Verify
 
