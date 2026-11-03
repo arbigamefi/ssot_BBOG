@@ -174,7 +174,8 @@
         "maxBet": "Max bet",
         "selectBetFirst": "Select first",
         "noCapacity": "No capacity",
-        "previewModule": "Preview"
+        "previewModule": "Preview",
+        "testnetModule": "Testnet"
       },
       "empty": {
         "moduleNotFound": "Game not found",
@@ -1150,14 +1151,16 @@
       "card": {
         "releaseAnchored": "Live",
         "playNow": "Play Now",
-        "preview": "Preview"
+        "preview": "Preview",
+        "testnet": "Testnet"
       },
       "reserve": {
         "title": "House bankroll, on-chain",
         "subtitle": "Bank {bank}",
         "status": "Live",
         "cta": "Check on-chain",
-        "preview": "Preview"
+        "preview": "Preview",
+        "testnet": "Testnet"
       },
       "bets": "Bets",
       "clearAll": "Clear all"
@@ -1165,7 +1168,12 @@
     "availability": {
       "title": "Betting isn't open yet",
       "description": "You can explore the games and their rules. Betting opens on Base after the audit report is published.",
-      "followTelegram": "Launch news on Telegram"
+      "followTelegram": "Launch news on Telegram",
+      "testnet": {
+        "title": "Testnet",
+        "description": "Bets here use test USDC on {chain}, which has no value, plus a little test ETH for gas. Betting with real USDC opens on Base after the audit report is published.",
+        "faucet": "Get test USDC"
+      }
     }
   },
   "portfolio": {
@@ -2563,6 +2571,13 @@
       "footerTitle": "Betting opens after the audit report is published.",
       "footerDescription": "Your money stays in your wallet until you place a bet. The launch date will be posted on the official channel.",
       "join": "Join on Telegram"
+    },
+    "testnet": {
+      "note": "This is the {chain} testnet. Bets use test USDC, which has no value; betting with real USDC opens on Base after the audit report is published.",
+      "faucet": "Get test USDC",
+      "play": "Play on testnet",
+      "footerTitle": "Try every game with test USDC.",
+      "footerDescription": "Test funds have no value. Tell us on Telegram what breaks or confuses you."
     }
   },
   "legal": {

@@ -174,7 +174,8 @@
         "maxBet": "最大下注",
         "selectBetFirst": "选择后计算",
         "noCapacity": "暂无额度",
-        "previewModule": "预览"
+        "previewModule": "预览",
+        "testnetModule": "测试网"
       },
       "empty": {
         "moduleNotFound": "没找到这个游戏",
@@ -1150,14 +1151,16 @@
       "card": {
         "releaseAnchored": "在线",
         "playNow": "开玩",
-        "preview": "预览"
+        "preview": "预览",
+        "testnet": "测试网"
       },
       "reserve": {
         "title": "庄家金库,链上可查",
         "subtitle": "金库 {bank}",
         "status": "在线",
         "cta": "链上查看",
-        "preview": "预览"
+        "preview": "预览",
+        "testnet": "测试网"
       },
       "bets": "下注",
       "clearAll": "清空"
@@ -1165,7 +1168,12 @@
     "availability": {
       "title": "下注尚未开放",
       "description": "你可以先看看游戏和规则。审计报告公布后，Base 上才开放下注。",
-      "followTelegram": "在 Telegram 获取上线消息"
+      "followTelegram": "在 Telegram 获取上线消息",
+      "testnet": {
+        "title": "测试网",
+        "description": "这里下注用的是 {chain} 上的测试 USDC，没有价值，另需少量测试 ETH 付 gas。审计报告公布后，Base 上才开放真实 USDC 下注。",
+        "faucet": "领取测试 USDC"
+      }
     }
   },
   "portfolio": {
@@ -2563,6 +2571,13 @@
       "footerTitle": "审计报告公布后开放下注。",
       "footerDescription": "下注之前，钱一直在你自己的钱包里。上线日期会在官方频道公布。",
       "join": "加入 Telegram 频道"
+    },
+    "testnet": {
+      "note": "这里是 {chain} 测试网。下注用的是测试 USDC，没有价值；审计报告公布后，Base 上才开放真实 USDC 下注。",
+      "faucet": "领取测试 USDC",
+      "play": "在测试网试玩",
+      "footerTitle": "用测试 USDC 把每个游戏都玩一遍。",
+      "footerDescription": "测试资金没有价值。哪里出错或看不懂，请在 Telegram 告诉我们。"
     }
   },
   "legal": {

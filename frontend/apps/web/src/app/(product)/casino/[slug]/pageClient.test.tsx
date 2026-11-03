@@ -76,6 +76,7 @@ vi.mock("next-intl", () => ({
     ({
       "casino.room.shell.liveModule": "Live SSOT Module",
       "casino.room.shell.previewModule": "Preview SSOT Module",
+      "casino.room.shell.testnetModule": "Testnet SSOT Module",
       "casino.room.shell.maxBet": "Max bet",
       "casino.room.shell.maxPayout": "Max payout",
       "casino.room.empty.moduleNotFound": "Module not found",
@@ -489,13 +490,21 @@ describe("GamePageClient", () => {
     expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("labels the room live once the website opens betting", () => {
+  it("labels the room testnet on an open test chain and live on an open main chain", () => {
     vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
+    const { unmount } = render(<GamePageClient slug="dice" />);
+    expect(screen.getByText("Testnet SSOT Module")).toBeDefined();
+    expect(screen.queryByText("Live SSOT Module")).toBeNull();
+    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
+    unmount();
+
+    state.chainId = 8453;
     render(<GamePageClient slug="dice" />);
     expect(screen.getByText("Live SSOT Module")).toBeDefined();
-    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
+    expect(screen.queryByText("Testnet SSOT Module")).toBeNull();
+    state.chainId = 84532;
     vi.unstubAllEnvs();
   });
 

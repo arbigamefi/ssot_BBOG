@@ -299,6 +299,23 @@ describe("HomePage", () => {
     vi.unstubAllEnvs();
   });
 
+  it("tells players on an open test chain that bets use test USDC and where to get it", () => {
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
+    state.release = { name: "Base Sepolia", chainId: 84532, releaseDigest: "test", contracts: {} };
+    render(<HomePage />);
+    expect(screen.getByText(/This is the Base Sepolia testnet/)).toBeDefined();
+    expect(screen.getByRole("link", { name: "Get test USDC" }).getAttribute("href")).toBe(
+      "https://faucet.circle.com"
+    );
+    expect(screen.getAllByRole("link", { name: /Play on testnet/ })[0]?.getAttribute("href")).toBe(
+      "/casino"
+    );
+    expect(screen.getByText("Try every game with test USDC.")).toBeDefined();
+    expect(screen.queryByText(/Start Playing/)).toBeNull();
+    expect(screen.queryByText("Connect a wallet. Pick a game. Spin.")).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
   it("distinguishes loading, failed refresh, and a successfully read empty response", () => {
     state.release = { name: "Base", chainId: 8453, releaseDigest: "test", contracts: {} };
     state.overviewLoading = true;

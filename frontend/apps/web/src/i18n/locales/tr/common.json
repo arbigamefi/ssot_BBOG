@@ -597,6 +597,13 @@
       "footerTitle": "Bahisler denetim raporu yayımlandıktan sonra açılacak.",
       "footerDescription": "Paranız siz bahis yapana kadar cüzdanınızda kalır. Lansman tarihi resmi kanalda duyurulacak.",
       "join": "Telegram'a katıl"
+    },
+    "testnet": {
+      "note": "Burası {chain} testnet'i. Bahisler değeri olmayan test USDC ile yapılır; gerçek USDC ile bahis, denetim raporu yayımlandıktan sonra Base'de açılacak.",
+      "faucet": "Test USDC al",
+      "play": "Testnet'te oyna",
+      "footerTitle": "Tüm oyunları test USDC ile deneyin.",
+      "footerDescription": "Test fonlarının değeri yoktur. Neyin bozulduğunu ya da kafa karıştırdığını Telegram'da bize bildirin."
     }
   },
   "legal": {
@@ -1164,13 +1171,17 @@
       },
       "card": {
         "releaseAnchored": "Canlı",
-        "playNow": "Hemen oyna"
+        "playNow": "Hemen oyna",
+        "testnet": "Testnet",
+        "preview": "Önizleme"
       },
       "reserve": {
         "title": "Kasa bankroll'u, zincir üstünde",
         "subtitle": "Banka {bank}",
         "status": "Canlı",
-        "cta": "Zincir üstünde kontrol et"
+        "cta": "Zincir üstünde kontrol et",
+        "testnet": "Testnet",
+        "preview": "Önizleme"
       },
       "bets": "Bahisler",
       "clearAll": "Tümünü temizle"
@@ -1192,7 +1203,9 @@
         "maxPayout": "Maks. ödeme",
         "maxBet": "Maks. bahis",
         "selectBetFirst": "Önce seçim",
-        "noCapacity": "Kapasite yok"
+        "noCapacity": "Kapasite yok",
+        "testnetModule": "Testnet",
+        "previewModule": "Önizleme"
       },
       "empty": {
         "moduleNotFound": "Oyun bulunamadı",
@@ -2012,6 +2025,16 @@
         "body": "Kapanmadan önce yapılan bahisler yine sonuçlandırılır ve makbuzları erişilebilir kalır.",
         "viewBets": "Bahislerinizi görün",
         "browse": "Açık oyunlara göz atın"
+      }
+    },
+    "availability": {
+      "title": "Bahisler henüz açık değil",
+      "description": "Oyunları ve kurallarını inceleyebilirsiniz. Bahisler, denetim raporu yayımlandıktan sonra Base'de açılacak.",
+      "followTelegram": "Lansman haberleri Telegram'da",
+      "testnet": {
+        "title": "Testnet",
+        "description": "Buradaki bahisler {chain} üzerindeki değeri olmayan test USDC ile yapılır; gas için biraz test ETH de gerekir. Gerçek USDC ile bahis, denetim raporu yayımlandıktan sonra Base'de açılacak.",
+        "faucet": "Test USDC al"
       }
     }
   },

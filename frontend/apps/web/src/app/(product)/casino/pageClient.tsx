@@ -11,7 +11,7 @@ import {
   TrophyIcon
 } from "@heroicons/react/24/outline";
 
-import { isCasinoRiskInEnabledForChain } from "../../../app-shell/casino-access";
+import { getCasinoAccess } from "../../../app-shell/casino-access";
 import { ProductStateCard } from "../../../components/ProductStateCard";
 import { getDefaultCasinoPoolAssetContext } from "../../../features/assets/pool-asset";
 import { getCatalogRooms } from "../../../features/casino/catalog";
@@ -120,8 +120,8 @@ export function GamesListClient() {
   const t = useTranslations();
   const locale = useLocale();
   const { release, readOnlyReason } = useRelease();
-  // Until the website opens betting, the lobby shows previews, not live games.
-  const preview = !release || !isCasinoRiskInEnabledForChain(release.chainId);
+  // The lobby shows previews until the website opens betting, and marks a test chain as such.
+  const access = release ? getCasinoAccess(release.chainId) : "preview";
   const casinoPoolAsset = React.useMemo(
     () => (release ? getDefaultCasinoPoolAssetContext(release) : null),
     [release]
@@ -340,9 +340,9 @@ export function GamesListClient() {
                   <span className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-fg-muted">
                     <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                     {t(
-                      preview
-                        ? "casino.directory.card.preview"
-                        : "casino.directory.card.releaseAnchored"
+                      access === "live"
+                        ? "casino.directory.card.releaseAnchored"
+                        : `casino.directory.card.${access}`
                     )}
                   </span>
                 </div>
@@ -452,9 +452,9 @@ export function GamesListClient() {
                   <span className="h-2 w-2 rounded-full bg-accent" />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-accent">
                     {t(
-                      preview
-                        ? "casino.directory.reserve.preview"
-                        : "casino.directory.reserve.status"
+                      access === "live"
+                        ? "casino.directory.reserve.status"
+                        : `casino.directory.reserve.${access}`
                     )}
                   </span>
                 </div>

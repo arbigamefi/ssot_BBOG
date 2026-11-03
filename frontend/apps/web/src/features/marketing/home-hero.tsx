@@ -11,7 +11,7 @@ import { SectionEyebrow } from "./section-eyebrow";
 
 export function HomeHero({
   copy,
-  preview
+  notice
 }: {
   copy: {
     channel: string;
@@ -35,7 +35,7 @@ export function HomeHero({
     };
   };
   /** Shown while the website has not opened betting: what is closed, and where launch news is posted. */
-  preview?: { note: string; follow: string; href: string };
+  notice?: { note: string; follow: string; href: string };
 }) {
   const proofPoints = [
     { icon: ShieldCheckIcon, ...copy.proofRows.vrf },
@@ -82,16 +82,16 @@ export function HomeHero({
               {copy.viewBank}
             </Link>
           </div>
-          {preview ? (
+          {notice ? (
             <p className="mt-4 max-w-xl text-sm leading-6 text-fg-muted">
-              {preview.note}{" "}
+              {notice.note}{" "}
               <a
-                href={preview.href}
+                href={notice.href}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="font-semibold text-brand underline-offset-4 hover:underline"
               >
-                {preview.follow}
+                {notice.follow}
               </a>
             </p>
           ) : null}

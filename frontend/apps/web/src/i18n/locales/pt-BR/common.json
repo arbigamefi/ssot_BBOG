@@ -597,6 +597,13 @@
       "footerTitle": "As apostas abrem depois que o relatório de auditoria for publicado.",
       "footerDescription": "Seu dinheiro fica na sua carteira até você apostar. A data de lançamento será publicada no canal oficial.",
       "join": "Entrar no Telegram"
+    },
+    "testnet": {
+      "note": "Esta é a testnet {chain}. As apostas usam USDC de teste, que não tem valor; apostas com USDC real abrem na Base depois que o relatório de auditoria for publicado.",
+      "faucet": "Obter USDC de teste",
+      "play": "Jogar na testnet",
+      "footerTitle": "Experimente todos os jogos com USDC de teste.",
+      "footerDescription": "Fundos de teste não têm valor. Conte no Telegram o que falhar ou confundir você."
     }
   },
   "legal": {
@@ -1164,13 +1171,17 @@
       },
       "card": {
         "releaseAnchored": "Ao vivo",
-        "playNow": "Jogar agora"
+        "playNow": "Jogar agora",
+        "testnet": "Testnet",
+        "preview": "Prévia"
       },
       "reserve": {
         "title": "Bankroll da casa, on-chain",
         "subtitle": "Banco {bank}",
         "status": "Ao vivo",
-        "cta": "Conferir on-chain"
+        "cta": "Conferir on-chain",
+        "testnet": "Testnet",
+        "preview": "Prévia"
       },
       "bets": "Apostas",
       "clearAll": "Limpar tudo"
@@ -1192,7 +1203,9 @@
         "maxPayout": "Pagamento máximo",
         "maxBet": "Aposta máxima",
         "selectBetFirst": "Escolha primeiro",
-        "noCapacity": "Sem capacidade"
+        "noCapacity": "Sem capacidade",
+        "testnetModule": "Testnet",
+        "previewModule": "Prévia"
       },
       "empty": {
         "moduleNotFound": "Jogo não encontrado",
@@ -2012,6 +2025,16 @@
         "body": "As apostas feitas antes do fechamento continuam sendo liquidadas, e seus recibos continuam disponíveis.",
         "viewBets": "Ver suas apostas",
         "browse": "Ver jogos abertos"
+      }
+    },
+    "availability": {
+      "title": "As apostas ainda não estão abertas",
+      "description": "Você pode explorar os jogos e as regras. As apostas abrem na Base depois que o relatório de auditoria for publicado.",
+      "followTelegram": "Novidades do lançamento no Telegram",
+      "testnet": {
+        "title": "Testnet",
+        "description": "As apostas aqui usam USDC de teste na {chain}, que não tem valor, além de um pouco de ETH de teste para o gas. Apostas com USDC real abrem na Base depois que o relatório de auditoria for publicado.",
+        "faucet": "Obter USDC de teste"
       }
     }
   },

@@ -1,7 +1,14 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 
+import type { CasinoAccess } from "../../../app-shell/casino-access";
 import { StickyActionBar } from "../../../components/overlay";
+
+const ROOM_ACCESS_LABEL = {
+  preview: "casino.room.shell.previewModule",
+  testnet: "casino.room.shell.testnetModule",
+  live: "casino.room.shell.liveModule"
+} as const satisfies Record<CasinoAccess, string>;
 
 export function GameRoomShell({
   gameName,
@@ -14,7 +21,7 @@ export function GameRoomShell({
   auditLedgerContent,
   mobileActionContent,
   isInteractive = false,
-  preview = false
+  access = "live"
 }: {
   gameName: React.ReactNode;
   /** Live, asset-aware limits for the selected pool (chain-derived). */
@@ -27,8 +34,8 @@ export function GameRoomShell({
   auditLedgerContent: React.ReactNode;
   mobileActionContent?: React.ReactNode;
   isInteractive?: boolean;
-  /** The website has not opened betting yet, so the room is a preview, not a live game. */
-  preview?: boolean;
+  /** Whether the website has opened betting here, and on a test or a live chain. */
+  access?: CasinoAccess;
 }) {
   const t = useTranslations();
 
@@ -44,7 +51,7 @@ export function GameRoomShell({
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-accent md:gap-3 md:text-xs">
             <span className="h-2.5 w-2.5 rounded-full bg-accent" />
-            {t(preview ? "casino.room.shell.previewModule" : "casino.room.shell.liveModule")}
+            {t(ROOM_ACCESS_LABEL[access])}
           </div>
           <h1 className="mt-1 truncate text-2xl font-semibold leading-tight text-fg md:text-5xl">
             {gameName}

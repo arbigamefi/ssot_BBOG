@@ -22,3 +22,6 @@ export const OFFICIAL_CHANNELS = {
   telegram: "https://t.me/arbigamefi",
   x: "https://x.com/arbi_game_fi"
 } as const;
+
+/** Circle's faucet hands out the test USDC (0x036C…CF7e on Base Sepolia) the testnet release uses. */
+export const TESTNET_USDC_FAUCET = "https://faucet.circle.com";
