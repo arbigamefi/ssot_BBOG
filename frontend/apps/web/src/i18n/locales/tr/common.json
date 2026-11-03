@@ -349,25 +349,6 @@
       }
     },
     "receipt": {
-      "label": "{id} numaralı bahsin fişi",
-      "bet": "Bahis {id}",
-      "where": "{chain}, blok {block}",
-      "stampPaid": "Cüzdana ödendi",
-      "stampSettled": "Sonuçlandı",
-      "net": "Net sonuç",
-      "lines": {
-        "stake": "Bahis",
-        "won": "Kazanç",
-        "houseEdge": "Casino avantajı, {rate}",
-        "paid": "Cüzdana ödenen",
-        "unused": "İade edilen kullanılmamış bahis"
-      },
-      "proof": {
-        "request": "VRF isteği",
-        "hash": "Rastgele hash",
-        "settled": "Sonuçlandığı işlem"
-      },
-      "open": "Bu fişi aç",
       "reprint": "Başka bir fiş bas",
       "announce": "Bahis {id}, {game}. Net sonuç {net} {symbol}.",
       "caption": "Kazanan ve kaybeden, son sonuçlanan bahisler.",
@@ -1481,50 +1462,12 @@
         }
       },
       "receipt": {
-        "eyebrow": "Herkese açık makbuz",
-        "title": "Bahis makbuzu #{betId}",
-        "description": "Bu turun paylaşılabilir, dizinlenmiş görünümü. Tekil bahis kanıtı zincir üstünde kalır; dizinlenmiş veriler, keeper ve veritabanı yetişene kadar gecikebilir.",
-        "indexed": "Dizinlendi",
-        "proof": "Kanıt ve zincir üstü detaylar",
-        "missing": {
-          "title": "Makbuz henüz hazır değil",
-          "description": "Dizinde sonuçlandırma veya iade kanıtı eksik. Eşitlemeden sonra tekrar deneyin ya da işlemi blok gezgininde doğrulayın."
-        },
         "status": {
           "placed": "Yapıldı",
           "randomReady": "Rastgelelik hazır",
           "finalized": "Finalize edildi",
           "refunded": "İade edildi",
           "voided": "Geçersiz kılındı"
-        },
-        "metrics": {
-          "stake": "Bahis",
-          "payout": "Toplam iade edilen",
-          "net": "Net",
-          "state": "Durum",
-          "returned": "İade edilen"
-        },
-        "facts": {
-          "game": "Oyun",
-          "player": "Oyuncu",
-          "affiliate": "Yönlendiren",
-          "asset": "Varlık",
-          "betId": "Bahis kimliği",
-          "requestId": "VRF isteği",
-          "randomHash": "Rastgele hash",
-          "placedBlock": "Bahis bloğu",
-          "updatedAt": "Dizinlenme zamanı",
-          "lastEvent": "Son olay",
-          "lastTx": "Son tx"
-        },
-        "actions": {
-          "play": "Bu oyunu oyna",
-          "explorer": "İşlemi görüntüle",
-          "casino": "Kumarhaneye git"
-        },
-        "voided": {
-          "headline": "{amount} iade edildi",
-          "body": "Sonuç alındı ancak bahis sonuçlandırılamadı; bu yüzden bahis tutarınız size talep edilebilir bakiye olarak iade edildi. VRF ücreti iade edilmez."
         }
       },
       "audit": {
@@ -2184,34 +2127,6 @@
         "open": "Bu bahsi aç"
       },
       "receipt": {
-        "label": "{id} numaralı bahsin fişi",
-        "bet": "Bahis {id}",
-        "rolled": "Gelen: {rolls}.",
-        "rolledRounds": "Gelen: {rolls}. {count} turun {won} tanesi kazandı.",
-        "net": "Net sonuç",
-        "lines": {
-          "stake": "Bahis",
-          "won": "Kazanç",
-          "houseEdge": "Casino avantajı, {rate}",
-          "paid": "Cüzdana ödenen",
-          "owed": "Size borçlu",
-          "unused": "İade edilen kullanılmamış bahis",
-          "returned": "Cüzdana iade edilen",
-          "claimable": "Talep edilebilir bakiye"
-        },
-        "stamp": {
-          "paid": "Cüzdana ödendi",
-          "settled": "Sonuçlandı",
-          "refunded": "İade edildi",
-          "voided": "Geçersiz"
-        },
-        "owedNote": "Ödeme sizin için tutuluyor. Talepler sayfasından alın.",
-        "proof": {
-          "request": "VRF isteği",
-          "hash": "Rastgele hash",
-          "settled": "Sonuçlandığı işlem"
-        },
-        "open": "Bu fişi aç",
         "again": "Tekrar bahis yap",
         "change": "Bahsi değiştir",
         "announce": "{rolled} Net sonuç {net} {symbol}."
@@ -2262,6 +2177,135 @@
         "contract": "Sözleşmeyi oku",
         "hours": "{count, plural, one {bir saat} other {# saat}}",
         "minutes": "{count, plural, one {# dakika} other {# dakika}}"
+      }
+    }
+  },
+  "receipt": {
+    "label": "{id} numaralı bahsin fişi",
+    "bet": "Bahis {id}",
+    "net": "Net sonuç",
+    "where": "{chain}, blok {block}",
+    "open": "Bu fişi aç",
+    "lines": {
+      "stake": "Bahis",
+      "won": "Kazanç",
+      "houseEdge": "Casino avantajı, {rate}",
+      "paid": "Cüzdana ödenen",
+      "owed": "Size borçlu",
+      "unused": "İade edilen kullanılmamış bahis",
+      "returned": "Cüzdana iade edilen",
+      "claimable": "Talep edilebilir bakiye"
+    },
+    "stamp": {
+      "paid": "Cüzdana ödendi",
+      "settled": "Sonuçlandı",
+      "refunded": "İade edildi",
+      "voided": "Geçersiz"
+    },
+    "notes": {
+      "owed": "Ödeme sizin için tutuluyor. Talepler sayfasından alın.",
+      "voided": "Sonuç geldi ancak bahis sonuçlandırılamadı; bu yüzden bahis tutarı talep edilebilir bakiyeye dönüştü. Rastgelelik ücreti iade edilmez.",
+      "refunded": "Sonuç zamanında gelmedi; bu yüzden bahis tutarı cüzdana iade edildi."
+    },
+    "proof": {
+      "request": "VRF isteği",
+      "hash": "Rastgele hash",
+      "settled": "Sonuçlandığı işlem",
+      "refunded": "İade işlemi",
+      "voided": "Geçersiz kılma işlemi",
+      "fee": "Rastgelelik ücreti",
+      "feeValue": "{amount} ETH",
+      "payment": "Ödeme"
+    },
+    "payment": {
+      "transferred": "Bu işlemde cüzdana gönderildi",
+      "payable": "Cüzdan için tutuluyor"
+    },
+    "printing": {
+      "placed": "Rastgele sayı bekleniyor",
+      "randomReady": "Sonuçlandırılıyor",
+      "indexing": "Tutarlar dizinleniyor",
+      "refund": "{time} tarihine kadar sonuç gelmezse bahis tutarı iade edilebilir."
+    },
+    "outcome": {
+      "rounds": "{count} turun {won} tanesi kazandı.",
+      "dice": {
+        "wins": "{from}–{to} kazanır.",
+        "rolled": "Gelen: {rolls}."
+      },
+      "coin": "Seçilen: {side}, gelen: {landed}.",
+      "roulette": {
+        "numbers": "Seçilen: {numbers}.",
+        "covered": "{count} sayı üzerine.",
+        "landed": "Gelen: {numbers}."
+      },
+      "keno": {
+        "picked": "Seçilen: {numbers}.",
+        "drew": "Çekilen: {numbers}: {hits} isabet.",
+        "hits": "Turlara göre isabet: {hits}."
+      },
+      "plinko": "{risk} risk, {slots} numaralı cebe düştü.",
+      "slots": "Makaralar: {reels}.",
+      "baccarat": {
+        "backed": "Seçilen: {side}.",
+        "hand": "{winner} kazandı, oyuncu {player}, banker {banker}.",
+        "winners": "Kazananlar: {winners}."
+      },
+      "sicBo": {
+        "bet": "Bahis: {bet}.",
+        "rolled": "Gelen: {dice}, toplam {totals}."
+      }
+    },
+    "page": {
+      "crumb": "Casino",
+      "title": {
+        "printed": "{id} numaralı bahsin fişi",
+        "pending": "{id} numaralı bahsin fişi yazdırılıyor",
+        "indexing": "{id} numaralı bahsin fişi yazdırılıyor",
+        "missing": "{id} numaralı bahis için fiş yok",
+        "degraded": "Fişler şu anda okunamıyor"
+      },
+      "lede": {
+        "printed": "{chain} üzerinde bir {game} bahsi. Her tutar tokenın son ondalık basamağına kadar kesin ve her bilgi zincire bağlanıyor.",
+        "placed": "{chain} üzerinde rastgele sayısını bekleyen bir {game} bahsi. Bahis sonuçlandığında fiş burada yazdırılır.",
+        "randomReady": "{chain} üzerinde bir {game} bahsi. Rastgele sayı geldi ve bahis sonuçlandırılıyor; bittiğinde fiş burada yazdırılır.",
+        "indexing": "Bahis {chain} üzerinde tamamlandı. Bahis dizini tüm tutarları aldığında fiş yazdırılır; genellikle bir dakikadan kısa sürer.",
+        "missing": "Bahis dizininde {chain} üzerinde böyle bir bahis yok. Bağlantıyı kontrol edin; son bir dakikada yapılan bir bahis henüz dizinlenmemiş olabilir.",
+        "degraded": "Bahis dizini şu anda okunamıyor. Bahsin kendisi zincirde ve hiçbir şey değişmedi. Bir dakika sonra tekrar deneyin."
+      },
+      "aGame": "casino",
+      "play": "{game} oyna",
+      "casino": "Casinoya git",
+      "retry": "Tekrar dene",
+      "activity": "Etkinliğinizde açın",
+      "copy": "Bağlantıyı kopyala",
+      "copied": "Bağlantı kopyalandı.",
+      "testnet": "{chain} test ağı fişi. Test fonlarının değeri yoktur.",
+      "loading": "Fiş yazdırılıyor…",
+      "details": {
+        "title": "Bu bilgiler nereden geliyor",
+        "lede": "Fişin her satırı zincirden ya da onu kopyalayan bahis dizininden okunur. Sözleşme adları yalnızca burada görünür.",
+        "player": "Oyuncu",
+        "referrerL1": "Doğrudan referans",
+        "referrerL2": "İkinci düzey referans",
+        "asset": "{symbol} sözleşmesi",
+        "gameHub": "GameHub sözleşmesi",
+        "block": "Bahis bloğu",
+        "event": "Son olay",
+        "indexed": "Kaynak",
+        "source": {
+          "index": "Bahis dizini, {time} UTC güncellendi",
+          "chain": "Zincir kayıtları, {time} UTC"
+        },
+        "allocation": {
+          "title": "Hacim dağılımı",
+          "lede": "Bu bahsin kullandığı bahis tutarı üzerinden, bir kazançtan alınan casino avantajından ayrı olarak kaydedilir. Likidite sağlayıcıları yarısını tutar; diğer yarısı ödülleri öder, kalan kısım protokol ücretidir. Bu bahsin HouseEdgeAllocated olayından.",
+          "edge": "Dağıtılan: {turnover} hacmin {rate} kadarı",
+          "liquidity": "Likidite sağlayıcılarında kalan",
+          "rakeback": "Rakeback",
+          "referrers": "Referanslar",
+          "protocol": "Protokol ücreti"
+        }
       }
     }
   },

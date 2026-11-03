@@ -6,11 +6,11 @@ import { useQueries } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import type { BetRow } from "@ssot/ssot/indexer";
 
-import { PrintedFigure } from "../../home/printed-figure";
-import { buildHomeReceipt } from "../../home/receipts";
+import { PrintedFigure } from "../../receipt/printed-figure";
+import { formatList } from "../../receipt/outcome";
+import { receiptFromRow } from "../../receipt/receipt";
 import { readCasinoOutcome } from "../room/outcome";
 import type { GameRoom } from "../room/use-game-room";
-import { formatRolls } from "./dice-receipt";
 import { diceWinRange } from "./slip-model";
 import { FOCUS_ON_PAPER, LINK } from "./styles";
 
@@ -57,7 +57,7 @@ export function DiceReceipts({
   const stubs = React.useMemo(() => {
     const printed = [];
     for (const row of rows) {
-      const receipt = buildHomeReceipt(row, { chainId, decimals });
+      const receipt = row.state === "finalized" ? receiptFromRow(row, { chainId, decimals }) : null;
       if (receipt) printed.push({ row, receipt });
       if (printed.length === STUB_COUNT) break;
     }
@@ -103,7 +103,7 @@ export function DiceReceipts({
               let desc = placed;
               if (outcome) {
                 const [from, to] = diceWinRange(outcome.direction, outcome.target);
-                const rolls = formatRolls(
+                const rolls = formatList(
                   locale,
                   outcome.rolls.map((roll) => roll.value)
                 );

@@ -349,25 +349,6 @@
       }
     },
     "receipt": {
-      "label": "Recibo da aposta {id}",
-      "bet": "Aposta {id}",
-      "where": "{chain}, bloco {block}",
-      "stampPaid": "Pago na carteira",
-      "stampSettled": "Liquidada",
-      "net": "Resultado líquido",
-      "lines": {
-        "stake": "Aposta",
-        "won": "Ganho",
-        "houseEdge": "Vantagem da casa, {rate}",
-        "paid": "Pago na carteira",
-        "unused": "Aposta não usada devolvida"
-      },
-      "proof": {
-        "request": "Pedido VRF",
-        "hash": "Hash aleatório",
-        "settled": "Liquidada em"
-      },
-      "open": "Abrir este recibo",
       "reprint": "Imprimir outro recibo",
       "announce": "Aposta {id}, {game}. Resultado líquido {net} {symbol}.",
       "caption": "As últimas apostas liquidadas, ganhos e perdas.",
@@ -1481,50 +1462,12 @@
         }
       },
       "receipt": {
-        "eyebrow": "Comprovante público",
-        "title": "Comprovante de aposta #{betId}",
-        "description": "Uma visão indexada e compartilhável desta rodada. A prova da aposta permanece on-chain; os números indexados podem atrasar enquanto o keeper e o banco de dados se atualizam.",
-        "indexed": "Indexado",
-        "proof": "Prova e detalhes on-chain",
-        "missing": {
-          "title": "Comprovante ainda indisponível",
-          "description": "Falta a confirmação da liquidação ou do reembolso no índice. Tente novamente após a sincronização ou confira a transação no explorador."
-        },
         "status": {
           "placed": "Apostado",
           "randomReady": "Aleatoriedade pronta",
           "finalized": "Finalizado",
           "refunded": "Reembolsado",
           "voided": "Anulado"
-        },
-        "metrics": {
-          "stake": "Aposta",
-          "payout": "Total devolvido",
-          "net": "Líquido",
-          "state": "Estado",
-          "returned": "Devolvido"
-        },
-        "facts": {
-          "game": "Jogo",
-          "player": "Jogador",
-          "affiliate": "Indicador",
-          "asset": "Ativo",
-          "betId": "ID da aposta",
-          "requestId": "Pedido VRF",
-          "randomHash": "Hash aleatório",
-          "placedBlock": "Bloco da aposta",
-          "updatedAt": "Indexado em",
-          "lastEvent": "Último evento",
-          "lastTx": "Última tx"
-        },
-        "actions": {
-          "play": "Jogar este jogo",
-          "explorer": "Ver transação",
-          "casino": "Explorar cassino"
-        },
-        "voided": {
-          "headline": "{amount} devolvidos",
-          "body": "O resultado foi recebido, mas não pôde ser liquidado, então sua aposta foi devolvida a você como saldo a resgatar. A taxa de VRF não é reembolsada."
         }
       },
       "audit": {
@@ -2184,34 +2127,6 @@
         "open": "Abrir esta aposta"
       },
       "receipt": {
-        "label": "Recibo da aposta {id}",
-        "bet": "Aposta {id}",
-        "rolled": "Saiu {rolls}.",
-        "rolledRounds": "Saiu {rolls}. {won} de {count} ganharam.",
-        "net": "Resultado líquido",
-        "lines": {
-          "stake": "Aposta",
-          "won": "Ganho",
-          "houseEdge": "Vantagem da casa, {rate}",
-          "paid": "Pago na carteira",
-          "owed": "A receber",
-          "unused": "Aposta não usada devolvida",
-          "returned": "Reembolsado na carteira",
-          "claimable": "Saldo a resgatar"
-        },
-        "stamp": {
-          "paid": "Pago na carteira",
-          "settled": "Liquidada",
-          "refunded": "Reembolsada",
-          "voided": "Anulada"
-        },
-        "owedNote": "O pagamento fica guardado para você. Resgate na página de resgates.",
-        "proof": {
-          "request": "Pedido VRF",
-          "hash": "Hash aleatório",
-          "settled": "Liquidada em"
-        },
-        "open": "Abrir este recibo",
         "again": "Apostar de novo",
         "change": "Mudar aposta",
         "announce": "{rolled} Resultado líquido {net} {symbol}."
@@ -2262,6 +2177,135 @@
         "contract": "Ler o contrato",
         "hours": "{count, plural, one {uma hora} other {# horas}}",
         "minutes": "{count, plural, one {# minuto} other {# minutos}}"
+      }
+    }
+  },
+  "receipt": {
+    "label": "Recibo da aposta {id}",
+    "bet": "Aposta {id}",
+    "net": "Resultado líquido",
+    "where": "{chain}, bloco {block}",
+    "open": "Abrir este recibo",
+    "lines": {
+      "stake": "Aposta",
+      "won": "Ganho",
+      "houseEdge": "Vantagem da casa, {rate}",
+      "paid": "Pago na carteira",
+      "owed": "A receber",
+      "unused": "Aposta não usada devolvida",
+      "returned": "Reembolsado na carteira",
+      "claimable": "Saldo a resgatar"
+    },
+    "stamp": {
+      "paid": "Pago na carteira",
+      "settled": "Liquidada",
+      "refunded": "Reembolsada",
+      "voided": "Anulada"
+    },
+    "notes": {
+      "owed": "O pagamento fica guardado para você. Resgate na página de resgates.",
+      "voided": "O resultado chegou, mas a aposta não pôde ser liquidada, então o valor apostado virou saldo a resgatar. A taxa de aleatoriedade não é reembolsada.",
+      "refunded": "Nenhum resultado chegou a tempo, então o valor apostado foi reembolsado na carteira."
+    },
+    "proof": {
+      "request": "Pedido VRF",
+      "hash": "Hash aleatório",
+      "settled": "Liquidada em",
+      "refunded": "Reembolsada em",
+      "voided": "Anulada em",
+      "fee": "Taxa de aleatoriedade",
+      "feeValue": "{amount} ETH",
+      "payment": "Pagamento"
+    },
+    "payment": {
+      "transferred": "Enviado à carteira nesta transação",
+      "payable": "Guardado para a carteira"
+    },
+    "printing": {
+      "placed": "Aguardando aleatoriedade",
+      "randomReady": "Liquidando o resultado",
+      "indexing": "Indexando os valores",
+      "refund": "Se nenhum resultado chegar até {time}, o valor apostado pode ser reembolsado."
+    },
+    "outcome": {
+      "rounds": "{won} de {count} rodadas ganharam.",
+      "dice": {
+        "wins": "{from}–{to} ganha.",
+        "rolled": "Saiu {rolls}."
+      },
+      "coin": "Escolheu {side}, caiu {landed}.",
+      "roulette": {
+        "numbers": "Em {numbers}.",
+        "covered": "Em {count} números.",
+        "landed": "Caiu em {numbers}."
+      },
+      "keno": {
+        "picked": "Escolheu {numbers}.",
+        "drew": "Sorteou {numbers}: {hits, plural, one {# acerto} other {# acertos}}.",
+        "hits": "Acertos por rodada: {hits}."
+      },
+      "plinko": "Risco {risk}, caiu na casa {slots}.",
+      "slots": "Rolos: {reels}.",
+      "baccarat": {
+        "backed": "Apostou em {side}.",
+        "hand": "{winner} venceu, jogador {player} contra banca {banker}.",
+        "winners": "Vencedores: {winners}."
+      },
+      "sicBo": {
+        "bet": "Aposta: {bet}.",
+        "rolled": "Saiu {dice}, total {totals}."
+      }
+    },
+    "page": {
+      "crumb": "Cassino",
+      "title": {
+        "printed": "Recibo da aposta {id}",
+        "pending": "A aposta {id} está sendo impressa",
+        "indexing": "A aposta {id} está sendo impressa",
+        "missing": "Nenhum recibo para a aposta {id}",
+        "degraded": "Os recibos não podem ser lidos agora"
+      },
+      "lede": {
+        "printed": "Uma aposta de {game} na {chain}. Cada valor é exato, até a última casa decimal do token, e cada fato leva à blockchain.",
+        "placed": "Uma aposta de {game} na {chain}, aguardando seu número aleatório. O recibo é impresso aqui quando a aposta for liquidada.",
+        "randomReady": "Uma aposta de {game} na {chain}. O número aleatório chegou e a aposta está sendo liquidada; o recibo é impresso aqui quando terminar.",
+        "indexing": "A aposta terminou na {chain}. O recibo é impresso quando o índice de apostas tiver todos os valores, normalmente em menos de um minuto.",
+        "missing": "O índice de apostas não tem essa aposta na {chain}. Confira o link; uma aposta feita no último minuto pode ainda não estar indexada.",
+        "degraded": "O índice de apostas não pode ser lido no momento. A aposta em si está na blockchain e nada nela mudou. Tente de novo em um minuto."
+      },
+      "aGame": "cassino",
+      "play": "Jogar {game}",
+      "casino": "Ir ao cassino",
+      "retry": "Tentar de novo",
+      "activity": "Abrir na sua atividade",
+      "copy": "Copiar link",
+      "copied": "Link copiado.",
+      "testnet": "Recibo da rede de teste {chain}. Fundos de teste não têm valor.",
+      "loading": "Imprimindo o recibo…",
+      "details": {
+        "title": "De onde vêm esses fatos",
+        "lede": "Cada linha do recibo é lida da blockchain ou do índice de apostas que a copia. Nomes de contratos aparecem só aqui.",
+        "player": "Jogador",
+        "referrerL1": "Indicador direto",
+        "referrerL2": "Indicador de segundo nível",
+        "asset": "Contrato do {symbol}",
+        "gameHub": "Contrato GameHub",
+        "block": "Feita no bloco",
+        "event": "Último evento",
+        "indexed": "Lido de",
+        "source": {
+          "index": "Índice de apostas, atualizado em {time} UTC",
+          "chain": "Logs da blockchain, {time} UTC"
+        },
+        "allocation": {
+          "title": "Alocação do volume",
+          "lede": "Registrada sobre o valor apostado que esta aposta usou, separada da vantagem da casa tirada de um ganho. Os provedores de liquidez ficam com metade; a outra metade paga recompensas, e o que sobra é a taxa do protocolo. Do evento HouseEdgeAllocated desta aposta.",
+          "edge": "Alocado, {rate} de {turnover} de volume",
+          "liquidity": "Fica com os provedores de liquidez",
+          "rakeback": "Rakeback",
+          "referrers": "Indicadores",
+          "protocol": "Taxa do protocolo"
+        }
       }
     }
   },

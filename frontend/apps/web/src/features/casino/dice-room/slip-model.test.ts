@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { CasinoTerminalRoundResult } from "../room/resolution";
 import {
-  buildSlipReceipt,
   deriveSlipQuote,
   diceLoseRange,
   diceMultiplier,
@@ -235,86 +233,5 @@ describe("slipMaxStake", () => {
     expect(slipMaxStake({ ...base, balance: 0n, rounds: 1 })).toBe(0n);
     expect(slipMaxStake({ ...base, poolMaxPerRound: 123_490n, rounds: 1 })).toBe(123_400n);
     expect(slipMaxStake({ ...base, rounds: 1 })).toBeUndefined();
-  });
-});
-
-describe("buildSlipReceipt", () => {
-  const proof = {
-    betId: 5n,
-    requestId: 1782n,
-    randomHash: "0xf106000000000000000000000000000000000000000000000000000000e846" as const,
-    player: "0x1111111111111111111111111111111111111111" as const,
-    stake: 800_000n
-  };
-
-  it("prints a win exactly, stamped paid to wallet", () => {
-    const result: CasinoTerminalRoundResult = {
-      ...proof,
-      kind: "settled",
-      settlement: {
-        txHash: "0x897a00000000000000000000000000000000000000000000000000000029cd",
-        payoutGross: 842_105n,
-        feeOnPayout: 16_842n,
-        payoutNet: 825_263n,
-        refundAmount: 0n
-      } as never
-    };
-    const receipt = buildSlipReceipt(result, null, USDC);
-    expect(receipt.stamp).toBe("paid");
-    expect(receipt.net).toEqual({ sign: "+", whole: "0", fraction: "025263" });
-    expect(receipt.lines).toEqual([
-      { key: "stake", amount: "0.800000" },
-      { key: "won", amount: "0.842105" },
-      { key: "houseEdge", amount: "0.016842" },
-      { key: "paid", amount: "0.825263" }
-    ]);
-  });
-
-  it("prints a loss as settled, and a payout held for the wallet as owed", () => {
-    const loss = buildSlipReceipt(
-      {
-        ...proof,
-        stake: 147_000n,
-        kind: "settled",
-        settlement: { payoutNet: 0n, refundAmount: 0n } as never
-      },
-      null,
-      USDC
-    );
-    expect(loss.stamp).toBe("settled");
-    expect(loss.net).toEqual({ sign: "−", whole: "0", fraction: "147" });
-
-    const owed = buildSlipReceipt(
-      {
-        ...proof,
-        kind: "settled",
-        settlement: {
-          payoutGross: 842_105n,
-          feeOnPayout: 16_842n,
-          payoutNet: 825_263n,
-          refundAmount: 0n,
-          payment: { status: "payable" }
-        } as never
-      },
-      null,
-      USDC
-    );
-    expect(owed.owed).toBe(true);
-    expect(owed.stamp).toBe("settled");
-    expect(owed.lines.map((line) => line.key)).toContain("owed");
-  });
-
-  it("prints a refund and a voided bet with what came back", () => {
-    const refund = { refundAmount: 800_000n, txHash: "0xabc" } as never;
-    const refunded = buildSlipReceipt({ ...proof, kind: "refunded", refund }, null, USDC);
-    expect(refunded.stamp).toBe("refunded");
-    expect(refunded.net).toEqual({ sign: "", whole: "0", fraction: "00" });
-    expect(refunded.lines).toEqual([
-      { key: "stake", amount: "0.80" },
-      { key: "returned", amount: "0.80" }
-    ]);
-    const voided = buildSlipReceipt({ ...proof, kind: "voided", refund }, null, USDC);
-    expect(voided.stamp).toBe("voided");
-    expect(voided.lines[1]?.key).toBe("claimable");
   });
 });

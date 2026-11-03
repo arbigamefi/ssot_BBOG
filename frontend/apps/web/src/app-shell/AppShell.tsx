@@ -53,7 +53,7 @@ function isCasinoGameRoom(pathname: string) {
 
 /** Pages rebuilt in Carbon copy run edge to edge and print their own site state (01-brand §11). */
 export function isCarbonCopyPage(pathname: string) {
-  return pathname === "/" || pathname === "/casino/dice";
+  return pathname === "/" || pathname === "/casino/dice" || pathname.startsWith("/casino/receipt/");
 }
 
 function getShellVariant(pathname: string) {

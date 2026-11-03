@@ -98,6 +98,19 @@ Rules:
 
 Purpose: the permanent, shareable receipt. It prints §1 in full and links back to the game.
 
+- **On carbon:** the bet's title, one sentence on what it is, "Play {game}" and "Copy link";
+  the receipt prints out of the slot beside them. Each game's draw (rolls, coin sides, numbers,
+  cards) and the randomness fee are read from the chain when the bet belongs to the release the
+  site runs; otherwise the fee prints `—`. The bet index records no place-bet transaction, so the
+  receipt prints the bet's block and links the settling transaction.
+- **On paper:** where the facts come from (player, referrers, asset and GameHub contracts, block,
+  last event, index or chain logs) and the `HouseEdgeAllocated` turnover allocation.
+- **States:** loading prints an empty sheet with the feed bar; a placed or randomness-ready bet
+  is paper still printing (stake, request, refund time, no stamp) and the page asks again every
+  10 seconds; a finished bet whose amounts are not all indexed prints the same way; a missing bet
+  and an unreadable index each get their own title and action. A void, or a payout held at
+  settlement, carries the claim on the receipt.
+
 ## 6. `/portfolio`
 
 Purpose: the player's own overview, reached from the wallet menu.

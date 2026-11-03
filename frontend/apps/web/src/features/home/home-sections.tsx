@@ -6,8 +6,8 @@ import { useTranslations } from "next-intl";
 
 import type { CasinoAccess } from "../../app-shell/casino-access";
 import { OFFICIAL_CHANNELS, TESTNET_USDC_FAUCET } from "../../config/site";
-import { PrintedFigure } from "./printed-figure";
-import type { SignedAmount } from "./receipts";
+import { PrintedFigure } from "../receipt/printed-figure";
+import type { SignedAmount } from "../receipt/receipt";
 
 /** Every section sits on one 12-column grid inside the page width. */
 const SECTION_GRID =
