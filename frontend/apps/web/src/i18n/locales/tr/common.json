@@ -123,7 +123,8 @@
     "support": "Destek",
     "faq": "Yardım ve SSS",
     "status": "Sistem durumu",
-    "community": "Topluluk"
+    "telegram": "Telegram",
+    "x": "X"
   },
   "notFound": {
     "title": "Sayfa bulunamadı",
@@ -147,7 +148,7 @@
     },
     "cookies": {
       "title": "Çerez tercihleri",
-      "description": "Trafiği anlamak için gizliliğe duyarlı analizler kullanıyoruz. Siz seçene kadar hiçbir şey yüklenmez.",
+      "description": "Kabul ederseniz sayfa görüntülemelerini gizliliğe duyarlı analizlerle sayarız. Bazı hizmetler her durumda yüklenir: siteyi barındıran Cloudflare ziyaretleri çerez kullanmadan sayar, cüzdan bağlayıcısı da WalletConnect ile iletişim kurar.",
       "learnMore": "Daha fazla bilgi",
       "accept": "Kabul et",
       "reject": "Reddet"
@@ -223,10 +224,11 @@
     "contact": {
       "title": "Hâlâ yardım mı lazım?",
       "description": "Ekibe ulaşın veya sistemin canlı durumunu kontrol edin.",
-      "discord": "Discord",
       "email": "E-posta desteği",
       "status": "Sistem durumu",
-      "docs": "Belgeler"
+      "docs": "Belgeler",
+      "telegram": "Telegram",
+      "x": "X"
     },
     "items": [
       {
@@ -251,7 +253,7 @@
       },
       {
         "q": "Rastgele sayı hiç gelmezse ne olur?",
-        "a": "VRF zaman aşımını geçerse, bahsinizi kendiniz iade edebilirsiniz — iade düğmesi tur durumu panelinde görünür. Hiçbir fon asla sıkışıp kalmaz."
+        "a": "İade süresi dolduktan sonra bahsinizi kendiniz geri alabilirsiniz; iade düğmesi tur durumu panelinde görünür. Rastgelelik ücreti iade edilmez. USDC ihraççısının dondurması gibi nadir durumlarda ödeme gecikebilir; Koşullar'a bakın."
       },
       {
         "q": "Bir bahsin adil olduğunu nasıl doğrularım?",
@@ -259,7 +261,7 @@
       },
       {
         "q": "Hangi ücretleri öderim?",
-        "a": "İki şey: oyunun casino avantajı (oranlara dahildir) ve rastgelelik isteğini finanse etmek için yerel gas cinsinden küçük bir Chainlink VRF ücreti. İkisi de onaylamadan önce gösterilir."
+        "a": "İki şey: kazançtan düşülen ve gösterilen ödemelere zaten yansıtılmış olan oyunun kasa avantajı ve rastgele sayı için ETH cinsinden bir Chainlink VRF ücreti. Oda, cüzdanınızın ekleyeceği en yüksek tutarı gösterir; kullanılmayan kısım aynı işlemde geri gelir. Ağ gas ücreti ayrıca ödenir."
       },
       {
         "q": "Hangi cüzdanlar destekleniyor?",
@@ -267,7 +269,7 @@
       },
       {
         "q": "Bu saklamalı mı? Fonlarımı siz mi tutuyorsunuz?",
-        "a": "Hayır. ArbiGameFi saklamasızdır. Fonlarınız siz bahis yapana kadar cüzdanınızda kalır ve kazançlar doğrudan cüzdanınıza geri döner. Bakiyeleri asla tutmayız."
+        "a": "ArbiGameFi fonlarınızı asla bizim kontrol ettiğimiz bir hesapta tutmaz. Bahis açıkken tutarı, sonuçlanana kadar herkese açık Bank sözleşmesinde durur ve kazançlar doğrudan cüzdanınıza gelir."
       },
       {
         "q": "Oyunumun kontrolünü nasıl elimde tutarım?",
@@ -374,7 +376,8 @@
           "title": "House bankroll görünür",
           "detail": "Ödeme kapasitesi ve protokol ücretleri canlı sözleşmelerden okunur."
         }
-      }
+      },
+      "exploreGames": "Oyunları keşfet"
     },
     "stats": {
       "vault": {
@@ -515,7 +518,7 @@
     "verify": {
       "eyebrow": "Açık kaynak",
       "title": "Bize güvenmeyin. Doğrulayın.",
-      "description": "Her oyunun kuralları saf bir zincir üstü fonksiyondur — deterministik, gizli kasa düğmesi yok. Tam bytecode'u okuyun ve kendiniz çalıştırın.",
+      "description": "Her oyunun kuralları herkese açık bir zincir üstü fonksiyondur. Gizli düğme yok: her parametre değişikliği yürürlüğe girmeden önce en az 72 saat herkesin görebileceği bir kuyrukta bekler. Tam bytecode'u okuyun ve kendiniz çalıştırın.",
       "sourceNote": "Temsili bir alıntı. Doğruluğun kaynağı dağıtılmış sözleşmedir — tam kaynağı zincir üstünde doğrulayın.",
       "verifyCta": "Explorer'da doğrula"
     },
@@ -587,6 +590,13 @@
         "unavailable": "Seçili ağda kullanılabilir bir dağıtım yok.",
         "retry": "Yeniden dene"
       }
+    },
+    "preview": {
+      "note": "Bahisler henüz açık değil: denetim raporu yayımlandıktan sonra Base üzerinde açılacak.",
+      "follow": "Lansman haberleri Telegram'da",
+      "footerTitle": "Bahisler denetim raporu yayımlandıktan sonra açılacak.",
+      "footerDescription": "Paranız siz bahis yapana kadar cüzdanınızda kalır. Lansman tarihi resmi kanalda duyurulacak.",
+      "join": "Telegram'a katıl"
     }
   },
   "legal": {

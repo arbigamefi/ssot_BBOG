@@ -19,10 +19,10 @@ import {
 import { PendingSettlementNotice } from "./pending-settlement-notice";
 import { PoolStatusNotice, BetSubmissionFeedback } from "./submission-feedback";
 import type { PoolAvailability } from "./hooks";
-import { formatNativeFee } from "./casino-round";
+import { casinoVrfFeeBudget, formatNativeFee } from "./casino-round";
 import type { GameMeta } from "./model";
 import type { PlaceBetButtonPhase } from "./place-bet-button";
-import { CasinoTestnetLink, PlaceBetButton } from "./place-bet-button";
+import { PlaceBetButton } from "./place-bet-button";
 
 const BET_AMOUNT_PATTERN = "[0-9]*[.]?[0-9]*";
 
@@ -209,7 +209,7 @@ export function MobileCasinoActionBar({
         {t("casino.room.feedback.cost", {
           total: multiplyBetAmountInput(betAmount, betCount, assetDecimals),
           symbol: assetSymbol,
-          fee: formatNativeFee(vrfQuote == null ? undefined : vrfQuote + vrfQuote / 2n)
+          fee: formatNativeFee(casinoVrfFeeBudget(vrfQuote), "ETH", "up")
         })}
       </p>
       <PlaceBetButton
@@ -229,9 +229,6 @@ export function MobileCasinoActionBar({
         onClick={primaryAction}
         density="compact"
       />
-      {riskInDisabled && !isPending && !manualSettleAvailable && !manualRefundAvailable ? (
-        <CasinoTestnetLink />
-      ) : null}
     </div>
   );
 }

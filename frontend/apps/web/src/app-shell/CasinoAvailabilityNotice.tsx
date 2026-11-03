@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { OFFICIAL_CHANNELS } from "../config/site";
 import { isCasinoRiskInEnabledForChain } from "./casino-access";
 
 export function CasinoAvailabilityNotice({ chainId }: { chainId?: number }) {
@@ -19,12 +19,14 @@ export function CasinoAvailabilityNotice({ chainId }: { chainId?: number }) {
         <p className="text-sm font-semibold text-fg">{t("title")}</p>
         <p className="mt-1 max-w-2xl text-xs leading-5 text-fg-muted">{t("description")}</p>
       </div>
-      <Link
-        href={`${pathname}?chainId=84532`}
+      <a
+        href={OFFICIAL_CHANNELS.telegram}
+        target="_blank"
+        rel="noreferrer noopener"
         className="inline-flex min-h-11 items-center rounded-lg border border-brand/30 px-4 text-sm font-semibold text-brand hover:bg-brand-soft"
       >
-        {t("tryTestnet")}
-      </Link>
+        {t("followTelegram")}
+      </a>
     </aside>
   );
 }

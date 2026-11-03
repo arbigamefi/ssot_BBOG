@@ -10,7 +10,8 @@ import { MobileWalletDeepLinkBanner } from "../../app-shell/MobileWalletDeepLink
 import { SectionEyebrow } from "./section-eyebrow";
 
 export function HomeHero({
-  copy
+  copy,
+  preview
 }: {
   copy: {
     channel: string;
@@ -33,6 +34,8 @@ export function HomeHero({
       bytecode: { title: string; detail: string };
     };
   };
+  /** Shown while the website has not opened betting: what is closed, and where launch news is posted. */
+  preview?: { note: string; follow: string; href: string };
 }) {
   const proofPoints = [
     { icon: ShieldCheckIcon, ...copy.proofRows.vrf },
@@ -79,6 +82,19 @@ export function HomeHero({
               {copy.viewBank}
             </Link>
           </div>
+          {preview ? (
+            <p className="mt-4 max-w-xl text-sm leading-6 text-fg-muted">
+              {preview.note}{" "}
+              <a
+                href={preview.href}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="font-semibold text-brand underline-offset-4 hover:underline"
+              >
+                {preview.follow}
+              </a>
+            </p>
+          ) : null}
 
           <div className="mt-10 hidden max-w-xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid">
             {proofPoints.map((point) => (

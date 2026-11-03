@@ -27,6 +27,8 @@ import type {
   LandingRoom,
   LandingStat
 } from "../../features/marketing/home-types";
+import { isCasinoRiskInEnabledForChain } from "../../app-shell/casino-access";
+import { OFFICIAL_CHANNELS } from "../../config/site";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 
 import { fetchLandingOverview } from "../../features/marketing/landing-overview";
@@ -219,6 +221,8 @@ export function HomePageClient() {
   // Verify-the-bytecode proof links to the actual deployed dice module so the
   // displayed source excerpt is never treated as the source of truth.
   const explorerBaseUrl = getExplorerBaseUrl(chainId);
+  // Until the website opens betting, the home page says so and points to the launch channel.
+  const preview = !isCasinoRiskInEnabledForChain(chainId);
   const verifyContractAddress =
     release?.gamesMeta?.find((meta) => meta.slug === "dice")?.module ?? release?.contracts.gameHub;
   const verifyHref =
@@ -229,11 +233,20 @@ export function HomePageClient() {
   return (
     <div className="min-h-screen bg-surface-0 text-fg">
       <HomeHero
+        preview={
+          preview
+            ? {
+                note: t("preview.note"),
+                follow: t("preview.follow"),
+                href: OFFICIAL_CHANNELS.telegram
+              }
+            : undefined
+        }
         copy={{
           channel: t("hero.channel"),
           title: t("hero.title"),
           description: t("hero.description"),
-          enterCasino: t("hero.enterCasino"),
+          enterCasino: t(preview ? "hero.exploreGames" : "hero.enterCasino"),
           viewBank: t("hero.viewBank"),
           scrollHint: t("landing.scrollHint"),
           visual: {
@@ -380,11 +393,12 @@ export function HomePageClient() {
       </section>
 
       <HomeFooterCta
+        primaryHref={preview ? OFFICIAL_CHANNELS.telegram : "/casino"}
         copy={{
           eyebrow: t("footerCta.eyebrow"),
-          title: t("footerCta.title"),
-          description: t("footerCta.description"),
-          primary: t("footerCta.primary"),
+          title: t(preview ? "preview.footerTitle" : "footerCta.title"),
+          description: t(preview ? "preview.footerDescription" : "footerCta.description"),
+          primary: t(preview ? "preview.join" : "footerCta.primary"),
           secondary: t("landing.receiptCta")
         }}
       />

@@ -162,7 +162,8 @@
     "support": "支持",
     "faq": "帮助与常见问题",
     "status": "系统状态",
-    "community": "社区"
+    "telegram": "Telegram",
+    "x": "X"
   },
   "casino": {
     "room": {
@@ -172,7 +173,8 @@
         "maxPayout": "最高赔付",
         "maxBet": "最大下注",
         "selectBetFirst": "选择后计算",
-        "noCapacity": "暂无额度"
+        "noCapacity": "暂无额度",
+        "previewModule": "预览"
       },
       "empty": {
         "moduleNotFound": "没找到这个游戏",
@@ -384,7 +386,7 @@
           }
         },
         "metrics": {
-          "vrfEstimate": "VRF 预估费用",
+          "vrfEstimate": "随机数费用（最多）",
           "betId": "投注 ID",
           "vrfRequest": "VRF 请求"
         },
@@ -752,14 +754,14 @@
           "lastTx": "最近交易"
         },
         "houseEdge": {
-          "title": "庄家优势去向",
-          "edge": "庄家优势",
-          "edgeValue": "{amount} · {turnover} 的 {rate}",
+          "title": "按流水的分配",
+          "edge": "分配额",
+          "edgeValue": "{amount} · 流水 {turnover} 的 {rate}",
           "lps": "留给 LP",
           "playerRakeback": "玩家返水",
           "referrers": "推荐人",
           "protocol": "协议费",
-          "note": "庄家优势的一半留给 LP；另一半支付推荐奖励，剩余部分为协议费。金额来自本注单的 HouseEdgeAllocated 事件。"
+          "note": "按这注实际用掉的下注额记账，和从赢得金额里扣的庄家优势是两回事。LP 留一半；另一半支付推荐奖励，剩下的是协议费。金额来自本注单的 HouseEdgeAllocated 事件。"
         },
         "actions": {
           "play": "进入该游戏",
@@ -769,6 +771,13 @@
         "voided": {
           "headline": "已退回 {amount}",
           "body": "已收到开奖结果，但无法完成结算，因此你的本金已作为可领取余额退回给你。VRF 费用不退还。"
+        },
+        "breakdown": {
+          "won": "赢得",
+          "houseEdge": "庄家优势",
+          "houseEdgeValue": "{amount} · 赢得金额的 {rate}",
+          "refund": "退回未用的下注额",
+          "paid": "打到钱包"
         }
       },
       "gameInfo": {
@@ -1009,7 +1018,7 @@
         "reviewAgain": "检查设置后继续",
         "approving": "正在授权代币 · 等待确认",
         "placing": "正在提交投注 · 等待确认",
-        "cost": "总投注 {total} {symbol} · 随机数费预算约 {fee}，Gas 另计。",
+        "cost": "合计 {total} {symbol} · 随机数费用最多 {fee}，没用完的部分在同一笔交易里退回；网络 Gas 另计。",
         "contextChanged": "钱包、网络或投注设置已变化，已停止后续提交。请核对当前设置后继续。",
         "capacity": "该池暂时满额，请等待已有投注结算后重试。",
         "minimumStake": "每轮下注额低于该池最低要求，请刷新池状态并提高每轮金额。",
@@ -1140,21 +1149,23 @@
       },
       "card": {
         "releaseAnchored": "在线",
-        "playNow": "开玩"
+        "playNow": "开玩",
+        "preview": "预览"
       },
       "reserve": {
         "title": "庄家金库,链上可查",
         "subtitle": "金库 {bank}",
         "status": "在线",
-        "cta": "链上查看"
+        "cta": "链上查看",
+        "preview": "预览"
       },
       "bets": "下注",
       "clearAll": "清空"
     },
     "availability": {
-      "title": "当前网络投注暂未开放",
-      "description": "你可以浏览游戏与规则。连接钱包不会开启当前网络的投注。",
-      "tryTestnet": "浏览 Base Sepolia"
+      "title": "下注尚未开放",
+      "description": "你可以先看看游戏和规则。审计报告公布后，Base 上才开放下注。",
+      "followTelegram": "在 Telegram 获取上线消息"
     }
   },
   "portfolio": {
@@ -2300,7 +2311,8 @@
           "title": "庄家金库看得见",
           "detail": "最大赔付能力和协议费都从实时合约读取。"
         }
-      }
+      },
+      "exploreGames": "浏览游戏"
     },
     "stats": {
       "vault": {
@@ -2441,7 +2453,7 @@
     "verify": {
       "eyebrow": "开源可验证",
       "title": "别信我们，自己验。",
-      "description": "每个游戏的规则都是链上纯函数——结果确定、没有任何暗箱的庄家旋钮。你可以读到精确的字节码，自己跑一遍。",
+      "description": "每个游戏的规则都是公开的链上函数。没有暗中可调的参数：任何参数变更都要公开排队至少 72 小时才能生效。你可以读到精确的字节码，自己跑一遍。",
       "sourceNote": "此处为代表性节选；以链上部署的合约为准——可在区块浏览器核对完整源码。",
       "verifyCta": "在区块浏览器验证"
     },
@@ -2544,6 +2556,13 @@
         "unavailable": "当前网络暂无可用部署。",
         "retry": "重新读取余额"
       }
+    },
+    "preview": {
+      "note": "下注尚未开放：审计报告公布后，Base 上才开放下注。",
+      "follow": "在 Telegram 获取上线消息",
+      "footerTitle": "审计报告公布后开放下注。",
+      "footerDescription": "下注之前，钱一直在你自己的钱包里。上线日期会在官方频道公布。",
+      "join": "加入 Telegram 频道"
     }
   },
   "legal": {
@@ -2833,7 +2852,7 @@
     },
     "cookies": {
       "title": "Cookie 偏好",
-      "description": "我们使用注重隐私的统计来了解流量。在你做出选择前不会加载任何跟踪。",
+      "description": "你同意后，我们用注重隐私的统计工具记录页面访问。有些服务无论你怎么选都会加载：托管本站的 Cloudflare 会在不使用 Cookie 的情况下统计访问量，钱包连接组件会联系 WalletConnect。",
       "learnMore": "了解更多",
       "accept": "接受",
       "reject": "拒绝"
@@ -2889,10 +2908,11 @@
     "contact": {
       "title": "还需要帮助?",
       "description": "联系团队,或查看系统实时状态。",
-      "discord": "Discord",
       "email": "邮件支持",
       "status": "系统状态",
-      "docs": "文档"
+      "docs": "文档",
+      "telegram": "Telegram",
+      "x": "X"
     },
     "items": [
       {
@@ -2917,7 +2937,7 @@
       },
       {
         "q": "如果随机数一直没来怎么办?",
-        "a": "如果 VRF 延迟超过超时时间,你可以自己退回本金 —— 退款按钮会出现在回合状态面板里。资金永远不会被卡死。"
+        "a": "过了退款期限，你可以自己取回下注额，退款按钮会出现在回合状态面板里。随机数费用不退。少数情况下，比如 USDC 发行方冻结资金，付款可能延迟，详见服务条款。"
       },
       {
         "q": "怎么验证一局是公平的?",
@@ -2925,7 +2945,7 @@
       },
       {
         "q": "我要付哪些费用?",
-        "a": "两项:游戏的庄家优势(已含在赔率里),以及一小笔 Chainlink VRF 费用(原生 gas,用于支付随机数请求)。两者在确认前都会显示。"
+        "a": "两项：游戏的庄家优势，从赢得金额里扣，显示的赔付已经扣过；以及 Chainlink VRF 的随机数费用，用 ETH 支付。房间里显示的是钱包最多会附带的金额，没用完的部分在同一笔交易里退回。网络 Gas 另计。"
       },
       {
         "q": "支持哪些钱包?",
@@ -2933,7 +2953,7 @@
       },
       {
         "q": "这是托管的吗?你们会保管我的资金吗?",
-        "a": "不会。ArbiGameFi 是非托管的。下注前你的资金一直在你自己的钱包里,中奖直接结算回你的钱包。我们从不持有余额。"
+        "a": "ArbiGameFi 从不把你的资金放在由我们控制的账户里。下注未结算时，下注额存放在公开的 Bank 合约里，直到结算；中奖直接结算到你的钱包。"
       },
       {
         "q": "怎么掌控自己的游戏节奏?",

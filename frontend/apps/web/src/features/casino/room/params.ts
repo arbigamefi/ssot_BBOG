@@ -19,6 +19,20 @@ import { RED_NUMBER_SET, RED_NUMBERS, kenoWinChance } from "./model";
 
 export type CoinSide = "HEADS" | "TAILS";
 export type DiceDirection = "under" | "over";
+
+/**
+ * The room offers a dice win chance from 2% to 97%: at 98% a win would only
+ * pay the stake back. Under wins on 1..target, over on target+1..100.
+ * DiceModule itself accepts targets 1..99, so this is a website limit.
+ */
+export function diceTargetBounds(direction: DiceDirection): readonly [number, number] {
+  return direction === "under" ? [2, 97] : [3, 98];
+}
+
+export function clampDiceTarget(direction: DiceDirection, target: number) {
+  const [min, max] = diceTargetBounds(direction);
+  return Math.min(max, Math.max(min, target));
+}
 export type { BaccaratSide, PlinkoRisk, SicBoKind };
 export type GameParamsHex = `0x${string}`;
 

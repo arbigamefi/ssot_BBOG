@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
+import { OFFICIAL_CHANNELS } from "../../config/site";
+
 /**
  * Player help center. Questions live in i18n under `support.faq.items` as an
  * array of `{ q, a }`. Rendered as an accessible accordion (button + region).
@@ -66,7 +68,8 @@ export function FaqAccordion() {
 
 function ContactCard({ t }: { t: ReturnType<typeof useTranslations> }) {
   const channels: Array<{ label: string; href: string; external?: boolean }> = [
-    { label: t("contact.discord"), href: "https://discord.gg/arbigamefi", external: true },
+    { label: t("contact.telegram"), href: OFFICIAL_CHANNELS.telegram, external: true },
+    { label: t("contact.x"), href: OFFICIAL_CHANNELS.x, external: true },
     { label: t("contact.email"), href: "mailto:support@arbigamefi.com" },
     { label: t("contact.status"), href: "/status" },
     {

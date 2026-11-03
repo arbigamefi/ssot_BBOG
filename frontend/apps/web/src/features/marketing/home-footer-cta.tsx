@@ -4,7 +4,8 @@ import { ArrowRightIcon } from "@heroicons/react/24/outline";
 import { SectionEyebrow } from "./section-eyebrow";
 
 export function HomeFooterCta({
-  copy
+  copy,
+  primaryHref = "/casino"
 }: {
   copy: {
     eyebrow: string;
@@ -13,7 +14,12 @@ export function HomeFooterCta({
     primary: string;
     secondary: string;
   };
+  /** Where the primary action goes; an external link (the launch channel) opens in a new tab. */
+  primaryHref?: string;
 }) {
+  const external = primaryHref?.startsWith("https://") ?? false;
+  const primaryClass =
+    "inline-flex items-center justify-center gap-3 rounded-md bg-brand px-8 py-4 text-sm font-bold uppercase tracking-[0.14em] text-fg-inverse shadow-e2 transition-[transform,box-shadow,background-color] hover:bg-brand-hover";
   return (
     <section className="relative overflow-hidden bg-surface-0 py-24">
       {/* atmosphere */}
@@ -38,12 +44,20 @@ export function HomeFooterCta({
         </h2>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-7 text-fg-muted">{copy.description}</p>
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link
-            href="/casino"
-            className="inline-flex items-center justify-center gap-3 rounded-md bg-brand px-8 py-4 text-sm font-bold uppercase tracking-[0.14em] text-fg-inverse shadow-e2 transition-[transform,box-shadow,background-color] hover:bg-brand-hover"
-          >
-            {copy.primary} <ArrowRightIcon className="h-5 w-5" />
-          </Link>
+          {external ? (
+            <a
+              href={primaryHref}
+              target="_blank"
+              rel="noreferrer noopener"
+              className={primaryClass}
+            >
+              {copy.primary} <ArrowRightIcon className="h-5 w-5" />
+            </a>
+          ) : (
+            <Link href={primaryHref} className={primaryClass}>
+              {copy.primary} <ArrowRightIcon className="h-5 w-5" />
+            </Link>
+          )}
           <Link
             href="/portfolio/activity"
             className="inline-flex items-center justify-center rounded-md border border-border-soft bg-surface-2 px-8 py-4 text-sm font-bold uppercase tracking-[0.14em] text-fg transition-[transform,box-shadow,border-color,background-color] hover:border-brand/40 hover:bg-surface-3 hover:shadow-e2"

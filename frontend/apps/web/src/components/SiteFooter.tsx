@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { ArbiGameFiBrand } from "./ArbiGameFiBrand";
 import { LocaleSheetSwitcher, LocaleSwitcher } from "./LocaleSwitcher";
 import { useCompliance } from "../app-shell/compliance";
+import { OFFICIAL_CHANNELS } from "../config/site";
 
 const GAME_LINKS = [
   { href: "/casino/dice", labelKey: "nav.dice" },
@@ -39,7 +40,8 @@ const LEGAL_LINKS = [
 ] as const;
 
 const COMMUNITY_LINKS = [
-  { href: "https://discord.gg/arbigamefi", labelKey: "footer.community" },
+  { href: OFFICIAL_CHANNELS.telegram, labelKey: "footer.telegram" },
+  { href: OFFICIAL_CHANNELS.x, labelKey: "footer.x" },
   { href: "https://github.com/arbigamefi/ssot_BBOG", labelKey: "GitHub" },
   { href: "https://github.com/arbigamefi/ssot_BBOG/tree/master/docs", labelKey: "footer.docs" }
 ] as const;

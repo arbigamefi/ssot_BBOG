@@ -3,6 +3,7 @@ import { gameHubRoundEventMatchesBet } from "@ssot/ssot/sdk";
 
 import {
   deriveCasinoRoundPhase,
+  casinoVrfFeeBudget,
   formatNativeFee,
   getCasinoRoundReadErrorMessage,
   isBetNotFoundError,
@@ -108,6 +109,12 @@ describe("casino round helpers", () => {
   it("formats native VRF fees without scientific notation", () => {
     expect(formatNativeFee(73_169_600_001_705n)).toBe("0.00007316 ETH");
     expect(formatNativeFee(undefined)).toBe("—");
+    // A fee the player may pay rounds up, so the quote never understates it.
+    expect(formatNativeFee(73_169_600_001_705n, "ETH", "up")).toBe("0.00007317 ETH");
+    expect(formatNativeFee(73_170_000_000_000n, "ETH", "up")).toBe("0.00007317 ETH");
+    // The wallet attaches the quote plus the SDK's 50% buffer.
+    expect(casinoVrfFeeBudget(37_220_000_000_000n)).toBe(55_830_000_000_000n);
+    expect(casinoVrfFeeBudget(undefined)).toBeUndefined();
   });
 
   it("maps chain read failures to product copy", () => {

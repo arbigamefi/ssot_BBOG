@@ -18,6 +18,7 @@ import { useCasinoPoolAssetSelection } from "../../../../features/assets/useCasi
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
 import {
   calculateGameWinChance,
+  clampDiceTarget,
   type BaccaratSide,
   type PlinkoRisk,
   type SicBoKind
@@ -77,7 +78,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const refetchRecentBets = recentBetsQuery.refetch;
   const recentBets = recentBetsQuery.data ?? [];
 
-  const [betAmount, setBetAmount] = React.useState("10");
+  const [betAmount, setBetAmount] = React.useState("1");
   const [isPending, setIsPending] = React.useState(false);
   const [showResult, setShowResult] = React.useState(false);
   const [terminalBet, setTerminalBet] = React.useState<DomainBet | null>(null);
@@ -521,8 +522,11 @@ export function GamePageClient({ slug }: { slug: string }) {
         onDiceRevealComplete={completeStageReveal}
         onCoinRevealComplete={completeStageReveal}
         onRouletteRevealComplete={completeStageReveal}
-        onDiceDirectionChange={setDiceDirection}
-        onDiceTargetChange={setDiceTarget}
+        onDiceDirectionChange={(direction) => {
+          setDiceDirection(direction);
+          setDiceTarget((target) => clampDiceTarget(direction, target));
+        }}
+        onDiceTargetChange={(target) => setDiceTarget(clampDiceTarget(diceDirection, target))}
         onCoinSideChange={setCoinSide}
         onRouletteChange={setRouletteSpots}
         onKenoChange={setKenoSpots}
@@ -561,6 +565,7 @@ export function GamePageClient({ slug }: { slug: string }) {
         maxPayout={maxPayoutLabel}
         maxPayoutIsHint={maxPayoutState !== "value"}
         isInteractive={true}
+        preview={actionProps.riskInDisabled}
         leftPaneContent={LeftPane}
         rightPaneContent={RightPane}
         auditLedgerContent={AuditLedger}

@@ -13,7 +13,8 @@ export function GameRoomShell({
   rightPaneContent,
   auditLedgerContent,
   mobileActionContent,
-  isInteractive = false
+  isInteractive = false,
+  preview = false
 }: {
   gameName: React.ReactNode;
   /** Live, asset-aware limits for the selected pool (chain-derived). */
@@ -26,6 +27,8 @@ export function GameRoomShell({
   auditLedgerContent: React.ReactNode;
   mobileActionContent?: React.ReactNode;
   isInteractive?: boolean;
+  /** The website has not opened betting yet, so the room is a preview, not a live game. */
+  preview?: boolean;
 }) {
   const t = useTranslations();
 
@@ -41,7 +44,7 @@ export function GameRoomShell({
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-accent md:gap-3 md:text-xs">
             <span className="h-2.5 w-2.5 rounded-full bg-accent" />
-            {t("casino.room.shell.liveModule")}
+            {t(preview ? "casino.room.shell.previewModule" : "casino.room.shell.liveModule")}
           </div>
           <h1 className="mt-1 truncate text-2xl font-semibold leading-tight text-fg md:text-5xl">
             {gameName}

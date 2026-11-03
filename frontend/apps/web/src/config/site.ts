@@ -16,3 +16,9 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://arbigamefi
 export const IS_INDEXABLE =
   (process.env.NEXT_PUBLIC_ENV ?? "development") === "production" &&
   !/sepolia|testnet|preview|localhost|vercel\.app/i.test(SITE_URL);
+
+/** Official channels. The site links only these, so players can tell an impersonator apart. */
+export const OFFICIAL_CHANNELS = {
+  telegram: "https://t.me/arbigamefi",
+  x: "https://x.com/arbi_game_fi"
+} as const;

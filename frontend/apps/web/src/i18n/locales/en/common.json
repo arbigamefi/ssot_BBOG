@@ -162,7 +162,8 @@
     "support": "Support",
     "faq": "Help & FAQ",
     "status": "System status",
-    "community": "Community"
+    "telegram": "Telegram",
+    "x": "X"
   },
   "casino": {
     "room": {
@@ -172,7 +173,8 @@
         "maxPayout": "Max payout",
         "maxBet": "Max bet",
         "selectBetFirst": "Select first",
-        "noCapacity": "No capacity"
+        "noCapacity": "No capacity",
+        "previewModule": "Preview"
       },
       "empty": {
         "moduleNotFound": "Game not found",
@@ -384,7 +386,7 @@
           }
         },
         "metrics": {
-          "vrfEstimate": "VRF estimate",
+          "vrfEstimate": "Randomness fee, up to",
           "betId": "Bet ID",
           "vrfRequest": "VRF request"
         },
@@ -752,14 +754,14 @@
           "lastTx": "Last tx"
         },
         "houseEdge": {
-          "title": "Where the house edge went",
-          "edge": "House edge",
-          "edgeValue": "{amount} · {rate} of {turnover}",
+          "title": "Turnover allocation",
+          "edge": "Allocated",
+          "edgeValue": "{amount} · {rate} of {turnover} turnover",
           "lps": "Kept by LPs",
           "playerRakeback": "Rakeback",
           "referrers": "Referrers",
           "protocol": "Protocol fee",
-          "note": "LPs keep half of the edge. The other half pays referral rewards; what remains is the protocol fee. Amounts come from this bet's HouseEdgeAllocated event."
+          "note": "Booked on the stake this bet used, separately from the house edge taken from a win. LPs keep half; the other half pays referral rewards, and what remains is the protocol fee. Amounts come from this bet's HouseEdgeAllocated event."
         },
         "actions": {
           "play": "Play this game",
@@ -769,6 +771,13 @@
         "voided": {
           "headline": "{amount} returned",
           "body": "The result was received but could not be settled, so your stake was returned to you as a claimable balance. The VRF fee is not refunded."
+        },
+        "breakdown": {
+          "won": "Won",
+          "houseEdge": "House edge",
+          "houseEdgeValue": "{amount} · {rate} of the win",
+          "refund": "Unused stake returned",
+          "paid": "Paid to wallet"
         }
       },
       "gameInfo": {
@@ -1009,7 +1018,7 @@
         "reviewAgain": "Check settings and continue",
         "approving": "Approving tokens · waiting for confirmation",
         "placing": "Placing bet · waiting for confirmation",
-        "cost": "Total {total} {symbol} · Randomness fee budget ≈ {fee}; gas extra.",
+        "cost": "Total {total} {symbol} · Randomness fee up to {fee}; the unused part comes back in the same transaction. Network gas is extra.",
         "contextChanged": "Your wallet, network or bet settings changed. The next step was stopped; review the current settings before continuing.",
         "capacity": "This pool is temporarily full. Try again after an open bet settles.",
         "minimumStake": "The amount per round is below the pool minimum. Refresh pool state and increase the amount per round.",
@@ -1140,21 +1149,23 @@
       },
       "card": {
         "releaseAnchored": "Live",
-        "playNow": "Play Now"
+        "playNow": "Play Now",
+        "preview": "Preview"
       },
       "reserve": {
         "title": "House bankroll, on-chain",
         "subtitle": "Bank {bank}",
         "status": "Live",
-        "cta": "Check on-chain"
+        "cta": "Check on-chain",
+        "preview": "Preview"
       },
       "bets": "Bets",
       "clearAll": "Clear all"
     },
     "availability": {
-      "title": "Betting is not yet available on this network",
-      "description": "You can explore games and rules. Connecting a wallet does not enable betting on this network.",
-      "tryTestnet": "View Base Sepolia"
+      "title": "Betting isn't open yet",
+      "description": "You can explore the games and their rules. Betting opens on Base after the audit report is published.",
+      "followTelegram": "Launch news on Telegram"
     }
   },
   "portfolio": {
@@ -2300,7 +2311,8 @@
           "title": "The house bankroll is visible",
           "detail": "Payout capacity and protocol fees are read from the live contracts."
         }
-      }
+      },
+      "exploreGames": "Browse the games"
     },
     "stats": {
       "vault": {
@@ -2379,7 +2391,7 @@
       "slots": {
         "title": "Slots",
         "badge": "Reel room",
-        "summary": "Spin a simple three-symbol room with readable multipliers and terminal proof.",
+        "summary": "Spin a simple three-symbol room with readable multipliers and a final receipt.",
         "facts": {
           "0": "3 reels",
           "1": "Visible symbols",
@@ -2393,7 +2405,7 @@
         "facts": {
           "0": "Card reveal",
           "1": "Player banker tie",
-          "2": "Terminal receipt"
+          "2": "Final receipt"
         }
       },
       "sic-bo": {
@@ -2441,7 +2453,7 @@
     "verify": {
       "eyebrow": "Open source",
       "title": "Don't trust us. Verify.",
-      "description": "Every game's rules are a pure on-chain function — deterministic, with no hidden house knobs. Read the exact bytecode and run it yourself.",
+      "description": "Every game's rules are a public on-chain function. No hidden knobs: any parameter change is queued publicly for at least 72 hours before it can take effect. Read the exact bytecode and run it yourself.",
       "sourceNote": "Representative excerpt. The deployed contract is the source of truth — verify the full source on-chain.",
       "verifyCta": "Verify on explorer"
     },
@@ -2544,6 +2556,13 @@
         "unavailable": "No deployment is available for the selected network.",
         "retry": "Retry bank balances"
       }
+    },
+    "preview": {
+      "note": "Betting isn't open yet: it opens on Base after the audit report is published.",
+      "follow": "Get launch news on Telegram",
+      "footerTitle": "Betting opens after the audit report is published.",
+      "footerDescription": "Your money stays in your wallet until you place a bet. The launch date will be posted on the official channel.",
+      "join": "Join on Telegram"
     }
   },
   "legal": {
@@ -2833,7 +2852,7 @@
     },
     "cookies": {
       "title": "Cookie preferences",
-      "description": "We use privacy-friendly analytics to understand traffic. Nothing loads until you choose.",
+      "description": "If you accept, we count page views with privacy-friendly analytics. Some services load either way: Cloudflare, which hosts the site, counts visits without cookies, and the wallet connector contacts WalletConnect.",
       "learnMore": "Learn more",
       "accept": "Accept",
       "reject": "Reject"
@@ -2889,10 +2908,11 @@
     "contact": {
       "title": "Still need help?",
       "description": "Reach the team or check live system status.",
-      "discord": "Discord",
       "email": "Email support",
       "status": "System status",
-      "docs": "Docs"
+      "docs": "Docs",
+      "telegram": "Telegram",
+      "x": "X"
     },
     "items": [
       {
@@ -2917,7 +2937,7 @@
       },
       {
         "q": "What if the random number never arrives?",
-        "a": "If VRF is delayed past the timeout, you can refund your stake yourself — the refund button appears in the round status panel. No funds are ever stuck."
+        "a": "After the refund deadline you can take your stake back yourself; the refund button appears in the round status panel. The randomness fee is not refunded. In rare cases, such as a USDC issuer freeze, a payment can be delayed; see the Terms."
       },
       {
         "q": "How do I verify a bet was fair?",
@@ -2925,7 +2945,7 @@
       },
       {
         "q": "What fees do I pay?",
-        "a": "Two things: the game's house edge (built into the odds) and a small Chainlink VRF fee in native gas to fund the randomness request. Both are shown before you confirm."
+        "a": "Two things: the game's house edge, taken from a win and already reflected in the payouts shown, and a Chainlink VRF fee in ETH for the random number. The room shows the most your wallet will attach; the unused part comes back in the same transaction. Network gas is extra."
       },
       {
         "q": "Which wallets are supported?",
@@ -2933,7 +2953,7 @@
       },
       {
         "q": "Is this custodial? Do you hold my funds?",
-        "a": "No. ArbiGameFi is non-custodial. Your funds stay in your wallet until you place a bet, and winnings settle directly back to your wallet. We never hold balances."
+        "a": "ArbiGameFi never holds your funds in an account we control. While a bet is open, its stake sits in the public Bank contract until it settles, and winnings settle directly to your wallet."
       },
       {
         "q": "How do I stay in control of my play?",
