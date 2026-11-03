@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@ssot/ui";
 
-import type { DiceDirection } from "../../room/params";
+import { diceTargetBounds, type DiceDirection } from "../../room/params";
 
 /**
  * DiceBar — the threshold control beneath the hero die.
@@ -29,6 +29,7 @@ export function DiceBar({
   onTargetChange: (target: number) => void;
   targetAriaLabel: string;
 }) {
+  const [minTarget, maxTarget] = diceTargetBounds(direction);
   const winLeft = direction === "under" ? 0 : target;
   const winWidth = direction === "under" ? target : 100 - target;
   const loseLeft = direction === "under" ? target : 0;
@@ -51,8 +52,8 @@ export function DiceBar({
 
         <input
           type="range"
-          min={2}
-          max={98}
+          min={minTarget}
+          max={maxTarget}
           value={target}
           disabled={isLocked}
           aria-label={targetAriaLabel}

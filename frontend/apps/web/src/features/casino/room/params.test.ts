@@ -17,7 +17,9 @@ import {
   buildRouletteBitmask,
   calculateGameReserveMultiplier,
   calculateGameWinChance,
+  clampDiceTarget,
   createRouletteParamsInput,
+  diceTargetBounds,
   kenoMaxMultiplier,
   rouletteCoveredNumbers,
   rouletteWinChance
@@ -464,5 +466,17 @@ describe("game room params", () => {
       ok: false,
       message: "请选择至少一个轮盘投注项。"
     });
+  });
+});
+
+describe("dice win chance bounds", () => {
+  it("keeps the win chance between 2% and 97% on either side", () => {
+    expect(diceTargetBounds("under")).toEqual([2, 97]);
+    expect(diceTargetBounds("over")).toEqual([3, 98]);
+    expect(clampDiceTarget("under", 98)).toBe(97);
+    expect(clampDiceTarget("under", 1)).toBe(2);
+    expect(clampDiceTarget("over", 2)).toBe(3);
+    expect(clampDiceTarget("over", 99)).toBe(98);
+    expect(clampDiceTarget("over", 50)).toBe(50);
   });
 });

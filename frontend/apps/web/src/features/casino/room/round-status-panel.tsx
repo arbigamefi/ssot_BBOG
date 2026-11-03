@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
-import { formatNativeFee, type CasinoRoundPhase } from "./casino-round";
+import { casinoVrfFeeBudget, formatNativeFee, type CasinoRoundPhase } from "./casino-round";
 
 type Translate = ReturnType<typeof useTranslations>;
 
@@ -126,7 +126,7 @@ export function CasinoRoundStatusPanel({
       <div className="divide-y divide-border-soft">
         <RoundProofRow
           label={t("casino.room.roundStatus.metrics.vrfEstimate")}
-          value={formatNativeFee(quote)}
+          value={formatNativeFee(casinoVrfFeeBudget(quote), "ETH", "up")}
         />
         <RoundProofRow
           label={t("casino.room.roundStatus.metrics.betId")}

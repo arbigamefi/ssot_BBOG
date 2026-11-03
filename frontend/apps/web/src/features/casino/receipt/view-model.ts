@@ -24,11 +24,24 @@ export type CasinoReceiptHouseEdge = {
   referrersValue?: string;
 };
 
+/**
+ * A settled bet's payout, exact: won (gross) minus the house edge taken from
+ * it (ADR-0007 fee on payout) is what was paid; unused rounds return stake.
+ */
+export type CasinoReceiptBreakdown = {
+  grossValue: string;
+  houseEdgeValue: string;
+  /** The house edge as a percentage of the gross win, e.g. "2.00%"; absent when nothing was won. */
+  houseEdgeRateLabel?: string;
+  refundValue?: string;
+};
+
 export type CasinoReceiptViewModel = {
   assetAddress?: string;
   assetDecimals: number;
   assetSymbol: string;
   betId: string;
+  breakdown?: CasinoReceiptBreakdown;
   chainId?: number;
   gameId?: string;
   gameLabel: string;
@@ -81,7 +94,7 @@ export function buildCasinoReceiptFromTerminalResult({
       : result.refund.refundAmount;
   const terminalTxHash =
     result.kind === "settled" ? result.settlement.txHash : result.refund.txHash;
-  return buildCasinoReceiptViewModel({
+  const model = buildCasinoReceiptViewModel({
     assetDecimals,
     assetSymbol,
     betId: result.betId.toString(),
@@ -98,6 +111,17 @@ export function buildCasinoReceiptFromTerminalResult({
     payout,
     payment: result.kind === "settled" ? result.settlement.payment : result.refund.payment
   });
+  const breakdown =
+    result.kind === "settled"
+      ? buildReceiptBreakdown({
+          gross: result.settlement.payoutGross,
+          net: result.settlement.payoutNet,
+          refund: result.settlement.refundAmount,
+          decimals: assetDecimals,
+          symbol: assetSymbol
+        })
+      : undefined;
+  return breakdown ? { ...model, breakdown } : model;
 }
 
 export function buildCasinoReceiptFromBetRow({
@@ -151,7 +175,49 @@ export function buildCasinoReceiptFromBetRow({
   const houseEdge = row.houseEdge
     ? buildReceiptHouseEdge(row.houseEdge, assetDecimals, assetSymbol)
     : undefined;
-  return houseEdge ? { ...model, houseEdge } : model;
+  const breakdown =
+    state === "finalized"
+      ? buildReceiptBreakdown({
+          gross: bigintFromString(row.payoutGross),
+          net: bigintFromString(row.payout),
+          refund: bigintFromString(row.refundAmount),
+          decimals: assetDecimals,
+          symbol: assetSymbol
+        })
+      : undefined;
+  return {
+    ...model,
+    ...(houseEdge ? { houseEdge } : {}),
+    ...(breakdown ? { breakdown } : {})
+  };
+}
+
+function buildReceiptBreakdown({
+  gross,
+  net,
+  refund,
+  decimals,
+  symbol
+}: {
+  gross?: bigint;
+  net?: bigint;
+  refund?: bigint;
+  decimals: number;
+  symbol: string;
+}): CasinoReceiptBreakdown | undefined {
+  if (gross == null || net == null || net > gross) return undefined;
+  const format = (value: bigint) => formatReceiptTokenAmount(value, decimals, symbol, decimals);
+  const edge = gross - net;
+  // Basis points of the gross win, rounded to the nearest; the fee itself is floored on-chain.
+  const bps = gross > 0n ? Number((edge * 20_000n + gross) / (2n * gross)) : undefined;
+  return {
+    grossValue: format(gross),
+    houseEdgeValue: format(edge),
+    ...(bps == null
+      ? {}
+      : { houseEdgeRateLabel: `${Math.floor(bps / 100)}.${String(bps % 100).padStart(2, "0")}%` }),
+    ...(refund != null && refund > 0n ? { refundValue: format(refund) } : {})
+  };
 }
 
 function buildReceiptHouseEdge(
@@ -247,7 +313,7 @@ export function formatReceiptTokenAmount(
 }
 
 export function formatSignedReceiptTokenAmount(value: bigint, decimals: number, symbol: string) {
-  const body = formatReceiptTokenAmount(value < 0n ? -value : value, decimals, symbol);
+  const body = formatReceiptTokenAmount(value < 0n ? -value : value, decimals, symbol, decimals);
   if (value > 0n) return `+ ${body}`;
   if (value < 0n) return `- ${body}`;
   return body;
@@ -330,9 +396,9 @@ function buildCasinoReceiptViewModel({
     lastEventName,
     multiplierValue: formatReceiptMultiplier(payout, stake),
     net,
-    netValue: formatReceiptTokenAmount(net, assetDecimals, assetSymbol),
+    netValue: formatReceiptTokenAmount(net, assetDecimals, assetSymbol, assetDecimals),
     payout,
-    payoutValue: formatReceiptTokenAmount(payout, assetDecimals, assetSymbol),
+    payoutValue: formatReceiptTokenAmount(payout, assetDecimals, assetSymbol, assetDecimals),
     payment: provenPayment,
     placedBlock,
     player,
@@ -344,7 +410,7 @@ function buildCasinoReceiptViewModel({
     shareText: `${gameLabel} bet #${betId}: ${signedNetValue}`,
     signedNetValue,
     stake,
-    stakeValue: formatReceiptTokenAmount(stake, assetDecimals, assetSymbol),
+    stakeValue: formatReceiptTokenAmount(stake, assetDecimals, assetSymbol, assetDecimals),
     state,
     terminalTxHash,
     tone,

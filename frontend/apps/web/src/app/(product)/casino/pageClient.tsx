@@ -11,6 +11,7 @@ import {
   TrophyIcon
 } from "@heroicons/react/24/outline";
 
+import { getCasinoAccess } from "../../../app-shell/casino-access";
 import { ProductStateCard } from "../../../components/ProductStateCard";
 import { getDefaultCasinoPoolAssetContext } from "../../../features/assets/pool-asset";
 import { getCatalogRooms } from "../../../features/casino/catalog";
@@ -119,6 +120,8 @@ export function GamesListClient() {
   const t = useTranslations();
   const locale = useLocale();
   const { release, readOnlyReason } = useRelease();
+  // The lobby shows previews until the website opens betting, and marks a test chain as such.
+  const access = release ? getCasinoAccess(release.chainId) : "preview";
   const casinoPoolAsset = React.useMemo(
     () => (release ? getDefaultCasinoPoolAssetContext(release) : null),
     [release]
@@ -336,7 +339,11 @@ export function GamesListClient() {
                 <div className="absolute left-4 top-4 z-20 hidden rounded-full border border-border-soft bg-surface-0/80 px-3 py-1.5 backdrop-blur lg:block">
                   <span className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-fg-muted">
                     <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                    {t("casino.directory.card.releaseAnchored")}
+                    {t(
+                      access === "live"
+                        ? "casino.directory.card.releaseAnchored"
+                        : `casino.directory.card.${access}`
+                    )}
                   </span>
                 </div>
 
@@ -444,7 +451,11 @@ export function GamesListClient() {
                 <div className="mt-4 flex items-center gap-2 rounded-lg border border-accent/30 bg-accent-soft px-3 py-1">
                   <span className="h-2 w-2 rounded-full bg-accent" />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-accent">
-                    {t("casino.directory.reserve.status")}
+                    {t(
+                      access === "live"
+                        ? "casino.directory.reserve.status"
+                        : `casino.directory.reserve.${access}`
+                    )}
                   </span>
                 </div>
                 <Link

@@ -284,16 +284,3 @@ export function PlaceBetButton({
     </button>
   );
 }
-
-/** A full navigation resets transient game state when leaving the unavailable chain. */
-export function CasinoTestnetLink() {
-  const t = useTranslations("casino.availability");
-  return (
-    <a
-      href="?chainId=84532"
-      className="mt-2 flex min-h-11 items-center justify-center rounded-lg border border-brand/30 px-3 text-sm font-semibold text-brand hover:bg-brand-soft"
-    >
-      {t("tryTestnet")}
-    </a>
-  );
-}

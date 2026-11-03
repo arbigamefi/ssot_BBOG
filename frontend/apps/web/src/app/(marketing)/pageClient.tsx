@@ -27,6 +27,9 @@ import type {
   LandingRoom,
   LandingStat
 } from "../../features/marketing/home-types";
+import { getCasinoAccess, type CasinoAccess } from "../../app-shell/casino-access";
+import { getAppChain } from "../../app-shell/chain-registry";
+import { OFFICIAL_CHANNELS, TESTNET_USDC_FAUCET } from "../../config/site";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 
 import { fetchLandingOverview } from "../../features/marketing/landing-overview";
@@ -39,6 +42,30 @@ function toBigOrNull(value?: string | bigint | number): bigint | null {
     return null;
   }
 }
+
+const HERO_ENTRY_LABEL = {
+  preview: "hero.exploreGames",
+  testnet: "testnet.play",
+  live: "hero.enterCasino"
+} as const satisfies Record<CasinoAccess, string>;
+
+const FOOTER_CTA_KEYS = {
+  preview: {
+    title: "preview.footerTitle",
+    description: "preview.footerDescription",
+    primary: "preview.join"
+  },
+  testnet: {
+    title: "testnet.footerTitle",
+    description: "testnet.footerDescription",
+    primary: "testnet.play"
+  },
+  live: {
+    title: "footerCta.title",
+    description: "footerCta.description",
+    primary: "footerCta.primary"
+  }
+} as const satisfies Record<CasinoAccess, Record<"title" | "description" | "primary", string>>;
 
 export function HomePageClient() {
   const t = useTranslations("marketing");
@@ -219,6 +246,11 @@ export function HomePageClient() {
   // Verify-the-bytecode proof links to the actual deployed dice module so the
   // displayed source excerpt is never treated as the source of truth.
   const explorerBaseUrl = getExplorerBaseUrl(chainId);
+  // Until the website opens betting, the home page says so and points to the launch channel;
+  // on a test chain it says the funds are test funds and where to get them.
+  const access = getCasinoAccess(chainId);
+  const preview = access === "preview";
+  const chainName = getAppChain(chainId)?.name ?? String(chainId);
   const verifyContractAddress =
     release?.gamesMeta?.find((meta) => meta.slug === "dice")?.module ?? release?.contracts.gameHub;
   const verifyHref =
@@ -229,11 +261,26 @@ export function HomePageClient() {
   return (
     <div className="min-h-screen bg-surface-0 text-fg">
       <HomeHero
+        notice={
+          preview
+            ? {
+                note: t("preview.note"),
+                follow: t("preview.follow"),
+                href: OFFICIAL_CHANNELS.telegram
+              }
+            : access === "testnet"
+              ? {
+                  note: t("testnet.note", { chain: chainName }),
+                  follow: t("testnet.faucet"),
+                  href: TESTNET_USDC_FAUCET
+                }
+              : undefined
+        }
         copy={{
           channel: t("hero.channel"),
           title: t("hero.title"),
           description: t("hero.description"),
-          enterCasino: t("hero.enterCasino"),
+          enterCasino: t(HERO_ENTRY_LABEL[access]),
           viewBank: t("hero.viewBank"),
           scrollHint: t("landing.scrollHint"),
           visual: {
@@ -380,11 +427,12 @@ export function HomePageClient() {
       </section>
 
       <HomeFooterCta
+        primaryHref={preview ? OFFICIAL_CHANNELS.telegram : "/casino"}
         copy={{
           eyebrow: t("footerCta.eyebrow"),
-          title: t("footerCta.title"),
-          description: t("footerCta.description"),
-          primary: t("footerCta.primary"),
+          title: t(FOOTER_CTA_KEYS[access].title),
+          description: t(FOOTER_CTA_KEYS[access].description),
+          primary: t(FOOTER_CTA_KEYS[access].primary),
           secondary: t("landing.receiptCta")
         }}
       />

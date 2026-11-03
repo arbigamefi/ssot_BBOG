@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isCasinoRiskInEnabledForChain, isLpDepositEnabledForChain } from "./casino-access";
+import {
+  getCasinoAccess,
+  isCasinoRiskInEnabledForChain,
+  isLpDepositEnabledForChain
+} from "./casino-access";
 
 const BASE_MAINNET = 8453;
 const BASE_SEPOLIA = 84532;
@@ -50,5 +54,30 @@ describe("casino website availability", () => {
     vi.stubEnv("NEXT_PUBLIC_LP_DEPOSITS_ENABLED", "true");
     expect(isCasinoRiskInEnabledForChain(999_999)).toBe(false);
     expect(isLpDepositEnabledForChain(999_999)).toBe(false);
+  });
+});
+
+describe("getCasinoAccess", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("is a preview on every chain until the website opens betting", () => {
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "false");
+    expect(getCasinoAccess(BASE_MAINNET)).toBe("preview");
+    expect(getCasinoAccess(BASE_SEPOLIA)).toBe("preview");
+  });
+
+  it("is testnet on a test chain and live on a main chain once betting opens", () => {
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
+    expect(getCasinoAccess(BASE_SEPOLIA)).toBe("testnet");
+    expect(getCasinoAccess(421614)).toBe("testnet");
+    expect(getCasinoAccess(BASE_MAINNET)).toBe("live");
+    expect(getCasinoAccess(42161)).toBe("live");
+  });
+
+  it("stays a preview on a chain the website does not know", () => {
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
+    expect(getCasinoAccess(31337)).toBe("preview");
   });
 });

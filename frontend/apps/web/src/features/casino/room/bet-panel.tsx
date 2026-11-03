@@ -19,9 +19,9 @@ import {
 } from "./bet-amount";
 import type { GameMeta } from "./model";
 import type { GameRoomBetPanelState, PlaceBetButtonPhase } from "./place-bet-button";
-import { CasinoTestnetLink, PlaceBetButton } from "./place-bet-button";
+import { PlaceBetButton } from "./place-bet-button";
 import type { CasinoRoundPhase } from "./casino-round";
-import { formatNativeFee } from "./casino-round";
+import { casinoVrfFeeBudget, formatNativeFee } from "./casino-round";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
 import { PendingSettlementNotice } from "./pending-settlement-notice";
 import { PoolStatusNotice, BetSubmissionFeedback } from "./submission-feedback";
@@ -310,7 +310,7 @@ export function GameRoomBetPanel({
           {t("casino.room.feedback.cost", {
             total: multiplyBetAmountInput(betAmount, betCount, assetDecimals),
             symbol: assetSymbol,
-            fee: formatNativeFee(vrfQuote == null ? undefined : vrfQuote + vrfQuote / 2n)
+            fee: formatNativeFee(casinoVrfFeeBudget(vrfQuote), "ETH", "up")
           })}
         </p>
         {isPending || activeBetId != null ? (
@@ -355,9 +355,6 @@ export function GameRoomBetPanel({
           amountBelowMin={betAmountInputToRaw(betAmount, assetDecimals) < minBetRaw}
           onClick={primaryAction}
         />
-        {riskInDisabled && !isPending && !manualSettleAvailable && !manualRefundAvailable ? (
-          <CasinoTestnetLink />
-        ) : null}
       </div>
     </div>
   );
