@@ -484,8 +484,19 @@ describe("GamePageClient", () => {
     expect(screen.getByText("Precision Dice")).toBeDefined();
     // Betting is not enabled for the website in tests, so the room is labelled a preview.
     expect(screen.getByText("Preview SSOT Module")).toBeDefined();
+    expect(screen.queryByText("Live SSOT Module")).toBeNull();
     expect(screen.getByLabelText("Wallet Balance")).toBeDefined();
     expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("labels the room live once the website opens betting", () => {
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
+    state.release = MOCK_RELEASE;
+    state.bets = MOCK_BETS;
+    render(<GamePageClient slug="dice" />);
+    expect(screen.getByText("Live SSOT Module")).toBeDefined();
+    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
+    vi.unstubAllEnvs();
   });
 
   it("renders roulette as a standard European table room", () => {

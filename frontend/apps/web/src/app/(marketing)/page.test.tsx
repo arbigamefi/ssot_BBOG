@@ -274,6 +274,31 @@ describe("HomePage", () => {
     expect(screen.getByRole("status").textContent).toContain("No deployment");
   });
 
+  it("shows the pre-launch copy until the website opens betting, then the launch copy", () => {
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "false");
+    const { unmount } = render(<HomePage />);
+    expect(screen.getByRole("link", { name: "Browse the games" }).getAttribute("href")).toBe(
+      "/casino"
+    );
+    expect(screen.getByRole("link", { name: "Get launch news on Telegram" })).toBeDefined();
+    expect(screen.getByRole("link", { name: /Join on Telegram/ }).getAttribute("href")).toBe(
+      "https://t.me/arbigamefi"
+    );
+    unmount();
+
+    // The same build flag that opens betting brings back the launch buttons and copy.
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
+    render(<HomePage />);
+    expect(screen.queryByText("Browse the games")).toBeNull();
+    expect(screen.queryByText("Get launch news on Telegram")).toBeNull();
+    expect(screen.queryByText(/Join on Telegram/)).toBeNull();
+    expect(screen.getByText("Connect a wallet. Pick a game. Spin.")).toBeDefined();
+    expect(screen.getByRole("link", { name: /Start Playing/ }).getAttribute("href")).toBe(
+      "/casino"
+    );
+    vi.unstubAllEnvs();
+  });
+
   it("distinguishes loading, failed refresh, and a successfully read empty response", () => {
     state.release = { name: "Base", chainId: 8453, releaseDigest: "test", contracts: {} };
     state.overviewLoading = true;
