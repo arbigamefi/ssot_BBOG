@@ -3,7 +3,6 @@ import * as React from "react";
 import { HomePageClient } from "./pageClient";
 import { SITE_URL } from "../../config/site";
 import { carbonCopyFontVariables } from "../../features/home/fonts";
-import { getRequestI18n } from "../../i18n/request";
 
 // Organization + WebSite structured data for rich results. Server-rendered
 // JSON-LD so crawlers see it without executing the client bundle.
@@ -29,10 +28,9 @@ const STRUCTURED_DATA = {
   ]
 };
 
-export default async function HomePage() {
-  const { locale } = await getRequestI18n();
+export default function HomePage() {
   return (
-    <div className={carbonCopyFontVariables(locale)}>
+    <div className={carbonCopyFontVariables}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}

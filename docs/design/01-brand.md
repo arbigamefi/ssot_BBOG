@@ -54,8 +54,9 @@ Values and contrast figures are in [`10-design-tokens.md`](./10-design-tokens.md
 
 ## 4. Type
 
-- **Schibsted Grotesk sets every word**, at 400, 600 and 800 only. Chinese falls back to Noto
-  Sans SC at the same weights, with a body line height of 1.8.
+- **Schibsted Grotesk sets every word**, at 400, 600 and 800 only. Chinese uses the system's
+  own Chinese face (PingFang SC, Microsoft YaHei, Noto Sans CJK SC), with a body line height
+  of 1.8.
 - **Doto 800 prints figures only**: the net result on a receipt, multipliers on ticket stubs,
   and win chances, multipliers and rolls in a game room. Doto's full stop looks like a plus, so
   the decimal point stays in Schibsted. Signs use Doto's own glyphs; minus is U+2212.
