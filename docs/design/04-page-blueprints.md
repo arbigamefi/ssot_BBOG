@@ -2,7 +2,7 @@
 
 | Owner | Product + Frontend |
 | Status | Active |
-| Last Updated | 2026-11-03 |
+| Last Updated | 2026-11-04 |
 | Depends on | `01-brand.md`, `03-information-architecture.md`, `casino-placebet-ux.md` |
 | Supersedes | Draft v1 pre-implementation wireframes |
 
@@ -58,10 +58,14 @@ Purpose: game discovery.
 
 Must show:
 
-- available games from the current release/catalog;
-- unavailable games as disabled, not broken;
-- the site state on each game: preview, testnet or live;
-- recent settlements if index data is available.
+- one ticket stub per game the current release ships, each with what the game is, its win chance
+  range and the most one bet can return after the release's house edge, rounded down;
+- nothing for a game GameHub has disabled: it takes no new bets, and its room shows the closed
+  state;
+- the site state above the games: in preview the official Telegram channel is the only action,
+  on a test chain the copy says the USDC has no value and links the faucet, and live prints no
+  state;
+- what the bet index has counted so far (bets, players, total staked), once it has counted a bet.
 
 ## 4. `/casino/[slug]`
 

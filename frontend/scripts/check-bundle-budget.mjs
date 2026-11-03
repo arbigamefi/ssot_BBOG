@@ -14,7 +14,9 @@ const budgets = [
   // Accepted flagship hero baseline. Keep enough headroom for gzip variance
   // across local and CI builders without loosening product-route budgets.
   { route: "/(marketing)/page", publicPath: "/", maxKb: 162 },
-  { route: "/(product)/casino/page", publicPath: "/casino", maxKb: 180 },
+  // 2026-11-04: the Carbon copy lobby prints the home page's game stubs and loads no game stage
+  // or SDK encoder; measured 160.1 kB locally.
+  { route: "/(product)/casino/page", publicPath: "/casino", maxKb: 164 },
   // The casino room route manifest includes all dynamically imported game
   // stages, not only the currently selected room's initial stage. Keep this
   // budget tight, but allow the accepted 8-game mobile stage set.

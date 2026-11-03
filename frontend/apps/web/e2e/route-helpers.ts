@@ -13,7 +13,7 @@ export const coreRoutes = [
 
 export const accessibilityRoutes = [
   { path: "/", heading: "Every bet prints a receipt." },
-  { path: "/casino", heading: hasRelease ? "Pick a game." : "Games" },
+  { path: "/casino", heading: "Pick a game." },
   { path: "/casino/dice", heading: hasRelease ? "Dice" : "Game not found" },
   ...coreRoutes
 ] as const;

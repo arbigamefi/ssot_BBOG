@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import * as React from "react";
-import { AppShell } from "./AppShell";
+import { AppShell, isCarbonCopyPage } from "./AppShell";
 
 // ——— Mock dependencies ———
 const mockRelease = {
@@ -252,6 +252,11 @@ describe("AppShell", () => {
 
     expect(screen.getByText("receipt content")).toBeDefined();
     expect(screen.queryByText("← Casino")).toBeNull();
+  });
+
+  it("runs the pages rebuilt in Carbon copy edge to edge", () => {
+    expect(["/", "/casino", "/casino/dice"].filter(isCarbonCopyPage)).toHaveLength(3);
+    expect(isCarbonCopyPage("/casino/roulette")).toBe(false);
   });
 
   it("uses the dark theme on the games directory route", () => {

@@ -54,11 +54,14 @@ describe("CasinoAvailabilityNotice", () => {
     );
   });
 
-  it("leaves the site state to the dice room, which prints it on its own paper", () => {
+  it("leaves the site state to the lobby and the dice room, which print it on their own paper", () => {
     vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "false");
-    route.pathname = "/casino/dice";
-    const { container } = render(<CasinoAvailabilityNotice chainId={84532} />);
-    expect(container.textContent).toBe("");
+    for (const pathname of ["/casino", "/casino/dice"]) {
+      route.pathname = pathname;
+      const { container, unmount } = render(<CasinoAvailabilityNotice chainId={84532} />);
+      expect(container.textContent).toBe("");
+      unmount();
+    }
     route.pathname = "/casino/roulette";
   });
 

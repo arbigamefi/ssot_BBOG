@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CASINO_MODULE_SLUGS } from "../casino/modules";
+import { CASINO_MODULE_SLUGS } from "./modules";
 import { ticketMultiplier } from "./game-multipliers";
 
 const printed = (slug: (typeof CASINO_MODULE_SLUGS)[number], bps = 200) => {

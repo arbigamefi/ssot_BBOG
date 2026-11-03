@@ -7,10 +7,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { getCasinoAccess } from "../../app-shell/casino-access";
 import { getAppChain, getExplorerAddressUrl } from "../../app-shell/chain-registry";
 import { useRecentBets } from "../../features/betting/useRecentBets";
-import { getCatalogRooms } from "../../features/casino/catalog";
+import { gameKey, useGameStubs } from "../../features/casino/game-stubs";
 import { isCasinoModuleSlug } from "../../features/casino/modules";
-import { useDisabledGameIds, withoutDisabledRooms } from "../../features/casino/useDisabledGames";
-import { ticketMultiplier } from "../../features/home/game-multipliers";
 import {
   BetSteps,
   GameStubs,
@@ -18,8 +16,7 @@ import {
   LiquiditySection,
   TelegramDock,
   VerifyLedger,
-  type PoolFigures,
-  type TicketStub
+  type PoolFigures
 } from "../../features/home/home-sections";
 import { ReceiptPrinter, type PrintableReceipt } from "../../features/home/receipt-printer";
 import { buildHomeReceipt, splitAmount } from "../../features/home/receipts";
@@ -31,11 +28,6 @@ import { useRelease } from "../../ssot/release/ReleaseProvider";
 
 /** How many settled bets the printer rotates through. */
 const RECEIPT_COUNT = 5;
-
-/** i18n key of a game, from its module slug. */
-function gameKey(slug: string) {
-  return slug.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
-}
 
 export function HomePageClient() {
   const t = useTranslations("home");
@@ -74,20 +66,7 @@ export function HomePageClient() {
     return printable;
   }, [chainId, recentBets.data, release, t]);
 
-  const disabledGameIds = useDisabledGameIds();
-  const stubs = React.useMemo<TicketStub[]>(
-    () =>
-      withoutDisabledRooms(getCatalogRooms(release?.gamesMeta), release?.gamesMeta, disabledGameIds)
-        .filter((room) => isCasinoModuleSlug(room.slug))
-        .map((room) => {
-          const { value, fixed } = ticketMultiplier(
-            room.slug as Parameters<typeof ticketMultiplier>[0],
-            houseEdgeBps
-          );
-          return { key: gameKey(room.slug), href: room.href, multiplier: value, fixed };
-        }),
-    [disabledGameIds, houseEdgeBps, release?.gamesMeta]
-  );
+  const stubs = useGameStubs(release?.gamesMeta, houseEdgeBps);
   const maxRounds = release?.gamesMeta.reduce((max, game) => Math.max(max, game.maxBetCount), 0);
 
   const overview = useQuery({

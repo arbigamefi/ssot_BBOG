@@ -13,9 +13,8 @@ export function CasinoAvailabilityNotice({ chainId }: { chainId?: number }) {
   if (!chainId) return null;
   const access = getCasinoAccess(chainId);
   if (access === "live") return null;
-  if (pathname !== "/casino" && !/^\/casino\/[^/]+$/.test(pathname)) return null;
-  // The dice room prints the site state on its own paper.
-  if (pathname === "/casino/dice") return null;
+  // Game rooms only: the lobby and the dice room print the site state themselves.
+  if (!/^\/casino\/[^/]+$/.test(pathname) || pathname === "/casino/dice") return null;
   const testnet = access === "testnet";
   const title = testnet ? t("testnet.title") : t("title");
   return (

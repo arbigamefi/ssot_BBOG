@@ -284,7 +284,7 @@
     "pages": {
       "casino": {
         "title": "Cassino",
-        "description": "Jogos de cassino nativos de carteira, cada giro verificável on-chain. Sem cadastro, sem custódia."
+        "description": "Jogos de cassino na Base, com a chance de ganhar e o pagamento máximo de cada um. O Chainlink VRF escolhe cada resultado e toda aposta liquidada tem um recibo público."
       },
       "casinoRoom": {
         "title": "{game}",
@@ -975,112 +975,49 @@
     }
   },
   "casino": {
-    "directory": {
-      "loading": "Carregando jogos...",
-      "empty": {
-        "noRelease": "O cassino não está ativo na rede a que você está conectado.",
-        "noGames": "Nenhum jogo disponível agora.",
-        "noResults": "Nenhum jogo encontrado",
-        "noResultsDetail": "Nada corresponde a \"{query}\". Tente limpar a busca.",
-        "clearSearch": "Limpar busca"
+    "lobby": {
+      "title": "Escolha um jogo.",
+      "lede": "Jogos de cassino na Base. O Chainlink VRF escolhe cada resultado, um ganho vai direto para a sua carteira e toda aposta liquidada tem um recibo que qualquer pessoa pode conferir.",
+      "preview": {
+        "note": "As apostas abrem na Base depois que o relatório de auditoria for publicado. Até lá, você pode ler as regras e as chances de cada jogo."
       },
-      "hero": {
-        "eyebrow": "Lobby de jogos",
-        "title": "Escolha um jogo.",
-        "description": "Salas de jogo verificáveis. Conecte a carteira e entre direto. Cada giro fica on-chain."
+      "testnet": {
+        "note": "As apostas na {chain} usam USDC de teste, que não tem valor, além de um pouco de ETH de teste para o gas. As apostas com USDC real abrem na Base depois que o relatório de auditoria for publicado.",
+        "faucet": "Obter USDC de teste"
       },
-      "stats": {
-        "rooms": "Jogos disponíveis",
-        "asset": "Joga em",
-        "volume": "Volume total",
-        "bets": "Total de apostas",
-        "players": "Jogadores"
-      },
-      "filters": {
-        "all": "Todos os jogos",
-        "table": "Mesa",
-        "dice": "Dados",
-        "binary": "Cara ou coroa",
-        "lottery": "Loteria",
-        "arcade": "Arcade"
-      },
-      "search": {
-        "placeholder": "Buscar jogos...",
-        "aria": "Buscar jogos"
-      },
-      "tags": {
-        "binary": "Binário",
-        "table": "Mesa",
-        "lottery": "Loteria",
-        "arcade": "Arcade",
-        "dice": "Dados",
-        "module": "Jogo"
-      },
-      "rooms": {
-        "dice": {
-          "title": "Dados de Precisão",
-          "promise": "Ajuste de 1 a 99 em segundos.",
-          "badge": "Rodadas rápidas"
-        },
-        "roulette": {
-          "title": "Roleta Europeia",
-          "promise": "Mecânica física clássica de 37 casas.",
-          "badge": "Pagamento máx. 36x"
-        },
-        "coinToss": {
-          "title": "Cara ou Coroa",
-          "promise": "Resolução 50/50 ultrarrápida.",
-          "badge": "Cara ou coroa"
-        },
-        "keno": {
-          "title": "Keno Draft",
-          "promise": "Escolha vários números para multiplicadores enormes.",
-          "badge": "Até 500,5x"
-        },
-        "plinko": {
-          "title": "Plinko",
-          "promise": "Caia por oito linhas e mire nos baldes extremos.",
-          "badge": "Até 24,6x"
-        },
-        "slots": {
-          "title": "Caça-níqueis",
-          "promise": "Combine pares, trios ou o jackpot de três setes.",
-          "badge": "Até 64x"
-        },
-        "baccarat": {
-          "title": "Bacará",
-          "promise": "Mãos de jogador contra banca com ganho no empate.",
-          "badge": "Até 10,4x"
-        },
-        "sicBo": {
-          "title": "Sic Bo",
-          "promise": "Três dados, apostas clássicas de mesa e ganho na trinca.",
-          "badge": "Até 216x"
+      "noRelease": "Os jogos ainda não estão disponíveis nesta rede.",
+      "games": {
+        "title": "O que cada jogo paga",
+        "lede": "O lado direito de cada canhoto é o máximo que uma aposta pode render, já com a vantagem da casa de {rate} descontada. O máximo ao vivo também depende do capital livre do pool da casa e aparece antes de você assinar.",
+        "pays": "paga",
+        "upTo": "até",
+        "range": "{from} a {to}",
+        "note": "Uma transação pode jogar até {rounds} rodadas. A cotação que você assina mostra a aposta, o multiplicador, a chance de ganhar e as taxas.",
+        "empty": "Nenhum jogo está aceitando apostas agora.",
+        "items": {
+          "coinToss": "Escolha cara ou coroa. Chance de ganhar: {chance}.",
+          "dice": "Defina uma linha de 1 a 100 e escolha um lado. Chance de ganhar: {chance}.",
+          "roulette": "Uma roda com um único zero. Cubra de 1 a 36 números; chance de ganhar: {chance}.",
+          "baccarat": "Aposte no jogador, na banca ou no empate. Chance de ganhar: {chance}.",
+          "sicBo": "Aposte no lançamento de três dados. Chance de ganhar: {chance}.",
+          "slots": "Três rolos; pares, trincas e três setes pagam. Chance de ganhar: {chance}.",
+          "plinko": "Escolha um nível de risco e solte a bola por oito fileiras. Chance de ganhar: {chance}.",
+          "keno": "Escolha de 1 a 5 dos 15 números contra um sorteio de cinco. Chance de ganhar: {chance}."
         }
       },
-      "card": {
-        "releaseAnchored": "Ao vivo",
-        "playNow": "Jogar agora",
-        "testnet": "Testnet",
-        "preview": "Prévia"
-      },
-      "reserve": {
-        "title": "Bankroll da casa, on-chain",
-        "subtitle": "Banco {bank}",
-        "status": "Ao vivo",
-        "cta": "Conferir on-chain",
-        "testnet": "Testnet",
-        "preview": "Prévia"
-      },
-      "bets": "Apostas",
-      "clearAll": "Limpar tudo"
+      "stats": {
+        "label": "Apostas até agora",
+        "bets": "Apostas feitas",
+        "players": "Jogadores",
+        "turnover": "Total apostado"
+      }
     },
     "room": {
       "names": {
-        "dice": "Dados de Precisão",
+        "dice": "Dados",
         "roulette": "Roleta Europeia",
         "coinToss": "Cara ou Coroa",
-        "keno": "Keno Draft",
+        "keno": "Keno",
         "plinko": "Plinko",
         "slots": "Caça-níqueis",
         "baccarat": "Bacará",
