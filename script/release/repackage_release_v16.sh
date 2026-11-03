@@ -98,8 +98,11 @@ except ValueError as error:
 PY
   fail "the bundle did not import"
 input=$stage/input
+# Forge reads only inside the project, so an earlier refresh is verified from deployments/ too.
+previous_refresh=deployments/governance-checkpoint-refresh-previous-v16.json
+previous_checkpoint=deployments/governance-checkpoint-refreshed-previous-v16.json
 targets=("$SNAPSHOT_PATH" "$RELEASE_PATH" "$GOVERNANCE_CHECKPOINT_PATH" "$CHECKPOINT_REFRESH_PATH"
-  "$REFRESHED_CHECKPOINT_PATH" deployments/release-notes-latest-v16.md deployments/frontend-manifest-latest-v16.json
+  "$REFRESHED_CHECKPOINT_PATH" "$previous_refresh" "$previous_checkpoint" deployments/release-notes-latest-v16.md deployments/frontend-manifest-latest-v16.json
   deployments/golden-vectors-latest-v16.json deployments/abis-v16)
 for target in "${targets[@]}"; do
   [[ ! -e "$target" ]] || fail "$target exists; move it away first (nothing is overwritten)"
@@ -114,12 +117,12 @@ cp "$input"/abis/* deployments/abis-v16/
 start_checkpoint=$GOVERNANCE_CHECKPOINT_PATH signed=$RELEASE_PATH
 step release-verify forge script script/release/VerifyReleaseV16.s.sol:VerifyReleaseV16 -vvv
 if [[ -f "$input/deployments/governance-checkpoint-refresh-latest-v16.json" ]]; then
-  cp "$input/deployments/governance-checkpoint-refresh-latest-v16.json" "$log_dir/previous-refresh.json"
-  cp "$input/deployments/governance-checkpoint-refreshed-latest-v16.json" "$log_dir/previous-refreshed-checkpoint.json"
-  step previous-refresh-verify env CHECKPOINT_REFRESH_PATH="$log_dir/previous-refresh.json" \
-    REFRESHED_CHECKPOINT_PATH="$log_dir/previous-refreshed-checkpoint.json" \
+  cp "$input/deployments/governance-checkpoint-refresh-latest-v16.json" "$previous_refresh"
+  cp "$input/deployments/governance-checkpoint-refreshed-latest-v16.json" "$previous_checkpoint"
+  step previous-refresh-verify env CHECKPOINT_REFRESH_PATH="$previous_refresh" \
+    REFRESHED_CHECKPOINT_PATH="$previous_checkpoint" \
     forge script script/release/VerifyCheckpointRefreshV16.s.sol:VerifyCheckpointRefreshV16 -vvv
-  start_checkpoint=$log_dir/previous-refreshed-checkpoint.json signed=$log_dir/previous-refresh.json
+  start_checkpoint=$previous_checkpoint signed=$previous_refresh
 fi
 start_sha=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["checkpointSha256"])' "$signed")
 
