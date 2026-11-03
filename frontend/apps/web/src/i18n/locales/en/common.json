@@ -2270,314 +2270,172 @@
       }
     }
   },
-  "marketing": {
-    "errors": {
-      "recentBetsFailed": "Recent activity failed to load"
-    },
-    "format": {
-      "syncing": "Syncing",
-      "awaitingReserveSync": "Awaiting reserve sync",
-      "pending": "Pending",
-      "walletPending": "Wallet pending",
-      "assetFallback": "Asset",
-      "roomFallback": "Room",
-      "placedFallback": "Placed"
-    },
-    "timeAgo": {
-      "now": "just now",
-      "seconds": "{count}s ago",
-      "minutes": "{count}m ago",
-      "hours": "{count}h ago",
-      "days": "{count}d ago"
-    },
+  "home": {
     "hero": {
-      "channel": "On-chain casino",
-      "title": "On-chain games. Verifiable results.",
-      "description": "Casino rooms with Chainlink VRF randomness, public receipts, and payouts that settle straight to your wallet.",
-      "enterCasino": "Enter Casino",
-      "viewBank": "See Bankroll",
-      "scrollHint": "Scroll to live proof",
-      "visual": {
-        "status": "Paid",
-        "wallet": "to wallet",
-        "receipt": "Public receipt",
-        "proof": "Proof"
+      "title": "Every bet prints a receipt.",
+      "lede": "Casino games on Base. Chainlink VRF picks every result, a win pays straight to your wallet, and the receipt stays on-chain where anyone can check it.",
+      "browse": "Look around the games",
+      "preview": {
+        "note": "Betting opens on Base after the audit report is published.",
+        "channel": "Telegram",
+        "join": "Join the channel",
+        "fine": "Also on X: <x>@arbi_game_fi</x>. Not offered in restricted regions.",
+        "dock": "Join on Telegram"
       },
-      "consoleLabel": "Live status",
-      "live": "Live",
-      "metrics": {
-        "freeReserve": "Free reserve",
-        "bankAssets": "Bankroll",
-        "rooms": "Rooms"
+      "testnet": {
+        "note": "Bets on {chain} use test USDC, which has no value. Betting with real USDC opens on Base after the audit report is published.",
+        "play": "Play on testnet",
+        "faucet": "Get test USDC"
       },
-      "proofRows": {
-        "vrf": {
-          "title": "Every result has a receipt",
-          "detail": "Bet ID, VRF request, random hash, and settlement transaction stay public."
-        },
-        "bytecode": {
-          "title": "The house bankroll is visible",
-          "detail": "Payout capacity and protocol fees are read from the live contracts."
-        }
-      },
-      "exploreGames": "Browse the games"
-    },
-    "stats": {
-      "vault": {
-        "label": "Network bankroll",
-        "detail": "Total capital for the selected asset across active Banks — read from the chain."
-      },
-      "turnover": {
-        "label": "Network turnover",
-        "detail": "Lifetime selected-asset stake flow across active Banks — read from the chain."
-      },
-      "protocolFee": {
-        "label": "Network fees",
-        "detail": "Accrued selected-asset protocol fees across active Banks — read from the chain."
-      },
-      "verifiable": "On-chain",
-      "indexed": "Indexed · may lag",
-      "assetContext": "Asset context"
-    },
-    "rooms": {
-      "eyebrow": "All games",
-      "title": "Game rooms. One wallet.",
-      "detail": "Each game settles on its own contract. Pick one and jump in — no signup.",
-      "actionLabel": "See all"
-    },
-    "roomCards": {
-      "dice": {
-        "title": "Dice",
-        "badge": "Precision room",
-        "summary": "Set the target, choose the stake, and step into a fast dice room.",
-        "facts": {
-          "0": "Fast bet",
-          "1": "Public receipt",
-          "2": "Single asset"
-        }
-      },
-      "coinToss": {
-        "title": "Coin Toss",
-        "badge": "Binary room",
-        "summary": "Choose heads or tails and follow the on-chain result.",
-        "facts": {
-          "0": "Quick entry",
-          "1": "Binary play",
-          "2": "Single outcome"
-        }
-      },
-      "roulette": {
-        "title": "Roulette",
-        "badge": "European table",
-        "summary": "Step into a standard European roulette table with a real board, clear bet slip, and readable receipt review.",
-        "facts": {
-          "0": "0-36 table",
-          "1": "Clear slip",
-          "2": "Standard bets"
-        }
-      },
-      "keno": {
-        "title": "Keno",
-        "badge": "Matrix room",
-        "summary": "Pick the board, choose the stake, and keep the draw centered on the room.",
-        "facts": {
-          "0": "Board-first",
-          "1": "Live draw",
-          "2": "Repeat plays"
-        }
-      },
-      "plinko": {
-        "title": "Plinko",
-        "badge": "Arcade board",
-        "summary": "Drop through a compact risk board and reveal the bucket from on-chain randomness.",
-        "facts": {
-          "0": "Risk profiles",
-          "1": "Bucket reveal",
-          "2": "Fast replay"
-        }
-      },
-      "slots": {
-        "title": "Slots",
-        "badge": "Reel room",
-        "summary": "Spin a simple three-symbol room with readable multipliers and a final receipt.",
-        "facts": {
-          "0": "3 reels",
-          "1": "Visible symbols",
-          "2": "Proof receipt"
-        }
-      },
-      "baccarat": {
-        "title": "Baccarat",
-        "badge": "Table room",
-        "summary": "Pick player, banker, or tie and inspect the opened cards after VRF returns.",
-        "facts": {
-          "0": "Card reveal",
-          "1": "Player banker tie",
-          "2": "Final receipt"
-        }
-      },
-      "sic-bo": {
-        "title": "Sic Bo",
-        "badge": "Triple dice",
-        "summary": "Choose a table bet, roll three dice, and review total, triple, and payout.",
-        "facts": {
-          "0": "3 dice",
-          "1": "Total bets",
-          "2": "Opened roll"
-        }
+      "live": {
+        "play": "Play now"
       }
     },
-    "bank": {
-      "eyebrow": "Bankroll reserve",
-      "title": "Reserve ledger before marketing yield.",
-      "description": "Bank balances and reserved liabilities are displayed from protocol reads. The page does not invent APY or hide pending obligations behind a promotional number.",
-      "freeReserve": "Free reserve",
-      "totalBankAssets": "Total bankroll",
-      "releaseDigest": "Build",
-      "inspectBank": "Inspect bankroll"
-    },
-    "activity": {
-      "eyebrow": "Live",
-      "title": "Last few bets",
-      "viewAll": "All activity",
-      "headers": {
-        "player": "Player",
-        "room": "Game",
-        "state": "Status",
-        "age": "When",
-        "payout": "Payout"
+    "receipt": {
+      "label": "Receipt for bet {id}",
+      "bet": "Bet {id}",
+      "where": "{chain}, block {block}",
+      "stampPaid": "Paid to wallet",
+      "stampSettled": "Settled",
+      "net": "Net result",
+      "lines": {
+        "stake": "Stake",
+        "won": "Won",
+        "houseEdge": "House edge, {rate}",
+        "paid": "Paid to wallet",
+        "unused": "Unused stake returned"
       },
-      "empty": "Be the first.",
-      "live": "Live"
-    },
-    "proof": {
-      "traceLabel": "On-chain trace",
-      "proofSurface": "live on-chain",
-      "eyebrow": "How it stays fair",
-      "title": "Every bet leaves a trail you can follow.",
-      "description": "Your wallet, the game, and the randomness are separate contracts. Anyone can replay the same bet from the chain and get the same answer.",
-      "actionLabel": "See receipts"
+      "proof": {
+        "request": "VRF request",
+        "hash": "Random hash",
+        "settled": "Settled in"
+      },
+      "open": "Open this receipt",
+      "reprint": "Print another receipt",
+      "announce": "Bet {id}, {game}. Net result {net} {symbol}.",
+      "caption": "The latest settled bets, wins and losses alike.",
+      "captionTestnet": "The latest settled bets on the testnet, wins and losses alike. Testnet funds have no value.",
+      "loading": "Reading the latest receipts…",
+      "error": "The latest receipts could not be read. Every receipt stays on-chain; try again in a minute.",
+      "empty": "No bet has settled yet. The first one prints here."
     },
     "verify": {
-      "eyebrow": "Open source",
-      "title": "Don't trust us. Verify.",
-      "description": "Every game's rules are a public on-chain function. No hidden knobs: any parameter change is queued publicly for at least 72 hours before it can take effect. Read the exact bytecode and run it yourself.",
-      "sourceNote": "Representative excerpt. The deployed contract is the source of truth — verify the full source on-chain.",
-      "verifyCta": "Verify on explorer"
-    },
-    "footerCta": {
-      "eyebrow": "Ready when you are",
-      "title": "Connect a wallet. Pick a game. Spin.",
-      "description": "Your money stays in your wallet until you place a bet. Wins come back the same way.",
-      "primary": "Start Playing",
-      "secondary": "Browse Games"
-    },
-    "home": {
-      "stats": {
-        "vault": {
-          "label": "Selected-asset bankroll",
-          "detail": "Capital backing payouts for the selected asset — read from the chain."
-        },
-        "turnover": {
-          "label": "Selected-asset turnover",
-          "detail": "Lifetime stake flow for the selected asset — read from the chain."
-        },
-        "protocolFee": {
-          "label": "Selected-asset fees",
-          "detail": "Accrued protocol fees for the selected asset — read from the chain."
-        },
-        "assetContext": "Selected asset"
+      "title": "Check it before you bet",
+      "lede": "None of this asks you to take our word for it. Each line opens the public record.",
+      "results": {
+        "title": "Results",
+        "detail": "Chainlink VRF picks every outcome. Nobody, including us, can choose or redraw it.",
+        "action": "See the randomness contract"
       },
-      "roomCards": {
-        "dice": {
-          "summary": "Set the target and stake, then step into a fast dice room."
-        },
+      "rules": {
+        "title": "Game rules",
+        "detail": "Each game is a verified contract. The payout math is in its source.",
+        "action": "Read a game contract"
+      },
+      "houseEdge": {
+        "title": "House edge",
+        "detail": "Every game keeps {rate} of a win. It is already counted in the multipliers below.",
+        "action": "See where it is set"
+      },
+      "changes": {
+        "title": "Rule changes",
+        "detail": "Every change waits at least 72 hours in a public timelock before it takes effect.",
+        "action": "See the timelock"
+      },
+      "status": {
+        "title": "System status",
+        "detail": "Whether settlement, randomness and the bet index are working right now.",
+        "action": "Open the status page"
+      },
+      "audit": {
+        "title": "Audit",
+        "detail": "The external audit report is published here before betting opens.",
+        "pending": "Not yet published"
+      }
+    },
+    "games": {
+      "title": "Games and what they pay",
+      "lede": "The right side of each stub is the most one bet can return, with the {rate} house edge already counted. The live maximum also depends on the house pool's free capital and is shown before you sign.",
+      "pays": "pays",
+      "upTo": "up to",
+      "note": "One transaction can play up to {rounds} rounds. The quote you sign shows the stake, the multiplier, your win chance and the fees.",
+      "items": {
         "coinToss": {
-          "summary": "Pick heads or tails and resolve a round in seconds."
+          "name": "Coin Toss",
+          "desc": "Heads or tails."
+        },
+        "dice": {
+          "name": "Dice",
+          "desc": "Set a line and pick a side. Win chance from 2% to 97%."
         },
         "roulette": {
-          "summary": "Step into a standard European roulette table with a real board, a clear slip, and readable review."
+          "name": "European Roulette",
+          "desc": "A single-zero wheel."
+        },
+        "baccarat": {
+          "name": "Baccarat",
+          "desc": "Back the player, the banker or a tie."
+        },
+        "sicBo": {
+          "name": "Sic Bo",
+          "desc": "Bet on the roll of three dice."
+        },
+        "slots": {
+          "name": "Slots",
+          "desc": "Three reels. Pairs, triples and triple sevens pay."
+        },
+        "plinko": {
+          "name": "Plinko",
+          "desc": "Choose a risk level and drop the ball through eight rows."
         },
         "keno": {
-          "summary": "Pick numbers, set the stake, and keep the draw centered in the room."
+          "name": "Keno",
+          "desc": "Pick up to five numbers and match the draw."
         }
       }
     },
-    "landing": {
-      "scrollHint": "Explore the games",
-      "bankHint": "Inspect bank balances and reserved funds for the selected network.",
-      "visual": {
-        "status": "Illustration",
-        "wallet": "Your wallet · your transaction history",
-        "receipt": "Receipt preview",
-        "proof": "Settlement",
-        "title": "Every result, traceable.",
-        "request": "Randomness request",
-        "transaction": "Transaction receipt"
-      },
-      "mechanisms": {
-        "rules": {
-          "label": "Game rules",
-          "value": "Open source",
-          "detail": "Review each game’s rules and current fees before placing a bet."
+    "steps": {
+      "title": "How one bet works",
+      "items": [
+        {
+          "title": "Pick a game and an amount",
+          "detail": "You see the multiplier, your win chance and the fees before anything is signed."
         },
-        "randomness": {
-          "label": "Randomness",
-          "value": "Chainlink VRF",
-          "detail": "Follow the randomness request and proof recorded for each bet."
+        {
+          "title": "Sign one transaction",
+          "detail": "Your stake moves into the public house pool contract, and Chainlink is asked for a random number."
         },
-        "receipts": {
-          "label": "Transaction history",
-          "value": "Public receipts",
-          "detail": "Track a bet from placement to its on-chain settlement."
+        {
+          "title": "Get paid, keep the receipt",
+          "detail": "The bet settles when the number arrives. A win pays straight to your wallet in that same transaction."
         }
-      },
-      "steps": {
-        "eyebrow": "How it works",
-        "title": "From your first choice to the final receipt.",
-        "items": {
-          "0": {
-            "title": "Choose a game",
-            "detail": "Explore the games, read the rules, and check the selected network and supported asset."
-          },
-          "1": {
-            "title": "Review, then sign",
-            "detail": "Connect your wallet. Check your stake, payout quote and fees before confirming the transaction."
-          },
-          "2": {
-            "title": "Follow the result",
-            "detail": "Wait for randomness and settlement confirmations, then open the receipt to check the result and payout."
-          }
-        }
-      },
-      "verifyDescription": "Read the game logic and inspect the deployed contract. Payouts also depend on the bet parameters and the protocol’s configured fees.",
-      "activityEyebrow": "Recent activity",
-      "receiptCta": "View receipts",
-      "bank": {
-        "title": "Check the bankroll before you play.",
-        "description": "Balances are read from contracts on the selected network and shown separately for each asset. Unreserved funds are NAV minus amounts reserved for open bets; they are not a payout guarantee.",
-        "freeLabel": "Unreserved funds",
-        "freeDetail": "Selected-asset NAV less reserved obligations, floored at zero.",
-        "loading": "Reading bank balances…",
-        "error": "Bank balances could not be read. Try again or inspect the bankroll directly.",
-        "empty": "No bank balances are available in this release.",
-        "unavailable": "No deployment is available for the selected network.",
-        "retry": "Retry bank balances"
-      }
+      ],
+      "late": "<lead>If the random number never arrives,</lead> you can take your stake back after {wait}. The randomness fee for that request is not returned.",
+      "hours": "{count, plural, one {an hour} other {# hours}}",
+      "minutes": "{count, plural, one {a minute} other {# minutes}}"
     },
-    "preview": {
-      "note": "Betting isn't open yet: it opens on Base after the audit report is published.",
-      "follow": "Get launch news on Telegram",
-      "footerTitle": "Betting opens after the audit report is published.",
-      "footerDescription": "Your money stays in your wallet until you place a bet. The launch date will be posted on the official channel.",
-      "join": "Join on Telegram"
-    },
-    "testnet": {
-      "note": "This is the {chain} testnet. Bets use test USDC, which has no value; betting with real USDC opens on Base after the audit report is published.",
-      "faucet": "Get test USDC",
-      "play": "Play on testnet",
-      "footerTitle": "Try every game with test USDC.",
-      "footerDescription": "Test funds have no value. Tell us on Telegram what breaks or confuses you."
+    "liquidity": {
+      "title": "Or take the other side of every bet",
+      "lede": "Liquidity providers fund the house pool that pays the winners. Before you deposit, here are the three answers that matter.",
+      "earn": {
+        "title": "What you earn",
+        "detail": "A share of the house edge on every settled bet, split across the pool. No return is promised."
+      },
+      "lose": {
+        "title": "What you can lose",
+        "detail": "Your deposit pays the winners, so a run of player wins can cut it, in the worst case to nothing."
+      },
+      "leave": {
+        "title": "How fast you can leave",
+        "detail": "Each deposit unlocks after 24 hours. Then you can withdraw up to the pool's free capital, first come, first served."
+      },
+      "figures": {
+        "label": "House pool in {symbol}",
+        "pool": "In the house pool",
+        "free": "Free to pay winners",
+        "turnover": "Staked since launch"
+      },
+      "more": "How liquidity works"
     }
   },
   "legal": {

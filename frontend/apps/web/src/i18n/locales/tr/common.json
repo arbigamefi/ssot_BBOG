@@ -327,283 +327,172 @@
       }
     }
   },
-  "marketing": {
-    "errors": {
-      "recentBetsFailed": "Son etkinlik yüklenemedi"
-    },
-    "format": {
-      "syncing": "Eşitleniyor",
-      "awaitingReserveSync": "Rezerv eşitlemesi bekleniyor",
-      "pending": "Beklemede",
-      "walletPending": "Cüzdan beklemede",
-      "assetFallback": "Varlık",
-      "roomFallback": "Oda",
-      "placedFallback": "Yapıldı"
-    },
-    "timeAgo": {
-      "now": "az önce",
-      "seconds": "{count}sn önce",
-      "minutes": "{count}dk önce",
-      "hours": "{count}sa önce",
-      "days": "{count}g önce"
-    },
+  "home": {
     "hero": {
-      "channel": "Zincir üstü casino",
-      "title": "Zincir üstü oyunlar. Doğrulanabilir sonuçlar.",
-      "description": "Chainlink VRF rastgeleliği, herkese açık makbuzlar ve doğrudan cüzdanınıza yerleşen ödemelerle casino odaları.",
-      "enterCasino": "Casinoya gir",
-      "viewBank": "Bankroll'u gör",
-      "scrollHint": "Canlı kanıta ilerle",
-      "visual": {
-        "status": "Ödendi",
-        "wallet": "cüzdana",
-        "receipt": "Herkese açık makbuz",
-        "proof": "Kanıt"
+      "title": "Her bahis bir fiş basar.",
+      "lede": "Base üzerinde casino oyunları. Her sonucu Chainlink VRF seçer, kazanç doğrudan cüzdanınıza ödenir ve fiş, herkesin kontrol edebileceği zincirde kalır.",
+      "browse": "Oyunlara göz atın",
+      "preview": {
+        "note": "Bahisler, denetim raporu yayımlandıktan sonra Base üzerinde açılır.",
+        "channel": "Telegram",
+        "join": "Kanala katıl",
+        "fine": "X'te de varız: <x>@arbi_game_fi</x>. Kısıtlı bölgelerde sunulmaz.",
+        "dock": "Telegram'a katıl"
       },
-      "consoleLabel": "Canlı durum",
-      "live": "Canlı",
-      "metrics": {
-        "freeReserve": "Serbest rezerv",
-        "bankAssets": "Bankroll",
-        "rooms": "Odalar"
+      "testnet": {
+        "note": "{chain} üzerindeki bahisler değeri olmayan test USDC ile yapılır. Gerçek USDC ile bahis, denetim raporu yayımlandıktan sonra Base üzerinde açılır.",
+        "play": "Testnet'te oyna",
+        "faucet": "Test USDC al"
       },
-      "proofRows": {
-        "vrf": {
-          "title": "Her sonucun makbuzu var",
-          "detail": "Bahis ID'si, VRF isteği, rastgele hash ve ödeme işlemi herkese açık kalır."
-        },
-        "bytecode": {
-          "title": "House bankroll görünür",
-          "detail": "Ödeme kapasitesi ve protokol ücretleri canlı sözleşmelerden okunur."
-        }
-      },
-      "exploreGames": "Oyunları keşfet"
-    },
-    "stats": {
-      "vault": {
-        "label": "Ağ bankroll'u",
-        "detail": "Seçili varlığın aktif Bank'lerdeki toplam sermayesi — doğrudan zincirden."
-      },
-      "turnover": {
-        "label": "Ağ devri",
-        "detail": "Seçili varlığın aktif Bank'lerdeki ömür boyu bahis akışı — zincirden okunur."
-      },
-      "protocolFee": {
-        "label": "Ağ ücretleri",
-        "detail": "Seçili varlığın aktif Bank'lerde birikmiş protokol ücretleri — zincirden okunur."
-      },
-      "verifiable": "Zincir üstü",
-      "indexed": "İndeksli · gecikebilir",
-      "assetContext": "Varlık bağlamı"
-    },
-    "rooms": {
-      "eyebrow": "Tüm oyunlar",
-      "title": "Oyun odaları. Tek cüzdan.",
-      "detail": "Her oyun kendi sözleşmesinde sonuçlanır. Birini seçin ve girin — kayıt yok.",
-      "actionLabel": "Tümünü gör"
-    },
-    "roomCards": {
-      "dice": {
-        "title": "Zar",
-        "badge": "Hassasiyet odası",
-        "summary": "Hedefi belirleyin, bahsi seçin ve hızlı bir zar odasına girin.",
-        "facts": {
-          "0": "Hızlı bahis",
-          "1": "Herkese açık makbuz",
-          "2": "Tek varlık"
-        }
-      },
-      "coinToss": {
-        "title": "Yazı Tura",
-        "badge": "İkili oda",
-        "summary": "Yazı veya tura seçin ve zincir üstü sonucu takip edin.",
-        "facts": {
-          "0": "Hızlı giriş",
-          "1": "İkili oyun",
-          "2": "Tek sonuç"
-        }
-      },
-      "roulette": {
-        "title": "Rulet",
-        "badge": "Avrupa masası",
-        "summary": "Gerçek bir tahta, net bahis fişi ve okunaklı makbuz incelemesiyle standart bir Avrupa rulet masasına girin.",
-        "facts": {
-          "0": "0-36 masa",
-          "1": "Net fiş",
-          "2": "Standart bahisler"
-        }
-      },
-      "keno": {
-        "title": "Keno",
-        "badge": "Matris odası",
-        "summary": "Tahtayı seçin, bahsi belirleyin ve çekilişi odanın merkezinde tutun.",
-        "facts": {
-          "0": "Önce tahta",
-          "1": "Canlı çekiliş",
-          "2": "Tekrar oyunlar"
-        }
-      },
-      "plinko": {
-        "title": "Plinko",
-        "badge": "Arcade tahtası",
-        "summary": "Kompakt bir risk tahtasından bırakın ve kovayı zincir üstü rastgelelikten açığa çıkarın.",
-        "facts": {
-          "0": "Risk profilleri",
-          "1": "Kova açılışı",
-          "2": "Hızlı tekrar"
-        }
-      },
-      "slots": {
-        "title": "Slot",
-        "badge": "Makara odası",
-        "summary": "Okunaklı çarpanlar ve kesin kanıtla üç sembollü basit bir oda çevirin.",
-        "facts": {
-          "0": "3 makara",
-          "1": "Görünür semboller",
-          "2": "Kanıt makbuzu"
-        }
-      },
-      "baccarat": {
-        "title": "Bakara",
-        "badge": "Masa odası",
-        "summary": "Oyuncu, banko veya berabere seçin ve VRF yanıt verdikten sonra açılan kartları inceleyin.",
-        "facts": {
-          "0": "Kart açılışı",
-          "1": "Oyuncu banko berabere",
-          "2": "Kesin makbuz"
-        }
-      },
-      "sic-bo": {
-        "title": "Sic Bo",
-        "badge": "Üç zar",
-        "summary": "Bir masa bahsi seçin, üç zar atın ve toplamı, üçlüyü ve ödemeyi inceleyin.",
-        "facts": {
-          "0": "3 zar",
-          "1": "Toplam bahisleri",
-          "2": "Açık atış"
-        }
+      "live": {
+        "play": "Hemen oyna"
       }
     },
-    "bank": {
-      "eyebrow": "Bankroll rezervi",
-      "title": "Pazarlama getirisinden önce rezerv defteri.",
-      "description": "Banka bakiyeleri ve rezerve edilmiş yükümlülükler protokol okumalarından gelir. Sayfa APY uydurmaz ve bekleyen yükümlülükleri tanıtım amaçlı bir rakamın arkasına saklamaz.",
-      "freeReserve": "Serbest rezerv",
-      "totalBankAssets": "Toplam bankroll",
-      "releaseDigest": "Build",
-      "inspectBank": "Bankroll'u incele"
-    },
-    "activity": {
-      "eyebrow": "Canlı",
-      "title": "Son bahisler",
-      "viewAll": "Tüm etkinlik",
-      "headers": {
-        "player": "Oyuncu",
-        "room": "Oyun",
-        "state": "Durum",
-        "age": "Ne zaman",
-        "payout": "Ödeme"
+    "receipt": {
+      "label": "{id} numaralı bahsin fişi",
+      "bet": "Bahis {id}",
+      "where": "{chain}, blok {block}",
+      "stampPaid": "Cüzdana ödendi",
+      "stampSettled": "Sonuçlandı",
+      "net": "Net sonuç",
+      "lines": {
+        "stake": "Bahis",
+        "won": "Kazanç",
+        "houseEdge": "Casino avantajı, {rate}",
+        "paid": "Cüzdana ödenen",
+        "unused": "İade edilen kullanılmamış bahis"
       },
-      "empty": "İlk siz olun.",
-      "live": "Canlı"
-    },
-    "proof": {
-      "traceLabel": "Zincir üstü iz",
-      "proofSurface": "zincir üstünde canlı",
-      "eyebrow": "Nasıl adil kalıyor",
-      "title": "Her bahis takip edebileceğiniz bir iz bırakır.",
-      "description": "Cüzdanınız, oyun ve rastgelelik ayrı sözleşmelerdir. Herkes aynı bahsi zincirden yeniden oynatıp aynı yanıtı alabilir.",
-      "actionLabel": "Makbuzları gör"
+      "proof": {
+        "request": "VRF isteği",
+        "hash": "Rastgele hash",
+        "settled": "Sonuçlandığı işlem"
+      },
+      "open": "Bu fişi aç",
+      "reprint": "Başka bir fiş bas",
+      "announce": "Bahis {id}, {game}. Net sonuç {net} {symbol}.",
+      "caption": "Kazanan ve kaybeden, son sonuçlanan bahisler.",
+      "captionTestnet": "Testnet'te kazanan ve kaybeden, son sonuçlanan bahisler. Test fonlarının değeri yoktur.",
+      "loading": "Son fişler okunuyor…",
+      "error": "Son fişler okunamadı. Her fiş zincirde kalır; bir dakika sonra tekrar deneyin.",
+      "empty": "Henüz sonuçlanan bahis yok. İlk fiş burada basılacak."
     },
     "verify": {
-      "eyebrow": "Açık kaynak",
-      "title": "Bize güvenmeyin. Doğrulayın.",
-      "description": "Her oyunun kuralları herkese açık bir zincir üstü fonksiyondur. Gizli düğme yok: her parametre değişikliği yürürlüğe girmeden önce en az 72 saat herkesin görebileceği bir kuyrukta bekler. Tam bytecode'u okuyun ve kendiniz çalıştırın.",
-      "sourceNote": "Temsili bir alıntı. Doğruluğun kaynağı dağıtılmış sözleşmedir — tam kaynağı zincir üstünde doğrulayın.",
-      "verifyCta": "Explorer'da doğrula"
-    },
-    "footerCta": {
-      "eyebrow": "Hazır olduğunuzda",
-      "title": "Cüzdan bağlayın. Oyun seçin. Çevirin.",
-      "description": "Paranız siz bahis yapana kadar cüzdanınızda kalır. Kazançlar aynı yoldan geri gelir.",
-      "primary": "Oynamaya başla",
-      "secondary": "Oyunlara göz at"
-    },
-    "landing": {
-      "scrollHint": "Oyunları keşfet",
-      "bankHint": "Seçili ağdaki banka bakiyelerini ve ayrılmış fonları inceleyin.",
-      "visual": {
-        "status": "Temsili",
-        "wallet": "Cüzdanınız · işlem geçmişiniz",
-        "receipt": "Makbuz önizlemesi",
-        "proof": "Uzlaşma",
-        "title": "Her sonuç izlenebilir.",
-        "request": "Rastgelelik isteği",
-        "transaction": "İşlem makbuzu"
+      "title": "Bahis yapmadan önce kontrol edin",
+      "lede": "Burada hiçbir şey sözümüze güvenmenizi istemez. Her satır kamuya açık kaydı açar.",
+      "results": {
+        "title": "Sonuçlar",
+        "detail": "Her sonucu Chainlink VRF seçer. Biz dahil kimse onu seçemez ya da yeniden çekemez.",
+        "action": "Rastgelelik sözleşmesini gör"
       },
-      "mechanisms": {
-        "rules": {
-          "label": "Oyun kuralları",
-          "value": "Açık kaynak",
-          "detail": "Bahis yapmadan önce her oyunun kurallarını ve güncel ücretlerini inceleyin."
-        },
-        "randomness": {
-          "label": "Rastgelelik",
-          "value": "Chainlink VRF",
-          "detail": "Her bahsin rastgelelik isteğini ve kayıtlı kanıtını takip edin."
-        },
-        "receipts": {
-          "label": "İşlem geçmişi",
-          "value": "Herkese açık makbuzlar",
-          "detail": "Bahsi gönderimden zincir üstü uzlaşmaya kadar takip edin."
-        }
+      "rules": {
+        "title": "Oyun kuralları",
+        "detail": "Her oyun doğrulanmış bir sözleşmedir. Ödeme hesabı kaynak kodundadır.",
+        "action": "Bir oyun sözleşmesini oku"
       },
-      "steps": {
-        "eyebrow": "Nasıl çalışır",
-        "title": "İlk seçimden son makbuza.",
-        "items": {
-          "0": {
-            "title": "Bir oyun seçin",
-            "detail": "Oyunları keşfedin, kuralları okuyun, ağı ve desteklenen varlığı kontrol edin."
-          },
-          "1": {
-            "title": "İnceleyin ve imzalayın",
-            "detail": "Cüzdanı bağlayın. İşlemi onaylamadan önce bahis tutarını, ödeme teklifini ve ücretleri kontrol edin."
-          },
-          "2": {
-            "title": "Sonucu takip edin",
-            "detail": "Rastgelelik ve uzlaşma onaylarını bekleyin. Sonucu ve ödemeyi kontrol etmek için makbuzu açın."
-          }
-        }
+      "houseEdge": {
+        "title": "Casino avantajı",
+        "detail": "Her oyun bir kazancın {rate} kadarını tutar. Aşağıdaki çarpanlara zaten dahildir.",
+        "action": "Nerede ayarlandığını gör"
       },
-      "verifyDescription": "Oyun mantığını okuyun ve dağıtılmış sözleşmeyi inceleyin. Ödemeler ayrıca bahis parametrelerine ve protokolde yapılandırılmış ücretlere bağlıdır.",
-      "activityEyebrow": "Son etkinlik",
-      "receiptCta": "Makbuzları gör",
-      "bank": {
-        "title": "Oynamadan önce bankayı inceleyin.",
-        "description": "Bakiyeler seçili ağın sözleşmelerinden okunur ve her varlık ayrı gösterilir. Ayrılmamış fonlar, net varlıklardan açık bahis rezervlerinin çıkarılmasıyla hesaplanır; ödeme garantisi değildir.",
-        "freeLabel": "Ayrılmamış fonlar",
-        "freeDetail": "Seçili varlığın net değerinden ayrılmış yükümlülükler çıkarılır; en az sıfır gösterilir.",
-        "loading": "Banka bakiyeleri okunuyor…",
-        "error": "Bakiyeler okunamadı. Tekrar deneyin veya bankayı inceleyin.",
-        "empty": "Bu sürümde gösterilecek banka bakiyesi yok.",
-        "unavailable": "Seçili ağda kullanılabilir bir dağıtım yok.",
-        "retry": "Yeniden dene"
+      "changes": {
+        "title": "Kural değişiklikleri",
+        "detail": "Her değişiklik yürürlüğe girmeden önce herkese açık bir zaman kilidinde en az 72 saat bekler.",
+        "action": "Zaman kilidini gör"
+      },
+      "status": {
+        "title": "Sistem durumu",
+        "detail": "Sonuçlandırma, rastgelelik ve bahis dizini şu anda çalışıyor mu.",
+        "action": "Durum sayfasını aç"
+      },
+      "audit": {
+        "title": "Denetim",
+        "detail": "Dış denetim raporu bahisler açılmadan önce burada yayımlanır.",
+        "pending": "Henüz yayımlanmadı"
       }
     },
-    "preview": {
-      "note": "Bahisler henüz açık değil: denetim raporu yayımlandıktan sonra Base üzerinde açılacak.",
-      "follow": "Lansman haberleri Telegram'da",
-      "footerTitle": "Bahisler denetim raporu yayımlandıktan sonra açılacak.",
-      "footerDescription": "Paranız siz bahis yapana kadar cüzdanınızda kalır. Lansman tarihi resmi kanalda duyurulacak.",
-      "join": "Telegram'a katıl"
+    "games": {
+      "title": "Oyunlar ve ödedikleri",
+      "lede": "Her koçanın sağ tarafı, {rate} casino avantajı düşülmüş olarak tek bir bahsin döndürebileceği en yüksek tutardır. Anlık üst sınır casino havuzunun serbest sermayesine de bağlıdır ve imzalamadan önce gösterilir.",
+      "pays": "öder",
+      "upTo": "en çok",
+      "note": "Bir işlem en fazla {rounds} tur oynayabilir. İmzaladığınız teklif bahsi, çarpanı, kazanma şansınızı ve ücretleri gösterir.",
+      "items": {
+        "coinToss": {
+          "name": "Yazı Tura",
+          "desc": "Yazı ya da tura."
+        },
+        "dice": {
+          "name": "Zar",
+          "desc": "Bir çizgi belirleyin ve bir taraf seçin. Kazanma şansı %2 ile %97 arası."
+        },
+        "roulette": {
+          "name": "Avrupa Ruleti",
+          "desc": "Tek sıfırlı bir çark."
+        },
+        "baccarat": {
+          "name": "Bakara",
+          "desc": "Oyuncuya, bankaya ya da beraberliğe oynayın."
+        },
+        "sicBo": {
+          "name": "Sic Bo",
+          "desc": "Üç zarın atışına bahis yapın."
+        },
+        "slots": {
+          "name": "Slot",
+          "desc": "Üç makara. İkililer, üçlüler ve üç yedi öder."
+        },
+        "plinko": {
+          "name": "Plinko",
+          "desc": "Bir risk seviyesi seçin ve topu sekiz sıradan bırakın."
+        },
+        "keno": {
+          "name": "Keno",
+          "desc": "En fazla beş sayı seçin ve çekilişi tutturun."
+        }
+      }
     },
-    "testnet": {
-      "note": "Burası {chain} testnet'i. Bahisler değeri olmayan test USDC ile yapılır; gerçek USDC ile bahis, denetim raporu yayımlandıktan sonra Base'de açılacak.",
-      "faucet": "Test USDC al",
-      "play": "Testnet'te oyna",
-      "footerTitle": "Tüm oyunları test USDC ile deneyin.",
-      "footerDescription": "Test fonlarının değeri yoktur. Neyin bozulduğunu ya da kafa karıştırdığını Telegram'da bize bildirin."
+    "steps": {
+      "title": "Bir bahis nasıl işler",
+      "items": [
+        {
+          "title": "Bir oyun ve tutar seçin",
+          "detail": "Herhangi bir şey imzalamadan önce çarpanı, kazanma şansınızı ve ücretleri görürsünüz."
+        },
+        {
+          "title": "Tek bir işlem imzalayın",
+          "detail": "Bahsiniz herkese açık casino havuzu sözleşmesine geçer ve Chainlink'ten rastgele bir sayı istenir."
+        },
+        {
+          "title": "Ödemenizi alın, fişi saklayın",
+          "detail": "Sayı geldiğinde bahis sonuçlanır. Kazanç aynı işlemde doğrudan cüzdanınıza ödenir."
+        }
+      ],
+      "late": "<lead>Rastgele sayı hiç gelmezse,</lead> {wait} sonra bahsinizi geri alabilirsiniz. O isteğin rastgelelik ücreti iade edilmez.",
+      "hours": "{count, plural, one {bir saat} other {# saat}}",
+      "minutes": "{count, plural, one {bir dakika} other {# dakika}}"
+    },
+    "liquidity": {
+      "title": "Ya da her bahsin karşı tarafında olun",
+      "lede": "Likidite sağlayıcıları, kazananlara ödeme yapan casino havuzunu finanse eder. Yatırmadan önce önemli olan üç yanıt burada.",
+      "earn": {
+        "title": "Ne kazanırsınız",
+        "detail": "Sonuçlanan her bahisteki casino avantajından bir pay, havuz genelinde bölüştürülür. Hiçbir getiri vaat edilmez."
+      },
+      "lose": {
+        "title": "Ne kaybedebilirsiniz",
+        "detail": "Yatırdığınız tutar kazananlara ödeme yapar; oyuncuların art arda kazanması onu azaltabilir, en kötü durumda sıfıra indirebilir."
+      },
+      "leave": {
+        "title": "Ne kadar hızlı çıkabilirsiniz",
+        "detail": "Her yatırım 24 saat sonra kilitten çıkar. Sonra havuzun serbest sermayesine kadar, ilk gelen ilk alır usulüyle çekebilirsiniz."
+      },
+      "figures": {
+        "label": "{symbol} casino havuzu",
+        "pool": "Casino havuzunda",
+        "free": "Kazananlara ödemeye hazır",
+        "turnover": "Açılıştan beri yatırılan bahis"
+      },
+      "more": "Likidite nasıl işler"
     }
   },
   "legal": {

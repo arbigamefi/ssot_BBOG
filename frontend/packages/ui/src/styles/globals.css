@@ -91,21 +91,34 @@
   --color-on-carbon-muted: hsl(var(--on-carbon-muted));
   --color-rule-carbon: hsl(var(--paper) / 0.22);
 
-  --font-text: var(--font-family-text);
-  --font-print: var(--font-family-print);
+  /* Schibsted Grotesk at 400, 600 and 800 sets every word; Doto 800 prints
+     figures only. The next/font variables are set on the wrapper of a page
+     rebuilt in Carbon copy (apps/web features/home/fonts.ts), so these stacks
+     stay inline and resolve on each element. The names after each variable
+     are what Storybook and tests get; every var() needs a fallback or the
+     whole list is void. Schibsted has no Cyrillic, so Russian falls through
+     to Inter, which the root layout loads. */
+  --font-text:
+    var(--font-schibsted, "Schibsted Grotesk"), var(--font-noto-sc, "Noto Sans SC"), "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", var(--font-inter, "Inter"), ui-sans-serif, system-ui,
+    sans-serif;
+  --font-print:
+    var(--font-doto, "Doto"), var(--font-schibsted, "Schibsted Grotesk"),
+    var(--font-noto-sc, "Noto Sans SC"), var(--font-inter, "Inter"), ui-sans-serif, system-ui,
+    sans-serif;
 
   --text-note: var(--type-note);
   --text-note--line-height: 1.45;
   --text-body: var(--type-body);
-  --text-body--line-height: 1.55;
+  --text-body--line-height: var(--line-body);
   --text-lede: var(--type-lede);
-  --text-lede--line-height: 1.5;
+  --text-lede--line-height: var(--line-lede);
   --text-heading: var(--type-heading);
-  --text-heading--line-height: 1.05;
-  --text-heading--letter-spacing: -0.025em;
+  --text-heading--line-height: var(--line-heading);
+  --text-heading--letter-spacing: var(--track-heading);
   --text-display: var(--type-display);
-  --text-display--line-height: 1;
-  --text-display--letter-spacing: -0.03em;
+  --text-display--line-height: var(--line-display);
+  --text-display--letter-spacing: var(--track-display);
   --text-price: var(--type-price);
   --text-price--line-height: 1;
   --text-total: var(--type-total);
@@ -119,6 +132,12 @@
 
   --radius-print: var(--corner-print);
   --radius-sheet: var(--corner-sheet);
+
+  /* Printing (docs/design/12-motion.md §3). Use with motion-safe: only. */
+  --animate-print: print var(--print-time, 2.4s) steps(16, end) var(--print-delay, 0.5s) both;
+  --animate-stamp: stamp 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.4)
+    calc(var(--print-delay, 0.5s) + var(--print-time, 2.4s) + 0.1s) both;
+  --animate-tear: tear 0.34s ease-in forwards;
 
   /* ── Radius ─────────────────────────────────────────────────────── */
   --radius-sm: var(--radius-sm);
@@ -155,6 +174,33 @@
   }
   to {
     height: 0;
+  }
+}
+
+@keyframes print {
+  from {
+    transform: translateY(-101%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes stamp {
+  from {
+    transform: rotate(-14deg) scale(1.6);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-14deg) scale(1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes tear {
+  to {
+    transform: translateY(24px) rotate(1.6deg);
+    opacity: 0;
   }
 }
 
@@ -257,4 +303,83 @@
 
 @utility bg-skeleton-size {
   background-size: 200% 100%;
+}
+
+/* ── Carbon copy printed objects (docs/design/01-brand.md §5–6) ─────── */
+
+/* Paper a receipt or slip is printed on: ink text, faint shading at the edges. */
+@utility print-sheet {
+  background:
+    linear-gradient(
+      90deg,
+      hsl(var(--carbon) / 0.06),
+      transparent 8%,
+      transparent 92%,
+      hsl(var(--carbon) / 0.06)
+    ),
+    hsl(var(--paper));
+  color: hsl(var(--ink));
+}
+
+/* The slot a receipt prints out of: a recess in the carbon. */
+@utility print-slot {
+  border-radius: var(--corner-sheet);
+  background: hsl(var(--carbon-deep));
+  box-shadow:
+    inset 0 3px 6px hsl(var(--slot-shade) / 0.55),
+    0 1px 0 hsl(var(--paper) / 0.08);
+}
+
+/* A finished receipt: the bottom edge is torn in a zigzag. Leave 16px of padding for it. */
+@utility print-torn {
+  --edge: 16px;
+  mask: conic-gradient(from -45deg at bottom, transparent, black 1deg 89deg, transparent 90deg)
+    50% / var(--edge) 100%;
+}
+
+/* A dotted leader between a receipt label and its amount. */
+@utility print-leader {
+  flex: 1;
+  min-width: 16px;
+  border-bottom: 2px dotted hsl(var(--thermal));
+  transform: translateY(-4px);
+}
+
+/* The settled stamp: a double ring pressed at an angle. */
+@utility print-stamp {
+  border: 2px solid hsl(var(--ink));
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 4px hsl(var(--paper)),
+    inset 0 0 0 6px hsl(var(--ink));
+  color: hsl(var(--ink));
+  transform: rotate(-14deg);
+  opacity: 0.8;
+  mix-blend-mode: multiply;
+}
+
+/* A ticket stub's tear-off part: a dashed perforation with a half-disc notch at each end. */
+@utility print-perforation {
+  position: relative;
+  border-left: 2px dashed hsl(var(--thermal));
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    left: -12px;
+    width: 24px;
+    height: 12px;
+    border: 1px solid var(--stub-edge, hsl(var(--thermal)));
+    background: hsl(var(--paper));
+  }
+  &::before {
+    top: -1px;
+    border-top: 0;
+    border-radius: 0 0 12px 12px;
+  }
+  &::after {
+    bottom: -1px;
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
+  }
 }

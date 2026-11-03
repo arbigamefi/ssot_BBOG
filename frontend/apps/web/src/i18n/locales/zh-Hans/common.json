@@ -2270,314 +2270,172 @@
       }
     }
   },
-  "marketing": {
-    "errors": {
-      "recentBetsFailed": "最近活动加载失败"
-    },
-    "format": {
-      "syncing": "同步中",
-      "awaitingReserveSync": "等待储备同步",
-      "pending": "等待中",
-      "walletPending": "钱包待确认",
-      "assetFallback": "资产",
-      "roomFallback": "房间",
-      "placedFallback": "已下注"
-    },
-    "timeAgo": {
-      "now": "刚刚",
-      "seconds": "{count}s 前",
-      "minutes": "{count}m 前",
-      "hours": "{count}h 前",
-      "days": "{count}d 前"
-    },
+  "home": {
     "hero": {
-      "channel": "链上赌场",
-      "title": "链上游戏，逐笔可验",
-      "description": "每一局都用 Chainlink VRF 抽号，结算后生成公开凭证；中了直接从 Bank 支付到你的钱包。",
-      "enterCasino": "进入赌场",
-      "viewBank": "查看金库",
-      "scrollHint": "继续查看链上凭证",
-      "visual": {
-        "status": "已派彩",
-        "wallet": "到钱包",
-        "receipt": "公开凭证",
-        "proof": "证明"
+      "title": "每一注都打印一张凭证。",
+      "lede": "Base 上的链上游戏。每个结果由 Chainlink VRF 决定，赢了直接打到你的钱包，凭证永久留在链上，任何人都能查。",
+      "browse": "先看看有哪些游戏",
+      "preview": {
+        "note": "审计报告公布后，Base 上即开放下注。",
+        "channel": "Telegram",
+        "join": "加入频道",
+        "fine": "X 上也有：<x>@arbi_game_fi</x>。受限地区不提供服务。",
+        "dock": "加入 Telegram 频道"
       },
-      "consoleLabel": "实时状态",
-      "live": "实时",
-      "metrics": {
-        "freeReserve": "可用储备",
-        "bankAssets": "金库资产",
-        "rooms": "房间"
+      "testnet": {
+        "note": "{chain} 上的下注使用测试 USDC，没有价值。审计报告公布后，Base 上开放真实 USDC 下注。",
+        "play": "在测试网上玩",
+        "faucet": "领取测试 USDC"
       },
-      "proofRows": {
-        "vrf": {
-          "title": "每一局都有收据",
-          "detail": "投注 ID、VRF 请求、随机哈希、结算交易全部公开。"
-        },
-        "bytecode": {
-          "title": "庄家金库看得见",
-          "detail": "最大赔付能力和协议费都从实时合约读取。"
-        }
-      },
-      "exploreGames": "浏览游戏"
-    },
-    "stats": {
-      "vault": {
-        "label": "全站金库",
-        "detail": "所选资产在 active Banks 中的总资金 —— 链上直读。"
-      },
-      "turnover": {
-        "label": "全站周转额",
-        "detail": "所选资产在 active Banks 中的历史投注流水 —— 链上直读。"
-      },
-      "protocolFee": {
-        "label": "全站协议费",
-        "detail": "所选资产在 active Banks 中已累计的协议费 —— 链上直读。"
-      },
-      "verifiable": "链上可验证",
-      "indexed": "索引·可能延迟",
-      "assetContext": "资产上下文"
-    },
-    "rooms": {
-      "eyebrow": "全部游戏",
-      "title": "游戏房间。一个钱包。",
-      "detail": "每款游戏走自己的合约结算。挑一个点进去 —— 不用注册。",
-      "actionLabel": "全部查看"
-    },
-    "roomCards": {
-      "dice": {
-        "title": "骰子",
-        "badge": "精密房间",
-        "summary": "设置目标和下注金额，然后进入快速骰子房间。",
-        "facts": {
-          "0": "快速下注",
-          "1": "链上凭证",
-          "2": "单一资产"
-        }
-      },
-      "coinToss": {
-        "title": "抛硬币",
-        "badge": "二元房间",
-        "summary": "选择正面或反面，跟进链上开奖结果。",
-        "facts": {
-          "0": "快速进入",
-          "1": "二元玩法",
-          "2": "单一结果"
-        }
-      },
-      "roulette": {
-        "title": "轮盘",
-        "badge": "欧式桌台",
-        "summary": "进入标准欧式轮盘桌：真实桌面、清晰下注单、可读凭证复核。",
-        "facts": {
-          "0": "0-36 桌台",
-          "1": "清晰下注单",
-          "2": "标准下注"
-        }
-      },
-      "keno": {
-        "title": "Keno",
-        "badge": "矩阵房间",
-        "summary": "选择号码、确定下注金额，等待链上随机数开奖。",
-        "facts": {
-          "0": "棋盘优先",
-          "1": "实时开奖",
-          "2": "重复游玩"
-        }
-      },
-      "plinko": {
-        "title": "Plinko",
-        "badge": "弹珠板",
-        "summary": "选择风险档位，落入桶位后由链上随机数揭示结果。",
-        "facts": {
-          "0": "风险档位",
-          "1": "桶位揭示",
-          "2": "快速复玩"
-        }
-      },
-      "slots": {
-        "title": "Slots",
-        "badge": "转轮房间",
-        "summary": "三符号转轮，倍率清晰，最终结果带链上凭证。",
-        "facts": {
-          "0": "3 个转轮",
-          "1": "符号可见",
-          "2": "凭证回执"
-        }
-      },
-      "baccarat": {
-        "title": "百家乐",
-        "badge": "牌桌",
-        "summary": "选择闲、庄或和，VRF 返回后直接查看开牌结果。",
-        "facts": {
-          "0": "开牌可见",
-          "1": "闲庄和",
-          "2": "最终回执"
-        }
-      },
-      "sic-bo": {
-        "title": "骰宝",
-        "badge": "三骰桌台",
-        "summary": "选择桌面投注，掷出三颗骰子，并查看总点数、围骰和赔付。",
-        "facts": {
-          "0": "3 颗骰子",
-          "1": "总点投注",
-          "2": "开骰结果"
-        }
+      "live": {
+        "play": "开始游戏"
       }
     },
-    "bank": {
-      "eyebrow": "金库储备",
-      "title": "先展示储备账本，再谈营销收益。",
-      "description": "金库余额和已保留负债都来自协议读取。页面不会编造 APY，也不会用促销数字遮住待履约义务。",
-      "freeReserve": "可用储备",
-      "totalBankAssets": "金库总资产",
-      "releaseDigest": "版本",
-      "inspectBank": "检查金库"
-    },
-    "activity": {
-      "eyebrow": "实时",
-      "title": "最近几局",
-      "viewAll": "全部记录",
-      "headers": {
-        "player": "玩家",
-        "room": "游戏",
-        "state": "状态",
-        "age": "时间",
-        "payout": "派彩"
+    "receipt": {
+      "label": "第 {id} 注的凭证",
+      "bet": "第 {id} 注",
+      "where": "{chain}，区块 {block}",
+      "stampPaid": "已付到钱包",
+      "stampSettled": "已结算",
+      "net": "净结果",
+      "lines": {
+        "stake": "下注额",
+        "won": "赢得",
+        "houseEdge": "庄家优势 {rate}",
+        "paid": "打到钱包",
+        "unused": "退回未用下注额"
       },
-      "empty": "做第一个吧。",
-      "live": "实时"
-    },
-    "proof": {
-      "traceLabel": "链上轨迹",
-      "proofSurface": "链上实时",
-      "eyebrow": "为什么公平",
-      "title": "每一笔下注都能在链上回放。",
-      "description": "你的钱包、游戏、随机数，各走各的合约。任何人都能从链上拿同一笔下注重放，结果一致。",
-      "actionLabel": "查看凭证"
+      "proof": {
+        "request": "VRF 请求",
+        "hash": "随机哈希",
+        "settled": "结算交易"
+      },
+      "open": "打开这张凭证",
+      "reprint": "再打印一张",
+      "announce": "第 {id} 注，{game}。净结果 {net} {symbol}。",
+      "caption": "最近结算的下注，赢的输的都有。",
+      "captionTestnet": "测试网上最近结算的下注，赢的输的都有。测试资金没有价值。",
+      "loading": "正在读取最近的凭证…",
+      "error": "最近的凭证暂时读不到。凭证都在链上，请一分钟后再试。",
+      "empty": "还没有结算的下注。第一张凭证会在这里打印。"
     },
     "verify": {
-      "eyebrow": "开源可验证",
-      "title": "别信我们，自己验。",
-      "description": "每个游戏的规则都是公开的链上函数。没有暗中可调的参数：任何参数变更都要公开排队至少 72 小时才能生效。你可以读到精确的字节码，自己跑一遍。",
-      "sourceNote": "此处为代表性节选；以链上部署的合约为准——可在区块浏览器核对完整源码。",
-      "verifyCta": "在区块浏览器验证"
-    },
-    "footerCta": {
-      "eyebrow": "你说开始就开始",
-      "title": "连钱包。挑游戏。开始。",
-      "description": "下注前，钱一直在你自己钱包里。中奖原路返回。",
-      "primary": "开始玩",
-      "secondary": "浏览游戏"
-    },
-    "home": {
-      "stats": {
-        "vault": {
-          "label": "所选资产金库",
-          "detail": "支撑所选资产每一笔赔付的资金 —— 链上直读。"
-        },
-        "turnover": {
-          "label": "所选资产周转额",
-          "detail": "所选资产历史承接的投注流水 —— 链上直读。"
-        },
-        "protocolFee": {
-          "label": "所选资产协议费",
-          "detail": "所选资产已累计的协议费 —— 链上直读。"
-        },
-        "assetContext": "所选资产"
+      "title": "下注前先查一查",
+      "lede": "这里没有一条需要你相信我们的话。每一行都打开公开记录。",
+      "results": {
+        "title": "结果",
+        "detail": "每个结果由 Chainlink VRF 决定。任何人，包括我们，都无法选择或重抽。",
+        "action": "查看随机数合约"
       },
-      "roomCards": {
-        "dice": {
-          "summary": "设置目标和下注金额，然后进入快速骰子房间。"
-        },
+      "rules": {
+        "title": "游戏规则",
+        "detail": "每个游戏都是经过验证的合约，赔付算法写在源码里。",
+        "action": "阅读游戏合约"
+      },
+      "houseEdge": {
+        "title": "庄家优势",
+        "detail": "每个游戏从赢得的金额中保留 {rate}。下面的倍数已经扣除。",
+        "action": "查看设置位置"
+      },
+      "changes": {
+        "title": "规则变更",
+        "detail": "每项变更至少在公开时间锁中等待 72 小时才生效。",
+        "action": "查看时间锁"
+      },
+      "status": {
+        "title": "系统状态",
+        "detail": "结算、随机数和下注索引此刻是否正常。",
+        "action": "打开状态页"
+      },
+      "audit": {
+        "title": "审计",
+        "detail": "外部审计报告会在开放下注前公布在这里。",
+        "pending": "尚未公布"
+      }
+    },
+    "games": {
+      "title": "游戏和赔付",
+      "lede": "每张票根右侧是一注最多能拿回的倍数，已扣除 {rate} 的庄家优势。实际上限还取决于庄池的可用资金，会在你签名前显示。",
+      "pays": "赔付",
+      "upTo": "最高",
+      "note": "一笔交易最多可玩 {rounds} 轮。你签名的报价会列出下注额、倍数、中奖概率和费用。",
+      "items": {
         "coinToss": {
-          "summary": "选择正面或反面，几秒内完成一局。"
+          "name": "抛硬币",
+          "desc": "正面或反面。"
+        },
+        "dice": {
+          "name": "骰子",
+          "desc": "设定一条线，选一边。中奖概率 2% 到 97%。"
         },
         "roulette": {
-          "summary": "进入标准欧式轮盘桌：真实桌面、清晰下注、可读复核。"
+          "name": "欧式轮盘",
+          "desc": "单零轮盘。"
+        },
+        "baccarat": {
+          "name": "百家乐",
+          "desc": "押闲、押庄或押和。"
+        },
+        "sicBo": {
+          "name": "骰宝",
+          "desc": "押三颗骰子的点数。"
+        },
+        "slots": {
+          "name": "Slots 拉霸",
+          "desc": "三个转轴。对子、三连和三个 7 有赔付。"
+        },
+        "plinko": {
+          "name": "Plinko 弹珠盘",
+          "desc": "选一个风险档位，让小球落过八排钉子。"
         },
         "keno": {
-          "summary": "选择号码、设置下注金额，等待链上随机数开奖。"
+          "name": "Keno 选号",
+          "desc": "最多选五个号码，对上开奖号。"
         }
       }
     },
-    "landing": {
-      "scrollHint": "浏览游戏",
-      "bankHint": "按当前网络查看金库余额和已预留资金。",
-      "visual": {
-        "status": "示意图",
-        "wallet": "你的钱包 · 你的交易记录",
-        "receipt": "凭证预览",
-        "proof": "结算",
-        "title": "每一局，都有迹可循",
-        "request": "随机数请求",
-        "transaction": "结算交易凭证"
-      },
-      "mechanisms": {
-        "rules": {
-          "label": "游戏规则",
-          "value": "开源可查",
-          "detail": "下注前查看各游戏规则和当前费用，按实际报价做决定。"
+    "steps": {
+      "title": "一注是怎么完成的",
+      "items": [
+        {
+          "title": "选游戏和金额",
+          "detail": "签名之前，你会看到倍数、中奖概率和费用。"
         },
-        "randomness": {
-          "label": "随机数来源",
-          "value": "Chainlink VRF",
-          "detail": "每笔投注的随机数请求与证明记录均可追溯。"
+        {
+          "title": "签一笔交易",
+          "detail": "你的下注额进入公开的庄池合约，同时向 Chainlink 请求一个随机数。"
         },
-        "receipts": {
-          "label": "交易记录",
-          "value": "逐笔凭证",
-          "detail": "从提交投注到链上结算，沿交易记录核对每一步。"
+        {
+          "title": "收款，留下凭证",
+          "detail": "随机数到达时下注即结算。赢了在同一笔交易里直接打到你的钱包。"
         }
-      },
-      "steps": {
-        "eyebrow": "如何开始",
-        "title": "从选游戏，到核对最终凭证",
-        "items": {
-          "0": {
-            "title": "选择游戏",
-            "detail": "浏览游戏，了解玩法，并确认当前网络和支持的资产。"
-          },
-          "1": {
-            "title": "核对后签名",
-            "detail": "连接钱包，检查投注金额、赔付报价和费用，再确认交易。"
-          },
-          "2": {
-            "title": "跟进开奖结果",
-            "detail": "等待随机数与结算交易确认，打开凭证核对结果和实际派彩。"
-          }
-        }
-      },
-      "verifyDescription": "游戏逻辑和部署合约可供核对。实际赔付还取决于投注参数及协议配置的费用，可结合源码与交易凭证检查。",
-      "activityEyebrow": "近期记录",
-      "receiptCta": "查看投注凭证",
-      "bank": {
-        "title": "下注前，先核对金库",
-        "description": "按当前网络从合约读取余额，不同资产分别展示。未预留资金为净资产扣除待结算投注的预留金额，不代表赔付保证。",
-        "freeLabel": "未预留资金",
-        "freeDetail": "所选资产的净资产减去预留负债，最低记为零。",
-        "loading": "正在读取金库余额…",
-        "error": "暂时无法读取金库余额。可以重试，或进入金库页面核对。",
-        "empty": "当前版本没有可展示的金库余额记录。",
-        "unavailable": "当前网络暂无可用部署。",
-        "retry": "重新读取余额"
-      }
+      ],
+      "late": "<lead>如果随机数一直没有到达，</lead>{wait}后你可以取回下注额。这次请求的随机数费用不退。",
+      "hours": "{count, plural, one {1 小时} other {# 小时}}",
+      "minutes": "{count, plural, one {1 分钟} other {# 分钟}}"
     },
-    "preview": {
-      "note": "下注尚未开放：审计报告公布后，Base 上才开放下注。",
-      "follow": "在 Telegram 获取上线消息",
-      "footerTitle": "审计报告公布后开放下注。",
-      "footerDescription": "下注之前，钱一直在你自己的钱包里。上线日期会在官方频道公布。",
-      "join": "加入 Telegram 频道"
-    },
-    "testnet": {
-      "note": "这里是 {chain} 测试网。下注用的是测试 USDC，没有价值；审计报告公布后，Base 上才开放真实 USDC 下注。",
-      "faucet": "领取测试 USDC",
-      "play": "在测试网试玩",
-      "footerTitle": "用测试 USDC 把每个游戏都玩一遍。",
-      "footerDescription": "测试资金没有价值。哪里出错或看不懂，请在 Telegram 告诉我们。"
+    "liquidity": {
+      "title": "或者，做每一注的对手方",
+      "lede": "流动性提供者为支付赢家的庄池出资。存入之前，先看这三个最重要的答案。",
+      "earn": {
+        "title": "你能赚什么",
+        "detail": "每一注结算后的庄家优势中的一部分，按池内份额分配。不承诺任何回报。"
+      },
+      "lose": {
+        "title": "你可能亏多少",
+        "detail": "你的存款用来支付赢家，玩家连续赢钱会让它减少，最坏情况下归零。"
+      },
+      "leave": {
+        "title": "多快能退出",
+        "detail": "每笔存款 24 小时后解锁。之后可在庄池可用资金范围内取出，先到先得。"
+      },
+      "figures": {
+        "label": "{symbol} 庄池",
+        "pool": "庄池内资金",
+        "free": "可用于赔付",
+        "turnover": "上线以来下注额"
+      },
+      "more": "了解流动性"
     }
   },
   "legal": {

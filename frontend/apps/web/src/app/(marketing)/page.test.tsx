@@ -1,79 +1,52 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
 import * as React from "react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const refetchOverview = vi.fn();
+import en from "../../i18n/locales/en/common.json";
+import zh from "../../i18n/locales/zh-Hans/common.json";
+
+const TIMELOCK = "0x00000000000000000000000000000000000000aa";
+const VRF_HUB = "0x00000000000000000000000000000000000000bb";
+const DICE = "0x00000000000000000000000000000000000000cc";
+const USDC = "0x036cbd53842c5426634e7929541ec2318f3dcf7e";
+
 const state = {
   release: null as any,
-  readOnly: false,
-  readOnlyReason: null as string | null,
-  sdk: null as any,
-  ready: false,
-  db: null as any,
-  indexerStatus: null as any,
+  chainId: 84532,
   bets: [] as any[],
-  betsLoading: false,
-  betCount: 0,
-  assetOverviews: [] as any[],
-  overviewLoading: false,
-  overviewError: null as Error | null
+  betsPending: false,
+  betsError: false,
+  disabled: undefined as ReadonlySet<string> | undefined,
+  overview: undefined as any,
+  overviewPending: false,
+  overviewError: false
 };
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: ({ queryKey }: any) => {
-    if (Array.isArray(queryKey) && queryKey.includes("bet-count")) {
-      return { data: state.betCount, isLoading: false, error: null };
-    }
-    if (Array.isArray(queryKey) && queryKey.includes("asset-overview")) {
-      return {
-        data: { assets: state.assetOverviews },
-        isPending: state.overviewLoading,
-        isFetching: false,
-        refetch: refetchOverview,
-        error: state.overviewError
-      };
-    }
-    return { data: undefined, isLoading: false, error: null };
-  }
+  useQuery: () => ({
+    data: state.overview,
+    isPending: state.overviewPending,
+    isError: state.overviewError
+  })
 }));
 
 vi.mock("../../ssot/release/ReleaseProvider", () => ({
-  useRelease: () => ({
-    release: state.release,
-    chainId: state.release?.chainId ?? 8453,
-    readOnly: state.readOnly,
-    readOnlyReason: state.readOnlyReason
-  })
-}));
-
-vi.mock("../../ssot/sdk", () => ({
-  useSSOTSDK: () => ({
-    sdk: state.sdk,
-    ready: state.ready
-  })
-}));
-
-vi.mock("../../ssot/runtime", () => ({
-  useSSOTRuntime: () => ({
-    db: state.db
-  })
-}));
-
-vi.mock("../../features/ops/useIndexer", () => ({
-  useIndexer: () => ({
-    indexerStatus: state.indexerStatus
-  })
+  useRelease: () => ({ release: state.release, chainId: state.chainId })
 }));
 
 vi.mock("../../features/betting/useRecentBets", () => ({
   useRecentBets: () => ({
     data: state.bets,
-    isLoading: state.betsLoading
+    isPending: state.betsPending,
+    isError: state.betsError
   })
 }));
 
-vi.mock("../components/PageTransition", () => ({
-  PageTransition: ({ children }: any) => <div>{children}</div>
+vi.mock("../../features/casino/useDisabledGames", async (importActual) => ({
+  ...(await importActual<typeof import("../../features/casino/useDisabledGames")>()),
+  useDisabledGameIds: () => state.disabled
 }));
 
 vi.mock("next/link", () => ({
@@ -88,265 +61,245 @@ vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
-vi.mock("next-intl", async () => {
-  const messages = (await import("../../i18n/locales/en/common.json")).default as Record<
-    string,
-    unknown
-  >;
+import { HomePageClient } from "./pageClient";
 
-  function resolveMessage(key: string) {
-    return key.split(".").reduce<unknown>((value, part) => {
-      if (value && typeof value === "object" && part in value) {
-        return (value as Record<string, unknown>)[part];
-      }
-      return undefined;
-    }, messages);
-  }
-
-  function translate(key: string, values?: Record<string, string | number>) {
-    const message = resolveMessage(`marketing.${key}`);
-    if (typeof message !== "string") return key;
-    return Object.entries(values ?? {}).reduce(
-      (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
-      message
-    );
-  }
-
+function release(chainId = 84532) {
   return {
-    useLocale: () => "en",
-    useTranslations: () => translate
+    chainId,
+    name: "Base Sepolia",
+    releaseDigest: "0xdigest",
+    refundTimeoutSeconds: 3600,
+    defaultHouseEdgeBps: 200,
+    contracts: {
+      governanceTimelock: TIMELOCK,
+      vrfHub: VRF_HUB,
+      gameHub: "0x00000000000000000000000000000000000000dd"
+    },
+    assets: [{ address: USDC, symbol: "USDC", decimals: 6 }],
+    gamesMeta: [
+      { gameId: "0x01", slug: "coin-toss", label: "Coin Toss", module: "0x01", maxBetCount: 25 },
+      { gameId: "0x02", slug: "dice", label: "Dice", module: DICE, maxBetCount: 25 },
+      { gameId: "0x03", slug: "keno", label: "Keno", module: "0x03", maxBetCount: 10 }
+    ]
   };
+}
+
+function bet(betId: string, overrides: Record<string, unknown> = {}) {
+  return {
+    betId,
+    gameId: "0x01",
+    asset: USDC,
+    state: "finalized",
+    stake: "10000",
+    payoutGross: "20000",
+    payout: "19600",
+    refundAmount: "0",
+    placedBlock: 51_346_846,
+    requestId: "86577843407123870663933366161905983352653535481161166303575843784462175295639",
+    randomHash: "0x1f63000000000000000000000000000000000000000000000000000000001013",
+    terminalTxHash: "0x7e24000000000000000000000000000000000000000000000000000000af90",
+    ...overrides
+  };
+}
+
+function renderHome(locale: "en" | "zh-Hans" = "en") {
+  return render(
+    <NextIntlClientProvider locale={locale} messages={locale === "en" ? en : zh}>
+      <HomePageClient />
+    </NextIntlClientProvider>
+  );
+}
+
+beforeEach(() => {
+  state.release = release();
+  state.chainId = 84532;
+  vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "false");
 });
 
-import HomePage from "./page";
-
-describe("HomePage", () => {
-  afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
-    state.release = null;
-    state.readOnly = false;
-    state.readOnlyReason = null;
-    state.sdk = null;
-    state.ready = false;
-    state.db = null;
-    state.indexerStatus = null;
-    state.bets = [];
-    state.betsLoading = false;
-    state.betCount = 0;
-    state.assetOverviews = [];
-    state.overviewLoading = false;
-    state.overviewError = null;
+afterEach(() => {
+  cleanup();
+  vi.unstubAllEnvs();
+  Object.assign(state, {
+    bets: [],
+    betsPending: false,
+    betsError: false,
+    disabled: undefined,
+    overview: undefined,
+    overviewPending: false,
+    overviewError: false
   });
+});
 
-  it("renders the product-first landing surface", () => {
-    render(<HomePage />);
+describe("home page", () => {
+  it("prints the latest settled bet, wins and losses alike, and skips unsettled ones", () => {
+    state.bets = [
+      bet("7", { state: "randomReady", payoutGross: undefined, payout: undefined }),
+      bet("1"),
+      bet("3", { gameId: "0x02", stake: "1500000", payoutGross: "0", payout: "0" })
+    ];
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as any;
+    renderHome();
 
     expect(
-      screen.getByRole("heading", { name: "On-chain games. Verifiable results." })
-    ).toBeDefined();
-    expect(screen.getByText("On-chain casino")).toBeDefined();
-    expect(screen.getAllByText("Enter Casino").length).toBeGreaterThan(0);
-    expect(screen.getByText("Game rooms. One wallet.")).toBeDefined();
-    expect(screen.getByText("From your first choice to the final receipt.")).toBeDefined();
-    expect(screen.queryByText("Last few bets")).toBeNull();
-    expect(screen.queryByText("Be the first.")).toBeNull();
+      screen.getByRole("heading", { level: 1, name: "Every bet prints a receipt." })
+    ).toBeVisible();
+    const win = screen.getByRole("article", { name: "Receipt for bet 1" });
+    expect(within(win).getByText("Coin Toss")).toBeVisible();
+    expect(within(win).getByText("Base Sepolia, block 51,346,846")).toBeVisible();
+    expect(within(win).getByText("Paid to wallet", { selector: "div" })).toBeInTheDocument();
+    expect(within(win).getByText("House edge, 2%")).toBeVisible();
+    expect(within(win).getByText("0.0196")).toBeVisible();
+    expect(win.querySelector(".text-total")?.textContent).toBe("+0.0096USDC");
+    expect(within(win).getByRole("link", { name: "Open this receipt" })).toHaveAttribute(
+      "href",
+      "/casino/receipt/84532/1"
+    );
+    expect(screen.queryByRole("article", { name: "Receipt for bet 7" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Print another receipt" }));
+    const loss = screen.getByRole("article", { name: "Receipt for bet 3" });
+    expect(within(loss).getByText("Dice")).toBeVisible();
+    expect(within(loss).getByText("Settled")).toBeInTheDocument();
+    expect(screen.getByText("Bet 3, Dice. Net result −1.50 USDC.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The latest settled bets on the testnet, wins and losses alike. Testnet funds have no value."
+      )
+    ).toBeVisible();
   });
 
-  it("renders live activity, reserve proof, and canonical room cards when release data exists", () => {
-    state.release = {
-      name: "Arbitrum",
-      chainId: 42161,
-      releaseDigest: "0xdeadbeefcafefeeddeadbeefcafefeed",
-      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
-      games: {},
-      assets: [
-        { address: "0x01", bank: "0x02", symbol: "USDC", decimals: 6 },
-        { address: "0x03", bank: "0x04", symbol: "WETH", decimals: 18 }
-      ],
-      pools: [
-        {
-          poolId: 1,
-          domainId: 1,
-          domain: "Casino",
-          asset: "0x01",
-          bank: "0x02",
-          symbol: "USDC",
-          decimals: 6
-        },
-        {
-          poolId: 2,
-          domainId: 1,
-          domain: "Casino",
-          asset: "0x03",
-          bank: "0x04",
-          symbol: "WETH",
-          decimals: 18
-        }
-      ],
-      gamesMeta: [
-        { gameId: "0x01", slug: "dice", label: "Dice", paramsEncoding: "uint8" },
-        { gameId: "0x02", slug: "keno", label: "Keno", paramsEncoding: "uint40" }
-      ]
-    };
-    state.indexerStatus = {
-      lagSeconds: 1,
-      config: { confirmationSeconds: 24 },
-      lastRunAt: Date.now() - 60_000
-    };
-    state.betCount = 12;
-    state.bets = [
+  it("says when no bet has settled instead of printing a made-up receipt", () => {
+    renderHome();
+    expect(screen.getByRole("status")).toHaveTextContent("No bet has settled yet.");
+    expect(screen.queryByRole("article")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Print another receipt" })).toBeNull();
+  });
+
+  it("before launch, points to the official channels and nowhere to play", () => {
+    renderHome();
+    expect(
+      screen.getByText("Betting opens on Base after the audit report is published.")
+    ).toBeVisible();
+    expect(screen.getByRole("link", { name: /Join the channel/ })).toHaveAttribute(
+      "href",
+      "https://t.me/arbigamefi"
+    );
+    expect(screen.getByRole("link", { name: "@arbi_game_fi" })).toHaveAttribute(
+      "href",
+      "https://x.com/arbi_game_fi"
+    );
+    expect(screen.queryByText("Play on testnet")).toBeNull();
+    expect(screen.queryByText("Play now")).toBeNull();
+  });
+
+  it("on an open test chain, says the funds are test funds and where to get them", () => {
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
+    renderHome();
+    expect(
+      screen.getByText(/Bets on Base Sepolia use test USDC, which has no value/)
+    ).toBeVisible();
+    expect(screen.getByRole("link", { name: "Play on testnet" })).toHaveAttribute(
+      "href",
+      "/casino"
+    );
+    expect(screen.getByRole("link", { name: "Get test USDC" })).toHaveAttribute(
+      "href",
+      "https://faucet.circle.com"
+    );
+    expect(screen.queryByRole("link", { name: /Join the channel/ })).toBeNull();
+  });
+
+  it("on an open main chain, shows the launch action", () => {
+    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
+    state.chainId = 8453;
+    state.release = release(8453);
+    state.bets = [bet("1")];
+    renderHome();
+    expect(screen.getByRole("link", { name: "Play now" })).toHaveAttribute("href", "/casino");
+    expect(screen.queryByText(/test USDC/)).toBeNull();
+    expect(screen.getByText("The latest settled bets, wins and losses alike.")).toBeVisible();
+  });
+
+  it("links every check to its public record", () => {
+    renderHome();
+    const ledger = screen.getByRole("region", { name: "Check it before you bet" });
+    expect(
+      within(ledger).getByRole("link", { name: "See the randomness contract" })
+    ).toHaveAttribute("href", `https://sepolia.basescan.org/address/${VRF_HUB}`);
+    expect(within(ledger).getByRole("link", { name: "Read a game contract" })).toHaveAttribute(
+      "href",
+      `https://sepolia.basescan.org/address/${DICE}`
+    );
+    expect(within(ledger).getByRole("link", { name: "See the timelock" })).toHaveAttribute(
+      "href",
+      `https://sepolia.basescan.org/address/${TIMELOCK}`
+    );
+    expect(
+      within(ledger).getByText(
+        "Every game keeps 2% of a win. It is already counted in the multipliers below."
+      )
+    ).toBeVisible();
+    expect(within(ledger).getByText("Not yet published")).toBeVisible();
+  });
+
+  it("prints a ticket stub for each enabled game with its top multiplier", () => {
+    state.disabled = new Set(["0x03"]);
+    renderHome();
+    const games = screen.getByRole("region", { name: "Games and what they pay" });
+    const coin = within(games).getByRole("link", { name: /Coin Toss/ });
+    expect(coin).toHaveAttribute("href", "/casino/coin-toss");
+    expect(coin).toHaveTextContent("pays1.96×");
+    expect(within(games).getByRole("link", { name: /Dice/ })).toHaveTextContent("up to49×");
+    expect(within(games).queryByRole("link", { name: /Keno/ })).toBeNull();
+    expect(within(games).getByText(/One transaction can play up to 25 rounds/)).toBeVisible();
+    expect(screen.getByText(/you can take your stake back after an hour/)).toBeVisible();
+  });
+
+  it("shows the house pool figures it read, and a dash for what it could not", () => {
+    const rows = [
       {
-        id: "bet-1",
-        betId: "1",
-        gameId: "0x01",
-        asset: "0x03",
-        stake: "1000000000000000000",
-        payout: "1230000000000000000",
-        refundAmount: "0",
-        state: "finalized",
-        updatedAt: Date.now() - 60_000,
-        updatedBlock: 123
-      }
-    ];
-    state.assetOverviews = [
-      {
-        address: "0x01",
-        bank: "0x02",
+        address: USDC,
         symbol: "USDC",
         decimals: 6,
         lpCapital: 1_000_000n,
         lockedCapital: 250_000n,
         turnover: 12_500_000n,
-        protocolFee: 25_000n,
-        freeLiquidity: 750_000n,
-        updatedAtBlock: 123n
+        protocolFee: 0n
       },
       {
-        address: "0x03",
-        bank: "0x04",
-        symbol: "WETH",
-        decimals: 18,
-        lpCapital: 3_000_000_000_000_000_000n,
-        lockedCapital: 1_000_000_000_000_000_000n,
-        turnover: 6_000_000_000_000_000_000n,
-        protocolFee: 50_000_000_000_000_000n,
-        freeLiquidity: 2_000_000_000_000_000_000n,
-        updatedAtBlock: 123n
-      }
-    ];
-
-    render(<HomePage />);
-
-    expect(screen.getByText("Unreserved funds")).toBeDefined();
-    expect(screen.getByText("Network bankroll")).toBeDefined();
-    expect(screen.getAllByText("0.75 USDC").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("1 USDC").length).toBeGreaterThan(0);
-    expect(screen.queryByText("0.75 USDC / 2 WETH")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "WETH" }));
-    expect(screen.getAllByText("2 WETH").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("3 WETH").length).toBeGreaterThan(0);
-    expect(screen.getByText("1.23 WETH")).toBeDefined();
-    expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Keno").length).toBeGreaterThan(0);
-    expect(screen.getByText("Last few bets")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Inspect bankroll" }).getAttribute("href")).toBe(
-      "/earn"
-    );
-
-    const kenoLinks = screen
-      .getAllByText("Keno")
-      .map((node) => node.closest("a")?.getAttribute("href"));
-    expect(kenoLinks).toContain("/casino/keno");
-  });
-  it("keeps illustrative content separate from live bank evidence", () => {
-    render(<HomePage />);
-    expect(screen.queryByText("98%")).toBeNull();
-    expect(screen.queryByText("On-chain", { exact: true })).toBeNull();
-    expect(screen.getByText("Illustration")).toBeDefined();
-    expect(screen.queryByText(/0xd662|0x44a3|9.6/)).toBeNull();
-    expect(screen.getByRole("link", { name: "View receipts" }).getAttribute("href")).toBe(
-      "/portfolio/activity"
-    );
-    expect(screen.getByRole("link", { name: "Explore the games" }).getAttribute("href")).toBe(
-      "#home-games"
-    );
-    expect(screen.getByRole("status").textContent).toContain("No deployment");
-  });
-
-  it("shows the pre-launch copy until the website opens betting, then the launch copy", () => {
-    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "false");
-    const { unmount } = render(<HomePage />);
-    expect(screen.getByRole("link", { name: "Browse the games" }).getAttribute("href")).toBe(
-      "/casino"
-    );
-    expect(screen.getByRole("link", { name: "Get launch news on Telegram" })).toBeDefined();
-    expect(screen.getByRole("link", { name: /Join on Telegram/ }).getAttribute("href")).toBe(
-      "https://t.me/arbigamefi"
-    );
-    unmount();
-
-    // The same build flag that opens betting brings back the launch buttons and copy.
-    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
-    render(<HomePage />);
-    expect(screen.queryByText("Browse the games")).toBeNull();
-    expect(screen.queryByText("Get launch news on Telegram")).toBeNull();
-    expect(screen.queryByText(/Join on Telegram/)).toBeNull();
-    expect(screen.getByText("Connect a wallet. Pick a game. Spin.")).toBeDefined();
-    expect(screen.getByRole("link", { name: /Start Playing/ }).getAttribute("href")).toBe(
-      "/casino"
-    );
-    vi.unstubAllEnvs();
-  });
-
-  it("tells players on an open test chain that bets use test USDC and where to get it", () => {
-    vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
-    state.release = { name: "Base Sepolia", chainId: 84532, releaseDigest: "test", contracts: {} };
-    render(<HomePage />);
-    expect(screen.getByText(/This is the Base Sepolia testnet/)).toBeDefined();
-    expect(screen.getByRole("link", { name: "Get test USDC" }).getAttribute("href")).toBe(
-      "https://faucet.circle.com"
-    );
-    expect(screen.getAllByRole("link", { name: /Play on testnet/ })[0]?.getAttribute("href")).toBe(
-      "/casino"
-    );
-    expect(screen.getByText("Try every game with test USDC.")).toBeDefined();
-    expect(screen.queryByText(/Start Playing/)).toBeNull();
-    expect(screen.queryByText("Connect a wallet. Pick a game. Spin.")).toBeNull();
-    vi.unstubAllEnvs();
-  });
-
-  it("distinguishes loading, failed refresh, and a successfully read empty response", () => {
-    state.release = { name: "Base", chainId: 8453, releaseDigest: "test", contracts: {} };
-    state.overviewLoading = true;
-    const { rerender } = render(<HomePage />);
-    expect(screen.getByRole("status").textContent).toContain("Reading bank balances");
-    state.overviewLoading = false;
-    state.overviewError = new Error("RPC unavailable");
-    // A cached balance must not remain labelled current after a failed refresh.
-    state.assetOverviews = [
-      {
-        address: "0x01",
+        address: USDC,
         symbol: "USDC",
         decimals: 6,
-        lpCapital: 1000000n,
+        lpCapital: 500_000n,
         lockedCapital: 0n,
         turnover: 0n,
         protocolFee: 0n
       }
     ];
-    rerender(<HomePage />);
-    expect(screen.getByRole("status").textContent).toContain("could not be read");
-    expect(screen.queryByText("1 USDC")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Retry bank balances" }));
-    expect(refetchOverview).toHaveBeenCalledOnce();
-    state.overviewError = null;
-    state.assetOverviews[0].lpCapital = 0n;
-    rerender(<HomePage />);
-    expect(screen.getAllByText("0 USDC")).toHaveLength(3);
-    expect(screen.queryByRole("status")).toBeNull();
-    state.assetOverviews = [];
-    rerender(<HomePage />);
-    expect(screen.getByRole("status").textContent).toContain("No bank balances");
+    state.overview = { assets: rows };
+    const { rerender } = renderHome();
+    const figures = screen.getByLabelText("House pool in USDC");
+    expect(figures).toHaveTextContent("In the house pool1.50USDC");
+    expect(figures).toHaveTextContent("Free to pay winners1.25USDC");
+    expect(figures).toHaveTextContent("Staked since launch12.50USDC");
+
+    // A failed refresh keeps the old data in the cache; it is no longer current.
+    state.overviewError = true;
+    rerender(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <HomePageClient />
+      </NextIntlClientProvider>
+    );
+    expect(screen.getByLabelText("House pool in USDC")).toHaveTextContent(
+      "In the house pool—Free to pay winners—Staked since launch—"
+    );
+  });
+
+  it("speaks Chinese with the Chinese terms", () => {
+    state.bets = [bet("1")];
+    renderHome("zh-Hans");
+    expect(screen.getByRole("heading", { level: 1, name: "每一注都打印一张凭证。" })).toBeVisible();
+    expect(screen.getByRole("article", { name: "第 1 注的凭证" })).toHaveTextContent("庄家优势 2%");
+    expect(screen.getByText(/1 小时后你可以取回下注额/)).toBeVisible();
   });
 });

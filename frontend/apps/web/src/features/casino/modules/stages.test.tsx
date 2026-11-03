@@ -15,7 +15,7 @@ import {
   baccaratMultiplier,
   PLINKO_FACTOR_TABLE,
   sicBoMultiplier
-} from "../room/params";
+} from "../room/payouts";
 
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")

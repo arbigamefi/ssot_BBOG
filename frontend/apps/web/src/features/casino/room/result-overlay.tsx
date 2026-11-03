@@ -19,8 +19,9 @@ import { SharePanel } from "../../share/SharePanel";
 import { buildShareUrl } from "../../share/share-link";
 import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
-import { applyHouseEdgeToMultiplier } from "./params";
-import type { BaccaratSide, CoinSide, DiceDirection, SicBoKind } from "./params";
+import { applyHouseEdgeToMultiplier } from "./payouts";
+import type { BaccaratSide, CoinSide, SicBoKind } from "./params";
+import type { DiceDirection } from "./payouts";
 import type { CasinoRoundResult, CasinoTerminalRoundResult } from "./resolution";
 
 function shortHash(value: string | undefined) {

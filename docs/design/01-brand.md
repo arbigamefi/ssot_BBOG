@@ -120,6 +120,9 @@ Liquidity, Portfolio, the receipt page, the entry card and the other game rooms.
 not moved keeps the old dark tokens, and nothing new is built on them. The old tokens are
 deleted with the last page.
 
+Moved so far: the home page (`app/(marketing)`, `features/home`). The site header and footer
+still use the old tokens and move with the navigation change (`03-information-architecture.md`).
+
 ## 12. Verification
 
 ```bash

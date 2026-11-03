@@ -7,15 +7,15 @@ import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import { mapBetState, shortHex, type GameMeta } from "./model";
+import { rouletteReserveMultiplier } from "./params";
 import {
   applyHouseEdgeToMultiplier,
   baccaratMultiplier,
   kenoMaxMultiplier,
   plinkoMaxMultiplier,
-  rouletteReserveMultiplier,
   sicBoMultiplier,
   slotsMaxMultiplier
-} from "./params";
+} from "./payouts";
 import { usePlayerBets } from "../../betting/usePlayerBets";
 import { formatUnits } from "../../betting/model/units";
 import { useCasinoLeaderboard, useCasinoStats, useCasinoTimeseries } from "../useCasinoStats";

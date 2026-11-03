@@ -1,483 +1,186 @@
 "use client";
 
-import { getCasinoCashReturned } from "@ssot/bet-index/financials";
-
 import * as React from "react";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { BetRow } from "@ssot/ssot/indexer";
 import { useLocale, useTranslations } from "next-intl";
 
+import { getCasinoAccess } from "../../app-shell/casino-access";
+import { getAppChain, getExplorerAddressUrl } from "../../app-shell/chain-registry";
 import { useRecentBets } from "../../features/betting/useRecentBets";
 import { getCatalogRooms } from "../../features/casino/catalog";
+import { isCasinoModuleSlug } from "../../features/casino/modules";
 import { useDisabledGameIds, withoutDisabledRooms } from "../../features/casino/useDisabledGames";
-import { getExplorerBaseUrl } from "../../features/earn/format";
-import { formatTokenAmount, shortAddress, timeAgo } from "../../features/marketing/format";
-import { HomeActivity } from "../../features/marketing/home-activity";
-import { HomeFooterCta } from "../../features/marketing/home-footer-cta";
-import { HomeHero } from "../../features/marketing/home-hero";
-import { HomeRoomDirectory } from "../../features/marketing/home-room-directory";
-import { HomeStatsStrip } from "../../features/marketing/home-stats-strip";
-import { HomeVerify } from "../../features/marketing/home-verify";
-import { HomeHowItWorks } from "../../features/marketing/home-how-it-works";
-import type {
-  AssetOverview,
-  LandingActivity,
-  LandingAssetTab,
-  LandingRoom,
-  LandingStat
-} from "../../features/marketing/home-types";
-import { getCasinoAccess, type CasinoAccess } from "../../app-shell/casino-access";
-import { getAppChain } from "../../app-shell/chain-registry";
-import { OFFICIAL_CHANNELS, TESTNET_USDC_FAUCET } from "../../config/site";
+import { ticketMultiplier } from "../../features/home/game-multipliers";
+import {
+  BetSteps,
+  GameStubs,
+  HomeHero,
+  LiquiditySection,
+  TelegramDock,
+  VerifyLedger,
+  type PoolFigures,
+  type TicketStub
+} from "../../features/home/home-sections";
+import { ReceiptPrinter, type PrintableReceipt } from "../../features/home/receipt-printer";
+import { buildHomeReceipt, splitAmount } from "../../features/home/receipts";
+import {
+  fetchLandingOverview,
+  type AssetOverview
+} from "../../features/marketing/landing-overview";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 
-import { fetchLandingOverview } from "../../features/marketing/landing-overview";
+/** How many settled bets the printer rotates through. */
+const RECEIPT_COUNT = 5;
 
-function toBigOrNull(value?: string | bigint | number): bigint | null {
-  if (value == null || value === "") return null;
-  try {
-    return typeof value === "bigint" ? value : BigInt(value);
-  } catch {
-    return null;
-  }
+/** i18n key of a game, from its module slug. */
+function gameKey(slug: string) {
+  return slug.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
-const HERO_ENTRY_LABEL = {
-  preview: "hero.exploreGames",
-  testnet: "testnet.play",
-  live: "hero.enterCasino"
-} as const satisfies Record<CasinoAccess, string>;
-
-const FOOTER_CTA_KEYS = {
-  preview: {
-    title: "preview.footerTitle",
-    description: "preview.footerDescription",
-    primary: "preview.join"
-  },
-  testnet: {
-    title: "testnet.footerTitle",
-    description: "testnet.footerDescription",
-    primary: "testnet.play"
-  },
-  live: {
-    title: "footerCta.title",
-    description: "footerCta.description",
-    primary: "footerCta.primary"
-  }
-} as const satisfies Record<CasinoAccess, Record<"title" | "description" | "primary", string>>;
-
 export function HomePageClient() {
-  const t = useTranslations("marketing");
-  const tBetState = useTranslations("casino.room.receipt.status");
+  const t = useTranslations("home");
   const locale = useLocale();
   const { chainId, release } = useRelease();
-  const { data: latestBets = [] } = useRecentBets({
-    errorMessage: t("errors.recentBetsFailed"),
-    limit: 5
-  });
+  const access = getCasinoAccess(chainId);
+  const chain = getAppChain(chainId);
+  const chainName = chain?.name ?? String(chainId);
+  const houseEdgeBps = release?.defaultHouseEdgeBps ?? 0;
+  const houseEdgeRate = new Intl.NumberFormat(locale, {
+    style: "percent",
+    maximumFractionDigits: 2
+  }).format(houseEdgeBps / 10_000);
 
-  const {
-    data: landingOverview,
-    isPending,
-    error: overviewError,
-    refetch,
-    isFetching
-  } = useQuery({
+  // Unsettled bets are skipped, so read more rows than the printer shows.
+  const recentBets = useRecentBets({ errorMessage: t("receipt.error"), limit: 20 });
+  const receipts = React.useMemo<PrintableReceipt[]>(() => {
+    if (!release) return [];
+    const slugById = new Map(release.gamesMeta.map((game) => [game.gameId, game.slug]));
+    const assetByAddress = new Map(release.assets.map((asset) => [asset.address, asset]));
+    const fallbackAsset = release.assets[0];
+    const printable: PrintableReceipt[] = [];
+    for (const row of recentBets.data ?? []) {
+      const asset = (row.asset && assetByAddress.get(row.asset.toLowerCase())) || fallbackAsset;
+      const slug = row.gameId ? slugById.get(row.gameId.toLowerCase()) : undefined;
+      if (!asset || !slug || !isCasinoModuleSlug(slug)) continue;
+      const receipt = buildHomeReceipt(row, { chainId, decimals: asset.decimals });
+      if (!receipt) continue;
+      printable.push({
+        ...receipt,
+        game: t(`games.items.${gameKey(slug)}.name`),
+        symbol: asset.symbol
+      });
+      if (printable.length === RECEIPT_COUNT) break;
+    }
+    return printable;
+  }, [chainId, recentBets.data, release, t]);
+
+  const disabledGameIds = useDisabledGameIds();
+  const stubs = React.useMemo<TicketStub[]>(
+    () =>
+      withoutDisabledRooms(getCatalogRooms(release?.gamesMeta), release?.gamesMeta, disabledGameIds)
+        .filter((room) => isCasinoModuleSlug(room.slug))
+        .map((room) => {
+          const { value, fixed } = ticketMultiplier(
+            room.slug as Parameters<typeof ticketMultiplier>[0],
+            houseEdgeBps
+          );
+          return { key: gameKey(room.slug), href: room.href, multiplier: value, fixed };
+        }),
+    [disabledGameIds, houseEdgeBps, release?.gamesMeta]
+  );
+  const maxRounds = release?.gamesMeta.reduce((max, game) => Math.max(max, game.maxBetCount), 0);
+
+  const overview = useQuery({
     queryKey: ["ssot", "landing", "asset-overview", chainId, release?.releaseDigest],
     enabled: Boolean(release),
     queryFn: () => fetchLandingOverview(chainId, release!.releaseDigest),
     retry: 1
   });
-  const assetOverviews = landingOverview?.assets ?? [];
-
-  const disabledGameIds = useDisabledGameIds();
-  const rooms = React.useMemo(
-    () =>
-      withoutDisabledRooms(
-        getCatalogRooms(release?.gamesMeta as Array<{ slug: string; label: string }> | undefined),
-        release?.gamesMeta,
-        disabledGameIds
-      ),
-    [disabledGameIds, release?.gamesMeta]
-  );
-
-  // Keep each asset separate, including a successfully read zero balance.
-  const aggregatedAssets = aggregateAssetOverviews(assetOverviews);
-  const hasBankRows = aggregatedAssets.length > 0;
-  const [selectedAssetAddress, setSelectedAssetAddress] = React.useState<string | null>(null);
-  const selectedAsset =
-    aggregatedAssets.find((asset) => asset.address.toLowerCase() === selectedAssetAddress) ??
-    aggregatedAssets[0];
-  const reserveFloor = hasBankRows
-    ? formatAssetOverviewValue(selectedAsset, locale, t("format.awaitingReserveSync"), (asset) =>
-        asset.lpCapital > asset.lockedCapital ? asset.lpCapital - asset.lockedCapital : 0n
-      )
-    : t("format.awaitingReserveSync");
-  const lpCapitalLabel = hasBankRows
-    ? formatAssetOverviewValue(
-        selectedAsset,
-        locale,
-        t("format.awaitingReserveSync"),
-        (asset) => asset.lpCapital
-      )
-    : t("format.awaitingReserveSync");
-
-  const gameLabelById = React.useMemo(() => {
-    const map = new Map<string, string>();
-    for (const gameMeta of release?.gamesMeta ?? []) {
-      if (!gameMeta?.gameId || !gameMeta?.label) continue;
-      map.set(String(gameMeta.gameId).toLowerCase(), String(gameMeta.label));
-    }
-    return map;
-  }, [release?.gamesMeta]);
-
-  // Never show a raw state name; the chip only appears while no payout is shown.
-  const activityStateLabel = (state: BetRow["state"] | undefined) =>
-    state === "randomReady" || state === "finalized" || state === "refunded" || state === "voided"
-      ? tBetState(state)
-      : t("format.placedFallback");
-  const activityAssetFallback = assetOverviews[0];
-  const activityAssetByAddress = React.useMemo(() => {
-    const map = new Map<string, { decimals: number; symbol: string }>();
-    for (const asset of release?.assets ?? []) {
-      if (!asset?.address) continue;
-      map.set(String(asset.address).toLowerCase(), {
-        decimals: asset.decimals,
-        symbol: asset.symbol || t("format.assetFallback")
+  const poolFigures = React.useMemo<PoolFigures[]>(() => {
+    // After a failed refresh the cached balances are no longer current, so they are not shown.
+    const read = overview.data && !overview.isError ? sumByAsset(overview.data.assets) : undefined;
+    // A figure that cannot be read shows a dash; the assets still come from the release.
+    return (read ?? release?.assets ?? []).map((asset) => {
+      const figures = "lpCapital" in asset ? asset : undefined;
+      // Balances carry no sign; only a net result does.
+      const cut = (value: bigint) => ({
+        ...splitAmount(value, asset.decimals, Math.min(2, asset.decimals)),
+        sign: "" as const
       });
-    }
-    for (const asset of assetOverviews) {
-      map.set(String(asset.address).toLowerCase(), {
-        decimals: asset.decimals,
-        symbol: asset.symbol || t("format.assetFallback")
-      });
-    }
-    return map;
-  }, [assetOverviews, release?.assets, t]);
-  const activity = latestBets.slice(0, 5).map<LandingActivity>((bet: BetRow, index: number) => {
-    const stake = toBigOrNull(bet.stake);
-    const payout = getCasinoCashReturned(bet);
-    const betAsset = bet.asset
-      ? activityAssetByAddress.get(String(bet.asset).toLowerCase())
-      : undefined;
-    const activityDecimals = betAsset?.decimals ?? activityAssetFallback?.decimals ?? 6;
-    const activitySymbol =
-      betAsset?.symbol ?? activityAssetFallback?.symbol ?? t("format.assetFallback");
-    const settled = bet.state === "finalized";
-    const isWin = settled && stake != null && payout != null && payout > stake;
-    const multiplier =
-      isWin && stake && payout
-        ? `${(Number((payout * 1_000_000n) / stake) / 1_000_000).toFixed(2)}×`
-        : undefined;
-    return {
-      id: String(bet.id ?? bet.betId ?? index),
-      player: shortAddress(bet.player, t("format.walletPending")),
-      game: bet.gameId
-        ? (gameLabelById.get(String(bet.gameId).toLowerCase()) ?? t("format.roomFallback"))
-        : t("format.roomFallback"),
-      state: activityStateLabel(bet.state),
-      payout:
-        settled && payout != null
-          ? formatTokenAmount(payout, activityDecimals, activitySymbol, locale, "")
+      return {
+        symbol: asset.symbol,
+        pool: figures ? cut(figures.lpCapital) : undefined,
+        free: figures
+          ? cut(
+              figures.lpCapital > figures.lockedCapital
+                ? figures.lpCapital - figures.lockedCapital
+                : 0n
+            )
           : undefined,
-      multiplier,
-      isWin,
-      time: timeAgo(typeof bet.updatedAt === "number" ? bet.updatedAt : undefined, {
-        now: t("timeAgo.now"),
-        seconds: (count) => t("timeAgo.seconds", { count }),
-        minutes: (count) => t("timeAgo.minutes", { count }),
-        hours: (count) => t("timeAgo.hours", { count }),
-        days: (count) => t("timeAgo.days", { count })
-      })
-    };
-  });
+        turnover: figures ? cut(figures.turnover) : undefined
+      };
+    });
+  }, [overview.data, overview.isError, release?.assets]);
 
-  // Lifetime turnover — verifiable per Bank and shown per asset. Do not sum
-  // USDC and WETH into a fake single number.
-  const totalTurnoverLabel = hasBankRows
-    ? formatAssetOverviewValue(
-        selectedAsset,
-        locale,
-        t("format.awaitingReserveSync"),
-        (asset) => asset.turnover
-      )
-    : t("format.awaitingReserveSync");
-  const stats: LandingStat[] = [
-    {
-      label: t("stats.vault.label"),
-      value: lpCapitalLabel,
-      detail: t("stats.vault.detail"),
-      integrity: "verifiable"
-    },
-    {
-      label: t("stats.turnover.label"),
-      value: totalTurnoverLabel,
-      detail: t("stats.turnover.detail"),
-      integrity: "verifiable"
-    },
-    {
-      label: t("landing.bank.freeLabel"),
-      value: reserveFloor,
-      detail: t("landing.bank.freeDetail"),
-      integrity: "verifiable"
-    }
-  ];
-
-  // Mechanism descriptions are not live chain measurements.
-  const mechanismStats: LandingStat[] = (["rules", "randomness", "receipts"] as const).map(
-    (key) => ({
-      label: t(`landing.mechanisms.${key}.label`),
-      value: t(`landing.mechanisms.${key}.value`),
-      detail: t(`landing.mechanisms.${key}.detail`)
-    })
-  );
-  const assetTabs: LandingAssetTab[] = aggregatedAssets.map((asset) => ({
-    label: asset.symbol,
-    selected: selectedAsset?.address.toLowerCase() === asset.address.toLowerCase(),
-    onSelect: () => setSelectedAssetAddress(asset.address.toLowerCase())
-  }));
-
-  const localizedRooms = React.useMemo(
-    () => rooms.map((room) => localizeLandingRoom(room, t)),
-    [rooms, t]
-  );
-
-  // Verify-the-bytecode proof links to the actual deployed dice module so the
-  // displayed source excerpt is never treated as the source of truth.
-  const explorerBaseUrl = getExplorerBaseUrl(chainId);
-  // Until the website opens betting, the home page says so and points to the launch channel;
-  // on a test chain it says the funds are test funds and where to get them.
-  const access = getCasinoAccess(chainId);
-  const preview = access === "preview";
-  const chainName = getAppChain(chainId)?.name ?? String(chainId);
-  const verifyContractAddress =
-    release?.gamesMeta?.find((meta) => meta.slug === "dice")?.module ?? release?.contracts.gameHub;
-  const verifyHref =
-    explorerBaseUrl && verifyContractAddress
-      ? `${explorerBaseUrl}/address/${verifyContractAddress}`
-      : undefined;
+  const refundWait = release?.refundTimeoutSeconds
+    ? release.refundTimeoutSeconds % 3600 === 0
+      ? t("steps.hours", { count: release.refundTimeoutSeconds / 3600 })
+      : t("steps.minutes", { count: Math.ceil(release.refundTimeoutSeconds / 60) })
+    : undefined;
+  const diceModule = release?.gamesMeta.find((game) => game.slug === "dice")?.module;
 
   return (
-    <div className="min-h-screen bg-surface-0 text-fg">
+    <div className="bg-paper font-text text-body text-carbon">
       <HomeHero
-        notice={
-          preview
-            ? {
-                note: t("preview.note"),
-                follow: t("preview.follow"),
-                href: OFFICIAL_CHANNELS.telegram
-              }
-            : access === "testnet"
-              ? {
-                  note: t("testnet.note", { chain: chainName }),
-                  follow: t("testnet.faucet"),
-                  href: TESTNET_USDC_FAUCET
-                }
-              : undefined
-        }
-        copy={{
-          channel: t("hero.channel"),
-          title: t("hero.title"),
-          description: t("hero.description"),
-          enterCasino: t(HERO_ENTRY_LABEL[access]),
-          viewBank: t("hero.viewBank"),
-          scrollHint: t("landing.scrollHint"),
-          visual: {
-            status: t("landing.visual.status"),
-            wallet: t("landing.visual.wallet"),
-            receipt: t("landing.visual.receipt"),
-            proof: t("landing.visual.proof"),
-            title: t("landing.visual.title"),
-            request: t("landing.visual.request"),
-            transaction: t("landing.visual.transaction")
-          },
-          proofRows: {
-            vrf: {
-              title: t("hero.proofRows.vrf.title"),
-              detail: t("hero.proofRows.vrf.detail")
-            },
-            bytecode: {
-              title: t("hero.proofRows.bytecode.title"),
-              detail: t("landing.bankHint")
+        access={access}
+        chainName={chainName}
+        printer={
+          <ReceiptPrinter
+            receipts={receipts}
+            status={recentBets.isPending ? "loading" : recentBets.isError ? "error" : "ready"}
+            chainName={chainName}
+            houseEdgeRate={houseEdgeRate}
+            caption={
+              chain?.environment === "testnet" ? t("receipt.captionTestnet") : t("receipt.caption")
             }
-          }
-        }}
-      />
-      <div id="home-after-hero" className="scroll-mt-24" />
-
-      <HomeStatsStrip
-        stats={mechanismStats}
-        copy={{
-          verifiable: t("stats.verifiable"),
-          indexed: t("stats.indexed"),
-          assetContext: t("stats.assetContext")
-        }}
-      />
-
-      <HomeRoomDirectory
-        rooms={localizedRooms}
-        copy={{
-          eyebrow: t("rooms.eyebrow"),
-          title: t("rooms.title"),
-          detail: t("rooms.detail"),
-          actionLabel: t("rooms.actionLabel")
-        }}
-      />
-
-      <HomeHowItWorks
-        copy={{
-          eyebrow: t("landing.steps.eyebrow"),
-          title: t("landing.steps.title"),
-          items: [0, 1, 2].map((index) => ({
-            title: t(`landing.steps.items.${index}.title`),
-            detail: t(`landing.steps.items.${index}.detail`)
-          }))
-        }}
-      />
-
-      <HomeVerify
-        verifyHref={verifyHref}
-        copy={{
-          eyebrow: t("verify.eyebrow"),
-          title: t("verify.title"),
-          description: t("landing.verifyDescription"),
-          sourceNote: t("verify.sourceNote"),
-          verifyCta: t("verify.verifyCta"),
-          cta: t("hero.enterCasino")
-        }}
-      />
-
-      {activity.length > 0 ? (
-        <HomeActivity
-          activity={activity}
-          copy={{
-            eyebrow: t("landing.activityEyebrow"),
-            title: t("activity.title"),
-            viewAll: t("activity.viewAll"),
-            live: t("stats.indexed"),
-            headers: {
-              player: t("activity.headers.player"),
-              room: t("activity.headers.room"),
-              payout: t("activity.headers.payout"),
-              age: t("activity.headers.age")
-            },
-            empty: t("activity.empty"),
-            emptyCta: t("hero.enterCasino")
-          }}
-        />
-      ) : null}
-
-      <section
-        aria-labelledby="home-bank-title"
-        className="border-b border-border-soft bg-surface-1 py-16"
-      >
-        <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
-          <p className="text-sm font-semibold text-brand">
-            {t("bank.eyebrow")} · {release?.name ?? String(chainId)}
-          </p>
-          <h2 id="home-bank-title" className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-            {t("landing.bank.title")}
-          </h2>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-fg-muted">
-            {t("landing.bank.description")}
-          </p>
-          <Link
-            href="/earn"
-            className="mt-4 inline-flex min-h-11 items-center font-semibold text-brand underline underline-offset-4"
-          >
-            {t("bank.inspectBank")}
-          </Link>
-          {!release || isPending || overviewError || !hasBankRows ? (
-            <div
-              role="status"
-              className="mt-6 rounded-xl border border-border-soft bg-surface-2 p-6 text-fg-muted"
-            >
-              {!release
-                ? t("landing.bank.unavailable")
-                : isPending
-                  ? t("landing.bank.loading")
-                  : overviewError
-                    ? t("landing.bank.error")
-                    : t("landing.bank.empty")}
-              {release && overviewError ? (
-                <button
-                  type="button"
-                  disabled={isFetching}
-                  onClick={() => void refetch()}
-                  className="mt-4 flex min-h-11 items-center rounded-md border border-border-soft px-5 font-semibold text-fg disabled:opacity-50"
-                >
-                  {isFetching ? t("landing.bank.loading") : t("landing.bank.retry")}
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-        {release && !isPending && !overviewError && hasBankRows ? (
-          <HomeStatsStrip
-            stats={stats}
-            assetTabs={assetTabs}
-            copy={{
-              verifiable: t("stats.verifiable"),
-              indexed: t("stats.indexed"),
-              assetContext: t("stats.assetContext")
-            }}
           />
-        ) : null}
-      </section>
-
-      <HomeFooterCta
-        primaryHref={preview ? OFFICIAL_CHANNELS.telegram : "/casino"}
-        copy={{
-          eyebrow: t("footerCta.eyebrow"),
-          title: t(FOOTER_CTA_KEYS[access].title),
-          description: t(FOOTER_CTA_KEYS[access].description),
-          primary: t(FOOTER_CTA_KEYS[access].primary),
-          secondary: t("landing.receiptCta")
+        }
+      />
+      <VerifyLedger
+        houseEdgeRate={houseEdgeRate}
+        links={{
+          results: getExplorerAddressUrl(chainId, release?.contracts.vrfHub),
+          rules: getExplorerAddressUrl(chainId, diceModule),
+          houseEdge: getExplorerAddressUrl(chainId, release?.contracts.gameHub),
+          changes: getExplorerAddressUrl(chainId, release?.contracts.governanceTimelock)
         }}
       />
+      <GameStubs stubs={stubs} houseEdgeRate={houseEdgeRate} maxRounds={maxRounds || undefined} />
+      <BetSteps refundWait={refundWait} />
+      <LiquiditySection figures={poolFigures} />
+      {access === "preview" ? <TelegramDock /> : null}
     </div>
   );
 }
 
-/** Sum reserve banks that hold the same asset without inventing a fiat total. */
-function aggregateAssetOverviews(rows: readonly AssetOverview[]): AssetOverview[] {
+/** Banks that hold the same asset add up; different assets never do. */
+function sumByAsset(rows: readonly AssetOverview[]): AssetOverview[] {
   const byAsset = new Map<string, AssetOverview>();
   for (const row of rows) {
-    const key = String(row.address).toLowerCase();
+    const key = row.address.toLowerCase();
     const existing = byAsset.get(key);
-    if (existing) {
-      existing.lpCapital += row.lpCapital;
-      existing.lockedCapital += row.lockedCapital;
-      existing.turnover += row.turnover;
-      existing.protocolFee += row.protocolFee;
-    } else {
-      byAsset.set(key, { ...row });
-    }
+    byAsset.set(
+      key,
+      existing
+        ? {
+            ...existing,
+            lpCapital: existing.lpCapital + row.lpCapital,
+            lockedCapital: existing.lockedCapital + row.lockedCapital,
+            turnover: existing.turnover + row.turnover,
+            protocolFee: existing.protocolFee + row.protocolFee
+          }
+        : row
+    );
   }
-  return Array.from(byAsset.values());
-}
-
-function formatAssetOverviewValue(
-  asset: AssetOverview | undefined,
-  locale: string,
-  emptyLabel: string,
-  selectValue: (asset: AssetOverview) => bigint
-) {
-  if (!asset) return emptyLabel;
-  return formatTokenAmount(selectValue(asset), asset.decimals, asset.symbol, locale, emptyLabel);
-}
-
-function localizeLandingRoom(
-  room: LandingRoom,
-  t: ReturnType<typeof useTranslations<"marketing">>
-): LandingRoom {
-  const key = room.slug === "coin-toss" ? "coinToss" : room.slug;
-  return {
-    ...room,
-    label: t(`roomCards.${key}.title`),
-    badge: t(`roomCards.${key}.badge`),
-    summary: t(`roomCards.${key}.summary`),
-    facts: [0, 1, 2].map((index) => t(`roomCards.${key}.facts.${index}`))
-  };
+  return [...byAsset.values()];
 }

@@ -4,11 +4,8 @@ import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import type { CasinoOutcome } from "../../room/outcome";
-import {
-  applyHouseEdgeToMultiplier,
-  baccaratMultiplier,
-  type BaccaratSide
-} from "../../room/params";
+import { type BaccaratSide } from "../../room/params";
+import { applyHouseEdgeToMultiplier, baccaratMultiplier } from "../../room/payouts";
 import { BaccaratCard, EmptyCardSlot } from "./baccarat-card";
 
 /**

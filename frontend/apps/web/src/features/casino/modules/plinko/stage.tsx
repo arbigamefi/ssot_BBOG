@@ -3,11 +3,8 @@ import { useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
-import {
-  applyHouseEdgeToMultiplier,
-  PLINKO_FACTOR_TABLE,
-  type PlinkoRisk
-} from "../../room/params";
+import { type PlinkoRisk } from "../../room/params";
+import { applyHouseEdgeToMultiplier, PLINKO_FACTOR_TABLE } from "../../room/payouts";
 import { PlinkoBall, type PlinkoBallMode } from "./plinko-ball";
 
 /**

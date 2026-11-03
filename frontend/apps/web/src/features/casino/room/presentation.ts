@@ -1,11 +1,11 @@
 import { MAX_TREE_CAPITAL } from "@ssot/ssot/domain";
 import {
-  applyHouseEdgeToMultiplier,
   calculateGameReserveMultiplier,
   calculateGameReserveRatio,
   type ReserveRatio,
   type ReserveSelection
 } from "./params";
+import { applyHouseEdgeToMultiplier } from "./payouts";
 import { betAmountInputToNumber } from "./bet-amount";
 
 /** Minimal bank-snapshot shape needed to derive spendable liquidity. */

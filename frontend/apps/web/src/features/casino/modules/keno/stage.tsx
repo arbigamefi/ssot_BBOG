@@ -5,7 +5,7 @@ import { kenoMultiplier } from "@ssot/ssot/domain";
 import { useTranslations } from "next-intl";
 
 import { KenoDrawMachine } from "./keno-machine";
-import { applyHouseEdgeToMultiplier } from "../../room/params";
+import { applyHouseEdgeToMultiplier } from "../../room/payouts";
 
 function pickKenoSpots(count: number): number[] {
   const spots: number[] = [];

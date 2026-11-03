@@ -21,11 +21,11 @@ import { useCasinoPoolAssetSelection } from "../../../../features/assets/useCasi
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
 import {
   calculateGameWinChance,
-  clampDiceTarget,
   type BaccaratSide,
   type PlinkoRisk,
   type SicBoKind
 } from "../../../../features/casino/room/params";
+import { clampDiceTarget } from "../../../../features/casino/room/payouts";
 import {
   deriveGameRoomLimits,
   deriveGameRoomPricing

@@ -4,12 +4,12 @@ import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import type { CasinoOutcome } from "../../room/outcome";
+import { type SicBoKind } from "../../room/params";
 import {
   applyHouseEdgeToMultiplier,
   normalizeSicBoValue,
-  sicBoMultiplier,
-  type SicBoKind
-} from "../../room/params";
+  sicBoMultiplier
+} from "../../room/payouts";
 import { SicBoDie, type SicBoDieMode } from "./sic-bo-die";
 
 /**

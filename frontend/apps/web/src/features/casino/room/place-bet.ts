@@ -14,12 +14,12 @@ import {
   buildGameParams,
   type BaccaratSide,
   type CoinSide,
-  type DiceDirection,
   type GameParamsHex,
   type GameParamsMessages,
   type PlinkoRisk,
   type SicBoKind
 } from "./params";
+import { type DiceDirection } from "./payouts";
 
 export type GameRoomRelease = {
   chainId: number;

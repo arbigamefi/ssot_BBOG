@@ -26,16 +26,12 @@
   --faded: 236 25.6% 45.9%; /* #575B93 */
   --thermal: 232.5 12.9% 75.7%; /* #B9BBC9 */
   --on-carbon-muted: 234.9 41.2% 83.3%; /* #C3C6E6 */
+  --slot-shade: 0 0% 0%; /* the printer slot's inner shadow, never a surface */
 
-  /* Schibsted Grotesk at 400, 600 and 800 sets every word. Doto 800 prints
-     figures only: money totals, multipliers, win chances and rolls. The
-     next/font variables are set in apps/web; the names after them are the
-     fallbacks Storybook and tests get. Every var() carries a fallback: an
-     unset variable without one would void the whole font-family list. */
-  --font-family-text:
-    var(--font-schibsted, "Schibsted Grotesk"), var(--font-noto-sc, "Noto Sans SC"), "PingFang SC",
-    "Hiragino Sans GB", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
-  --font-family-print: var(--font-doto, "Doto"), var(--font-family-text);
+  /* The two faces (Schibsted Grotesk for words, Doto for printed figures)
+     are set where the utilities are defined, in globals.css: their next/font
+     variables live on a page wrapper, so the stack must resolve on each
+     element, not here on :root. */
 
   /* Five text sizes, plus two sizes for printed figures. Phones get the
      smaller step; sizes never scale with the viewport width. */
@@ -44,8 +40,17 @@
   --type-lede: 1.125rem; /* 18 */
   --type-heading: 2.125rem; /* 34 */
   --type-display: 3.25rem; /* 52 */
-  --type-price: 1.875rem; /* 30, a multiplier on a ticket stub */
-  --type-total: 3.25rem; /* 52, the net result on a receipt */
+  --type-price: 1.625rem; /* 26, a multiplier on a ticket stub */
+  --type-total: 2.75rem; /* 44, the net result on a receipt */
+
+  /* Line height and tracking per size. Chinese sets looser lines and no
+     negative tracking (see the :lang block below). */
+  --line-body: 1.55;
+  --line-lede: 1.5;
+  --line-heading: 1.05;
+  --line-display: 0.95;
+  --track-heading: -0.025em;
+  --track-display: -0.035em;
 
   --space-section: 4rem; /* 64 */
   --space-head: 2rem; /* 32 */
@@ -57,15 +62,35 @@
   --corner-sheet: 8px; /* receipts, slips, buttons */
 }
 
+/* Seven-character Chinese headlines need a smaller display size to break
+   at punctuation instead of mid-phrase. */
+:root:lang(zh-Hans) {
+  --type-display: 2.5rem; /* 40 */
+  --line-body: 1.8;
+  --line-lede: 1.8;
+  --line-heading: 1.25;
+  --line-display: 1.15;
+  --track-heading: 0;
+  --track-display: 0;
+}
+
 @media (min-width: 48rem) {
   :root {
     --type-body: 1.0625rem; /* 17 */
     --type-lede: 1.25rem; /* 20 */
     --type-heading: 3rem; /* 48 */
     --type-display: 5.5rem; /* 88 */
+    --type-price: 1.875rem; /* 30 */
+    --type-total: 3.25rem; /* 52 */
 
     --space-section: 6rem; /* 96 */
     --space-head: 3rem; /* 48 */
     --space-gutter: 3.5rem; /* 56 */
+  }
+}
+
+@media (min-width: 48rem) {
+  :root:lang(zh-Hans) {
+    --type-display: 3.75rem; /* 60 */
   }
 }

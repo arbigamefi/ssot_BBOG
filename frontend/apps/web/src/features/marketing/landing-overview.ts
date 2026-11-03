@@ -1,5 +1,18 @@
 import type { LandingAssetOverviewResponse } from "../../server/landing/asset-overview";
-import type { AssetOverview } from "./home-types";
+import type { Address } from "@ssot/ssot/sdk";
+
+/** One asset's house pool, read from its Banks on chain. */
+export type AssetOverview = {
+  address: Address;
+  symbol: string;
+  decimals: number;
+  lpCapital: bigint;
+  lockedCapital: bigint;
+  /** Lifetime turnover (Bank.getPerformance.turnover). */
+  turnover: bigint;
+  /** Accrued protocol fee payable (Bank getSSOT.PF). */
+  protocolFee: bigint;
+};
 
 /** A missing read is not an empty bank. Never present another release's balances. */
 export async function fetchLandingOverview(

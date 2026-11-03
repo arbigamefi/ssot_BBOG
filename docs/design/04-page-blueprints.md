@@ -39,7 +39,9 @@ Must show, in this order:
   rotates through the latest settled bets, wins and losses alike, never only wins. On a phone the
   receipt's net result is inside the first screen.
 - **Verify, on paper.** A table of what the player can check and where: randomness, contract
-  source, the governance timelock, the guardian, the house edge.
+  source, the house edge, the governance timelock, system status and the audit report. The
+  guardian joins it when the release manifest carries the guardian's address; the licence when
+  the operator's licence number is published.
 - **Games, on paper.** One ticket stub per enabled game: its name, its multiplier range and a
   link. Minimum stake and the round limit appear once, in a footnote.
 - **How a bet works, on paper.** Three numbered steps, the only numbered list on the page, plus
