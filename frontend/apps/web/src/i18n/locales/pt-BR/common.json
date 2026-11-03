@@ -1,9 +1,45 @@
 {
   "app": {
     "skipToContent": "Pular para o conteúdo",
+    "readOnlyTitle": "Somente leitura",
+    "nav": {
+      "label": "Principal",
+      "menu": "Menu",
+      "openMenu": "Abrir menu",
+      "closeMenu": "Fechar menu",
+      "casino": "Cassino",
+      "liquidity": "Liquidez",
+      "rewards": "Recompensas",
+      "help": "Ajuda"
+    },
+    "footer": {
+      "label": "Links do site",
+      "ageLabel": "Somente maiores de 18 anos",
+      "age": "Apostar pode viciar. Jogue apenas com dinheiro que você pode perder.",
+      "restricted": "Este site não é oferecido em regiões restritas. Cabe a você verificar se jogar é permitido onde você está; as regras estão nos <terms>Termos</terms>.",
+      "responsibleGambling": "Jogo responsável",
+      "channelsNote": "A ArbiGameFi publica apenas nos canais oficiais acima. Qualquer outra conta com esse nome não é nossa.",
+      "groups": {
+        "play": "Jogar",
+        "liquidity": "Liquidez",
+        "help": "Ajuda",
+        "channels": "Canais oficiais"
+      },
+      "links": {
+        "casino": "Cassino",
+        "liquidity": "Liquidez",
+        "status": "Status do sistema",
+        "support": "Suporte",
+        "terms": "Termos",
+        "privacy": "Privacidade",
+        "disclaimer": "Aviso de risco",
+        "telegram": "Telegram",
+        "x": "X (@arbi_game_fi)",
+        "ops": "Operações"
+      }
+    },
     "connectWalletActionDescription": "Conecte uma carteira para {action}.",
     "connectWalletButton": "Conectar carteira",
-    "connectWalletShort": "Conectar",
     "connectWalletDescription": "Conecte uma carteira para usar este recurso.",
     "connectingWallet": "Conectando...",
     "unknownNetwork": "Rede desconhecida",
@@ -18,32 +54,25 @@
       "errorId": "ID do erro: {digest}",
       "tryAgain": "Tentar novamente"
     },
-    "network": {
-      "label": "Rede ativa",
-      "switchWallet": "Trocar",
-      "switching": "Trocando"
-    },
     "walletMenu": {
-      "chainSection": "Rede ativa",
+      "connect": "Conectar carteira",
+      "open": "Carteira {address}",
       "connectedVia": "via {wallet}",
       "copyAddress": "Copiar endereço",
-      "disconnect": "Desconectar",
+      "copied": "Endereço copiado",
+      "viewOnExplorer": "Ver no explorador de blocos",
       "mismatch": {
         "title": "Carteira em outra rede",
         "description": "Mude sua carteira para {target} para apostar.",
-        "switch": "Trocar carteira"
+        "switch": "Trocar carteira",
+        "switching": "Trocando"
       },
-      "viewOnExplorer": "Ver no explorador de blocos"
-    },
-    "mobileDeepLink": {
-      "title": "Abrir em um app de carteira",
-      "description": "Para a melhor experiência no celular, abra este site no navegador interno da sua carteira.",
-      "openIn": {
-        "metamask": "Abrir no MetaMask",
-        "coinbase": "Abrir no Coinbase Wallet",
-        "trust": "Abrir no Trust"
-      },
-      "dismiss": "Dispensar"
+      "network": "Rede",
+      "pages": "Suas páginas",
+      "portfolio": "Portfólio",
+      "bets": "Apostas",
+      "claims": "Resgates",
+      "disconnect": "Desconectar"
     },
     "install": {
       "title": "Instalar o ArbiGameFi",
@@ -77,54 +106,7 @@
     "label": "Idioma"
   },
   "nav": {
-    "account": "Conta",
-    "affiliates": "Afiliados",
-    "bets": "Apostas",
-    "casino": "Cassino",
-    "claims": "Resgates",
-    "baccarat": "Bacará",
-    "coinToss": "Cara ou Coroa",
-    "dice": "Dados",
-    "games": "Jogos",
-    "keno": "Keno",
-    "liquidity": "Liquidez",
-    "menu": "Menu",
-    "openMenu": "Abrir menu",
-    "closeMenu": "Fechar menu",
-    "language": "Idioma",
-    "refresh": "Atualizar",
-    "openRooms": "Abrir salas",
-    "ops": "Operações",
-    "plinko": "Plinko",
-    "product": "Produto",
-    "rooms": "Salas",
-    "roulette": "Roleta",
-    "sicBo": "Sic Bo",
-    "slots": "Caça-níqueis",
-    "status": "Status",
-    "support": "Suporte"
-  },
-  "footer": {
-    "brandSubtitle": "Salas nativas de carteira",
-    "description": "Cassino nativo de carteira. Cada giro e cada liquidação ficam on-chain.",
-    "liveRooms": "Salas ao vivo",
-    "games": "Jogos",
-    "platform": "Plataforma",
-    "resources": "Recursos",
-    "legal": "Jurídico",
-    "portfolio": "Portfólio",
-    "terms": "Termos",
-    "privacy": "Privacidade",
-    "disclaimer": "Aviso de risco",
-    "copyright": "Frontend ArbiGameFi para salas nativas de carteira e liquidação transparente.",
-    "docs": "Documentação",
-    "responsibleGambling": "Jogo responsável",
-    "responsibleNote": "Jogue com responsabilidade.",
-    "support": "Suporte",
-    "faq": "Ajuda e FAQ",
-    "status": "Status do sistema",
-    "telegram": "Telegram",
-    "x": "X"
+    "games": "Jogos"
   },
   "notFound": {
     "title": "Página não encontrada",

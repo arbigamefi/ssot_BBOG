@@ -8,6 +8,7 @@ import { AppShell } from "../app-shell/AppShell";
 import { ProductProviders } from "../app-shell/ProductProviders";
 import { getRequestI18n } from "../i18n/request";
 import { IS_INDEXABLE, SITE_URL } from "../config/site";
+import { carbonCopyFontVariables } from "../features/home/fonts";
 
 // Self-hosted Inter (no external request, no FOUT). Subsets cover the Latin,
 // Latin-Extended (tr/pt) and Cyrillic (ru) locales; CJK (zh-Hans) falls back
@@ -88,7 +89,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // dialog, and overlay inherits it with zero per-component theme wiring —
     // `arbi-dark.css` keys off `:root[data-theme="dark"]` / `.dark` / bare
     // `:root`, and no `.light` is ever applied.
-    <html lang={locale} className={`dark ${inter.variable}`} data-theme="dark">
+    <html
+      lang={locale}
+      className={`dark ${inter.variable} ${carbonCopyFontVariables}`}
+      data-theme="dark"
+    >
       <body className="min-h-screen">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ProductProviders defaultChainId={defaultChainId}>

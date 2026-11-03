@@ -128,9 +128,9 @@ export function TrendChart({
     : 0n;
   const volTop = H - VOL_H;
 
-  // Inline hsl(var(--token)) is the established SVG color pattern in this app
-  // (see ArbiGameFiBrand). Tailwind fill-*/stroke-* utilities are not wired for
-  // these custom tokens, so SVG paint is driven directly.
+  // Inline hsl(var(--token)) is the established SVG color pattern in this app.
+  // Tailwind fill-*/stroke-* utilities are not wired for these custom tokens,
+  // so SVG paint is driven directly.
   const stroke = signed ? (up ? "hsl(var(--success))" : "hsl(var(--danger))") : "hsl(var(--brand))";
 
   // Y-axis reference rows: peak / zero / trough, de-duplicated by value so a

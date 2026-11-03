@@ -92,9 +92,9 @@
   --color-rule-carbon: hsl(var(--paper) / 0.22);
 
   /* Schibsted Grotesk at 400, 600 and 800 sets every word; Doto 800 prints
-     figures only. The next/font variables are set on the wrapper of a page
-     rebuilt in Carbon copy (apps/web features/home/fonts.ts), so these stacks
-     stay inline and resolve on each element. The names after each variable
+     figures only. The next/font variables are set on <html> by the root
+     layout (apps/web features/home/fonts.ts), so these stacks stay inline
+     and resolve on each element. The names after each variable
      are what Storybook and tests get; every var() needs a fallback or the
      whole list is void. Chinese uses the system's Chinese face (PingFang SC,
      Microsoft YaHei, Noto Sans CJK SC, …). Schibsted has no Cyrillic, so

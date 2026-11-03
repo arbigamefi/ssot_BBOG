@@ -1,17 +1,48 @@
 {
   "app": {
     "skipToContent": "Skip to content",
+    "readOnlyTitle": "Read-only",
+    "nav": {
+      "label": "Main",
+      "menu": "Menu",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "casino": "Casino",
+      "liquidity": "Liquidity",
+      "rewards": "Rewards",
+      "help": "Help"
+    },
+    "footer": {
+      "label": "Site links",
+      "ageLabel": "18 or older only",
+      "age": "Gambling can be addictive. Play only with money you can afford to lose.",
+      "restricted": "This site is not offered in restricted regions. You are responsible for checking that playing is lawful where you are; the <terms>Terms</terms> set out the rules.",
+      "responsibleGambling": "Responsible gambling",
+      "channelsNote": "ArbiGameFi posts only on the official channels above. Any other account using the name is not ours.",
+      "groups": {
+        "play": "Play",
+        "liquidity": "Liquidity",
+        "help": "Help",
+        "channels": "Official channels"
+      },
+      "links": {
+        "casino": "Casino",
+        "liquidity": "Liquidity",
+        "status": "System status",
+        "support": "Support",
+        "terms": "Terms",
+        "privacy": "Privacy",
+        "disclaimer": "Disclaimer",
+        "telegram": "Telegram",
+        "x": "X (@arbi_game_fi)",
+        "ops": "Operations"
+      }
+    },
     "connectWalletActionDescription": "Connect a wallet to {action}.",
     "connectWalletButton": "Connect Wallet",
-    "connectWalletShort": "Connect",
     "connectWalletDescription": "Connect a wallet to use this feature.",
     "connectingWallet": "Connecting...",
     "indexerWorkerFailed": "Indexer worker failed to start",
-    "network": {
-      "label": "Active network",
-      "switchWallet": "Switch",
-      "switching": "Switching"
-    },
     "unknownNetwork": "Unknown network",
     "walletRequired": "Wallet required",
     "writesDisabled": "Writes are disabled.",
@@ -25,26 +56,24 @@
       "tryAgain": "Try again"
     },
     "walletMenu": {
-      "chainSection": "Active chain",
+      "connect": "Connect wallet",
+      "open": "Wallet {address}",
       "connectedVia": "via {wallet}",
       "copyAddress": "Copy address",
-      "disconnect": "Disconnect",
+      "copied": "Address copied",
+      "viewOnExplorer": "View on block explorer",
       "mismatch": {
         "title": "Wallet on a different chain",
         "description": "Switch your wallet to {target} to place bets.",
-        "switch": "Switch wallet"
+        "switch": "Switch wallet",
+        "switching": "Switching"
       },
-      "viewOnExplorer": "View on block explorer"
-    },
-    "mobileDeepLink": {
-      "title": "Open in a wallet app",
-      "description": "For the smoothest mobile experience, open this site inside your wallet's in-app browser.",
-      "openIn": {
-        "metamask": "Open in MetaMask",
-        "coinbase": "Open in Coinbase Wallet",
-        "trust": "Open in Trust"
-      },
-      "dismiss": "Dismiss"
+      "network": "Network",
+      "pages": "Your pages",
+      "portfolio": "Portfolio",
+      "bets": "Bets",
+      "claims": "Claims",
+      "disconnect": "Disconnect"
     },
     "install": {
       "title": "Install ArbiGameFi",
@@ -54,7 +83,6 @@
     },
     "mobileWallet": {
       "title": "Connect wallet",
-      "inlineTitle": "Connect your wallet",
       "hint": "Open this page in your wallet to connect and confirm transactions there.",
       "browserHint": "Choose a wallet to open this page in its browser. WalletConnect keeps you in this browser.",
       "notOpened": "Didn't open {wallet}? Retry, or download it if you don't have it.",
@@ -138,32 +166,7 @@
     }
   },
   "locale": {
-    "label": "Language",
-    "en": "English",
-    "zhHans": "简体中文"
-  },
-  "footer": {
-    "brandSubtitle": "Wallet-native rooms",
-    "description": "Wallet-native casino. Every spin and every settlement is on-chain.",
-    "liveRooms": "Live rooms",
-    "games": "Games",
-    "platform": "Platform",
-    "resources": "Resources",
-    "legal": "Legal",
-    "earn": "Pools",
-    "portfolio": "Portfolio",
-    "terms": "Terms",
-    "privacy": "Privacy",
-    "disclaimer": "Disclaimer",
-    "copyright": "ArbiGameFi frontend for wallet-native rooms and transparent settlement.",
-    "docs": "Docs",
-    "responsibleGambling": "Responsible gambling",
-    "responsibleNote": "Please play responsibly.",
-    "support": "Support",
-    "faq": "Help & FAQ",
-    "status": "System status",
-    "telegram": "Telegram",
-    "x": "X"
+    "label": "Language"
   },
   "casino": {
     "room": {
@@ -3020,32 +3023,7 @@
     }
   },
   "nav": {
-    "account": "Account",
-    "affiliates": "Affiliates",
-    "bets": "Bets",
-    "casino": "Casino",
-    "claims": "Claims",
-    "baccarat": "Baccarat",
-    "coinToss": "Coin Toss",
-    "dice": "Dice",
-    "games": "Games",
-    "keno": "Keno",
-    "liquidity": "Liquidity",
-    "menu": "Menu",
-    "openMenu": "Open menu",
-    "closeMenu": "Close menu",
-    "language": "Language",
-    "refresh": "Refresh",
-    "openRooms": "Open Rooms",
-    "ops": "Ops",
-    "plinko": "Plinko",
-    "product": "Product",
-    "rooms": "Rooms",
-    "roulette": "Roulette",
-    "sicBo": "Sic Bo",
-    "slots": "Slots",
-    "status": "Status",
-    "support": "Support"
+    "games": "Games"
   },
   "compliance": {
     "gate": {

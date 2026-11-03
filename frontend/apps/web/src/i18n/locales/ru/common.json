@@ -1,9 +1,45 @@
 {
   "app": {
     "skipToContent": "Перейти к содержимому",
+    "readOnlyTitle": "Только чтение",
+    "nav": {
+      "label": "Основная навигация",
+      "menu": "Меню",
+      "openMenu": "Открыть меню",
+      "closeMenu": "Закрыть меню",
+      "casino": "Казино",
+      "liquidity": "Ликвидность",
+      "rewards": "Награды",
+      "help": "Помощь"
+    },
+    "footer": {
+      "label": "Ссылки сайта",
+      "ageLabel": "Только для лиц старше 18 лет",
+      "age": "Азартные игры могут вызывать зависимость. Играйте только на те деньги, которые можете позволить себе проиграть.",
+      "restricted": "Сайт не предлагается в регионах с ограничениями. Вы сами проверяете, разрешена ли игра там, где находитесь; правила изложены в <terms>Условиях</terms>.",
+      "responsibleGambling": "Ответственная игра",
+      "channelsNote": "ArbiGameFi публикует сообщения только в официальных каналах выше. Другие аккаунты с этим именем — не наши.",
+      "groups": {
+        "play": "Игра",
+        "liquidity": "Ликвидность",
+        "help": "Помощь",
+        "channels": "Официальные каналы"
+      },
+      "links": {
+        "casino": "Казино",
+        "liquidity": "Ликвидность",
+        "status": "Статус системы",
+        "support": "Поддержка",
+        "terms": "Условия",
+        "privacy": "Конфиденциальность",
+        "disclaimer": "Предупреждение о рисках",
+        "telegram": "Telegram",
+        "x": "X (@arbi_game_fi)",
+        "ops": "Операции"
+      }
+    },
     "connectWalletActionDescription": "Подключите кошелёк, чтобы {action}.",
     "connectWalletButton": "Подключить кошелёк",
-    "connectWalletShort": "Подключить",
     "connectWalletDescription": "Подключите кошелёк, чтобы использовать эту функцию.",
     "connectingWallet": "Подключение...",
     "unknownNetwork": "Неизвестная сеть",
@@ -18,32 +54,25 @@
       "errorId": "ID ошибки: {digest}",
       "tryAgain": "Повторить"
     },
-    "network": {
-      "label": "Активная сеть",
-      "switchWallet": "Сменить",
-      "switching": "Смена"
-    },
     "walletMenu": {
-      "chainSection": "Активная сеть",
+      "connect": "Подключить кошелёк",
+      "open": "Кошелёк {address}",
       "connectedVia": "через {wallet}",
       "copyAddress": "Копировать адрес",
-      "disconnect": "Отключить",
+      "copied": "Адрес скопирован",
+      "viewOnExplorer": "Открыть в обозревателе блоков",
       "mismatch": {
         "title": "Кошелёк в другой сети",
         "description": "Переключите кошелёк на {target}, чтобы делать ставки.",
-        "switch": "Переключить кошелёк"
+        "switch": "Переключить кошелёк",
+        "switching": "Смена"
       },
-      "viewOnExplorer": "Открыть в обозревателе блоков"
-    },
-    "mobileDeepLink": {
-      "title": "Открыть в приложении кошелька",
-      "description": "Для наилучшего опыта на телефоне откройте сайт во встроенном браузере вашего кошелька.",
-      "openIn": {
-        "metamask": "Открыть в MetaMask",
-        "coinbase": "Открыть в Coinbase Wallet",
-        "trust": "Открыть в Trust"
-      },
-      "dismiss": "Скрыть"
+      "network": "Сеть",
+      "pages": "Ваши страницы",
+      "portfolio": "Портфель",
+      "bets": "Ставки",
+      "claims": "Выплаты",
+      "disconnect": "Отключить"
     },
     "install": {
       "title": "Установить ArbiGameFi",
@@ -77,54 +106,7 @@
     "label": "Язык"
   },
   "nav": {
-    "account": "Аккаунт",
-    "affiliates": "Партнёры",
-    "bets": "Ставки",
-    "casino": "Казино",
-    "claims": "Выплаты",
-    "baccarat": "Баккара",
-    "coinToss": "Орёл или решка",
-    "dice": "Кости",
-    "games": "Игры",
-    "keno": "Кено",
-    "liquidity": "Ликвидность",
-    "menu": "Меню",
-    "openMenu": "Открыть меню",
-    "closeMenu": "Закрыть меню",
-    "language": "Язык",
-    "refresh": "Обновить",
-    "openRooms": "Открыть залы",
-    "ops": "Операции",
-    "plinko": "Плинко",
-    "product": "Продукт",
-    "rooms": "Залы",
-    "roulette": "Рулетка",
-    "sicBo": "Сик Бо",
-    "slots": "Слоты",
-    "status": "Статус",
-    "support": "Поддержка"
-  },
-  "footer": {
-    "brandSubtitle": "Залы на базе кошелька",
-    "description": "Казино на базе кошелька. Каждый спин и каждый расчёт — в блокчейне.",
-    "liveRooms": "Залы онлайн",
-    "games": "Игры",
-    "platform": "Платформа",
-    "resources": "Ресурсы",
-    "legal": "Юридическое",
-    "portfolio": "Портфель",
-    "terms": "Условия",
-    "privacy": "Конфиденциальность",
-    "disclaimer": "Предупреждение о рисках",
-    "copyright": "Фронтенд ArbiGameFi для залов на базе кошелька и прозрачного расчёта.",
-    "docs": "Документация",
-    "responsibleGambling": "Ответственная игра",
-    "responsibleNote": "Играйте ответственно.",
-    "support": "Поддержка",
-    "faq": "Помощь и FAQ",
-    "status": "Статус системы",
-    "telegram": "Telegram",
-    "x": "X"
+    "games": "Игры"
   },
   "notFound": {
     "title": "Страница не найдена",

@@ -47,7 +47,7 @@ export function HomeHero({
   const t = useTranslations("home.hero");
   return (
     <header className="bg-carbon text-paper">
-      <div className="mx-auto box-content grid max-w-page grid-cols-1 gap-x-columns px-gutter pt-24 pb-section md:pt-32 lg:grid-cols-12 lg:grid-rows-[1fr_auto_auto_1fr]">
+      <div className="mx-auto box-content grid max-w-page grid-cols-1 gap-x-columns px-gutter pt-12 pb-section md:pt-16 lg:grid-cols-12 lg:grid-rows-[1fr_auto_auto_1fr]">
         <div className="lg:col-span-6 lg:col-start-1 lg:row-start-2">
           <h1 className="text-display font-extrabold text-balance break-keep">{t("title")}</h1>
           <p className="mt-6 max-w-[32em] text-lede text-on-carbon-muted">{t("lede")}</p>

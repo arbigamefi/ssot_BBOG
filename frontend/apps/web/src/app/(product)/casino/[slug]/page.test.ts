@@ -39,20 +39,15 @@ vi.mock("../../../../i18n/request", () => ({
   }))
 }));
 
-vi.mock("../../../../features/home/fonts", () => ({
-  carbonCopyFontVariables: "carbon-copy-faces"
-}));
-
 vi.mock("../../../../i18n/metadata", () => ({
   buildPageMetadata: vi.fn(() => ({ description: "Test casino room description" }))
 }));
 
 import GameRoomPage from "./page";
 
-/** The room as a fragment: [<script ld+json>, <GamePageClient>]. The dice room wraps it in its faces. */
+/** The room as a fragment: [<script ld+json>, <GamePageClient>]. */
 function room(page: unknown) {
-  const element = page as React.ReactElement<{ children?: unknown; className?: string }>;
-  return element.type === "div" ? (element.props.children as React.ReactElement) : element;
+  return page as React.ReactElement<{ children?: unknown }>;
 }
 
 function findGameClient(page: unknown): React.ReactElement | undefined {
@@ -79,20 +74,6 @@ describe("GameRoomPage", () => {
       expect(client?.props.slug).toBe(slug);
     }
   );
-
-  it("loads the Carbon copy faces for the dice room only", async () => {
-    const dice = (await GameRoomPage({
-      params: Promise.resolve({ slug: "dice" })
-    })) as React.ReactElement<{ className?: string }>;
-    expect(dice.type).toBe("div");
-    expect(dice.props.className).toBe("carbon-copy-faces");
-    expect(findGameClient(dice)?.props.slug).toBe("dice");
-
-    const roulette = (await GameRoomPage({
-      params: Promise.resolve({ slug: "roulette" })
-    })) as React.ReactElement;
-    expect(roulette.type).not.toBe("div");
-  });
 
   it("emits game-room JSON-LD structured data", async () => {
     const page = await GameRoomPage({ params: Promise.resolve({ slug: "dice" }) });

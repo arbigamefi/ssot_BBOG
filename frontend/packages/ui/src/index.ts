@@ -38,7 +38,6 @@ export * from "./components/protocol/error-callout";
 export * from "./components/protocol/asset-selector";
 
 // New Refactored Domain Components
-export * from "./components/ui/shell-header";
 export * from "./components/ui/room-strip";
 export * from "./components/protocol/audit-tabs";
 
