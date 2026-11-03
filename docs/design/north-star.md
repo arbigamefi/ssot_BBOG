@@ -2,7 +2,7 @@
 
 | Owner | Frontend Lead |
 | Status | Active |
-| Last Updated | 2026-05-18 |
+| Last Updated | 2026-11-03 |
 | Depends on | `../strategy/fullstack-product-architecture.md`, `../architecture/overview.md` |
 | Supersedes | monolithic North Star and rewrite index |
 
@@ -29,11 +29,13 @@ The product should feel:
    a fallback.
 3. Result receipts show chain-derived facts: bet id, request id, payout, random
    hash, and settlement transaction.
-4. LP and portfolio pages explain bankroll, reserves, liabilities, and history
+4. Liquidity and portfolio pages explain the house pool, reserves, liabilities, and history
    without leaking unnecessary contract internals into the primary betting flow.
 
 ## Visual Rules
 
+- The brand is Carbon copy ([`01-brand.md`](./01-brand.md)): every bet prints a receipt, and
+  the receipt is the visual language.
 - One design-token source.
 - No per-game brand color family.
 - No product UI hard-coded hex literals.
@@ -41,8 +43,9 @@ The product should feel:
 - No prototype routes in production.
 - No raw RPC, viem, ABI, or server errors as user-facing copy.
 
-Detailed token and component references remain in:
+Detailed brand, token and component references remain in:
 
+- [`01-brand.md`](./01-brand.md) and [`02-voice-and-copy.md`](./02-voice-and-copy.md)
 - [`10-design-tokens.md`](./10-design-tokens.md)
 - [`11-component-library.md`](./11-component-library.md)
 - [`13-web3-ux.md`](./13-web3-ux.md)

@@ -2,81 +2,89 @@
 
 | Owner | Product + Frontend |
 | Status | Active |
-| Last Updated | 2026-05-18 |
-| Depends on | `../strategy/fullstack-product-architecture.md`, `../architecture/overview.md` |
+| Last Updated | 2026-11-03 |
+| Depends on | `02-voice-and-copy.md`, `../strategy/fullstack-product-architecture.md`, `../architecture/overview.md` |
 | Supersedes | Draft v1 IA matrix |
 
 The IA supports a B2C casino product on a protocol-grade settlement
 kernel. It should make the primary betting loop obvious while keeping proof,
-portfolio, LP, and ops surfaces accessible.
+portfolio, liquidity, and ops surfaces accessible. Names follow the terms in
+[`02-voice-and-copy.md`](./02-voice-and-copy.md) §2.
 
 ## 1. Primary Users
 
-| User     | Goal                                                | Primary routes                           |
-| -------- | --------------------------------------------------- | ---------------------------------------- |
-| Player   | Place bets, see results, verify history             | `/`, `/casino/*`, `/portfolio`           |
-| LP       | Understand bankroll, deposit/withdraw, monitor risk | `/earn`, `/portfolio`, `/ops`            |
-| Referrer | Understand attribution and claimable value          | `/portfolio`, future referral surfaces   |
-| Operator | Monitor release, keeper, index, risk                | `/ops`                                   |
-| Auditor  | Verify release, addresses, proofs, history          | `/`, `/ops`, `/portfolio/activity`, docs |
+| User               | Goal                                                        | Primary routes                            |
+| ------------------ | ----------------------------------------------------------- | ----------------------------------------- |
+| Player             | Place bets, see results, verify history                     | `/`, `/casino/*`, `/portfolio`            |
+| Liquidity provider | Understand the house pool, deposit and withdraw, watch risk | `/liquidity`, `/portfolio`, `/status`     |
+| Referrer           | Understand attribution and claimable rewards                | `/rewards`, `/portfolio/claims`           |
+| Operator           | Monitor release, keeper, index, risk                        | `/ops`                                    |
+| Auditor            | Verify release, addresses, proofs, history                  | `/`, `/status`, `/casino/receipt/*`, docs |
 
-## 2. Canonical Routes
+## 2. Routes
 
 ```text
 /
 /casino
-/casino/dice
-/casino/coin-toss
-/casino/roulette
-/casino/keno
+/casino/[slug]
+/casino/receipt/[chainId]/[betId]
+/liquidity
+/rewards
 /portfolio
 /portfolio/activity
 /portfolio/activity/[betId]
 /portfolio/claims
-/earn
+/status
+/support
 /ops
 /legal/privacy
 /legal/terms
 /legal/disclaimer
 ```
 
+Two routes are renamed when their pages move to Carbon copy, with no redirect from the old
+path (the site is pre-launch):
+
+| Today                               | Becomes      | Page                        |
+| ----------------------------------- | ------------ | --------------------------- |
+| `/earn`                             | `/liquidity` | The liquidity page          |
+| `/affiliate`, `/portfolio/referral` | `/rewards`   | Referral and rebate rewards |
+
 ## 3. Primary Journeys
 
-### Player Casino
+### Player
 
 ```text
 / -> /casino -> /casino/[slug]
   -> connect wallet
   -> approve if needed
-  -> placeBet
-  -> wait for VRF
-  -> keeper finalizes
-  -> result receipt
-  -> portfolio/activity detail
+  -> place bet
+  -> wait for randomness
+  -> keeper settles
+  -> receipt on the slip
+  -> /casino/receipt/[chainId]/[betId]
 ```
 
-### LP
+### Liquidity provider
 
 ```text
-/earn -> deposit/withdraw -> /portfolio -> /ops for deeper proof
+/liquidity -> deposit or withdraw -> /portfolio -> /status for deeper proof
 ```
 
 ## 4. Navigation
 
-Primary navigation:
+One navigation bar on every page, marketing and product alike:
 
 ```text
-Casino | Portfolio | Earn
+[Logo]  Casino  Liquidity  Rewards  Help        [Language] [Connect]
 ```
 
-Right side:
+After connecting, the wallet button opens a menu with Portfolio, Bets, Claims and Disconnect.
+Those are the player's own things, not top-level sections.
 
-```text
-locale | chain/release proof | wallet
-```
-
-Ops and legal can be reachable from footer or secondary links; they should not
-compete with the betting path.
+The footer groups links by reader: Play (Casino), Liquidity (Liquidity, Status),
+Help (Support, Terms, Privacy, Disclaimer), and the official channels. Ops is linked from the
+footer only.
 
 ## 5. State Rules
 
@@ -87,8 +95,9 @@ Every product page should account for:
 - loading data;
 - empty history;
 - degraded index/API fallback;
+- the site state: preview, testnet or live (`02-voice-and-copy.md` §8);
 - disabled or unavailable chain feature;
-- terminal success/failure.
+- final success or failure.
 
 Do not show raw provider errors. Map failures to product copy and a next action.
 
@@ -96,7 +105,7 @@ Do not show raw provider errors. Map failures to product copy and a next action.
 
 - Release proof should be accessible from product chrome.
 - Wallet gate should explain the action it unlocks.
-- Activity links should lead to `/portfolio/activity/[betId]`.
+- Activity links lead to the bet's receipt.
 - Ops should link to runbooks or docs for non-obvious states.
 
 ## 7. Verification
@@ -104,5 +113,5 @@ Do not show raw provider errors. Map failures to product copy and a next action.
 ```bash
 pnpm -C frontend precheck:frontend -- --strict
 test ! -d frontend/apps/web/src/app/prototype
-rg -n "href=\\\"/(dice|roulette|games|bets|account|invest|liquidity)" frontend/apps/web/src
+rg -n "href=\\\"/(dice|roulette|games|bets|account|invest|pools|bankroll)" frontend/apps/web/src
 ```

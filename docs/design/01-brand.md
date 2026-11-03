@@ -2,89 +2,129 @@
 
 | Owner | Frontend Lead + Product |
 | Status | Active |
-| Last Updated | 2026-05-18 |
+| Last Updated | 2026-11-03 |
 | Depends on | `../strategy/fullstack-product-architecture.md`, `10-design-tokens.md` |
-| Supersedes | Draft v1 brand book |
+| Supersedes | The 2026-05-18 dark-dashboard direction |
 
-ArbiGameFi should look like a serious, verifiable casino product,
-not a promo-heavy casino skin.
+The ArbiGameFi brand is **Carbon copy** (复写联). The owner adopted it on 2026-11-03 after
+reviewing the home page and dice room concepts.
 
-## 1. Position
+## 1. What the brand has to prove
 
-The brand communicates:
+| Reader                      | What they must be able to see                                                                                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Player                      | The money stays in their wallet until they bet, the odds and the most they can win are on the slip before they sign, and every result has a receipt they can check. |
+| Liquidity provider          | What their deposit funds (the house pool), what it can lose, and how and when they can take it out.                                                                 |
+| Auditor, regulator, partner | The site claims only what the contracts and the release do.                                                                                                         |
 
-1. **Non-custodial play** — players do not deposit into an opaque platform
-   wallet before betting.
-2. **Verifiable settlement** — results, payouts, release artifacts, and
-   bankroll state are inspectable.
-3. **Bankroll seriousness** — LPs and operators can reason about reserves,
-   liabilities, and risk.
-4. **B2C clarity** — users should understand how to play without reading
-   contract docs.
+The brand serves these readers. It is never a promo skin over them.
 
-## 2. Visual Direction
+## 2. Concept
 
-Use these references:
+Every bet prints two copies: one goes to the player's wallet, one stays on chain. The
+settlement receipt is the product's strongest asset, so it is the visual language itself, not
+an illustration on a card.
 
-- Polymarket: neutral, event/proof-forward surfaces.
-- Hyperliquid: dense data and restrained visual hierarchy.
-- Linear/Vercel dashboards: calm dark UI and precise typography.
+- The home page shows real receipts as evidence.
+- A game room is one sheet of paper. It starts as the quote (the slip), prints into the receipt
+  when the bet is sent, and is torn off when the bet settles.
 
-Avoid these references:
+## 3. Colour roles
 
-- promo-heavy casino pages;
-- high-saturation slot-machine UI;
-- mascot/character branding;
-- coin-stack, chip-stack, or stadium stock imagery.
+| Token             | Role                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| `carbon`          | The dark surface. Headings on paper.                                                        |
+| `carbon-deep`     | Status strips and the footer: quieter than anything under them.                             |
+| `paper`           | The light surface, and text on carbon.                                                      |
+| `ink`             | Carbon-copy ink: printed objects (receipts, slips, stubs, stamps) and things you can press. |
+| `ink-bright`      | Ink under the pointer.                                                                      |
+| `faded`           | Secondary text on paper; the edge of an input on paper.                                     |
+| `thermal`         | Lines that separate content on paper; disabled text.                                        |
+| `on-carbon-muted` | Secondary text on carbon.                                                                   |
 
-## 3. Logo
+Rules:
+
+- Ink never sits on carbon (1.43:1). On carbon, links and buttons are paper.
+- Thermal is too light (1.73:1) to mark a control's edge. Inputs on paper use faded.
+- No other hue exists. Games, liquidity and portfolio get no colour families of their own.
+- A page alternates carbon and paper sections. The home page puts the hero and liquidity on
+  carbon, and verification, games and steps on paper.
+
+Values and contrast figures are in [`10-design-tokens.md`](./10-design-tokens.md).
+
+## 4. Type
+
+- **Schibsted Grotesk sets every word**, at 400, 600 and 800 only. Chinese falls back to Noto
+  Sans SC at the same weights, with a body line height of 1.8.
+- **Doto 800 prints figures only**: the net result on a receipt, multipliers on ticket stubs,
+  and win chances, multipliers and rolls in a game room. Doto's full stop looks like a plus, so
+  the decimal point stays in Schibsted. Signs use Doto's own glyphs; minus is U+2212.
+- **Small amounts and hashes** use Schibsted 600 with tabular figures. The product uses no
+  monospace face.
+- **Five text sizes**: note, body, lede, heading, display. Receipts and stubs add two figure
+  sizes, total and price. Phones get a smaller step; nothing scales with the viewport width.
+- **Chinese headings** use weight 800 and break only at punctuation (`word-break: keep-all`), so
+  a word such as 每一注 never splits.
+- No sentence gets one phrase in bold or a different colour to make it stand out.
+
+## 5. Lines and edges
+
+There are four kinds of line, and nothing else:
+
+| Line       | Meaning                                                                                       |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| 1px solid  | Structure: section tops, table rows, ticket edges                                             |
+| 2px dashed | A tear or cut: the divider inside a receipt, a stub's perforation, the line on the dice scale |
+| 2px dotted | A leader between a label and its amount on a receipt                                          |
+| 2px ring   | A stamp: the settled stamp, step numbers, the 18+ mark                                        |
+
+A torn zigzag edge means a finished receipt. Paper still being filled in or printed has plain
+edges.
+
+## 6. Printed objects
+
+Only printed objects are boxed: receipts, slips, ticket stubs, stamps and the dice scale strip.
+Nothing else on the site is a card. Lists sit under a 1px top line on the page grid.
+
+## 7. Wins and losses
+
+There are no win or lose colours. A win is printed in ink; a loss is blank paper. No confetti,
+no celebration copy: the receipt states the facts, including the house edge taken from a win.
+
+## 8. Logo
 
 - Use the `ArbiGameFi` wordmark in the header.
-- Use the geometric mark only for favicon/app icon/tight spaces.
-- Do not animate, gradient-fill, stretch, shadow, or recolor the wordmark.
+- Use the geometric mark only for the favicon, app icon and tight spaces.
+- Do not animate, gradient-fill, stretch, shadow or recolour the wordmark.
 
-## 4. Color
+## 9. Imagery
 
-- Use the token palette from [`10-design-tokens.md`](./10-design-tokens.md).
-- One product, one brand color.
-- Casino, portfolio, earn, and ops do not receive separate hue families.
-- Semantic colors are for state only: success, warning, danger.
+Allowed: real receipts and chain data, diagrams drawn from the brand's lines, and the icons
+already in use.
 
-## 5. Typography
+Not allowed: casino photography, chips, coins, stadiums, AI illustrations, mascots, decorative
+external image URLs and per-game visual brands.
 
-- Use the project sans for display/body.
-- Use mono only for hashes, addresses, digests, and numeric readouts.
-- Do not add a third display font.
-- Do not use mono for body copy.
+## 10. What the brand leaves out
 
-## 6. Visual Assets
+- all-caps labels above headings;
+- metadata strings joined with middle dots;
+- arrows appended to button and link text;
+- numbered markers, except where the content is a real sequence (the three steps of a bet);
+- gradient washes and soft shadows used as decoration.
 
-Allowed:
+## 11. Rollout
 
-- geometric diagrams;
-- data visualizations;
-- Heroicons/lucide icons where already used;
-- local textures/assets only.
+Pages move to Carbon copy one at a time: the home page and the dice room first, then
+Liquidity, Portfolio, the receipt page, the entry card and the other game rooms. A page that has
+not moved keeps the old dark tokens, and nothing new is built on them. The old tokens are
+deleted with the last page.
 
-Not allowed:
-
-- stock casino photography;
-- AI casino illustrations;
-- mascot art;
-- decorative external image URLs;
-- per-game visual brands.
-
-## 7. Product Surface Rules
-
-- Game variety comes from rules, layout, and module visuals, not hue changes.
-- Marketing pages may be more expressive, but still must show the actual
-  product and proof surfaces.
-- Ops pages prioritize density and scanability over visual flourish.
-
-## 8. Verification
+## 12. Verification
 
 ```bash
 rg -nE "bg-\\[#|text-\\[#|border-\\[#|shadow-\\[" frontend/apps/web/src frontend/packages/ui/src
 rg -nE "game.*(purple|emerald|amber|fuchsia|rose)|--game-" frontend/apps/web/src frontend/packages/ui/src
 rg -nE "http.*(grainy|unsplash|pexels|pixabay)" frontend/apps/web/src frontend/packages/ui/src
+pnpm -C frontend/packages/ui exec vitest run -c vitest.config.ts src/tokens
 ```

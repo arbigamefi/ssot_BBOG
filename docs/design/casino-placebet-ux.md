@@ -53,9 +53,9 @@ stateDiagram-v2
   settling --> settled: bet.state == Settled
   settling --> manual_settle_offered: keeper delay threshold
   manual_settle_offered --> settling: user explicitly clicks Settle result
-  settled --> result_modal
+  settled --> receipt_printed
   refundable --> [*]
-  result_modal --> ready
+  receipt_printed --> ready: Place another bet tears it off
 ```
 
 ## 3. Timing Contract
@@ -144,13 +144,15 @@ stage animation, or imply funds are lost. It simply changes the copy from
 `Refund stake` sends `GameHub.refund(betId)` only after the user explicitly
 clicks it. The frontend must never auto-refund a player round.
 
-## 7. Result Modal Contract
+## 7. Result Receipt Contract
 
-The result modal is the final receipt, not a loading screen. It should open only
-after the frontend has a terminal chain read or terminal receipt with enough
-facts to tell the player the outcome.
+The result is the receipt printed on the slip (`04-page-blueprints.md` §4), not a
+modal. The slip prints it only after the frontend has a terminal chain read or
+terminal receipt with enough facts to tell the player the outcome. Rooms not yet
+rebuilt in Carbon copy still open a result modal with the same facts; it goes when
+the room is rebuilt (`01-brand.md` §11).
 
-The result modal must show only chain-derived facts:
+The receipt must show only chain-derived facts (rows in `04-page-blueprints.md` §1):
 
 - `betId`
 - `requestId`
@@ -162,7 +164,7 @@ The result modal must show only chain-derived facts:
 
 If the chain is already terminal but the frontend still lacks the payout/refund
 amount, keep the user in the round status panel (`Reading result`) and continue
-polling. Do not open a large final modal that only says `Indexing`.
+polling. Do not print a receipt that only says `Indexing`.
 
 ## 8. Don'ts
 

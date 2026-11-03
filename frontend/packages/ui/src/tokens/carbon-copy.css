@@ -1,0 +1,71 @@
+/*
+ * Carbon copy: the ArbiGameFi brand (docs/design/01-brand.md, 10-design-tokens.md).
+ *
+ * Every bet prints two copies: one for the player's wallet, one kept on
+ * chain. The settlement receipt is the product's strongest asset, so it is
+ * the visual language itself.
+ *
+ * - Carbon and paper are the two surfaces. Ink is carbon-copy ink: it marks
+ *   printed objects (receipts, slips, ticket stubs, stamps) and things you
+ *   can press. Ink never sits on carbon (1.43:1).
+ * - Headings on paper are carbon; secondary text on paper is faded.
+ * - Thermal draws lines that separate content. It is too light (1.73:1 on
+ *   paper) for the edge of a control; inputs use faded.
+ * - There are no win or lose colours: a win is printed, a loss is blank paper.
+ *
+ * Values are HSL channels so utilities can add alpha: hsl(var(--ink) / 0.4).
+ * Pages rebuilt in Carbon copy use only these tokens; arbi-dark.css serves
+ * pages not yet rebuilt and is deleted with the last of them.
+ */
+:root {
+  --carbon: 236.4 55.4% 23.7%; /* #1B1F5E */
+  --carbon-deep: 236.3 57.6% 16.7%; /* #121543 */
+  --paper: 80 12% 95.1%; /* #F3F4F1 */
+  --ink: 237.5 58.4% 39.6%; /* #2A2FA0 */
+  --ink-bright: 238 68% 42.9%; /* #2328B8, ink under the pointer */
+  --faded: 236 25.6% 45.9%; /* #575B93 */
+  --thermal: 232.5 12.9% 75.7%; /* #B9BBC9 */
+  --on-carbon-muted: 234.9 41.2% 83.3%; /* #C3C6E6 */
+
+  /* Schibsted Grotesk at 400, 600 and 800 sets every word. Doto 800 prints
+     figures only: money totals, multipliers, win chances and rolls. The
+     next/font variables are set in apps/web; the names after them are the
+     fallbacks Storybook and tests get. Every var() carries a fallback: an
+     unset variable without one would void the whole font-family list. */
+  --font-family-text:
+    var(--font-schibsted, "Schibsted Grotesk"), var(--font-noto-sc, "Noto Sans SC"), "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-family-print: var(--font-doto, "Doto"), var(--font-family-text);
+
+  /* Five text sizes, plus two sizes for printed figures. Phones get the
+     smaller step; sizes never scale with the viewport width. */
+  --type-note: 0.875rem; /* 14 */
+  --type-body: 1rem; /* 16 */
+  --type-lede: 1.125rem; /* 18 */
+  --type-heading: 2.125rem; /* 34 */
+  --type-display: 3.25rem; /* 52 */
+  --type-price: 1.875rem; /* 30, a multiplier on a ticket stub */
+  --type-total: 3.25rem; /* 52, the net result on a receipt */
+
+  --space-section: 4rem; /* 64 */
+  --space-head: 2rem; /* 32 */
+  --space-gutter: 1rem; /* 16 */
+  --page-max: 75rem; /* 1200 */
+  --grid-gap: 1.5rem; /* 24 */
+
+  --corner-print: 4px; /* inputs, stubs, small printed parts */
+  --corner-sheet: 8px; /* receipts, slips, buttons */
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --type-body: 1.0625rem; /* 17 */
+    --type-lede: 1.25rem; /* 20 */
+    --type-heading: 3rem; /* 48 */
+    --type-display: 5.5rem; /* 88 */
+
+    --space-section: 6rem; /* 96 */
+    --space-head: 3rem; /* 48 */
+    --space-gutter: 3.5rem; /* 56 */
+  }
+}
