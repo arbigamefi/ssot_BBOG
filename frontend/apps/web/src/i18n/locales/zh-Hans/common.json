@@ -704,68 +704,12 @@
         }
       },
       "receipt": {
-        "eyebrow": "公开凭证",
-        "title": "赌场投注凭证 #{betId}",
-        "description": "本局可分享的索引视图。单笔投注的证明始终保留在链上;索引数据可能在 keeper 与数据库同步前略有延迟。",
-        "indexed": "已索引",
-        "proof": "证明与链上明细",
-        "missing": {
-          "title": "回执尚未就绪",
-          "description": "索引回执缺少结算或退款证明。请在索引同步后重试，或前往区块浏览器核验交易。"
-        },
         "status": {
           "placed": "已下注",
           "randomReady": "随机数就绪",
           "finalized": "已结算",
           "refunded": "已退款",
           "voided": "已作废"
-        },
-        "metrics": {
-          "stake": "投注金额",
-          "payout": "结算金额",
-          "net": "净额",
-          "state": "状态",
-          "returned": "已退回"
-        },
-        "facts": {
-          "game": "游戏",
-          "player": "玩家",
-          "referrerL1": "一级推荐人",
-          "referrerL2": "二级推荐人",
-          "asset": "资产",
-          "betId": "投注 ID",
-          "requestId": "VRF 请求",
-          "randomHash": "随机哈希",
-          "placedBlock": "下注区块",
-          "updatedAt": "索引时间",
-          "lastEvent": "最近事件",
-          "lastTx": "最近交易"
-        },
-        "houseEdge": {
-          "title": "按流水的分配",
-          "edge": "分配额",
-          "edgeValue": "{amount} · 流水 {turnover} 的 {rate}",
-          "lps": "留给 LP",
-          "playerRakeback": "玩家返水",
-          "referrers": "推荐人",
-          "protocol": "协议费",
-          "note": "按这注实际用掉的下注额记账，和从赢得金额里扣的庄家优势是两回事。LP 留一半；另一半支付推荐奖励，剩下的是协议费。金额来自本注单的 HouseEdgeAllocated 事件。"
-        },
-        "actions": {
-          "play": "进入该游戏",
-          "explorer": "查看交易",
-          "casino": "前往赌场"
-        },
-        "voided": {
-          "headline": "已退回 {amount}",
-          "body": "已收到开奖结果，但无法完成结算，因此你的本金已作为可领取余额退回给你。VRF 费用不退还。"
-        },
-        "breakdown": {
-          "won": "赢得",
-          "houseEdge": "庄家优势",
-          "houseEdgeValue": "{amount} · 赢得金额的 {rate}",
-          "refund": "退回未用的下注额",
-          "paid": "打到钱包"
         }
       },
       "gameInfo": {
@@ -1433,34 +1377,6 @@
         "open": "打开这一注"
       },
       "receipt": {
-        "label": "第 {id} 注的凭证",
-        "bet": "第 {id} 注",
-        "rolled": "掷出 {rolls}。",
-        "rolledRounds": "掷出 {rolls}，{count} 局赢 {won} 局。",
-        "net": "净结果",
-        "lines": {
-          "stake": "下注额",
-          "won": "赢得",
-          "houseEdge": "庄家优势 {rate}",
-          "paid": "打到钱包",
-          "owed": "待你领取",
-          "unused": "退回未用下注额",
-          "returned": "退回钱包",
-          "claimable": "可领取余额"
-        },
-        "stamp": {
-          "paid": "已付到钱包",
-          "settled": "已结算",
-          "refunded": "已退回",
-          "voided": "已作废"
-        },
-        "owedNote": "赔付为你保留着，可在领取页面领取。",
-        "proof": {
-          "request": "VRF 请求",
-          "hash": "随机哈希",
-          "settled": "结算交易"
-        },
-        "open": "打开这张凭证",
         "again": "再下一注",
         "change": "修改下注",
         "announce": "{rolled}净结果 {net} {symbol}。"
@@ -1511,6 +1427,135 @@
         "contract": "查看合约",
         "hours": "{count, plural, other {# 小时}}",
         "minutes": "{count, plural, other {# 分钟}}"
+      }
+    }
+  },
+  "receipt": {
+    "label": "第 {id} 注的凭证",
+    "bet": "第 {id} 注",
+    "net": "净结果",
+    "where": "{chain}，区块 {block}",
+    "open": "打开这张凭证",
+    "lines": {
+      "stake": "下注额",
+      "won": "赢得",
+      "houseEdge": "庄家优势 {rate}",
+      "paid": "打到钱包",
+      "owed": "待你领取",
+      "unused": "退回未用下注额",
+      "returned": "退回钱包",
+      "claimable": "可领取余额"
+    },
+    "stamp": {
+      "paid": "已付到钱包",
+      "settled": "已结算",
+      "refunded": "已退回",
+      "voided": "已作废"
+    },
+    "notes": {
+      "owed": "赔付为你保留着，可在领取页面领取。",
+      "voided": "开奖结果已到，但这注无法结算，因此下注额已转为可领取余额。随机数费用不退还。",
+      "refunded": "开奖结果没有按时到达，因此下注额已退回钱包。"
+    },
+    "proof": {
+      "request": "VRF 请求",
+      "hash": "随机哈希",
+      "settled": "结算交易",
+      "refunded": "退款交易",
+      "voided": "作废交易",
+      "fee": "随机数费用",
+      "feeValue": "{amount} ETH",
+      "payment": "付款"
+    },
+    "payment": {
+      "transferred": "已在这笔交易中打到钱包",
+      "payable": "为钱包保留"
+    },
+    "printing": {
+      "placed": "等待随机数",
+      "randomReady": "正在结算",
+      "indexing": "正在索引金额",
+      "refund": "如果到 {time} 仍没有开奖结果，可以退回下注额。"
+    },
+    "outcome": {
+      "rounds": "{count} 局赢 {won} 局。",
+      "dice": {
+        "wins": "{from}–{to} 为赢。",
+        "rolled": "掷出 {rolls}。"
+      },
+      "coin": "押{side}，开出{landed}。",
+      "roulette": {
+        "numbers": "押 {numbers}。",
+        "covered": "押 {count} 个号码。",
+        "landed": "开出 {numbers}。"
+      },
+      "keno": {
+        "picked": "选了 {numbers}。",
+        "drew": "开出 {numbers}：中 {hits} 个。",
+        "hits": "每局命中：{hits}。"
+      },
+      "plinko": "{risk}风险，落入第 {slots} 格。",
+      "slots": "转轮：{reels}。",
+      "baccarat": {
+        "backed": "押{side}。",
+        "hand": "{winner}赢，闲 {player} 点对庄 {banker} 点。",
+        "winners": "胜方：{winners}。"
+      },
+      "sicBo": {
+        "bet": "下注：{bet}。",
+        "rolled": "掷出 {dice}，合计 {totals}。"
+      }
+    },
+    "page": {
+      "crumb": "游戏",
+      "title": {
+        "printed": "第 {id} 注的凭证",
+        "pending": "第 {id} 注正在打印",
+        "indexing": "第 {id} 注正在打印",
+        "missing": "没有第 {id} 注的凭证",
+        "degraded": "暂时无法读取凭证"
+      },
+      "lede": {
+        "printed": "{chain} 上的一注{game}。每个金额都精确到代币的最后一位小数，每项事实都链接到链上。",
+        "placed": "{chain} 上的一注{game}，正在等待随机数。这注结算后，凭证会在这里打印。",
+        "randomReady": "{chain} 上的一注{game}。随机数已到，正在结算；结算完成后凭证会在这里打印。",
+        "indexing": "这注已在 {chain} 上完成。投注索引拿到全部金额后就会打印凭证，通常不到一分钟。",
+        "missing": "投注索引里没有 {chain} 上的这注。请检查链接；最近一分钟内下的注可能还没有被索引。",
+        "degraded": "投注索引暂时无法读取。这注本身在链上，没有任何变化。请一分钟后再试。"
+      },
+      "aGame": "游戏",
+      "play": "玩{game}",
+      "casino": "前往游戏",
+      "retry": "重试",
+      "activity": "在你的记录中打开",
+      "copy": "复制链接",
+      "copied": "链接已复制。",
+      "testnet": "{chain} 测试网凭证。测试资金没有价值。",
+      "loading": "正在打印凭证…",
+      "details": {
+        "title": "这些事实从哪里来",
+        "lede": "凭证上的每一行都读自链上，或读自复制链上数据的投注索引。合约名称只出现在这里。",
+        "player": "玩家",
+        "referrerL1": "直接推荐人",
+        "referrerL2": "二级推荐人",
+        "asset": "{symbol} 合约",
+        "gameHub": "GameHub 合约",
+        "block": "下注区块",
+        "event": "最后事件",
+        "indexed": "读取来源",
+        "source": {
+          "index": "投注索引，更新于 {time} UTC",
+          "chain": "链上日志，{time} UTC"
+        },
+        "allocation": {
+          "title": "流水分配",
+          "lede": "按这注实际使用的下注额记账，与从赢得金额中扣除的庄家优势分开。流动性提供者保留一半；另一半支付奖励，剩余部分为协议费。数据来自这注的 HouseEdgeAllocated 事件。",
+          "edge": "已分配，{turnover} 流水的 {rate}",
+          "liquidity": "流动性提供者保留",
+          "rakeback": "返水",
+          "referrers": "推荐人",
+          "protocol": "协议费"
+        }
       }
     }
   },
@@ -2630,25 +2675,6 @@
       }
     },
     "receipt": {
-      "label": "第 {id} 注的凭证",
-      "bet": "第 {id} 注",
-      "where": "{chain}，区块 {block}",
-      "stampPaid": "已付到钱包",
-      "stampSettled": "已结算",
-      "net": "净结果",
-      "lines": {
-        "stake": "下注额",
-        "won": "赢得",
-        "houseEdge": "庄家优势 {rate}",
-        "paid": "打到钱包",
-        "unused": "退回未用下注额"
-      },
-      "proof": {
-        "request": "VRF 请求",
-        "hash": "随机哈希",
-        "settled": "结算交易"
-      },
-      "open": "打开这张凭证",
       "reprint": "再打印一张",
       "announce": "第 {id} 注，{game}。净结果 {net} {symbol}。",
       "caption": "最近结算的下注，赢的输的都有。",

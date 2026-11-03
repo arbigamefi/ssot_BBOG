@@ -1,5 +1,5 @@
 import type { CasinoModuleSlug } from "../casino/modules";
-import type { SignedAmount } from "./receipts";
+import type { SignedAmount } from "../receipt/receipt";
 import {
   applyHouseEdgeToMultiplier,
   baccaratMultiplier,

@@ -1,12 +1,11 @@
 import type { CasinoAccess } from "../../../app-shell/casino-access";
-import { fractionDigits, joined, splitAmount, type SignedAmount } from "../../home/receipts";
+import { fractionDigits, joined, splitAmount, type SignedAmount } from "../../receipt/receipt";
 import type { PoolAvailability } from "../room/hooks";
-import type { CasinoOutcome } from "../room/outcome";
 import type { DiceDirection } from "../room/payouts";
-import type { CasinoTerminalRoundResult } from "../room/resolution";
 
-// The dice room's slip, as data: the odds it quotes, the one action its main button takes and the
-// receipt it prints. Quotes round down; receipts are exact (docs/design/02-voice-and-copy.md §6).
+// The dice room's slip, as data: the odds it quotes and the one action its main button takes. The
+// receipt it prints is features/receipt. Quotes round down; receipts are exact
+// (docs/design/02-voice-and-copy.md §6).
 
 /** Winning numbers out of 100: low wins on 1..line, high on line+1..100. */
 export function diceWins(direction: DiceDirection, line: number) {
@@ -218,91 +217,4 @@ export function slipMaxStake({
   if (known.length === 0) return undefined;
   const cap = known.reduce((low, cap) => (cap < low ? cap : low));
   return quoteRaw(cap, decimals);
-}
-
-export type SlipReceiptLine = {
-  key: "stake" | "won" | "houseEdge" | "paid" | "owed" | "unused" | "returned" | "claimable";
-  amount: string;
-};
-
-export type SlipReceipt = {
-  betId: string;
-  stamp: "paid" | "settled" | "refunded" | "voided";
-  /** The settlement held the payout for the wallet instead of transferring it. */
-  owed: boolean;
-  net: SignedAmount;
-  lines: SlipReceiptLine[];
-  requestId: string;
-  randomHash: string;
-  settledTx?: string;
-  vrfFeeCharged?: bigint;
-};
-
-/** A settled, refunded or voided dice bet as its receipt: exact amounts, one number of decimals. */
-export function buildSlipReceipt(
-  result: CasinoTerminalRoundResult,
-  outcome: CasinoOutcome | null | undefined,
-  decimals: number
-): SlipReceipt {
-  const base = {
-    betId: result.betId.toString(),
-    requestId: result.requestId.toString(),
-    randomHash: result.randomHash,
-    vrfFeeCharged: result.vrfFeeCharged
-  };
-  const print = (values: Array<{ key: SlipReceiptLine["key"]; value: bigint }>, net: bigint) => {
-    const digits = Math.max(
-      2,
-      ...[...values.map((line) => line.value), net].map((value) => fractionDigits(value, decimals))
-    );
-    return {
-      net: splitAmount(net, decimals, digits),
-      lines: values.map((line) => ({
-        key: line.key,
-        amount: joined(splitAmount(line.value, decimals, digits))
-      }))
-    };
-  };
-
-  if (result.kind === "settled") {
-    const { settlement } = result;
-    const paid = settlement.payoutNet;
-    const unused = settlement.refundAmount;
-    const gross =
-      settlement.payoutGross ??
-      (outcome?.kind === "dice" ? outcome.payoutGross : paid + (settlement.feeOnPayout ?? 0n));
-    const edge = settlement.feeOnPayout ?? gross - paid;
-    const owed = settlement.payment?.status === "payable";
-    return {
-      ...base,
-      settledTx: settlement.txHash,
-      stamp: paid > 0n && !owed ? "paid" : "settled",
-      owed,
-      ...print(
-        [
-          { key: "stake", value: result.stake },
-          { key: "won", value: gross },
-          { key: "houseEdge", value: edge },
-          { key: owed ? "owed" : "paid", value: paid },
-          ...(unused > 0n ? [{ key: "unused" as const, value: unused }] : [])
-        ],
-        paid + unused - result.stake
-      )
-    };
-  }
-
-  const returned = result.refund.refundAmount;
-  return {
-    ...base,
-    settledTx: result.refund.txHash,
-    stamp: result.kind === "voided" ? "voided" : "refunded",
-    owed: false,
-    ...print(
-      [
-        { key: "stake", value: result.stake },
-        { key: result.kind === "voided" ? "claimable" : "returned", value: returned }
-      ],
-      returned - result.stake
-    )
-  };
 }

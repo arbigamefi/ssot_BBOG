@@ -565,6 +565,7 @@ function useDockedAction(
 /** Placed and waiting: the paper is printing, so its edge is still plain. */
 function PrintingSlip({ room }: { room: GameRoom }) {
   const t = useTranslations("casino.dice");
+  const tReceipt = useTranslations("receipt");
   const locale = useLocale();
   const gameLine = useGameLine(room);
   const { casinoRound, assetSymbol: symbol, assetDecimals: decimals } = room;
@@ -633,7 +634,7 @@ function PrintingSlip({ room }: { room: GameRoom }) {
   return (
     <article aria-label={t("slip.label")} aria-busy="true" className={SHEET}>
       <SlipHeader
-        right={betId != null ? t("receipt.bet", { id: betId.toString() }) : t("slip.title")}
+        right={betId != null ? tReceipt("bet", { id: betId.toString() }) : t("slip.title")}
       />
       <p className="mt-4 text-lede font-semibold">{gameLine}</p>
       <hr className={DIVIDER} />
@@ -646,7 +647,7 @@ function PrintingSlip({ room }: { room: GameRoom }) {
       </div>
       <hr className={DIVIDER} />
       <ul>
-        <QuoteLine label={t("receipt.lines.stake")} value={`${amount(stake)} ${symbol}`} />
+        <QuoteLine label={tReceipt("lines.stake")} value={`${amount(stake)} ${symbol}`} />
         <QuoteLine
           label={rounds > 1 ? t("slip.eachWin") : t("slip.ifWin")}
           value={winPays == null ? "—" : `${amount(winPays)} ${symbol}`}

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@ssot/ui";
 
-import type { SignedAmount } from "./receipts";
+import type { SignedAmount } from "./receipt";
 
 /**
  * A figure the printer prints, in Doto. Doto's own decimal point is a single dot that

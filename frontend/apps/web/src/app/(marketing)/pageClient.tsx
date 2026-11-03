@@ -22,7 +22,7 @@ import {
   type TicketStub
 } from "../../features/home/home-sections";
 import { ReceiptPrinter, type PrintableReceipt } from "../../features/home/receipt-printer";
-import { buildHomeReceipt, splitAmount } from "../../features/home/receipts";
+import { receiptFromRow, splitAmount } from "../../features/receipt/receipt";
 import {
   fetchLandingOverview,
   type AssetOverview
@@ -61,8 +61,9 @@ export function HomePageClient() {
     for (const row of recentBets.data ?? []) {
       const asset = (row.asset && assetByAddress.get(row.asset.toLowerCase())) || fallbackAsset;
       const slug = row.gameId ? slugById.get(row.gameId.toLowerCase()) : undefined;
-      if (!asset || !slug || !isCasinoModuleSlug(slug)) continue;
-      const receipt = buildHomeReceipt(row, { chainId, decimals: asset.decimals });
+      // The printer shows settled bets; refunds and voids have their own receipts.
+      if (row.state !== "finalized" || !asset || !slug || !isCasinoModuleSlug(slug)) continue;
+      const receipt = receiptFromRow(row, { chainId, decimals: asset.decimals });
       if (!receipt) continue;
       printable.push({
         ...receipt,

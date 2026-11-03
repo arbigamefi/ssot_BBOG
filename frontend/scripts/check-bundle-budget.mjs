@@ -24,6 +24,13 @@ const budgets = [
   // 2026-10-12: the launch candidate's inactive-pool and void reads (D) and the required pool-rule disclosure (C4)
   // measured 189.6 kB locally and 190.1 kB on the CI builder, which compresses about 0.5 kB larger.
   { route: "/(product)/earn/page", publicPath: "/earn", maxKb: 192 },
+  // 2026-11-04: the receipt page in Carbon copy reads the bet's draw and randomness fee from the chain
+  // and carries the claim; measured 178.2 kB locally.
+  {
+    route: "/(product)/casino/receipt/[chainId]/[betId]/page",
+    publicPath: "/casino/receipt/[chainId]/[betId]",
+    maxKb: 181
+  },
   { route: "/(product)/ops/page", publicPath: "/ops", maxKb: 220 },
   { route: "/(product)/portfolio/page", publicPath: "/portfolio", maxKb: 190 },
   {

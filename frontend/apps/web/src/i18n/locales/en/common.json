@@ -704,68 +704,12 @@
         }
       },
       "receipt": {
-        "eyebrow": "Public receipt",
-        "title": "Casino receipt #{betId}",
-        "description": "A shareable, indexed view of this round. Single-bet proof remains on-chain; indexed figures may lag while the keeper and database catch up.",
-        "indexed": "Indexed",
-        "proof": "Proof & on-chain details",
-        "missing": {
-          "title": "Receipt not ready yet",
-          "description": "The indexed receipt is missing settlement or refund proof. Try again after the index catches up, or verify the transaction on the explorer."
-        },
         "status": {
           "placed": "Placed",
           "randomReady": "Random ready",
           "finalized": "Finalized",
           "refunded": "Refunded",
           "voided": "Voided"
-        },
-        "metrics": {
-          "stake": "Stake",
-          "payout": "Settlement amount",
-          "net": "Net",
-          "state": "State",
-          "returned": "Returned"
-        },
-        "facts": {
-          "game": "Game",
-          "player": "Player",
-          "referrerL1": "Direct referrer",
-          "referrerL2": "Second-level referrer",
-          "asset": "Asset",
-          "betId": "Bet ID",
-          "requestId": "VRF request",
-          "randomHash": "Random hash",
-          "placedBlock": "Placed block",
-          "updatedAt": "Indexed at",
-          "lastEvent": "Last event",
-          "lastTx": "Last tx"
-        },
-        "houseEdge": {
-          "title": "Turnover allocation",
-          "edge": "Allocated",
-          "edgeValue": "{amount} · {rate} of {turnover} turnover",
-          "lps": "Kept by LPs",
-          "playerRakeback": "Rakeback",
-          "referrers": "Referrers",
-          "protocol": "Protocol fee",
-          "note": "Booked on the stake this bet used, separately from the house edge taken from a win. LPs keep half; the other half pays referral rewards, and what remains is the protocol fee. Amounts come from this bet's HouseEdgeAllocated event."
-        },
-        "actions": {
-          "play": "Play this game",
-          "explorer": "View transaction",
-          "casino": "Browse casino"
-        },
-        "voided": {
-          "headline": "{amount} returned",
-          "body": "The result was received but could not be settled, so your stake was returned to you as a claimable balance. The VRF fee is not refunded."
-        },
-        "breakdown": {
-          "won": "Won",
-          "houseEdge": "House edge",
-          "houseEdgeValue": "{amount} · {rate} of the win",
-          "refund": "Unused stake returned",
-          "paid": "Paid to wallet"
         }
       },
       "gameInfo": {
@@ -1433,34 +1377,6 @@
         "open": "Open this bet"
       },
       "receipt": {
-        "label": "Receipt for bet {id}",
-        "bet": "Bet {id}",
-        "rolled": "Rolled {rolls}.",
-        "rolledRounds": "Rolled {rolls}. {won} of {count} won.",
-        "net": "Net result",
-        "lines": {
-          "stake": "Stake",
-          "won": "Won",
-          "houseEdge": "House edge, {rate}",
-          "paid": "Paid to wallet",
-          "owed": "Owed to you",
-          "unused": "Unused stake returned",
-          "returned": "Refunded to wallet",
-          "claimable": "Claimable balance"
-        },
-        "stamp": {
-          "paid": "Paid to wallet",
-          "settled": "Settled",
-          "refunded": "Refunded",
-          "voided": "Voided"
-        },
-        "owedNote": "The payout is held for you. Claim it from your claims page.",
-        "proof": {
-          "request": "VRF request",
-          "hash": "Random hash",
-          "settled": "Settled in"
-        },
-        "open": "Open this receipt",
         "again": "Bet again",
         "change": "Change bet",
         "announce": "{rolled} Net result {net} {symbol}."
@@ -1511,6 +1427,135 @@
         "contract": "Read the contract",
         "hours": "{count, plural, one {an hour} other {# hours}}",
         "minutes": "{count, plural, one {# minute} other {# minutes}}"
+      }
+    }
+  },
+  "receipt": {
+    "label": "Receipt for bet {id}",
+    "bet": "Bet {id}",
+    "net": "Net result",
+    "where": "{chain}, block {block}",
+    "open": "Open this receipt",
+    "lines": {
+      "stake": "Stake",
+      "won": "Won",
+      "houseEdge": "House edge, {rate}",
+      "paid": "Paid to wallet",
+      "owed": "Owed to you",
+      "unused": "Unused stake returned",
+      "returned": "Refunded to wallet",
+      "claimable": "Claimable balance"
+    },
+    "stamp": {
+      "paid": "Paid to wallet",
+      "settled": "Settled",
+      "refunded": "Refunded",
+      "voided": "Voided"
+    },
+    "notes": {
+      "owed": "The payout is held for you. Claim it from your claims page.",
+      "voided": "The result arrived but the bet could not be settled, so the stake became a claimable balance. The randomness fee is not refunded.",
+      "refunded": "No result arrived in time, so the stake was refunded to the wallet."
+    },
+    "proof": {
+      "request": "VRF request",
+      "hash": "Random hash",
+      "settled": "Settled in",
+      "refunded": "Refunded in",
+      "voided": "Voided in",
+      "fee": "Randomness fee",
+      "feeValue": "{amount} ETH",
+      "payment": "Payment"
+    },
+    "payment": {
+      "transferred": "Sent to the wallet in this transaction",
+      "payable": "Held for the wallet"
+    },
+    "printing": {
+      "placed": "Waiting for randomness",
+      "randomReady": "Settling result",
+      "indexing": "Indexing the amounts",
+      "refund": "If no result arrives by {time}, the stake can be refunded."
+    },
+    "outcome": {
+      "rounds": "{won} of {count} rounds won.",
+      "dice": {
+        "wins": "{from}–{to} wins.",
+        "rolled": "Rolled {rolls}."
+      },
+      "coin": "Called {side}, landed {landed}.",
+      "roulette": {
+        "numbers": "On {numbers}.",
+        "covered": "On {count} numbers.",
+        "landed": "Landed on {numbers}."
+      },
+      "keno": {
+        "picked": "Picked {numbers}.",
+        "drew": "Drew {numbers}: {hits, plural, one {# hit} other {# hits}}.",
+        "hits": "Hits by round: {hits}."
+      },
+      "plinko": "{risk} risk, landed in slot {slots}.",
+      "slots": "Reels: {reels}.",
+      "baccarat": {
+        "backed": "Backed {side}.",
+        "hand": "{winner} won, player {player} to banker {banker}.",
+        "winners": "Winners: {winners}."
+      },
+      "sicBo": {
+        "bet": "Bet: {bet}.",
+        "rolled": "Rolled {dice}, total {totals}."
+      }
+    },
+    "page": {
+      "crumb": "Casino",
+      "title": {
+        "printed": "Receipt for bet {id}",
+        "pending": "Bet {id} is printing",
+        "indexing": "Bet {id} is printing",
+        "missing": "No receipt for bet {id}",
+        "degraded": "Receipts cannot be read right now"
+      },
+      "lede": {
+        "printed": "A {game} bet on {chain}. Every amount is exact, to the token's last decimal, and every fact links to the chain.",
+        "placed": "A {game} bet on {chain}, waiting for its random number. The receipt prints here when the bet settles.",
+        "randomReady": "A {game} bet on {chain}. Its random number has arrived and the bet is being settled; the receipt prints here when it is.",
+        "indexing": "The bet has finished on {chain}. Its receipt prints once the bet index holds every amount, usually within a minute.",
+        "missing": "The bet index has no such bet on {chain}. Check the link; a bet placed in the last minute may not be indexed yet.",
+        "degraded": "The bet index cannot be read at the moment. The bet itself is on chain and nothing about it has changed. Try again in a minute."
+      },
+      "aGame": "casino",
+      "play": "Play {game}",
+      "casino": "Go to the casino",
+      "retry": "Try again",
+      "activity": "Open in your activity",
+      "copy": "Copy link",
+      "copied": "Link copied.",
+      "testnet": "A {chain} test network receipt. Test funds have no value.",
+      "loading": "Printing the receipt…",
+      "details": {
+        "title": "Where these facts come from",
+        "lede": "Every line of the receipt is read from the chain, or from the bet index that copies it. Contract names appear only here.",
+        "player": "Player",
+        "referrerL1": "Direct referrer",
+        "referrerL2": "Second-level referrer",
+        "asset": "{symbol} contract",
+        "gameHub": "GameHub contract",
+        "block": "Placed in block",
+        "event": "Last event",
+        "indexed": "Read from",
+        "source": {
+          "index": "Bet index, updated {time} UTC",
+          "chain": "Chain logs, {time} UTC"
+        },
+        "allocation": {
+          "title": "Turnover allocation",
+          "lede": "Booked on the stake this bet used, separately from the house edge taken from a win. Liquidity providers keep half; the other half pays rewards, and what remains is the protocol fee. From this bet's HouseEdgeAllocated event.",
+          "edge": "Allocated, {rate} of {turnover} turnover",
+          "liquidity": "Kept by liquidity providers",
+          "rakeback": "Rakeback",
+          "referrers": "Referrers",
+          "protocol": "Protocol fee"
+        }
       }
     }
   },
@@ -2630,25 +2675,6 @@
       }
     },
     "receipt": {
-      "label": "Receipt for bet {id}",
-      "bet": "Bet {id}",
-      "where": "{chain}, block {block}",
-      "stampPaid": "Paid to wallet",
-      "stampSettled": "Settled",
-      "net": "Net result",
-      "lines": {
-        "stake": "Stake",
-        "won": "Won",
-        "houseEdge": "House edge, {rate}",
-        "paid": "Paid to wallet",
-        "unused": "Unused stake returned"
-      },
-      "proof": {
-        "request": "VRF request",
-        "hash": "Random hash",
-        "settled": "Settled in"
-      },
-      "open": "Open this receipt",
       "reprint": "Print another receipt",
       "announce": "Bet {id}, {game}. Net result {net} {symbol}.",
       "caption": "The latest settled bets, wins and losses alike.",

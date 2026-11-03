@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 
-import { PrintedFigure } from "../../home/printed-figure";
+import { PrintedFigure } from "../../receipt/printed-figure";
 import { diceTargetBounds, type DiceDirection } from "../room/payouts";
 import { diceLoseRange, diceMultiplier, diceWinRange, diceWins } from "./slip-model";
 import { LINE_BUTTON } from "./styles";

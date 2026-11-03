@@ -12,8 +12,8 @@ import { cn } from "@ssot/ui";
 
 import { getExplorerTxUrl } from "../../../app-shell/chain-registry";
 import { Modal } from "../../../components/overlay";
-import { buildCasinoReceiptFromTerminalResult } from "../receipt/view-model";
-import { buildReceiptPath } from "../receipt/receipt-path";
+import { buildCasinoReceiptFromTerminalResult } from "./result-model";
+import { buildReceiptPath } from "../../receipt/receipt-path";
 import { useOptionalRelease } from "../../../ssot/release/ReleaseProvider";
 import { SharePanel } from "../../share/SharePanel";
 import { buildShareUrl } from "../../share/share-link";
