@@ -274,7 +274,7 @@ describe("an existing browser's missing-player rows (2026-11-03 review A1-R1)", 
     "retries a failed player lookup without changing the %s row or cursor",
     async (state) => {
       const db = new SSOTDb(`player-bets-retry-${state}-${crypto.randomUUID()}`);
-      const orphan = { ...indexRow([REFUNDED_A]), state };
+      const orphan = { ...indexRow([REFUNDED_A]), state, stake: "777" };
       const cursor = {
         id: `${CHAIN_ID}:${release().contracts.gameHub}`,
         chainId: CHAIN_ID,

@@ -3,7 +3,7 @@ import { getAddress } from "viem";
 import { readSettledBetRefund } from "@ssot/bet-index/terminal-refund";
 import type { SSOTRelease } from "../release/schema";
 import { getContractAbis } from "../abis/index.mjs";
-import type { SSOTDb } from "./store";
+import type { BetRow, SSOTDb } from "./store";
 import type { GameHubEventName, GameHubEventNormalized } from "./reduce";
 import { applyGameHubEventToBet } from "./reduce";
 import { createBlockClock } from "./blockClock";
@@ -130,19 +130,16 @@ export function createGameHubIndexer(params: {
         const { GameHubAbi } = getContractAbis();
         for (const row of missing) {
           const placement = await findPlacement(GameHubAbi as Abi, row.betId, row.updatedBlock);
+          const recovered = applyGameHubEventToBet(undefined, placement);
           await db.bets
             .where("id")
             .equals(row.id)
             .modify((current) => {
-              // Read the current row inside the write transaction: another tab may have updated it during the RPC.
-              const { state, updatedBlock, lastTxHash, lastEventName, updatedAt } = current;
-              Object.assign(current, applyGameHubEventToBet(current, placement), {
-                state,
-                updatedBlock,
-                lastTxHash,
-                lastEventName,
-                updatedAt
-              });
+              // Only fill absent fields on the row read in this write transaction. Existing facts, including a
+              // newer terminal proof written by another tab while the RPC was pending, always win.
+              for (const key of Object.keys(recovered) as (keyof BetRow)[]) {
+                if (current[key] == null) Object.assign(current, { [key]: recovered[key] });
+              }
             });
           placements.delete(row.betId);
         }
