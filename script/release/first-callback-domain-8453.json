@@ -242,5 +242,12 @@
     "proxyRuntimeSha256": "98d785fcb1bf847f287adc2310759fd94cc13e754b974bc72131382e8266f607",
     "implementationRuntimeSha256": "dcb3b7ca28662970d0a7cdad420e529fb837d7bf8a246b1a680c20e153db79e8"
   },
-  "qualificationNote": "Base mainnet inputs and post-Denim fixed block; pending independent mainnet gas-certificate review. Not deployment approval."
+  "qualificationNote": "Base mainnet inputs and post-Denim fixed block; pending independent mainnet gas-certificate review. Not deployment approval.",
+  "certificateSeal": {
+    "version": "v5-mainnet-1",
+    "manifest": "mainnet-certificate-2026-11-08/certificate/MANIFEST.sha256",
+    "sha256": "17c8ab971e393fe598ff18b957339ec2b11beaceb4f94e8143deb989b2f123b4",
+    "computedAt": "5cc1199bd08dc6959f106529d6b86ddf7d6cae63",
+    "computedOn": "2026-11-08"
+  }
 }
