@@ -61,8 +61,11 @@ not the live runs below.
 - Existing browsers that ran `191df9646` (or the same indexer) can retain terminal rows without a player, even after
   the event leaves the 48-second rewind. After installing the fix, reload every open tab for this origin; do not
   clear site data or delete IndexedDB. On its first sync, each new indexer finds cached rows of this chain and
-  GameHub without a player and looks up their own `BetPlaced`, using `getBet.placedAt`. It updates only `player`;
-  terminal states, amounts, receipts, cursors, other deployments and `txJournal` are retained. No new event is needed.
+  GameHub without a player and looks up their own `BetPlaced`, using `getBet.placedAt`. It restores the placement's
+  player, game, asset, stake, referrers, request ID, block and deadline; existing terminal states, payments, receipts,
+  update bookkeeping, cursors, other deployments and `txJournal` are retained. No new event is needed. Verify the
+  merged row still appears in its game room and the portfolio shows the right asset and returned amount; merely
+  finding the bet ID in the unfiltered list does not prove these fields were recovered.
   A failed lookup leaves that row and the cursor unchanged and sets `lastError`; a later sync retries it. Rows repaired
   before another row fails remain repaired. Confirm no sync error and that the affected player's terminal bet is
   visible with the server index healthy, stale and unavailable (RPC fallback enabled), after reopening the same DB

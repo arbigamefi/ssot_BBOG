@@ -119,7 +119,7 @@ export function createGameHubIndexer(params: {
       status.targetBlock = targetBlock;
 
       // Older browsers may already have terminal rows without players, outside the rewind. Repair just those
-      // cached rows once per indexer, even with no new events. Preserve their terminal facts and the tx journal.
+      // cached rows once per indexer, even with no new events. Recover the whole placement, preserving terminal facts.
       // A failed lookup leaves that row untouched and retries next pass, before advancing the cursor.
       if (!oldPlayersRecovered) {
         const missing = await db.bets
@@ -130,7 +130,20 @@ export function createGameHubIndexer(params: {
         const { GameHubAbi } = getContractAbis();
         for (const row of missing) {
           const placement = await findPlacement(GameHubAbi as Abi, row.betId, row.updatedBlock);
-          await db.bets.update(row.id, { player: placement.args.player as Address });
+          await db.bets
+            .where("id")
+            .equals(row.id)
+            .modify((current) => {
+              // Read the current row inside the write transaction: another tab may have updated it during the RPC.
+              const { state, updatedBlock, lastTxHash, lastEventName, updatedAt } = current;
+              Object.assign(current, applyGameHubEventToBet(current, placement), {
+                state,
+                updatedBlock,
+                lastTxHash,
+                lastEventName,
+                updatedAt
+              });
+            });
           placements.delete(row.betId);
         }
         oldPlayersRecovered = true;

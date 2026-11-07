@@ -31,6 +31,7 @@ vi.mock("@ssot/ssot/release", async (importOriginal) => {
 
 import { clearRecentBetsCache, queryPlayerBets } from "../../server/betting/recent-bets";
 import { mergeBetRows, readLocalPlayerBets } from "./usePlayerBets";
+import { formatOutcome, getBigIntField, mapBetState } from "../portfolio/activity/format";
 
 const CHAIN_ID = 84532;
 const A = "0x00000000000000000000000000000000000000a1";
@@ -54,13 +55,21 @@ function log(eventName: GameHubEventName, block: bigint, betId: bigint, args = {
 
 // Five blocks a second. A fresh browser's first range starts 3,600 seconds before the target 99,880, at 81,880;
 // both bets were placed at second 12,000 and refunded at 19,880, after the one-hour refund timeout.
-const PLACED_A = log("BetPlaced", 60_000n, 7n, { player: A, stake: 100n });
-const REFUNDED_A = log("BetRefunded", 99_400n, 7n, { refundAmount: 100n });
+const placementFields = {
+  gameId: release().gamesMeta![0]!.gameId,
+  asset: release().assets[0]!.address,
+  stake: 1_000_000n,
+  refundDeadline: 15_600n,
+  referrerL1: "0x0000000000000000000000000000000000000000",
+  referrerL2: "0x0000000000000000000000000000000000000000"
+};
+const PLACED_A = log("BetPlaced", 60_000n, 7n, { ...placementFields, player: A, requestId: 7n });
+const REFUNDED_A = log("BetRefunded", 99_400n, 7n, { refundAmount: 1_000_000n });
 const LOGS = [
   PLACED_A,
-  log("BetPlaced", 60_001n, 8n, { player: B, stake: 100n }),
+  log("BetPlaced", 60_001n, 8n, { ...placementFields, player: B, requestId: 8n }),
   REFUNDED_A,
-  log("BetRefunded", 99_405n, 8n, { refundAmount: 100n })
+  log("BetRefunded", 99_405n, 8n, { refundAmount: 1_000_000n })
 ];
 
 /** getLogs answers the query's range, events, bet and player; getBet gives the bet's placement second. */
@@ -194,9 +203,17 @@ describe("an existing browser's missing-player rows (2026-11-03 review A1-R1)", 
         const indexer = createGameHubIndexer({ release: release(), publicClient: client, db });
         await indexer.syncOnce();
         expect(indexer.getStatus().lastError).toBeUndefined();
-        // Only the player changes: no terminal state, amount or receipt is replaced by the placement.
-        expect(await db.bets.get(orphanA.id)).toEqual({ ...orphanA, player: A });
-        expect(await db.bets.get(orphanB.id)).toEqual({ ...orphanB, player: B });
+        // Recover the complete placement without replacing any terminal fact with BetPlaced bookkeeping.
+        expect(await db.bets.get(orphanA.id)).toEqual({
+          ...indexRow([PLACED_A]),
+          ...orphanA,
+          player: A
+        });
+        expect(await db.bets.get(orphanB.id)).toEqual({
+          ...indexRow([LOGS[1]!]),
+          ...orphanB,
+          player: B
+        });
         expect(await db.bets.get(otherHub.id)).toEqual(otherHub);
         expect(await db.bets.get(otherChain.id)).toEqual(otherChain);
         expect(await db.txJournal.toArray()).toEqual([journal]);
@@ -214,9 +231,35 @@ describe("an existing browser's missing-player rows (2026-11-03 review A1-R1)", 
         durable.rows = [indexRow(server === "healthy" ? [PLACED_A, REFUNDED_A] : [PLACED_A])];
         const response = await queryPlayerBets({ chainId: CHAIN_ID, player: A, client });
         const local = await readLocalPlayerBets({ db, chainId: CHAIN_ID, player: A, limit: 50 });
+        const merged = mergeBetRows(response.rows, local, 50);
+        expect(merged.map((row) => [row.betId, row.player, row.state])).toEqual([
+          ["7", A, "refunded"]
+        ]);
+        const row = merged[0]!;
+        expect(row).toMatchObject({
+          gameId: placementFields.gameId,
+          asset: placementFields.asset,
+          stake: "1000000",
+          requestId: "7",
+          placedBlock: 60_000,
+          refundDeadline: 15_600_000
+        });
+        // These are the values the game filter and portfolio formatter consume, after server/local merging.
+        expect(release().gamesMeta!.find((game) => game.gameId === row.gameId)?.label).toBe("Dice");
+        const asset = release().assets.find((asset) => asset.address === row.asset)!;
+        const stake = getBigIntField(row, "stake")!;
+        const payout = getBigIntField(row, "payout")!;
         expect(
-          mergeBetRows(response.rows, local, 50).map((row) => [row.betId, row.player, row.state])
-        ).toEqual([["7", A, "refunded"]]);
+          formatOutcome({
+            status: mapBetState(row.state, payout, stake),
+            stake,
+            payout,
+            decimals: asset.decimals,
+            symbol: asset.symbol,
+            pendingLabel: "Pending",
+            returnedLabel: (amount) => `${amount} returned`
+          })
+        ).toBe("1 TEST returned");
         const theirs = await readLocalPlayerBets({ db, chainId: CHAIN_ID, player: B, limit: 50 });
         expect(theirs.map((row) => [row.betId, row.state])).toEqual([["8", "refunded"]]);
         await indexer.syncOnce();
@@ -252,7 +295,11 @@ describe("an existing browser's missing-player rows (2026-11-03 review A1-R1)", 
         expect(client.getLogs).not.toHaveBeenCalled();
         await indexer.syncOnce();
         expect(indexer.getStatus().lastError).toBeUndefined();
-        expect(await db.bets.get(orphan.id)).toEqual({ ...orphan, player: A });
+        expect(await db.bets.get(orphan.id)).toEqual({
+          ...indexRow([PLACED_A]),
+          ...orphan,
+          player: A
+        });
         expect((await db.cursors.get(cursor.id))?.lastProcessedBlock).toBe(99_980);
       } finally {
         await db.delete();

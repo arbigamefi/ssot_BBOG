@@ -182,10 +182,11 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
 
    When upgrading the browser indexer from `191df9646`, include the existing-browser checks in
    [network acceptance](v16-sepolia-acceptance.md#base-denim-plan-a13). Reload all tabs after the new image is installed.
-   The first sync repairs only the missing players of cached bets belonging to this chain and GameHub, including
-   terminal bets outside the rewind. It preserves terminal facts and `txJournal`; do not clear all site storage.
+   The first sync repairs the placement fields of cached bets without players belonging to this chain and GameHub,
+   including terminal bets outside the rewind. It preserves terminal facts and `txJournal`; do not clear all site storage.
    A lookup error prevents cursor advancement and is retried by a later sync. Check the affected player's terminal
-   row with the server healthy, stale and unavailable, not just a fresh browser or a caught-up cursor. Old-version
+   row in its game room and portfolio with the server healthy, stale and unavailable, not just a fresh browser or a
+   caught-up cursor. Verify game, asset, stake and returned cash after merging server/local rows. Old-version
    tabs must be closed so they do not keep writing missing-player rows. Unsupported `batchSize` values (non-integers
    or fewer than 5 blocks) fail when the indexer is created; the default remains 200.
 
