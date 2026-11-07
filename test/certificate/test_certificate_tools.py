@@ -185,9 +185,21 @@ class Bindings(unittest.TestCase):
         domain['token']['implementationRuntimeSha256'] = '0' * 64
         self.assertNotEqual(self.bind(reused, domain).returncode, 0)
 
+    def test_mainnet_token_is_bound_to_the_mainnet_domain(self):
+        reused, _ = self.inputs()
+        domain = json.loads((ROOT / 'script/release/first-callback-domain-8453.json').read_text())
+        self.assertEqual(self.bind(reused, domain).returncode, 0)
+        reused['token']['chains']['8453'] = reused['token']['chains']['84532']
+        self.assertNotEqual(self.bind(reused, domain).returncode, 0)
+
+    def test_an_unknown_chain_cannot_reuse_a_token_bound(self):
+        reused, domain = self.inputs()
+        domain['chainId'] = 1
+        self.assertNotEqual(self.bind(reused, domain).returncode, 0)
+
 
 class Composition(unittest.TestCase):
-    def certificate(self, rounds_ok=True, bindings_ok=True):
+    def certificate(self, rounds_ok=True, bindings_ok=True, chain_id=84532):
         work = Path(tempfile.mkdtemp(dir=TMP.name))
         for name in ['protocol', 'tree', 'ledger', 'bindings']:
             shutil.copytree(OUT / name, work / name)
@@ -201,6 +213,9 @@ class Composition(unittest.TestCase):
             b = json.loads((work / 'bindings/component-bindings.json').read_text())
             b['allBindingsHold'] = False
             (work / 'bindings/component-bindings.json').write_text(json.dumps(b))
+        b = json.loads((work / 'bindings/component-bindings.json').read_text())
+        b['domain']['chainId'] = chain_id
+        (work / 'bindings/component-bindings.json').write_text(json.dumps(b))
         return run([str(CERT / 'composition.py'), str(work)], check=False), work
 
     def test_closes_with_the_floor(self):
@@ -218,8 +233,33 @@ class Composition(unittest.TestCase):
         proc, _ = self.certificate(bindings_ok=False)
         self.assertIn('bindings do not hold', proc.stderr)
 
+    def test_mainnet_composition_is_not_labelled_as_sepolia(self):
+        proc, work = self.certificate(chain_id=8453)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        result = json.loads((work / 'composition.json').read_text())
+        self.assertEqual(result['chainId'], 8453)
+        self.assertIn('first-callback-domain-8453.json', result['domain'])
+
 
 class Certify(unittest.TestCase):
+    def test_mainnet_composition_refuses_sepolia_bindings(self):
+        work = Path(tempfile.mkdtemp(dir=TMP.name))
+        shutil.copytree(OUT / 'bindings', work / 'bindings')
+        proc = run([str(CERT / 'certify.py'), str(work), '--chain-id', '8453', '--stages', 'composition'], check=False)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn('bindings chain does not match', proc.stderr)
+
+    def test_mainnet_stages_copy_and_bind_the_selected_domain(self):
+        work = Path(tempfile.mkdtemp(dir=TMP.name))
+        shutil.copytree(OUT / 'build', work / 'build')
+        proc = run([str(CERT / 'certify.py'), str(work), '--chain-id', '8453', '--stages', 'frames,bindings'])
+        self.assertEqual(proc.returncode, 0)
+        self.assertTrue((work / 'protocol/first-callback-domain-8453.json').is_file())
+        self.assertFalse((work / 'protocol/first-callback-domain-84532.json').exists())
+        result = json.loads((work / 'bindings/component-bindings.json').read_text())
+        self.assertTrue(result['allBindingsHold'])
+        self.assertEqual(result['domain']['chainId'], 8453)
+
     def test_an_existing_directory_is_never_overwritten(self):
         proc = run([str(CERT / 'certify.py'), str(OUT)], check=False)
         self.assertNotEqual(proc.returncode, 0)

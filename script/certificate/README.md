@@ -2,7 +2,7 @@
 
 These scripts compute the first-callback gas certificate on a checkout: an upper bound on the gas the first VRF
 callback needs to settle a k > 0 casino position, compared with the gas the consumer receives at `VRFHub` entry
-(2,447,746, `VRFHub.MAX_CALLBACK_GAS`). The domain table is `script/release/first-callback-domain-84532.json`; the
+(2,447,746, `VRFHub.MAX_CALLBACK_GAS`). The domain table is `script/release/first-callback-domain-<chainId>.json`; the
 certificate document is `docs/audit/first-callback-gas-certificate-2026-10-07.md`. Certificate v5 covers the
 launch candidate (`docs/release/launch-candidate.zh-CN.md` §10); it was computed on freeze commit `1a5e9df00` into
 `freeze-2026-10-12/certificate/`, whose seal the domain file cites (copy in `script/release/certificates/
@@ -11,6 +11,8 @@ first-callback-v5/`).
 ```sh
 forge build src
 python3 script/certificate/certify.py <new output directory>
+# Mainnet: select its own domain and USDC runtime pins. This does not certify or approve that domain.
+python3 script/certificate/certify.py <new mainnet output directory> --chain-id 8453
 ```
 
 The output directory must not exist. The run takes about 1.5 hours, almost all of it in the module stage (Baccarat
@@ -72,10 +74,22 @@ first-callback-v4/` at commit `4a5762aa3`); the 2026-10-04 files are members of 
 | `composition.py` | v4 `composition_v4.py` (`991c131c…`) | Same rule, placement and O1/O2; terms from this run's stage outputs; margin floor; void settlement gas |
 | `protocol/env_frame_bound.py`, `protocol/frames.py`, `build.py`, `certify.py`, `common.py` | new | |
 
-`reused.json` lists the independently reviewed components taken over unchanged, each with the sealed evidence and
+`reused.json` lists the components taken over unchanged, each with the sealed evidence and
 the code it was computed on: the USDC callee bodies (bound to the token runtimes the domain file pins), the
 2026-10-04 static module bounds (the secondary measure, bound to unchanged module executable code), the Vault frame
 constants and the ledger components.
+Token runtime/evidence identities are selected from `token.chains` by the domain's chain ID; no chain falls back to
+another chain's entry. The common token-body term and topology remain 78,394 and the reviewed call counts. The
+mainnet proxy/implementation mapping and its 2026-10-14 body calculation are pending independent mainnet review;
+adding their entry is not an acceptance. Composition records the bound chain ID explicitly. The accepted Sepolia
+domain and its seal remain unchanged.
+
+For a mainnet fork matrix use `test/helpers/nft-callback/run_gas_matrix.py --chain-id 8453 --all-cases --require-fit
+--output <new directory>` with `NFT_GAS_RPC_URL` supplied through the OPS wrapper. The matrix and real-USDC void
+fixtures select the domain by `NFT_GAS_CHAIN_ID` (default 84532), including its pinned block and hash. The historical
+Sepolia hash is unchanged; mainnet requires `providerReference.blockHash`. The direct-wrapper test already takes
+all five explicit target fields. These are local forks, not broadcasts, oracle-availability tests or a worst-case
+gas proof. Include the selected domain and shared fork helper in the matrix source manifest.
 
 Certificate v4 reproduces from the archived evidence with `script/certificate/reproduce_first_callback_v4.py` on a
 checkout of `4a5762aa3`, the last commit with the v4 contracts; the script was removed from later commits when v5

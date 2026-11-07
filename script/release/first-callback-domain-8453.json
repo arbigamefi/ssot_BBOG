@@ -1,0 +1,246 @@
+{
+  "schema": "ARBIGAMEFI_FIRST_CALLBACK_DOMAIN_V1",
+  "chainId": 8453,
+  "status": "PENDING_INDEPENDENT_REVIEW",
+  "certificate": "docs/audit/first-callback-gas-certificate-mainnet-2026-11-08.md",
+  "consumerCallbackGasLimit": 2447746,
+  "maxBetCountCeiling": 25,
+  "casinoMinBetAmountFloor": 99,
+  "ownerPolicy": {
+    "casinoMinBetAmount": 10000,
+    "riskReserveBps": 6000,
+    "withdrawalBufferBps": 1000
+  },
+  "moduleCodeHashes": {
+    "moduleDice": "0x14cae2f211a4393d47a1ef6217ba8fc99e20f482b9ba36daa98eb3d3838e85d1",
+    "moduleCoinToss": "0x22d9f0a3c00d20e20b4902f86bac605fcd117876378da3bde038ae86d85d6b53",
+    "moduleRoulette": "0xb57616ebcb68fd8b2ed7b9be5f8e0bec92027a72deb716695d8b2a6cd07a428b",
+    "moduleKeno": "0x1a6d11cc755a0e9efb506ce5eca14fdafef709321759642001f8d860362c46d8",
+    "modulePlinko": "0x755fca370c11c07609f62d3b261f7c7c1b5317e27f9e763025bc142ee476a114",
+    "moduleSicBo": "0x7358cbad9adcaf4962f47ea0d481953dabb71036e14072cc9d3418387aff55c2",
+    "moduleSlots": "0xaeac1a6329397120d99629d659ad8f44910e8055f871d7f71c760c32145a2319",
+    "moduleBaccarat": "0x06b8941f39ce25b6fdc92114fd6278ffc6461e1a32a53a5a932762d943f88253"
+  },
+  "coreRuntimes": {
+    "GovernanceTimelock": {
+      "artifact": "GovernanceTimelock.sol:GovernanceTimelock",
+      "runtimeBytes": 5565,
+      "keccakWithImmutablesZeroed": "0xcb9c773592883f73362aeccb0cf60c97d15550b4de3d0bb64fcae4c504427830",
+      "immutables": []
+    },
+    "VRFHub": {
+      "artifact": "VRFHub.sol:VRFHub",
+      "runtimeBytes": 6439,
+      "keccakWithImmutablesZeroed": "0x7d0d3bd2627b300ee730b0fd9847c7a30cd2abd9a5bf25d9e37a3fd7bac28fec",
+      "immutables": [
+        {
+          "value": "wrapperLink",
+          "offsets": [
+            1209
+          ]
+        },
+        {
+          "value": "vrfWrapper",
+          "offsets": [
+            943,
+            1700,
+            3052,
+            3449
+          ]
+        },
+        {
+          "value": "settlementRouter",
+          "offsets": [
+            421,
+            1083,
+            2161,
+            2602,
+            3311
+          ]
+        }
+      ]
+    },
+    "GameHub": {
+      "artifact": "GameHub.sol:GameHub",
+      "runtimeBytes": 21562,
+      "keccakWithImmutablesZeroed": "0x5524636291f7e01ad5e2e525d78a8161b0d18c0cfdf8113898f5a12d67a0fb60",
+      "immutables": [
+        {
+          "value": "settlementRouter",
+          "offsets": [
+            720,
+            2688,
+            6541,
+            9604,
+            16750,
+            18831,
+            20323
+          ]
+        },
+        {
+          "value": "vrfHub",
+          "offsets": [
+            3792,
+            4981,
+            5915,
+            6202,
+            10448,
+            13397,
+            16841,
+            18996,
+            21016
+          ]
+        },
+        {
+          "value": "refRegistry",
+          "offsets": [
+            3894,
+            8828,
+            12038,
+            12220,
+            12320,
+            12387
+          ]
+        },
+        {
+          "value": "refEngine",
+          "offsets": [
+            3722,
+            18530
+          ]
+        }
+      ]
+    },
+    "SettlementRouter": {
+      "artifact": "SettlementRouter.sol:SettlementRouter",
+      "runtimeBytes": 4816,
+      "keccakWithImmutablesZeroed": "0xb207dd71dcdc5913c781b4ae67b149ca512b9bc994a2c77ad7e3e76b8ca39357",
+      "immutables": [
+        {
+          "value": "poolRegistry",
+          "offsets": [
+            1093,
+            2829
+          ]
+        }
+      ]
+    },
+    "PoolRegistry": {
+      "artifact": "PoolRegistry.sol:PoolRegistry",
+      "runtimeBytes": 3834,
+      "keccakWithImmutablesZeroed": "0x87742480c1cf51262327e3bb76dac407307b55776671662901f4bb50d95af33c",
+      "immutables": []
+    },
+    "ReferralRegistry": {
+      "artifact": "ReferralRegistry.sol:ReferralRegistry",
+      "runtimeBytes": 1211,
+      "keccakWithImmutablesZeroed": "0x58d3794fdcedb87c248fa4ac57a49711cdee535f886be6522e7fd7f3996f3583",
+      "immutables": []
+    },
+    "DefaultReferralEngine": {
+      "artifact": "DefaultReferralEngine.sol:DefaultReferralEngine",
+      "runtimeBytes": 2148,
+      "keccakWithImmutablesZeroed": "0xf0505760f8e870c7f22d8928d17d20b338671e5be7a7620b3b755b4ef0ce6eb7",
+      "immutables": []
+    },
+    "Bank": {
+      "artifact": "Bank.sol:Bank",
+      "runtimeBytes": 16693,
+      "keccakWithImmutablesZeroed": "0x340d0df1c4e7db6861feec0ebb4e9f54e61852d9b6e3eeafc3edf1baf761e93d",
+      "immutables": [
+        {
+          "value": "poolAsset",
+          "offsets": [
+            3638,
+            10659
+          ]
+        },
+        {
+          "value": "poolVault",
+          "offsets": [
+            909,
+            6612,
+            7997,
+            14849
+          ]
+        },
+        {
+          "value": "poolAssetDecimals",
+          "offsets": [
+            6863,
+            9845
+          ]
+        },
+        {
+          "value": "poolAsset",
+          "offsets": [
+            5412,
+            7905,
+            12752,
+            13658,
+            14513,
+            15122
+          ]
+        },
+        {
+          "value": "poolVault",
+          "offsets": [
+            5167,
+            8104,
+            8212,
+            9082,
+            12430,
+            13296,
+            14382
+          ]
+        }
+      ]
+    },
+    "LiquidityVault": {
+      "artifact": "LiquidityVault.sol:LiquidityVault",
+      "runtimeBytes": 15849,
+      "keccakWithImmutablesZeroed": "0x843d0ee274c9568ac1ec3b83fad7dd98d69172cd338137cb2f2373d97c91fc3a",
+      "immutables": [
+        {
+          "value": "poolAsset",
+          "offsets": [
+            3382,
+            7828,
+            8234,
+            10375,
+            11009
+          ]
+        },
+        {
+          "value": "poolBank",
+          "offsets": [
+            1408,
+            2438,
+            2893,
+            7634,
+            8945,
+            10309
+          ]
+        }
+      ]
+    }
+  },
+  "providerReference": {
+    "block": 54423335,
+    "wrapper": "0xb0407dbe851f8318bd31404A49e658143C982F23",
+    "coordinator": "0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634",
+    "wrapperOverheadGas": 13400,
+    "coordinatorMaxGas": 2500000,
+    "blockHash": "0x343323a2528b7cc60e4bc2a1fe3c35894db36c6544145f5d705440d162468317",
+    "wrapperRuntimeSha256": "30c55dc5b48c040572124d51ffddcf071a721396959261098e7ee6ead49df51b",
+    "coordinatorRuntimeSha256": "ad5df8598dcf9e72302aacd70f62e484f8744c74a146147b65146b7e02086684"
+  },
+  "token": {
+    "proxy": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "implementationSlot": "0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3",
+    "implementation": "0x2ce6311ddae708829bc0784c967b7d77d19fd779",
+    "proxyRuntimeSha256": "98d785fcb1bf847f287adc2310759fd94cc13e754b974bc72131382e8266f607",
+    "implementationRuntimeSha256": "dcb3b7ca28662970d0a7cdad420e529fb837d7bf8a246b1a680c20e153db79e8"
+  },
+  "qualificationNote": "Base mainnet inputs and post-Denim fixed block; pending independent mainnet gas-certificate review. Not deployment approval."
+}

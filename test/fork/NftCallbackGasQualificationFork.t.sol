@@ -26,6 +26,7 @@ import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
 import {SicBoModule} from "../../src/modules/sicbo/SicBoModule.sol";
 import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
 import {ITreeView, PrefixPath} from "../utils/PrefixPath.sol";
+import {CallbackDomainFork} from "../utils/CallbackDomainFork.sol";
 
 interface INftGasWrapper {
     function s_vrfCoordinator() external view returns (address);
@@ -54,7 +55,7 @@ interface INftGasUsdc is IERC20Metadata {
 ///      Uses a pinned observed block/hash (2026-10-04 UTC); no network broadcast, proof verification,
 ///      coordinator billing or oracle delivery SLA is claimed. Warps in setUp create matured LP/XP state.
 ///      Sampled full callback successes are lower-bound evidence of required gas, NEVER a worst-case proof.
-contract NftCallbackGasQualificationForkTest is Test {
+contract NftCallbackGasQualificationForkTest is CallbackDomainFork {
     /// Binds through ReferralRegistry, which requires the player as caller (GameHub keeps no forwarder).
     function _bindReferrer(GameHub target, address player, address referrer) internal {
         IReferralRegistry referrals = IReferralRegistry(target.referralRegistry());
@@ -62,10 +63,8 @@ contract NftCallbackGasQualificationForkTest is Test {
         referrals.bind(player, referrer);
     }
 
-    uint256 private constant PINNED_BLOCK = 47_657_524;
-    bytes32 private constant PINNED_HASH = 0x5a75e3c5fbaaa54dd1e67075af773668d43757b4e5de71f788ee69837650b872;
-    address private constant WRAPPER = 0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed;
-    address private constant USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+    address private WRAPPER;
+    address private USDC;
     address private constant GOV = address(0xA11CE);
     address private constant PLAYER = address(0xBEEF);
     uint48 private constant FIRST_LEAF = 1 << 40;
@@ -136,15 +135,7 @@ contract NftCallbackGasQualificationForkTest is Test {
 
     function setUp() public {
         if (!vm.envOr("NFT_GAS_QUALIFICATION_FORK", false)) return;
-        uint256 target = vm.envOr("NFT_GAS_BLOCK", PINNED_BLOCK);
-        require(target == PINNED_BLOCK, "refresh pinned block AND hash in reviewed fixture together");
-        vm.createSelectFork(vm.envString("NFT_GAS_RPC_URL"), target);
-        assertEq(block.chainid, 84_532);
-        assertEq(block.number, PINNED_BLOCK);
-        // BLOCKHASH excludes the current block; temporarily advance locally to authenticate it.
-        vm.roll(PINNED_BLOCK + 1);
-        assertEq(blockhash(PINNED_BLOCK), PINNED_HASH, "pinned fork block identity");
-        vm.roll(PINNED_BLOCK);
+        (USDC, WRAPPER) = selectCallbackDomainFork();
         game = vm.envOr("NFT_GAS_GAME", uint256(0));
         // 0 Keno, 1 Plinko, 2 Baccarat, 3 Coin, 4 Dice, 5 Roulette, 6 SicBo, 7 Slots.
         uint256[8] memory defaults = [uint256(31), 1, 2, 1, 99, 13, 6, 0];
@@ -629,7 +620,9 @@ contract NftCallbackGasQualificationForkTest is Test {
         vm.stopPrank();
         uint256 priorFee = largeStake * 200 / 10_000 / 2;
         // The setup result is part of the case: PROFIT_SEED, recorded in the case file, must leave the pool a profit.
-        if (!vm.envExists("NFT_GAS_PROFIT_SEED")) _recordProfitSeed(priorModule, priorParams, priorSpec, prior, priorFee);
+        if (!vm.envExists("NFT_GAS_PROFIT_SEED")) {
+            _recordProfitSeed(priorModule, priorParams, priorSpec, prior, priorFee);
+        }
         setupProfitSeed = vm.envUint("NFT_GAS_PROFIT_SEED");
         (bool profit, uint256 priorNet) =
             _poolProfit(priorModule, priorParams, priorSpec, prior, priorFee, setupProfitSeed);

@@ -3,12 +3,6 @@
   "token": {
     "use": "tokenBodies: every USDC callee body on the settlement path (at most 11 balanceOf and 2 transfer calls on a loss, 9 balanceOf, 1 transferFrom and 1 transfer on a profit)",
     "jointCalleeBodyBound": 78394,
-    "evidence": "dist/callback-cost-certificate-2026-10-04/tree/independent-token-crosscheck.json",
-    "evidenceSha256": "18a713cde5d4a3e73c8357e028e8286e4e195645cf28d7fc4749e9ac4f799a6e",
-    "identity": "dist/callback-cost-certificate-2026-10-04/payment/usdc-identity.json",
-    "identitySha256": "f90cf6179ab3792d491cca85e74c8b447591af35a745328d3a8a577c72b9dd32",
-    "proxyRuntimeSha256": "e878b99fc0c17354c86c7edeb999c70c18cfd925abb0958496f027cbad996d28",
-    "implementationRuntimeSha256": "9e410c49b2c8f98e4924d5cab8f07e734625c650c940a7ed600b376f010eba77",
     "topology": {
       "about": "calls per settlement the bound covers; protocol/frames.py counts them on the build",
       "loss": {
@@ -20,6 +14,25 @@
         "balanceOf": 9,
         "transfer": 1,
         "transferFrom": 1
+      }
+    },
+    "chains": {
+      "84532": {
+        "evidence": "dist/callback-cost-certificate-2026-10-04/tree/independent-token-crosscheck.json",
+        "evidenceSha256": "18a713cde5d4a3e73c8357e028e8286e4e195645cf28d7fc4749e9ac4f799a6e",
+        "identity": "dist/callback-cost-certificate-2026-10-04/payment/usdc-identity.json",
+        "identitySha256": "f90cf6179ab3792d491cca85e74c8b447591af35a745328d3a8a577c72b9dd32",
+        "proxyRuntimeSha256": "e878b99fc0c17354c86c7edeb999c70c18cfd925abb0958496f027cbad996d28",
+        "implementationRuntimeSha256": "9e410c49b2c8f98e4924d5cab8f07e734625c650c940a7ed600b376f010eba77"
+      },
+      "8453": {
+        "evidence": "dist/mainnet-certificate-inputs-2026-10-14/token-bound-8453/usdc-region-instruction-bound.json",
+        "evidenceSha256": "4cbc5b0cf8203d16602356dd6e92edbd19c8c4b0b7170ff5092a567058ce00c7",
+        "identity": "dist/mainnet-certificate-inputs-2026-10-14/readings/base.json",
+        "identitySha256": "09bf40ae2b4765eb6672d5d56449213d61b1c077143d036a124ec958a5e53b03",
+        "proxyRuntimeSha256": "98d785fcb1bf847f287adc2310759fd94cc13e754b974bc72131382e8266f607",
+        "implementationRuntimeSha256": "dcb3b7ca28662970d0a7cdad420e529fb837d7bf8a246b1a680c20e153db79e8",
+        "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
       }
     }
   },

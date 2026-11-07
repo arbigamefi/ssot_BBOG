@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compute the first-callback gas certificate (v5) on this checkout.
 
-    python3 script/certificate/certify.py <new output directory> [--memory-gib N] [--jobs N]
+    python3 script/certificate/certify.py <new output directory> [--chain-id 84532|8453] [--memory-gib N] [--jobs N]
                                           [--stages build,frames,tree,modules,ledger,bindings,composition]
 
 Needs this checkout's build in out/ (forge build src) and the solc pinned in deps.lock (script/ci/install_solc.sh).
@@ -38,7 +38,6 @@ from common import ROOT, fail, read_json, sha256, write_json  # noqa: E402
 STAGES = ['build', 'frames', 'tree', 'modules', 'ledger', 'bindings', 'composition']
 MODULES = ['CoinTossModule', 'DiceModule', 'SlotsModule', 'RouletteModule', 'PlinkoModule', 'SicBoModule',
            'KenoModule', 'BaccaratModule']
-DOMAIN = ROOT / 'script/release/first-callback-domain-84532.json'
 
 
 def run(stage_dir, name, argv):
@@ -65,8 +64,8 @@ def stage_build(out, args):
 def stage_frames(out, args):
     copy('protocol', ['frame_bound.py', 'env_frame_bound.py', 'frames.py'], out / 'protocol')
     copy('modules', ['pure_module_bound.py'], out / 'modules')
-    shutil.copy2(DOMAIN, out / 'protocol' / DOMAIN.name)
-    run(out / 'protocol', 'frames', ['frames.py', str(out / 'build'), DOMAIN.name, 'frame-bounds.json'])
+    shutil.copy2(args.domain, out / 'protocol' / args.domain.name)
+    run(out / 'protocol', 'frames', ['frames.py', str(out / 'build'), args.domain.name, 'frame-bounds.json'])
 
 
 def stage_tree(out, args):
@@ -111,13 +110,15 @@ def stage_ledger(out, args):
 
 def stage_bindings(out, args):
     copy('bindings', ['bindings.py'], out / 'bindings')
-    shutil.copy2(DOMAIN, out / 'bindings' / DOMAIN.name)
+    shutil.copy2(args.domain, out / 'bindings' / args.domain.name)
     shutil.copy2(HERE / 'reused.json', out / 'reused.json')
-    run(out / 'bindings', 'bindings', ['bindings.py', str(out / 'build'), DOMAIN.name, str(out / 'reused.json'),
+    run(out / 'bindings', 'bindings', ['bindings.py', str(out / 'build'), args.domain.name, str(out / 'reused.json'),
                                        'component-bindings.json'])
 
 
 def stage_composition(out, args):
+    if read_json(out / 'bindings/component-bindings.json')['domain']['chainId'] != args.chain_id:
+        fail('composition bindings chain does not match --chain-id')
     shutil.copy2(HERE / 'composition.py', out / 'composition.py')
     run(out, 'composition', ['composition.py', str(out)])
     print((out / 'composition.log').read_text(), end='')
@@ -132,10 +133,14 @@ def manifest(out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('out')
+    ap.add_argument('--chain-id', type=int, choices=[84532, 8453], default=84532)
     ap.add_argument('--stages', default=','.join(STAGES))
     ap.add_argument('--memory-gib', type=float, default=70.0)
     ap.add_argument('--jobs', type=int, default=10)
     args = ap.parse_args()
+    args.domain = ROOT / f'script/release/first-callback-domain-{args.chain_id}.json'
+    if read_json(args.domain)['chainId'] != args.chain_id:
+        fail('callback domain chain does not match --chain-id')
     out = Path(args.out).resolve()
     stages = args.stages.split(',')
     if any(s not in STAGES for s in stages):

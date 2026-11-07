@@ -48,7 +48,7 @@ def main():
     static = reused['staticModuleBounds']['executableSha256']
     static_rows = {m: {'reviewedExecutableSha256': sha, 'currentExecutableSha256': rows[m]['executableSha256'],
                        'identical': sha == rows[m]['executableSha256']} for m, sha in static.items()}
-    token = reused['token']
+    token = reused['token']['chains'][str(domain['chainId'])]
     token_row = {'reviewedProxyRuntimeSha256': token['proxyRuntimeSha256'],
                  'reviewedImplementationRuntimeSha256': token['implementationRuntimeSha256'],
                  'domainProxyRuntimeSha256': domain['token']['proxyRuntimeSha256'],
@@ -66,7 +66,7 @@ def main():
     out = {'compilerSha256': record['compilerSha256'], 'analyzed': rows,
            'staticModuleBounds': {'modules': static_rows, 'apply': all(r['identical'] for r in static_rows.values())},
            'token': token_row, 'sourceConstants': constants,
-           'domain': {'consumerCallbackGasLimit': domain['consumerCallbackGasLimit'],
+           'domain': {'chainId': domain['chainId'], 'consumerCallbackGasLimit': domain['consumerCallbackGasLimit'],
                       'maxBetCountCeiling': domain['maxBetCountCeiling']}}
     out['allBindingsHold'] = out['staticModuleBounds']['apply'] and token_row['identical']
     target.write_text(json.dumps(out, indent=2) + '\n')

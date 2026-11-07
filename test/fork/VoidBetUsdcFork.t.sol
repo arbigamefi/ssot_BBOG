@@ -14,6 +14,7 @@ import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
 import {ReferralRegistry} from "../../src/engines/referral/ReferralRegistry.sol";
 import {DefaultReferralEngine} from "../../src/engines/referral/DefaultReferralEngine.sol";
 import {GasBurnerModule} from "../utils/LaunchFixture.sol";
+import {CallbackDomainFork} from "../utils/CallbackDomainFork.sol";
 
 interface IUsdcBlacklist {
     function blacklister() external view returns (address);
@@ -32,10 +33,8 @@ interface IUsdcBlacklist {
 ///     'VOID_USDC_FORK=true NFT_GAS_RPC_URL="$OPS_RPC_URL" forge test --isolate --match-path test/fork/VoidBetUsdcFork.t.sol -vv'
 ///
 ///         The VRF wrapper is the mock: the first callback only has to leave the result unbooked.
-contract VoidBetUsdcForkTest is Test {
-    uint256 private constant PINNED_BLOCK = 47_657_524;
-    bytes32 private constant PINNED_HASH = 0x5a75e3c5fbaaa54dd1e67075af773668d43757b4e5de71f788ee69837650b872;
-    address private constant USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+contract VoidBetUsdcForkTest is CallbackDomainFork {
+    address private USDC;
     address private constant GOV = address(0xA11CE);
     address private constant LP = address(0x1B);
     address private constant PLAYER = address(0xB0B);
@@ -44,7 +43,7 @@ contract VoidBetUsdcForkTest is Test {
     uint32 private constant CALLBACK_GAS = 2_447_746;
     bytes32 private constant GAME_BURN = keccak256("BURN");
 
-    IERC20 private token = IERC20(USDC);
+    IERC20 private token;
     MockVRFV2PlusWrapper private wrapper;
     VRFHub private vrf;
     GameHub private hub;
@@ -55,10 +54,8 @@ contract VoidBetUsdcForkTest is Test {
 
     function setUp() public {
         if (!vm.envOr("VOID_USDC_FORK", false)) return;
-        vm.createSelectFork(vm.envString("NFT_GAS_RPC_URL"), PINNED_BLOCK);
-        vm.roll(PINNED_BLOCK + 1);
-        assertEq(blockhash(PINNED_BLOCK), PINNED_HASH, "pinned fork block identity");
-        vm.roll(PINNED_BLOCK);
+        (USDC,) = selectCallbackDomainFork();
+        token = IERC20(USDC);
         PoolRegistry registry = new PoolRegistry(GOV);
         router = new SettlementRouter(address(registry));
         wrapper = new MockVRFV2PlusWrapper();

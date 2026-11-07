@@ -35,13 +35,14 @@ def all_cases(directory: Path) -> tuple[list[dict], dict[str, int]]:
     return cases, counts
 
 
-def source_manifest(cases_paths: list[Path]) -> str:
+def source_manifest(cases_paths: list[Path], chain_id: int = 84532) -> str:
     # Cover production/test inputs and a superset of compiled Solidity dependencies.
     # Upstream identity is still authenticated by the separate dependency gate.
     paths = set()
     for directory in ("src", "lib/forge-std/src", "lib/openzeppelin-contracts/contracts", "lib/chainlink-brownie-contracts/contracts"):
         paths.update((ROOT / directory).rglob("*.sol"))
-    paths.update({ROOT / FIXTURE, ROOT / "test/utils/PrefixPath.sol", Path(__file__),
+    paths.update({ROOT / FIXTURE, ROOT / "test/utils/PrefixPath.sol", ROOT / "test/utils/CallbackDomainFork.sol",
+                  ROOT / f"script/release/first-callback-domain-{chain_id}.json", Path(__file__),
                   ROOT / "foundry.toml", ROOT / "deps.lock", *(path.resolve() for path in cases_paths)})
     lines = []
     for path in sorted(paths):
@@ -54,6 +55,7 @@ def source_manifest(cases_paths: list[Path]) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", type=Path, default=Path(__file__).with_name("gas-qualification-cases.json"))
+    parser.add_argument("--chain-id", type=int, choices=[84532, 8453], default=84532)
     parser.add_argument("--all-cases", action="store_true",
                         help="every case file in this directory; the first case with a name wins (files in name order)")
     parser.add_argument("--output", type=Path, required=True)
@@ -63,7 +65,7 @@ def main() -> int:
     args = parser.parse_args()
     rpc = os.environ.get("NFT_GAS_RPC_URL")
     if not rpc:
-        parser.error("NFT_GAS_RPC_URL must name a Base Sepolia archive RPC; do not put credentials in arguments")
+        parser.error("NFT_GAS_RPC_URL must name the selected chain's archive RPC; do not put credentials in arguments")
     forge = shutil.which("forge") or str(Path.home() / ".foundry/bin/forge")
     if args.all_cases:
         case_files = sorted(Path(__file__).parent.glob("*cases.json"))
@@ -82,7 +84,7 @@ def main() -> int:
     (args.output / "cases.json").write_text(json.dumps(cases, indent=2) + "\n")
     build_args = ["--out", str((args.output / "forge-out").resolve()),
                   "--cache-path", str((args.output / "forge-cache").resolve())] if args.isolate_build else []
-    source_before = source_manifest(case_files)
+    source_before = source_manifest(case_files, args.chain_id)
     (args.output / "SOURCE_BEFORE.sha256").write_text(source_before)
     # Foundry also accepts legacy DAPP_* options. Neither may override the pinned build.
     base = {key: value for key, value in os.environ.items()
@@ -107,7 +109,7 @@ def main() -> int:
     results = []
     source_drift = False
     for case in cases:
-        case_source = source_manifest(case_files)
+        case_source = source_manifest(case_files, args.chain_id)
         if case_source != source_before:
             source_drift = True
             print(json.dumps({"sourceDriftBeforeCase": case["name"]}), flush=True)
@@ -118,6 +120,7 @@ def main() -> int:
             env["NFT_GAS_" + key] = str(value).lower() if isinstance(value, bool) else str(value)
         if args.require_fit:
             env["NFT_GAS_REQUIRE_FIT"] = "true"
+        env["NFT_GAS_CHAIN_ID"] = str(args.chain_id)
         started = time.time()
         process = subprocess.run(
             [forge, "test", "--threads", "1", "--match-path", FIXTURE, *build_args, "-vv"],
@@ -142,12 +145,12 @@ def main() -> int:
         (args.output / "results.json").write_text(json.dumps(results, indent=2) + "\n")
         if process.returncode and "Compiler run failed" in output:
             break  # A common build failure cannot provide independent per-case gas observations.
-    source_after = source_manifest(case_files)
+    source_after = source_manifest(case_files, args.chain_id)
     (args.output / "SOURCE_AFTER.sha256").write_text(source_after)
     source_unchanged = not source_drift and source_before == source_after
     semantic = sum(bool(row["semanticChecksPassed"]) for row in results)
     fits = sum(row.get(FIT_LABEL) == 1 for row in results)
-    summary = {"requestedCases": len(cases), "cases": len(results), "semanticChecksPassed": semantic, "callbacksFit": fits,
+    summary = {"chainId": args.chain_id, "requestedCases": len(cases), "cases": len(results), "semanticChecksPassed": semantic, "callbacksFit": fits,
                "callbacksDidNotFit": sum(row.get(FIT_LABEL) == 0 for row in results),
                "requireFit": args.require_fit, "sourceUnchanged": source_unchanged,
                "isolatedBuild": args.isolate_build,

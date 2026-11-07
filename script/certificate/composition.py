@@ -8,7 +8,7 @@ component.json, modules/module-bounds.json and module-rounds.json, ledger/ledger
 bindings.json, reused.json) and writes composition.json there.
 
 Scope: k > 0 casino positions (architecture decision §12.2); the domain table is script/release/first-callback-
-domain-84532.json. Nested rule at a CALL (reviewed nested-budget.py, unchanged since certificate v2):
+domain-<chainId>.json, with the chain taken from the bound domain. Nested rule at a CALL (unchanged since v2):
     need(U; O, R, Qafter) = max(U + R, O + inv(U), O + U + Qafter, R + 1),  inv(U) = U + (U - 1) // 63.
 The rule, the placement of every ledger charge and the O1/O2 checks are those of certificate v4 (composition_v4.py,
 sealed with CERTIFICATE-v4.sha256). What v5 changes is where the terms come from:
@@ -161,7 +161,8 @@ def main():
                               'covers': main_row['U_child'] <= void_gas},
            'moduleBoundsByModule': {'interpreter': {m: v['bound'] for m, v in modules.items()},
                                     'static': reused['staticModuleBounds']['bounds25']},
-           'domain': 'k > 0 casino positions; see script/release/first-callback-domain-84532.json',
+           'chainId': bindings['domain']['chainId'],
+           'domain': f"k > 0 casino positions; see script/release/first-callback-domain-{bindings['domain']['chainId']}.json",
            'reserves': {'consumerBudget': C, 'vrfHub': R_VRF, 'gameHubOuter': R_OUTER, 'outerO': O_OUTER,
                         'outerQafter': Q_OUTER},
            'tokenCalls': {'Bank.settleBet': tb, 'LiquidityVault.applySettlement': tv, 'covered': top},
