@@ -88,7 +88,15 @@ bcd81eeb04a088abf7b0988fbc6d4a303bfc72d342623b95c24b29d6883b7c1f  2026-11-03-bas
 02f10709863c1a9d24a6e088b2dff130bb2162ba4596a7ad3e78369a96291f42  2026-11-03-base-sepolia-void-disable/dist.MANIFEST.sha256
 4fba227f98a32566610cd683ed283d5282b8714f13dc7aff5b16e093abb9ef1a  2026-11-03-base-sepolia-void-disable/dist.PATHS.txt
 6921fb787e7ee9202067c37695d1f114da98714061d9a4f5ee9ed4a5dc2965d8  2026-11-03-base-sepolia-void-disable/dist.tar.gz
+35d0a299d9d9d066142ae609451234b87fe1d7deebadb39a4d6423a754de4a87  2026-11-08-app-a3-independent-reviews/dist.MANIFEST.sha256
+a92c020d4b23be279a77145b4a71eb4ae7519463c3c96be87513ecaeb91955d7  2026-11-08-app-a3-independent-reviews/dist.PATHS.txt
+39658e852b2f97e2505873cd6e62fbbee9efa301235cc29f263f07e26b9c5a9e  2026-11-08-app-a3-independent-reviews/dist.tar.gz
+41f3ddfa7be2d9fede74a01fbaac08ae3c2e839c576c76f1da9b9e0dbcde919d  2026-11-08-app-a3-independent-reviews/restore-check.json
 4be8e91d148a8fd69d26de44a414096bf6abd59bfe5e6b69d5113378d79ed2b8  2026-11-08-app-p2-p3-rework/dist.MANIFEST.sha256
 ded3ee1d893dd766dd9407ea85bd977b9bf7373ea2ee066170fea5c5332945fb  2026-11-08-app-p2-p3-rework/dist.PATHS.txt
 476a37397e59896f3fbf35e9ee10a1c1ed484831e63fab7d63de30828f70d7c3  2026-11-08-app-p2-p3-rework/dist.tar.gz
 4841e0c8acf456550a3d96f188d2346560a2a0712e2c5783b8bbdd540d5dcdc9  2026-11-08-app-p2-p3-rework/restore-check.json
+d38fc185d3596bd74e8b3a87cd82e7fcecedfff7849fe19d9e2466484ab2fee8  2026-11-08-mainnet-certificate-and-app-a3/dist.MANIFEST.sha256
+bc7ab4f68f9f06fcc1949775e6f817f50005c24961a8d2b75eef71f90dda4cfb  2026-11-08-mainnet-certificate-and-app-a3/dist.PATHS.txt
+9cebae422b87ce514f5ae12b7f36c24bb633dca0a09e21aed465f430f00caeb4  2026-11-08-mainnet-certificate-and-app-a3/dist.tar.gz
+ca76913929787bba3e5f3d185d595409932aa6b1cfbb90429b801c1bf609df04  2026-11-08-mainnet-certificate-and-app-a3/restore-check.json
