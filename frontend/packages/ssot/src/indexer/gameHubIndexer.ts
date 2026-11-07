@@ -13,7 +13,7 @@ export interface GameHubIndexerConfig {
   /** Blocks younger than this wait for a later pass. */
   confirmationSeconds: number;
   pollIntervalMs: number;
-  /** Blocks per eth_getLogs, first and last included: Base's public RPC takes 201. */
+  /** Integer blocks per eth_getLogs, at least 5 to cover a whole Base second; the public RPC takes 201. */
   batchSize: number;
   /**
    * Each pass rereads this much chain before its cursor, replacing what a shallow reorg changed. A reread placement
@@ -72,6 +72,8 @@ export function createGameHubIndexer(params: {
 }): GameHubIndexer {
   const { release, publicClient, db } = params;
   const config: GameHubIndexerConfig = { ...GAME_HUB_INDEXER_DEFAULTS, ...(params.config ?? {}) };
+  if (!Number.isInteger(config.batchSize) || config.batchSize < 5)
+    throw new Error("GameHub indexer batchSize must be an integer of at least 5 blocks");
   const gameHub = getAddress(release.contracts.gameHub) as Address;
   const clock = createBlockClock(publicClient);
   /** The block and timestamp the cursor was last set to, so the next rewind needs no read for it. */
@@ -80,6 +82,7 @@ export function createGameHubIndexer(params: {
   const placements = new Map<string, GameHubEventNormalized>();
   /** The poll timer fires every pollIntervalMs however long a pass takes; a call during a pass joins it. */
   let pass: Promise<void> | undefined;
+  let oldPlayersRecovered = false;
 
   const status: GameHubIndexerStatus = { chainId: release.chainId, gameHub };
   let timer: any | undefined;
@@ -114,6 +117,24 @@ export function createGameHubIndexer(params: {
       if (!target) return;
       const targetBlock = Number(target.number);
       status.targetBlock = targetBlock;
+
+      // Older browsers may already have terminal rows without players, outside the rewind. Repair just those
+      // cached rows once per indexer, even with no new events. Preserve their terminal facts and the tx journal.
+      // A failed lookup leaves that row untouched and retries next pass, before advancing the cursor.
+      if (!oldPlayersRecovered) {
+        const missing = await db.bets
+          .where("chainId")
+          .equals(release.chainId)
+          .filter((row) => row.gameHub.toLowerCase() === gameHub.toLowerCase() && !row.player)
+          .toArray();
+        const { GameHubAbi } = getContractAbis();
+        for (const row of missing) {
+          const placement = await findPlacement(GameHubAbi as Abi, row.betId, row.updatedBlock);
+          await db.bets.update(row.id, { player: placement.args.player as Address });
+          placements.delete(row.betId);
+        }
+        oldPlayersRecovered = true;
+      }
 
       const cursorId = `${release.chainId}:${gameHub}`;
       const cursor = await db.cursors.get(cursorId);

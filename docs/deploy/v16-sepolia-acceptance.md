@@ -58,6 +58,20 @@ not the live runs below.
   8-second budget for a bet days old; a fresh browser index starts an hour before the safe head, reaches it, confirms
   after 24 seconds and rereads 48 seconds, and lists a bet placed before that hour whose refund, settlement or void
   falls inside it under its own player; the operations page judges indexer lag in seconds.
+- Existing browsers that ran `191df9646` (or the same indexer) can retain terminal rows without a player, even after
+  the event leaves the 48-second rewind. After installing the fix, reload every open tab for this origin; do not
+  clear site data or delete IndexedDB. On its first sync, each new indexer finds cached rows of this chain and
+  GameHub without a player and looks up their own `BetPlaced`, using `getBet.placedAt`. It updates only `player`;
+  terminal states, amounts, receipts, cursors, other deployments and `txJournal` are retained. No new event is needed.
+  A failed lookup leaves that row and the cursor unchanged and sets `lastError`; a later sync retries it. Rows repaired
+  before another row fails remain repaired. Confirm no sync error and that the affected player's terminal bet is
+  visible with the server index healthy, stale and unavailable (RPC fallback enabled), after reopening the same DB
+  and release digest. Test a failed lookup and retry, another player's bet, and unchanged journal records. A cursor
+  reaching the head alone is not acceptance. Close old-version tabs during the upgrade so they cannot write new bad rows.
+  This repairs identities in cached rows; it does not fetch all older history absent from the local index.
+- `GameHubIndexerConfig.batchSize` must be an integer of at least 5: a placement second can span five Base blocks.
+  Values 1 and 4 must fail at construction before any RPC or DB write; 5 and the production default 200 must find
+  a placement in the first block of that second. Keep the configured page size within the endpoint's tested limit.
 
 ## LP acceptance
 

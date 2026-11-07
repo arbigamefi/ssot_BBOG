@@ -64,10 +64,10 @@ const LOGS = [
 ];
 
 /** getLogs answers the query's range, events, bet and player; getBet gives the bet's placement second. */
-function chain() {
+function chain(head = 100_000n) {
   return {
     getBlock: vi.fn(async (args?: { blockNumber?: bigint }) => {
-      const number = args?.blockNumber ?? 100_000n;
+      const number = args?.blockNumber ?? head;
       return { number, timestamp: number / 5n };
     }),
     getLogs: vi.fn(async (q: any) => {
@@ -149,6 +149,111 @@ describe("a fresh browser's list of a player's bets (2026-11-03 review A1)", () 
         // The other player's refund in the same range stays theirs.
         const theirs = await readLocalPlayerBets({ db, chainId: CHAIN_ID, player: B, limit: 50 });
         expect(theirs.map((row) => [row.betId, row.state])).toEqual([["8", "refunded"]]);
+      } finally {
+        await db.delete();
+      }
+    }
+  );
+});
+
+describe("an existing browser's missing-player rows (2026-11-03 review A1-R1)", () => {
+  it.each(["healthy", "stale", "unavailable"] as const)(
+    "repairs persisted terminal rows without new events with the server index %s",
+    async (server) => {
+      const name = `player-bets-upgrade-${server}-${crypto.randomUUID()}`;
+      let db = new SSOTDb(name);
+      const orphanA = indexRow([REFUNDED_A]);
+      const orphanB = indexRow([LOGS[3]!]);
+      const otherHub: BetRow = { ...orphanA, id: `${CHAIN_ID}:9`, betId: "9", gameHub: B };
+      const otherChain = { ...orphanA, id: "8453:7", chainId: 8453 };
+      const cursor = {
+        id: `${CHAIN_ID}:${release().contracts.gameHub}`,
+        chainId: CHAIN_ID,
+        source: release().contracts.gameHub as `0x${string}`,
+        lastProcessedBlock: 99_880,
+        updatedAt: 1
+      };
+      const journal = {
+        id: `${CHAIN_ID}:${REFUNDED_A.transactionHash}`,
+        chainId: CHAIN_ID,
+        txHash: REFUNDED_A.transactionHash,
+        releaseDigest: release().releaseDigest,
+        action: "withdraw",
+        status: "mined" as const,
+        ok: true,
+        createdAt: 1
+      };
+      try {
+        // Persist the exact old reducer's refund-only shape, close, then reopen the same release's database.
+        await db.bets.bulkPut([orphanA, orphanB, otherHub, otherChain]);
+        await db.cursors.put(cursor);
+        await db.txJournal.put(journal);
+        db.close();
+        db = new SSOTDb(name);
+        const client = chain(100_100n);
+        const indexer = createGameHubIndexer({ release: release(), publicClient: client, db });
+        await indexer.syncOnce();
+        expect(indexer.getStatus().lastError).toBeUndefined();
+        // Only the player changes: no terminal state, amount or receipt is replaced by the placement.
+        expect(await db.bets.get(orphanA.id)).toEqual({ ...orphanA, player: A });
+        expect(await db.bets.get(orphanB.id)).toEqual({ ...orphanB, player: B });
+        expect(await db.bets.get(otherHub.id)).toEqual(otherHub);
+        expect(await db.bets.get(otherChain.id)).toEqual(otherChain);
+        expect(await db.txJournal.toArray()).toEqual([journal]);
+        const scans = client.getLogs.mock.calls.filter(([q]: any[]) => q.events);
+        expect(scans[0]![0].fromBlock).toBeGreaterThan(REFUNDED_A.blockNumber);
+        expect(client.readContract).toHaveBeenCalledTimes(2);
+        expect(await db.gameHubEvents.count()).toBe(0);
+
+        vi.stubEnv("PLAYER_BETS_RPC_FALLBACK_ENABLED", "true");
+        vi.stubEnv("BET_INDEX_READ_ENABLED", server === "unavailable" ? "false" : "true");
+        vi.stubEnv(
+          "BET_INDEX_DATABASE_URL",
+          server === "unavailable" ? "" : "postgres://index.invalid/bets"
+        );
+        durable.rows = [indexRow(server === "healthy" ? [PLACED_A, REFUNDED_A] : [PLACED_A])];
+        const response = await queryPlayerBets({ chainId: CHAIN_ID, player: A, client });
+        const local = await readLocalPlayerBets({ db, chainId: CHAIN_ID, player: A, limit: 50 });
+        expect(
+          mergeBetRows(response.rows, local, 50).map((row) => [row.betId, row.player, row.state])
+        ).toEqual([["7", A, "refunded"]]);
+        const theirs = await readLocalPlayerBets({ db, chainId: CHAIN_ID, player: B, limit: 50 });
+        expect(theirs.map((row) => [row.betId, row.state])).toEqual([["8", "refunded"]]);
+        await indexer.syncOnce();
+        expect(client.readContract).toHaveBeenCalledTimes(2);
+      } finally {
+        await db.delete();
+      }
+    }
+  );
+
+  it.each(["refunded", "finalized", "voided"] as const)(
+    "retries a failed player lookup without changing the %s row or cursor",
+    async (state) => {
+      const db = new SSOTDb(`player-bets-retry-${state}-${crypto.randomUUID()}`);
+      const orphan = { ...indexRow([REFUNDED_A]), state };
+      const cursor = {
+        id: `${CHAIN_ID}:${release().contracts.gameHub}`,
+        chainId: CHAIN_ID,
+        source: release().contracts.gameHub as `0x${string}`,
+        lastProcessedBlock: 99_880,
+        updatedAt: 1
+      };
+      try {
+        await db.bets.put(orphan);
+        await db.cursors.put(cursor);
+        const client = chain(100_100n);
+        client.readContract.mockRejectedValueOnce(new Error("placement temporarily unavailable"));
+        const indexer = createGameHubIndexer({ release: release(), publicClient: client, db });
+        await indexer.syncOnce();
+        expect(indexer.getStatus().lastError).toBe("placement temporarily unavailable");
+        expect(await db.bets.get(orphan.id)).toEqual(orphan);
+        expect(await db.cursors.get(cursor.id)).toEqual(cursor);
+        expect(client.getLogs).not.toHaveBeenCalled();
+        await indexer.syncOnce();
+        expect(indexer.getStatus().lastError).toBeUndefined();
+        expect(await db.bets.get(orphan.id)).toEqual({ ...orphan, player: A });
+        expect((await db.cursors.get(cursor.id))?.lastProcessedBlock).toBe(99_980);
       } finally {
         await db.delete();
       }

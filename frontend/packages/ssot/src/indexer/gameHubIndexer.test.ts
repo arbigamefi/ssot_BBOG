@@ -112,6 +112,24 @@ afterEach(async () => {
 });
 
 describe("createGameHubIndexer", () => {
+  it.each([0, 1, 4, -1, 5.5, NaN, Infinity])(
+    "rejects unsupported batchSize %s before reading or writing",
+    (batchSize) => {
+      const client = createMockPublicClient({});
+      expect(() =>
+        createGameHubIndexer({
+          release: MOCK_RELEASE,
+          publicClient: client,
+          db,
+          config: { batchSize }
+        })
+      ).toThrow("GameHub indexer batchSize must be an integer of at least 5 blocks");
+      expect(client.getBlock).not.toHaveBeenCalled();
+      expect(client.getLogs).not.toHaveBeenCalled();
+      expect(db.isOpen()).toBe(false);
+    }
+  );
+
   it("returns an indexer with start, stop, syncOnce, getStatus", () => {
     const client = createMockPublicClient({});
     indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
@@ -557,6 +575,29 @@ describe("bets placed before a fresh browser's first range (2026-11-03 review A1
     (client.getLogs.mock.calls as [{ fromBlock: bigint; toBlock: bigint }][]).map(
       ([q]) => q.toBlock - q.fromBlock + 1n
     );
+
+  it.each([5, 200])(
+    "finds the first of five same-second blocks with batchSize %s",
+    async (batchSize) => {
+      const client = chainOf(100_500n, [
+        log("BetPlaced", 100_000n, 1n, { player: A, stake: 100n }),
+        log("BetRandomReady", 100_380n, 1n, { requestId: 1n })
+      ]);
+      indexer = createGameHubIndexer({
+        release: MOCK_RELEASE,
+        publicClient: client,
+        db,
+        config: { batchSize, initialLookbackSeconds: 10 }
+      });
+      await indexer.syncOnce();
+      expect(indexer.getStatus().lastError).toBeUndefined();
+      expect(await db.bets.get("84532:1")).toMatchObject({ player: A, state: "randomReady" });
+      const placement = client.getLogs.mock.calls.find(([q]: any[]) => q.event)?.[0];
+      expect(placement.fromBlock).toBeLessThanOrEqual(100_000n);
+      expect(placement.toBlock).toBe(100_004n);
+      expect(Math.max(...ranges(client).map(Number))).toBeLessThanOrEqual(batchSize);
+    }
+  );
 
   it("binds a refund an hour later to the bet's player, placed 176 seconds before the first range", async () => {
     // The target is 99,880 and the first range starts 3,600 seconds before it, at 81,880.

@@ -179,6 +179,16 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    it with `GOVERNANCE_CHECKPOINT` only when `GOVERNANCE_CHECKPOINT_SHA256` comes from a signed record. Run the check
    locally through `script/tools/with-ops-rpc.sh infura <network>` with `RPC_URL="$OPS_RPC_URL"`; CI uses the Base
    public RPCs.
+
+   When upgrading the browser indexer from `191df9646`, include the existing-browser checks in
+   [network acceptance](v16-sepolia-acceptance.md#base-denim-plan-a13). Reload all tabs after the new image is installed.
+   The first sync repairs only the missing players of cached bets belonging to this chain and GameHub, including
+   terminal bets outside the rewind. It preserves terminal facts and `txJournal`; do not clear all site storage.
+   A lookup error prevents cursor advancement and is retried by a later sync. Check the affected player's terminal
+   row with the server healthy, stale and unavailable, not just a fresh browser or a caught-up cursor. Old-version
+   tabs must be closed so they do not keep writing missing-player rows. Unsupported `batchSize` values (non-integers
+   or fewer than 5 blocks) fail when the indexer is created; the default remains 200.
+
    Release verification also checks the first-callback certificate domain for the snapshot's chain
    (`script/release/first-callback-domain-<chainId>.json`). `make release-v16` runs this check before anything is
    signed, as `release-domain-check`.
