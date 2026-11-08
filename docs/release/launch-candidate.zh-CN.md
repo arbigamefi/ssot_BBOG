@@ -110,6 +110,8 @@ Owner 于 2026-10-25 追加两项决定：
 
    **Owner 后续决定（2026-11-08）**：主网 guardian 改用 `0x52Aeb30572dD5B6dEA62359f54A910575245aDCA`，其余角色和多签门限/签名者沿用测试网清单，输入固定到 `docs/deploy/v16/roles-8453.json`。外审书面材料“额外提供，现在不需要”，按 Owner 指令后补，不再作为本轮部署准备或广播的等待项；未将此指令记成已收件或外审范围已独立核实。初次角色读链未通过：guardian 的 Safe 接口返回空值；在主网区块 54,703,113，Infura/Alchemy 均读回该地址代码为 `0x`、nonce 为 0，而 Base Sepolia 区块 56,045,909 上该地址有 123 字节代理代码、三个原 guardian owners、门限 2。Owner 随后完成 guardian 在 **Base 主网 8453** 的部署；重读区块 54,704,380，三名预期 owners、门限 2、独立性、无 module/guard、所有签名者及部署/keeper/发布账户无代码、余额/nonce、token/provider 和认证域等 15 项检查均通过，部署者 nonce 0。完整 preflight、部署计划与广播随后执行，现有工具和域门槛未绕过。证据 `dist/base-mainnet-deployment-20261108T094225Z/`；主网部署授权持续有效，无须再次批准。
 
+   **主网合约实际部署及回执核对完成（2026-11-08）**：固定源码 `579058d3f`（tree `0b7adfd8…`）；Owner 第三轮经 Alchemy OPS 广播，nonce 0–15 的 16 笔创建全部 status=1，区块 54,734,291–54,734,378，北京时间 19:27:13–19:27:31；Bank 另构造 Vault，共 17 个合约。前两轮 Infura TLS 在提交前失败，nonce/余额未变、无 gas 消耗，均保留失败证据，未使用 --resume。实施方经 Infura 逐笔核对主网交易、init code、构造地址、区块哈希及回执；17 个 runtime hash 与计划/快照一致，Bank↔Vault↔主网 USDC 绑定、6 位精度、riskReserveBps=6000、每轮最低10000通过；两家 RPC finalized 块 54,736,137 已覆盖全部回执。gas 共22,627,357，实际费用0.000136214102260205 ETH，含L1费用，余额差逐wei一致；部署者 nonce16、没有时间锁管理权限。17/17合约已在Basescan源码验证。时间锁仍72小时，poolCount=0，接线/激活均unset；已用真实部署地址在只读分叉演练接线和激活，生成22调用的接线Safe文件及后续激活文件。**下一步：主网K0-4安装/武装后，由治理Safe在8453排入接线，再按链上ready时间等待72小时**；前端开关、生产主机及激活均未改动。本次证据 `dist/base-mainnet-deployment-20261108T094225Z/`、归档 `2026-11-08-base-mainnet-deployment-receipts/`。当前部署提交CI仍在官方Foundry下载阶段HTTP504，未冒称该轮CI通过；可执行源码/测试/工作流/工具链与绿色基线d55417d47对象全同的沿用依据及三轮新角色预检分别保留。
+
 ## 6. 工作包 A：发布工具与 CI
 
 | 编号 | 内容 | 来源 | 涉及文件 | 验收 |
