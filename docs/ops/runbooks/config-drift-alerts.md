@@ -10,8 +10,14 @@ before any network that carries real funds.
 
 [`config-drift-monitor.py`](../../../script/ops/config-drift-monitor.py) runs every 5 minutes through
 [`config-drift-alert.sh`](../../../script/ops/config-drift-alert.sh). The Owner chose the production host as its
-always-on host (2026-10-15): it runs there under systemd and, on Base Sepolia, through the public RPC; a dedicated key
-is to be chosen before mainnet. The operator's own machine can also run it, under launchd with `INFURA_API_KEY_OPS`
+always-on host (2026-10-15): it runs there under systemd and, on Base Sepolia, through the public RPC. The Base mainnet
+instance was installed on 2026-11-08 as `arbigamefi-config-drift-8453.service` / `.timer`, using the existing K0-4
+allocation `INFURA_API_KEY_OPS` through `with-ops-rpc.sh`, separately from the production keeper. Its code and snapshot
+are in `/opt/arbigamefi/ops/mainnet-8453-20261108T120742Z`; its root-only `rpc.env` and
+`/var/lib/arbigamefi/config-drift-8453.state.json` are separate from Sepolia. The mainnet configuration reuses the
+Owner-managed Telegram credentials and clears the Sepolia release record and checkpoint. Once mainnet wiring is
+executed and its release is signed, configure that mainnet record and checkpoint together to enable live release
+verification. The operator's own machine can also run it, under launchd with `INFURA_API_KEY_OPS`
 ([Install](#install)). It pushes to the ops channel of the health notifier ([alerts](../alerts.md)). Timelock
 operations, admission reviews, void windows and bets settled after a void on the same path also go to a public channel
 that LPs and players can read (ADR-0037 D5 and R-5).
