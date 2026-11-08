@@ -226,8 +226,10 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
 
    Chain 8453 has its own [mainnet certificate](../audit/first-callback-gas-certificate-mainnet-2026-11-08.md),
    independently accepted on 2026-11-08 at `2fc1325c7`. Its domain now records `CERTIFIED`, retaining computation
-   seal `17c8ab97…` and adding independent-review seal `80f57ca4…`. The status/reference increment is submitted
-   separately for independent review. This acceptance covers gas sufficiency in the pinned domain; mainnet
+   seal `17c8ab97…` and adding independent-review seal `80f57ca4…`. The status/reference/errata increment at
+   `13bda9c6e` was independently accepted (`b2693872…`). Public mainnet parameters use
+   `v16/chain-8453.env.example`; confirm a mainnet roles file separately before the preflight.
+   This acceptance covers gas sufficiency in the pinned domain; mainnet
    deployment approval and the remaining release gates are separate requirements.
 
 4. Run the authenticated **Frontend Docker Images** workflow on the same source commit with the

@@ -104,3 +104,7 @@ d38fc185d3596bd74e8b3a87cd82e7fcecedfff7849fe19d9e2466484ab2fee8  2026-11-08-mai
 bc7ab4f68f9f06fcc1949775e6f817f50005c24961a8d2b75eef71f90dda4cfb  2026-11-08-mainnet-certificate-and-app-a3/dist.PATHS.txt
 9cebae422b87ce514f5ae12b7f36c24bb633dca0a09e21aed465f430f00caeb4  2026-11-08-mainnet-certificate-and-app-a3/dist.tar.gz
 ca76913929787bba3e5f3d185d595409932aa6b1cfbb90429b801c1bf609df04  2026-11-08-mainnet-certificate-and-app-a3/restore-check.json
+7c68c8ee9946054cf972911e37a18a0712aa507eb11fac5c212ff49cdc544fd3  2026-11-08-mainnet-deployment-preparation/dist.MANIFEST.sha256
+a77cd2e03827d0410d7966ae72629ee64f215c10853cf8ccfa0a5d00d336d24d  2026-11-08-mainnet-deployment-preparation/dist.PATHS.txt
+79b7c20400923f9b35570762ad174976a7c53b2a243a40b246270c610059e8f5  2026-11-08-mainnet-deployment-preparation/dist.tar.gz
+5da0fc8574ca5efa4ac7c65eb6d2ff91017d6327c1a29edb00ebbfb096daea6e  2026-11-08-mainnet-deployment-preparation/restore-check.json

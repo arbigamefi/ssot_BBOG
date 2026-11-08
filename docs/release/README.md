@@ -8,8 +8,8 @@ through a 72-hour governance timelock, pause, per-player capacity and the void o
 and [certificate v5](../audit/first-callback-gas-certificate-2026-10-07.md) is computed on it; the certificate's
 independent review accepted it on 2026-10-15 and the Base Sepolia domain file is `CERTIFIED`. The separately bound
 [Base mainnet certificate](../audit/first-callback-gas-certificate-mainnet-2026-11-08.md) was independently accepted
-on 2026-11-08; its domain now records `CERTIFIED`, with the status/reference increment submitted separately for
-independent review. Certificate acceptance covers gas sufficiency within its domain and assumptions. The external
+on 2026-11-08; its domain now records `CERTIFIED`, and the status/reference increment at `13bda9c6e` was also
+independently accepted. Certificate acceptance covers gas sufficiency within its domain and assumptions. The external
 audit and network acceptance are pending.**
 Follow the [detailed plan](../design/lp-accounting-and-callback-implementation.md) and
 [contract rules](../constitution/SSOT.v1.6.md).
