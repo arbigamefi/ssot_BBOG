@@ -11,8 +11,8 @@ import {CasinoParameterDomain, IGameModule, SSOTTypes} from "../utils/CasinoPara
 /// The census document proves this from the admission facts; this test is the mechanical companion:
 ///   - sweep: every admitted parameter value of every module (the complete domain) resolves at the floor stake;
 ///   - grid: the parameter classes that resolve's arithmetic distinguishes, at the floor stake, the official
-///     minimum, and the largest stake Bank admits (reserved <= 2^108 - 1), for 1 and 25 rounds, with every
-///     stop configuration and several random words, including the ones that force early stops.
+///     minimum, and a fixture-selected admitted large sample (25-round reserved <= 2^108 - 1), for 1 and 25
+///     rounds, with every stop configuration and several random words, including the ones that force early stops.
 contract CallbackDomainM4Test is CasinoParameterDomain {
     uint256 internal constant MAX_TREE_CAPITAL = (uint256(1) << 108) - 1;
     uint256 internal constant OFFICIAL_MIN_BET = 10_000;
@@ -103,7 +103,8 @@ contract CallbackDomainM4Test is CasinoParameterDomain {
         }
     }
 
-    /// Largest per-round amount Bank can admit for these params at 25 rounds: reserved(25 rounds) <= 2^108 - 1.
+    /// A large per-round sample, reduced in steps until admitted with 25-round reserved <= 2^108 - 1.
+    /// This is not an exact maximum; the sample plus one may also be admitted (MN-2, 2026-11-08).
     function _maxAmount(IGameModule m, bytes memory params) internal view returns (uint256 amount) {
         (, uint256 unit) = _admit(m, params, SSOTTypes.StakeSpec(OFFICIAL_MIN_BET, 1, 0, 0));
         amount = MAX_TREE_CAPITAL / 25 * OFFICIAL_MIN_BET / unit;

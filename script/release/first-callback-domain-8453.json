@@ -1,7 +1,7 @@
 {
   "schema": "ARBIGAMEFI_FIRST_CALLBACK_DOMAIN_V1",
   "chainId": 8453,
-  "status": "PENDING_INDEPENDENT_REVIEW",
+  "status": "CERTIFIED",
   "certificate": "docs/audit/first-callback-gas-certificate-mainnet-2026-11-08.md",
   "consumerCallbackGasLimit": 2447746,
   "maxBetCountCeiling": 25,
@@ -242,12 +242,15 @@
     "proxyRuntimeSha256": "98d785fcb1bf847f287adc2310759fd94cc13e754b974bc72131382e8266f607",
     "implementationRuntimeSha256": "dcb3b7ca28662970d0a7cdad420e529fb837d7bf8a246b1a680c20e153db79e8"
   },
-  "qualificationNote": "Base mainnet inputs and post-Denim fixed block; pending independent mainnet gas-certificate review. Not deployment approval.",
+  "qualificationNote": "Base mainnet gas sufficiency accepted by independent review on 2026-11-08 for the pinned domain and non-gas assumptions. Not deployment approval.",
   "certificateSeal": {
     "version": "v5-mainnet-1",
     "manifest": "mainnet-certificate-2026-11-08/certificate/MANIFEST.sha256",
     "sha256": "17c8ab971e393fe598ff18b957339ec2b11beaceb4f94e8143deb989b2f123b4",
     "computedAt": "5cc1199bd08dc6959f106529d6b86ddf7d6cae63",
-    "computedOn": "2026-11-08"
+    "computedOn": "2026-11-08",
+    "review": "independent-review-mainnet-certificate-2026-11-08/MANIFEST.sha256",
+    "reviewSha256": "80f57ca44ebb3c74e00056d86ff175a73d764c56aae0f872824313e6f4b60179",
+    "certifiedOn": "2026-11-08"
   }
 }

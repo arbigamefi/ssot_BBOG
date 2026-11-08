@@ -253,6 +253,50 @@ contract CallbackDomainV16Test is Test {
         verifier.verify(_json(s), committed);
     }
 
+    function test_mainnetDomainCitesTheSealedCertificateAndItsReview() public view {
+        string memory dom = vm.readFile("script/release/first-callback-domain-8453.json");
+        assertEq(dom.readUint(".chainId"), 8453);
+        assertEq(dom.readString(".status"), "CERTIFIED");
+        assertEq(dom.readString(".certificateSeal.version"), "v5-mainnet-1");
+        string memory seal = vm.readFile("script/release/certificates/first-callback-mainnet-v1/CERTIFICATE.sha256");
+        assertEq(sha256(bytes(seal)), vm.parseBytes32(string.concat("0x", dom.readString(".certificateSeal.sha256"))));
+        assertEq(
+            dom.readString(".certificateSeal.sha256"),
+            "17c8ab971e393fe598ff18b957339ec2b11beaceb4f94e8143deb989b2f123b4"
+        );
+        string memory review =
+            vm.readFile("script/release/certificates/first-callback-mainnet-v1/independent-review.MANIFEST.sha256");
+        assertEq(
+            sha256(bytes(review)), vm.parseBytes32(string.concat("0x", dom.readString(".certificateSeal.reviewSha256")))
+        );
+        assertEq(
+            dom.readString(".certificateSeal.reviewSha256"),
+            "80f57ca44ebb3c74e00056d86ff175a73d764c56aae0f872824313e6f4b60179"
+        );
+        assertEq(
+            dom.readString(".certificateSeal.review"),
+            "independent-review-mainnet-certificate-2026-11-08/MANIFEST.sha256"
+        );
+        assertEq(dom.readString(".certificateSeal.computedAt"), "5cc1199bd08dc6959f106529d6b86ddf7d6cae63");
+        assertEq(dom.readString(".certificateSeal.certifiedOn"), "2026-11-08");
+    }
+
+    function test_mainnetCertifiedSnapshotPassesButPendingAndCrossChainFail() public {
+        string memory dom = vm.readFile("script/release/first-callback-domain-8453.json");
+        Snap memory s = _good();
+        s.chainId = 8453;
+        s.wrapper = dom.readAddress(".providerReference.wrapper");
+        s.casinoAsset = dom.readAddress(".token.proxy");
+        verifier.verify(_json(s), dom);
+        _rejects(
+            s,
+            vm.replace(dom, '"status": "CERTIFIED"', '"status": "PENDING_INDEPENDENT_REVIEW"'),
+            "first-callback certificate not accepted"
+        );
+        _rejects(s, committed, "certificate is for another chain");
+        _rejects(_good(), dom, "certificate is for another chain");
+    }
+
     function test_pendingCertificateFailsReleaseVerification() public {
         _rejects(_good(), pending, "first-callback certificate not accepted");
     }

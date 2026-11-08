@@ -96,6 +96,10 @@ a92c020d4b23be279a77145b4a71eb4ae7519463c3c96be87513ecaeb91955d7  2026-11-08-app
 ded3ee1d893dd766dd9407ea85bd977b9bf7373ea2ee066170fea5c5332945fb  2026-11-08-app-p2-p3-rework/dist.PATHS.txt
 476a37397e59896f3fbf35e9ee10a1c1ed484831e63fab7d63de30828f70d7c3  2026-11-08-app-p2-p3-rework/dist.tar.gz
 4841e0c8acf456550a3d96f188d2346560a2a0712e2c5783b8bbdd540d5dcdc9  2026-11-08-app-p2-p3-rework/restore-check.json
+f944394ad498d3b66d2da6211286d708de4b0dd562be9664e917db374a707e51  2026-11-08-mainnet-certificate-acceptance/dist.MANIFEST.sha256
+001edc4c629c93d30eda86c1f12ff80b5c4885d302f72f8ef672afc07d95c6e6  2026-11-08-mainnet-certificate-acceptance/dist.PATHS.txt
+eb47def40615b4b0b8073bbf76d83a580a1ad9fbc524f4784d570ceb584e6c2b  2026-11-08-mainnet-certificate-acceptance/dist.tar.gz
+d6618b3dd1b69871613b6248d38e12e3162c5ea9592b609d9dc53a70f53c5f8e  2026-11-08-mainnet-certificate-acceptance/restore-check.json
 d38fc185d3596bd74e8b3a87cd82e7fcecedfff7849fe19d9e2466484ab2fee8  2026-11-08-mainnet-certificate-and-app-a3/dist.MANIFEST.sha256
 bc7ab4f68f9f06fcc1949775e6f817f50005c24961a8d2b75eef71f90dda4cfb  2026-11-08-mainnet-certificate-and-app-a3/dist.PATHS.txt
 9cebae422b87ce514f5ae12b7f36c24bb633dca0a09e21aed465f430f00caeb4  2026-11-08-mainnet-certificate-and-app-a3/dist.tar.gz

@@ -90,7 +90,7 @@ payoutGross = cumPayout; refundAmount = stake - usedTurnover
 ### Roulette
 
 - `RouletteParams.decode`：`Kind(kindRaw)` 的枚举转换、各 `require`，与 `validate` 相同（A1、A2）。Column 的循环 `x += 3` 在 `x ≤ 36` 时执行，`x ≤ 39 < 256`。
-- `pc = popcount(numbers)`；`require(pc > 0)` 与 `maxPayout` 相同，且 `numbers ≠ 0`。`popcount` 的乘法 `numbers·POPCNT_MULT < 2^40 · 2^222 < 2^256`。
+- `pc = popcount(numbers)`；`require(pc > 0)` 与 `maxPayout` 相同，且 `numbers ≠ 0`。`POPCNT_MULT = 0x0000000000002000000000100000000008000000000400000000020000000001` 的实际位长为 206，故任意 `uint40 numbers` 均满足 `numbers·POPCNT_MULT < 2^40 · 2^206 = 2^246 < 2^256`；取 `numbers = 2^40−1` 时，实际乘积为 245 位。（2026-11-08 勘误 MN-1；原封存保留。）
 - 每轮：`mulDiv(amount, 37, pc)`，`pc ∈ [1, 36]`；上界 `reserved`，`F/P = 37/pc > 1`。
 - `(1 << rolled) & numbers`，`rolled < 37`，无 revert。
 
@@ -130,7 +130,7 @@ payoutGross = cumPayout; refundAmount = stake - usedTurnover
 `test/unit/CallbackDomainM4.t.sol` 与本文的证明一一对应，不替代证明：
 
 - **sweep**：`test/utils/CasinoParameterDomain.sol` 枚举每个模块的完整参数域（每个参数取遍其 ABI 类型；Roulette 位图按 popcount 等价类取代表），每个已准入的参数在最低注额 99、1 轮下 `resolve`，并通过第 1 节的三条后置检查。共 31,259 个参数值。
-- **grid**：对 `resolve` 算术所区分的参数类（Dice 分母 1 与 99、Roulette 36 个 popcount 类加两个 typed 代表、Keno 5 个 `played` 类各两组号码、SicBo 全部 35 个参数、Plinko 3 档、Baccarat 3 边、CoinToss 2、Slots 1）× 注额 {99，官方 10,000，Bank 在 25 轮下可准入的最大值} × 轮数 {1，25} × 止盈止损 {无，首胜即停，首负即停，一轮注额} × 随机字 {0，2^256−1，哈希}。共 6,912 个格点，其中 2,226 个触发提前停止（`refund > 0`）。
+- **grid**：对 `resolve` 算术所区分的参数类（Dice 分母 1 与 99、Roulette 36 个 popcount 类加两个 typed 代表、Keno 5 个 `played` 类各两组号码、SicBo 全部 35 个参数、Plinko 3 档、Baccarat 3 边、CoinToss 2、Slots 1）× 注额 {99，官方 10,000，按夹具选取的可准入大额样本} × 轮数 {1，25} × 止盈止损 {无，首胜即停，首负即停，一轮注额} × 随机字 {0，2^256−1，哈希}。大额样本按步长缩减，直到 25 轮的预留赔付不超过 `2^108−1`，不声称精确最大值；Dice 分母 99 的样本加一仍满足夹具准入及该资本上限。共 6,912 个格点，其中 2,226 个触发提前停止（`refund > 0`）。（2026-11-08 勘误 MN-2；夹具行为与原封存未变。）
 - **一致性**：准入拒绝的每个参数值，`resolve` 也拒绝。
 - 所有断言通过（21 项测试，含 P5）。
 
