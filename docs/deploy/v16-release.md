@@ -228,7 +228,8 @@ Use the [Base Sepolia acceptance checklist](v16-sepolia-acceptance.md) to qualif
    independently accepted on 2026-11-08 at `2fc1325c7`. Its domain now records `CERTIFIED`, retaining computation
    seal `17c8ab97…` and adding independent-review seal `80f57ca4…`. The status/reference/errata increment at
    `13bda9c6e` was independently accepted (`b2693872…`). Public mainnet parameters use
-   `v16/chain-8453.env.example`; confirm a mainnet roles file separately before the preflight.
+   `v16/chain-8453.env.example`; Owner-confirmed role inputs are pinned in `v16/roles-8453.json`.
+   They remain subject to the live multisig/control checks before the preflight can pass.
    This acceptance covers gas sufficiency in the pinned domain; mainnet
    deployment approval and the remaining release gates are separate requirements.
 
