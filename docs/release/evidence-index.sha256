@@ -124,3 +124,7 @@ b88107290a17bfe1e386c16913de37a78e42b2751f027eb94f6a067f3dfb237b  2026-11-08-mai
 b5f1e96bf3c0f65b030db6f0249bb9af8be6653221a1dbf96d3df646cdd41f63  2026-11-08-mainnet-wiring-schedule/dist.PATHS.txt
 eb37efd9a6279f16364f4571db82974fe6a900b62c57ffb06b299f825a450ac5  2026-11-08-mainnet-wiring-schedule/dist.tar.gz
 da08dc8c73d12f463ffdb8078429bb198ea92b05f3a988b65e6fb9bddf0d1793  2026-11-08-mainnet-wiring-schedule/restore-check.json
+d1c7eb768f904de7e91e487a93ac6ffde3ece8cb25d00742beafe857e35124f1  2026-11-09-testnet-open/dist.MANIFEST.sha256
+7a7d623a8c4ec22090abd2c0f17fea197d89b55dce997968b0f80ceb5d22e4ff  2026-11-09-testnet-open/dist.PATHS.txt
+92a3b7ce27f0ca85dae4852dbf748408757e589fa5087e79d423e4c0c9ba741d  2026-11-09-testnet-open/dist.tar.gz
+8698c0a1bc4b1033f7f3cb7845c6cc7156048c3bf1840d98579267f602b4a4ff  2026-11-09-testnet-open/restore-check.json
