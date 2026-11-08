@@ -116,3 +116,7 @@ a77cd2e03827d0410d7966ae72629ee64f215c10853cf8ccfa0a5d00d336d24d  2026-11-08-mai
 71d2e68d1a5a3644c9d6776013b8a8984118a47e718988392ebc7b562da2f3ff  2026-11-08-mainnet-k04-install/dist.PATHS.txt
 7b00f78e1094ddb3e65d3b9a49d8f36f8f7b7a2e4f4ca9176732eb0b2f30368d  2026-11-08-mainnet-k04-install/dist.tar.gz
 8c5b92715b2fa4eb11aabd558b5670239456f8dd976382de634edded05b2eb55  2026-11-08-mainnet-k04-install/restore-check.json
+3abff5c6c5a8f9fb115d7b78d7cbb6a9392517bc827322a8118a850d679e2bd6  2026-11-08-mainnet-wiring-schedule/dist.MANIFEST.sha256
+b5f1e96bf3c0f65b030db6f0249bb9af8be6653221a1dbf96d3df646cdd41f63  2026-11-08-mainnet-wiring-schedule/dist.PATHS.txt
+eb37efd9a6279f16364f4571db82974fe6a900b62c57ffb06b299f825a450ac5  2026-11-08-mainnet-wiring-schedule/dist.tar.gz
+da08dc8c73d12f463ffdb8078429bb198ea92b05f3a988b65e6fb9bddf0d1793  2026-11-08-mainnet-wiring-schedule/restore-check.json
