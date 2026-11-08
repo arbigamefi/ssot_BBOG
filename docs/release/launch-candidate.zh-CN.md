@@ -116,6 +116,8 @@ Owner 于 2026-10-25 追加两项决定：
 
    **主网接线已排队（2026-11-08）**：治理Safe执行排队，交易 `0x0db69d4d…21b6e49`、区块54,751,573、status=1，北京时间20:24:50。操作 `0x18f3ba5b…bad08a` 为Waiting；Infura与Alchemy均读回ready timestamp `1794399890`，即 **2026-11-11 20:24:50北京时间（12:24:50 UTC）**，与排队块时间+259200秒一致。Safe经转发合约提交，回执确认治理Safe的ExecutionSuccess，22条排队调用与原封存计划逐项一致。K0-4于北京时间20:27:29向ops与公开频道公告，22项准入审查全部passed；游标覆盖排队块，failures=0、各告警条件为空，服务exit0且两路通知成功后提交状态。接线尚未执行、poolCount=0，激活操作仍unset；本轮只读核对，未签名、广播、重启监控或改主机。证据 `dist/mainnet-wiring-schedule-20261108T122646Z/`，归档 `2026-11-08-mainnet-wiring-schedule/`。**下一步：到上述ready时间后执行接线，再签主网发布并推进既有发布门槛与后续激活。**
 
+   **11月11日主网接线执行材料已备（2026-11-08）**：准备包 `dist/mainnet-wiring-execution-prep-20261108T124348Z/`，入口 `owner-wiring.sh` 默认只读 `--check`，Owner到北京时间2026-11-11 20:24:50后明确用 `--execute`；别名 `arbigamefi-deployer-84532` 对应同一个主网部署者，固定chain8453。沿用原22调用calldata与既有cast/域/多签核对工具，执行前核对源文件、时间锁ready、域/多签与pending nonce，保存签名hash并校验签名者/链/nonce/目标/value/gas/完整data后只发布一次；记录放仓库外，`--verify` 仅按hash重读并独立保存新回执，不自动重发。实际主网只读通过，nonce16；本地分叉（54,754,841）最新8项保护/协议验证通过：错链、篡改、未到期、取消、Ready模拟估算、错签名者、完整22调用执行/收据/状态、已执行后拒绝重复。分叉估算1,186,354 gas，按估算120%+50,000给limit1,473,625，当天重估；预期接线Done、poolCount1、池未激活、激活unset。旧运行保留、计数不相加；真实Owner密码/keystore解锁/主网签名广播分支未运行，生产主机未改。中文命令与K0-4/finalized/完整发布后续步骤在包内《执行与核对步骤》。归档 `2026-11-08-mainnet-wiring-execution-prep/`；本项是实施准备，不冒称主网执行或独审通过。
+
 ## 6. 工作包 A：发布工具与 CI
 
 | 编号 | 内容 | 来源 | 涉及文件 | 验收 |
