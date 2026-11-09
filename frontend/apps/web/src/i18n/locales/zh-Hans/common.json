@@ -1,17 +1,48 @@
 {
   "app": {
     "skipToContent": "跳至主要内容",
+    "readOnlyTitle": "只读模式",
+    "nav": {
+      "label": "主导航",
+      "menu": "菜单",
+      "openMenu": "打开菜单",
+      "closeMenu": "关闭菜单",
+      "casino": "游戏",
+      "liquidity": "流动性",
+      "rewards": "奖励",
+      "help": "帮助"
+    },
+    "footer": {
+      "label": "网站链接",
+      "ageLabel": "仅限 18 岁及以上",
+      "age": "游戏下注可能令人上瘾。只用输得起的钱下注。",
+      "restricted": "本网站不向受限地区提供服务。你需自行确认所在地允许参与，规则见<terms>服务条款</terms>。",
+      "responsibleGambling": "责任游戏",
+      "channelsNote": "ArbiGameFi 只在以上官方渠道发布消息。其他使用这个名字的账号都不是我们。",
+      "groups": {
+        "play": "玩家",
+        "liquidity": "流动性",
+        "help": "帮助",
+        "channels": "官方渠道"
+      },
+      "links": {
+        "casino": "游戏",
+        "liquidity": "流动性",
+        "status": "系统状态",
+        "support": "支持",
+        "terms": "服务条款",
+        "privacy": "隐私政策",
+        "disclaimer": "风险提示",
+        "telegram": "Telegram",
+        "x": "X（@arbi_game_fi）",
+        "ops": "运维"
+      }
+    },
     "connectWalletActionDescription": "连接钱包以{action}。",
     "connectWalletButton": "连接钱包",
-    "connectWalletShort": "连接",
     "connectWalletDescription": "连接钱包以使用此功能。",
     "connectingWallet": "连接中...",
     "indexerWorkerFailed": "索引器 worker 启动失败",
-    "network": {
-      "label": "当前网络",
-      "switchWallet": "切换",
-      "switching": "切换中"
-    },
     "unknownNetwork": "未知网络",
     "walletRequired": "需要钱包",
     "writesDisabled": "当前写入已关闭。",
@@ -25,26 +56,24 @@
       "tryAgain": "重试"
     },
     "walletMenu": {
-      "chainSection": "当前链",
+      "connect": "连接钱包",
+      "open": "钱包 {address}",
       "connectedVia": "通过 {wallet}",
       "copyAddress": "复制地址",
-      "disconnect": "断开连接",
+      "copied": "地址已复制",
+      "viewOnExplorer": "在区块浏览器中查看",
       "mismatch": {
         "title": "钱包在另一条链上",
         "description": "请将钱包切换到 {target} 才能下注。",
-        "switch": "切换钱包"
+        "switch": "切换钱包",
+        "switching": "切换中"
       },
-      "viewOnExplorer": "在区块浏览器中查看"
-    },
-    "mobileDeepLink": {
-      "title": "在钱包中打开",
-      "description": "为了在手机上获得最顺畅的体验,建议在钱包内置浏览器里打开本站。",
-      "openIn": {
-        "metamask": "在 MetaMask 中打开",
-        "coinbase": "在 Coinbase Wallet 中打开",
-        "trust": "在 Trust 中打开"
-      },
-      "dismiss": "关闭"
+      "network": "网络",
+      "pages": "我的页面",
+      "portfolio": "账户",
+      "bets": "投注",
+      "claims": "领取",
+      "disconnect": "断开连接"
     },
     "install": {
       "title": "安装 ArbiGameFi",
@@ -54,7 +83,6 @@
     },
     "mobileWallet": {
       "title": "连接钱包",
-      "inlineTitle": "连接你的钱包",
       "hint": "在钱包内打开当前页面，连接与交易都在钱包中确认。",
       "browserHint": "选择钱包，在其内置浏览器打开当前页面。WalletConnect 可留在此浏览器连接。",
       "notOpened": "没有打开 {wallet}？可重试，或在尚未安装时下载。",
@@ -138,32 +166,7 @@
     }
   },
   "locale": {
-    "label": "语言",
-    "en": "English",
-    "zhHans": "简体中文"
-  },
-  "footer": {
-    "brandSubtitle": "钱包原生游戏",
-    "description": "原生钱包的赌场。每一局、每一笔结算都在链上。",
-    "liveRooms": "实时游戏",
-    "games": "游戏",
-    "platform": "平台",
-    "resources": "资源",
-    "legal": "法律",
-    "earn": "资金池",
-    "portfolio": "账户组合",
-    "terms": "服务条款",
-    "privacy": "隐私政策",
-    "disclaimer": "风险提示",
-    "copyright": "ArbiGameFi 为钱包原生游戏与透明结算而建。",
-    "docs": "文档",
-    "responsibleGambling": "责任游戏",
-    "responsibleNote": "请理性游戏。",
-    "support": "支持",
-    "faq": "帮助与常见问题",
-    "status": "系统状态",
-    "telegram": "Telegram",
-    "x": "X"
+    "label": "语言"
   },
   "casino": {
     "room": {
@@ -3039,32 +3042,7 @@
     }
   },
   "nav": {
-    "account": "账户",
-    "affiliates": "推广",
-    "bets": "投注",
-    "casino": "赌场",
-    "claims": "领取",
-    "baccarat": "百家乐",
-    "coinToss": "抛硬币",
-    "dice": "骰子",
-    "games": "游戏",
-    "keno": "Keno",
-    "liquidity": "流动性",
-    "menu": "菜单",
-    "openMenu": "打开菜单",
-    "closeMenu": "关闭菜单",
-    "language": "语言",
-    "refresh": "刷新",
-    "openRooms": "进入游戏",
-    "ops": "运维",
-    "plinko": "Plinko 弹珠盘",
-    "product": "产品",
-    "rooms": "游戏",
-    "roulette": "轮盘",
-    "sicBo": "骰宝",
-    "slots": "Slots 拉霸",
-    "status": "状态",
-    "support": "支持"
+    "games": "游戏"
   },
   "compliance": {
     "gate": {

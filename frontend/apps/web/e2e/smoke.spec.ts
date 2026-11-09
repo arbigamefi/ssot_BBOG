@@ -30,7 +30,10 @@ test.describe("current route smoke", () => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await gotoReady(page, "/");
-    await page.getByRole("button", { name: "Connect Wallet", exact: true }).click();
+    await page
+      .getByRole("banner")
+      .getByRole("button", { name: "Connect wallet", exact: true })
+      .click();
     const dialog = page.getByRole("dialog");
     // Use the built-in download flow: it exercises the same real QR renderer
     // as live pairing, without depending on a relay or requesting accounts.
@@ -50,22 +53,24 @@ test.describe("current route smoke", () => {
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
   });
 
-  test("product header points only at current product routes", async ({ page }) => {
+  test("the header carries the one site navigation", async ({ page }) => {
     await gotoReady(page, "/casino");
-    const header = page.locator("header").first();
-
-    for (const href of ["/casino", "/portfolio/activity", "/earn", "/portfolio/claims"]) {
-      await expect(header.locator(`a[href="${href}"]`).first()).toBeVisible();
+    const nav = page.getByRole("banner").getByRole("navigation", { name: "Main" });
+    const links = nav.getByRole("link");
+    await expect(links).toHaveText(["Casino", "Liquidity", "Rewards", "Help"]);
+    for (const [index, href] of ["/casino", "/earn", "/affiliate", "/support"].entries()) {
+      await expect(links.nth(index)).toHaveAttribute("href", href);
     }
+    // Ops is linked from the footer only.
+    await expect(page.getByRole("banner").locator('a[href="/ops"]')).toHaveCount(0);
+    await expect(page.getByRole("contentinfo").locator('a[href="/ops"]')).toBeVisible();
   });
 
   test("casino directory requires a release before exposing rooms", async ({ page }) => {
     await gotoReady(page, "/casino");
 
     if (embeddedChainIds.length === 0) {
-      await expect(
-        page.getByRole("heading", { name: "Read-only mode", exact: true })
-      ).toBeVisible();
+      await expect(page.getByRole("status").getByText("Read-only", { exact: true })).toBeVisible();
       const main = page.getByRole("main");
       await expect(main.getByRole("heading", { name: "Games", exact: true })).toBeVisible();
       await expect(main.getByText(/^No embedded release for chainId=\d+$/)).toBeVisible();

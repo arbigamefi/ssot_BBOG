@@ -9,6 +9,5 @@ export * from "../components/protocol/tx-stepper";
 export * from "../components/ui/copy-button";
 export * from "../components/ui/page-header";
 export * from "../components/ui/room-strip";
-export * from "../components/ui/shell-header";
 export * from "../components/ui/stat-card";
 export * from "../components/ui/status-badge";

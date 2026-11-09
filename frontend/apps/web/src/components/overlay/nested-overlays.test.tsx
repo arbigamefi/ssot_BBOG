@@ -2,8 +2,38 @@ import * as React from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Drawer } from "./Drawer";
 import { Sheet } from "./Sheet";
+import { useOverlayController } from "./use-overlay-controller";
+
+/** A phone-only side panel built on the shared controller, as a parent layer for the sheet. */
+function Drawer({
+  children,
+  closeLabel,
+  onClose,
+  open,
+  title
+}: {
+  children: React.ReactNode;
+  closeLabel: string;
+  onClose: () => void;
+  open: boolean;
+  title: string;
+}) {
+  const { panelRef } = useOverlayController<HTMLDivElement>({
+    lockScroll: true,
+    mobileOnly: true,
+    onClose,
+    open,
+    trapFocus: true
+  });
+  if (!open) return null;
+  return (
+    <div ref={panelRef} role="dialog" aria-modal="true" aria-label={title}>
+      <button aria-label={closeLabel} onClick={onClose} />
+      {children}
+    </div>
+  );
+}
 
 function NestedMenus() {
   const [drawer, setDrawer] = React.useState(false);

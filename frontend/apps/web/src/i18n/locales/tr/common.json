@@ -1,9 +1,45 @@
 {
   "app": {
     "skipToContent": "İçeriğe geç",
+    "readOnlyTitle": "Salt okunur",
+    "nav": {
+      "label": "Ana menü",
+      "menu": "Menü",
+      "openMenu": "Menüyü aç",
+      "closeMenu": "Menüyü kapat",
+      "casino": "Casino",
+      "liquidity": "Likidite",
+      "rewards": "Ödüller",
+      "help": "Yardım"
+    },
+    "footer": {
+      "label": "Site bağlantıları",
+      "ageLabel": "Yalnızca 18 yaş ve üzeri",
+      "age": "Kumar bağımlılık yapabilir. Yalnızca kaybetmeyi göze alabileceğiniz parayla oynayın.",
+      "restricted": "Bu site kısıtlı bölgelerde sunulmaz. Bulunduğunuz yerde oynamanın yasal olup olmadığını kontrol etmek sizin sorumluluğunuzdadır; kurallar <terms>Koşullar</terms> sayfasındadır.",
+      "responsibleGambling": "Sorumlu oyun",
+      "channelsNote": "ArbiGameFi yalnızca yukarıdaki resmî kanallarda paylaşım yapar. Bu adı kullanan başka hesaplar bize ait değildir.",
+      "groups": {
+        "play": "Oyna",
+        "liquidity": "Likidite",
+        "help": "Yardım",
+        "channels": "Resmî kanallar"
+      },
+      "links": {
+        "casino": "Casino",
+        "liquidity": "Likidite",
+        "status": "Sistem durumu",
+        "support": "Destek",
+        "terms": "Koşullar",
+        "privacy": "Gizlilik",
+        "disclaimer": "Risk uyarısı",
+        "telegram": "Telegram",
+        "x": "X (@arbi_game_fi)",
+        "ops": "Operasyon"
+      }
+    },
     "connectWalletActionDescription": "{action} için bir cüzdan bağlayın.",
     "connectWalletButton": "Cüzdan bağla",
-    "connectWalletShort": "Bağlan",
     "connectWalletDescription": "Bu özelliği kullanmak için bir cüzdan bağlayın.",
     "connectingWallet": "Bağlanıyor...",
     "unknownNetwork": "Bilinmeyen ağ",
@@ -18,32 +54,25 @@
       "errorId": "Hata kimliği: {digest}",
       "tryAgain": "Tekrar dene"
     },
-    "network": {
-      "label": "Aktif ağ",
-      "switchWallet": "Değiştir",
-      "switching": "Değiştiriliyor"
-    },
     "walletMenu": {
-      "chainSection": "Aktif ağ",
+      "connect": "Cüzdan bağla",
+      "open": "Cüzdan {address}",
       "connectedVia": "{wallet} ile",
       "copyAddress": "Adresi kopyala",
-      "disconnect": "Bağlantıyı kes",
+      "copied": "Adres kopyalandı",
+      "viewOnExplorer": "Blok gezgininde görüntüle",
       "mismatch": {
         "title": "Cüzdan farklı bir ağda",
         "description": "Bahis yapmak için cüzdanınızı {target} ağına geçirin.",
-        "switch": "Cüzdanı değiştir"
+        "switch": "Cüzdanı değiştir",
+        "switching": "Değiştiriliyor"
       },
-      "viewOnExplorer": "Blok gezgininde görüntüle"
-    },
-    "mobileDeepLink": {
-      "title": "Bir cüzdan uygulamasında aç",
-      "description": "Mobilde en akıcı deneyim için bu siteyi cüzdanınızın uygulama içi tarayıcısında açın.",
-      "openIn": {
-        "metamask": "MetaMask'te aç",
-        "coinbase": "Coinbase Wallet'ta aç",
-        "trust": "Trust'ta aç"
-      },
-      "dismiss": "Kapat"
+      "network": "Ağ",
+      "pages": "Sayfalarınız",
+      "portfolio": "Portföy",
+      "bets": "Bahisler",
+      "claims": "Talepler",
+      "disconnect": "Bağlantıyı kes"
     },
     "install": {
       "title": "ArbiGameFi'yi yükle",
@@ -77,54 +106,7 @@
     "label": "Dil"
   },
   "nav": {
-    "account": "Hesap",
-    "affiliates": "Ortaklar",
-    "bets": "Bahisler",
-    "casino": "Casino",
-    "claims": "Talepler",
-    "baccarat": "Bakara",
-    "coinToss": "Yazı Tura",
-    "dice": "Zar",
-    "games": "Oyunlar",
-    "keno": "Keno",
-    "liquidity": "Likidite",
-    "menu": "Menü",
-    "openMenu": "Menüyü aç",
-    "closeMenu": "Menüyü kapat",
-    "language": "Dil",
-    "refresh": "Yenile",
-    "openRooms": "Odaları aç",
-    "ops": "Operasyon",
-    "plinko": "Plinko",
-    "product": "Ürün",
-    "rooms": "Odalar",
-    "roulette": "Rulet",
-    "sicBo": "Sic Bo",
-    "slots": "Slot",
-    "status": "Durum",
-    "support": "Destek"
-  },
-  "footer": {
-    "brandSubtitle": "Cüzdan tabanlı odalar",
-    "description": "Cüzdan tabanlı casino. Her dönüş ve her ödeme zincir üstünde.",
-    "liveRooms": "Canlı odalar",
-    "games": "Oyunlar",
-    "platform": "Platform",
-    "resources": "Kaynaklar",
-    "legal": "Hukuki",
-    "portfolio": "Portföy",
-    "terms": "Koşullar",
-    "privacy": "Gizlilik",
-    "disclaimer": "Risk uyarısı",
-    "copyright": "Cüzdan tabanlı odalar ve şeffaf ödeme için ArbiGameFi arayüzü.",
-    "docs": "Belgeler",
-    "responsibleGambling": "Sorumlu oyun",
-    "responsibleNote": "Lütfen sorumlu oynayın.",
-    "support": "Destek",
-    "faq": "Yardım ve SSS",
-    "status": "Sistem durumu",
-    "telegram": "Telegram",
-    "x": "X"
+    "games": "Oyunlar"
   },
   "notFound": {
     "title": "Sayfa bulunamadı",

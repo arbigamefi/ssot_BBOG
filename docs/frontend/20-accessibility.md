@@ -6,7 +6,8 @@ Associate input errors with their fields and explain why an action is unavailabl
 
 Reuse the existing [overlay components](../../frontend/apps/web/src/components/overlay)
 for dialogs and sheets. Their tests cover focus handling and nested overlays.
-Language selection has [keyboard tests](../../frontend/apps/web/src/components/LocaleSwitcher.test.tsx).
+The site navigation, language menu and wallet menu have [keyboard tests](../../frontend/apps/web/src/app-shell/AppShell.test.tsx)
+([wallet menu](../../frontend/apps/web/src/app-shell/WalletHeaderMenu.test.tsx)).
 Use the existing [motion guidance](../design/12-motion.md) and preserve information
 when reduced motion is requested.
 

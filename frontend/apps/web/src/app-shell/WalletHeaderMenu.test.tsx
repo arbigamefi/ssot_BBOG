@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WalletHeaderMenu } from "./WalletHeaderMenu";
@@ -9,8 +9,12 @@ const walletAddress = "0xd6622cBaA82995bD62b3316b696c23314263BFB9";
 const disconnect = vi.fn();
 const openConnectModal = vi.fn();
 const switchChain = vi.fn();
+const setSelectedChainId = vi.fn();
+const baseSepolia = { id: 84532, environment: "testnet", name: "Base Sepolia" };
+const base = { id: 8453, environment: "mainnet", name: "Base Mainnet" };
 let isConnected = true;
 let walletChainId = 84532;
+let supportedChains = [baseSepolia];
 
 vi.mock("wagmi", () => ({
   useAccount: () => ({
@@ -19,66 +23,74 @@ vi.mock("wagmi", () => ({
     isConnected,
     chainId: walletChainId
   }),
-  useChainId: () => 84532,
   useDisconnect: () => ({ disconnect }),
-  useEnsAvatar: () => ({ data: null }),
   useEnsName: () => ({ data: null }),
   useSwitchChain: () => ({ isPending: false, switchChain })
 }));
 
-vi.mock("viem/ens", () => ({
-  normalize: (value: string) => value
-}));
+vi.mock("wagmi/chains", () => ({ mainnet: { id: 1 } }));
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, string>) => {
     const copy: Record<string, string> = {
-      "walletMenu.chainSection": "Active chain",
-      "walletMenu.connectedVia": `Via ${values?.wallet ?? "wallet"}`,
-      "walletMenu.copyAddress": "Copy address",
-      "walletMenu.disconnect": "Disconnect",
-      "walletMenu.mismatch.description": `Switch your wallet to ${values?.target ?? "the active chain"}.`,
-      "walletMenu.mismatch.switch": "Switch wallet",
-      "walletMenu.mismatch.title": "Wallet on a different chain",
-      "walletMenu.viewOnExplorer": "View on explorer",
-      "nav.closeMenu": "Close menu"
+      connect: "Connect wallet",
+      open: `Wallet ${values?.address}`,
+      connectedVia: `via ${values?.wallet}`,
+      copyAddress: "Copy address",
+      copied: "Address copied",
+      viewOnExplorer: "View on block explorer",
+      "mismatch.title": "Wallet on a different chain",
+      "mismatch.description": `Switch your wallet to ${values?.target}.`,
+      "mismatch.switch": "Switch wallet",
+      "mismatch.switching": "Switching",
+      network: "Network",
+      pages: "Your pages",
+      portfolio: "Portfolio",
+      bets: "Bets",
+      claims: "Claims",
+      disconnect: "Disconnect"
     };
     return copy[key] ?? key;
   }
 }));
 
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  )
+}));
+
 vi.mock("./ActiveChainProvider", () => ({
   useActiveChain: () => ({
-    selectedChain: { environment: "testnet", name: "Base Sepolia", shortName: "Base Sepolia" },
-    selectedChainId: 84532
+    selectedChain: baseSepolia,
+    selectedChainId: 84532,
+    supportedChains,
+    setSelectedChainId
   })
 }));
 
-vi.mock("./ChainSwitcher", () => ({
-  ChainOptionList: ({ onSelect }: { onSelect: () => void }) => (
-    <button type="button" onClick={onSelect}>
-      Base Sepolia
-    </button>
-  ),
-  ChainSwitcher: () => <button type="button">Base Sepolia</button>
+vi.mock("./chain-registry", () => ({
+  getExplorerAddressUrl: () => "https://sepolia.basescan.org/address/test"
 }));
 
-vi.mock("./chain-registry", () => ({
-  getExplorerAddressUrl: () => "https://basescan.org/address/test"
-}));
+function openMenu() {
+  const trigger = screen.getByRole("button", { name: /0xd662…BFB9/ });
+  fireEvent.click(trigger);
+  return trigger;
+}
 
 describe("WalletHeaderMenu", () => {
   afterEach(() => {
     cleanup();
-    document.body.style.overflow = "";
-    disconnect.mockClear();
-    openConnectModal.mockClear();
-    switchChain.mockClear();
+    vi.clearAllMocks();
     isConnected = true;
     walletChainId = 84532;
+    supportedChains = [baseSepolia];
   });
 
-  it("opens the wallet selector through the application provider when disconnected", () => {
+  it("opens the wallet selector when no wallet is connected", () => {
     isConnected = false;
     render(
       <WalletEntryContext.Provider
@@ -93,28 +105,57 @@ describe("WalletHeaderMenu", () => {
       </WalletEntryContext.Provider>
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "connectWalletButton" }));
+    fireEvent.click(screen.getByRole("button", { name: "Connect wallet" }));
     expect(openConnectModal).toHaveBeenCalledOnce();
   });
 
-  it("opens connected wallet actions in the shared mobile sheet", async () => {
-    render(<WalletHeaderMenu mode="sheet" />);
+  it("opens the player's own pages and Disconnect from the address", () => {
+    render(<WalletHeaderMenu />);
+    const trigger = openMenu();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
 
-    fireEvent.click(screen.getByRole("button", { name: /0xd662/i }));
+    const pages = screen.getByRole("navigation", { name: "Your pages" });
+    const links = within(pages).getAllByRole("link");
+    expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+      ["Portfolio", "/portfolio"],
+      ["Bets", "/portfolio/activity"],
+      ["Claims", "/portfolio/claims"]
+    ]);
+    expect(screen.getByText("via Browser Wallet")).toBeVisible();
+    // One chain in the build, so there is nothing to choose.
+    expect(screen.queryByText("Network")).toBeNull();
 
-    expect(await screen.findByRole("dialog", { name: /0xd662/i })).toBeDefined();
-    expect(screen.getByText("Via Browser Wallet")).toBeDefined();
-    expect(screen.getByText("Active chain")).toBeDefined();
-    expect(screen.getByRole("button", { name: "Base Sepolia" })).toBeDefined();
-    expect(screen.getByRole("menuitem", { name: "Disconnect" })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
   });
-});
 
-it("offers a wallet network correction for a connected unsupported chain", () => {
-  walletChainId = 8453;
-  render(<WalletHeaderMenu />);
-  fireEvent.click(screen.getByRole("button", { name: /0xd662/i }));
-  expect(screen.getByText("Wallet on a different chain")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "Switch wallet" }));
-  expect(switchChain).toHaveBeenCalledWith({ chainId: 84532 });
+  it("closes on Escape and returns focus to the address", () => {
+    render(<WalletHeaderMenu />);
+    const trigger = openMenu();
+    screen.getByRole("link", { name: "Bets" }).focus();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("offers to move a wallet that sits on another chain", () => {
+    walletChainId = 8453;
+    render(<WalletHeaderMenu />);
+    openMenu();
+    expect(screen.getByText("Wallet on a different chain")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Switch wallet" }));
+    expect(switchChain).toHaveBeenCalledWith({ chainId: 84532 });
+  });
+
+  it("lists the networks when the build has more than one", () => {
+    supportedChains = [base, baseSepolia];
+    render(<WalletHeaderMenu />);
+    openMenu();
+    expect(screen.getByRole("button", { name: "Base Sepolia" }).getAttribute("aria-current")).toBe(
+      "true"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Base Mainnet" }));
+    expect(setSelectedChainId).toHaveBeenCalledWith(8453);
+  });
 });

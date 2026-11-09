@@ -12,6 +12,7 @@ type Story = StoryObj<typeof ReadOnlyBanner>;
 
 export const Default: Story = {
   args: {
+    title: "Read-only",
     reason: "Release snapshot is invalid or missing.",
     details: ["GameHub address is zero", "Release digest is placeholder"]
   }

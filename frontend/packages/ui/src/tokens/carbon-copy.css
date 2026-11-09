@@ -49,8 +49,8 @@
 
   /* The two faces (Schibsted Grotesk for words, Doto for printed figures)
      are set where the utilities are defined, in globals.css: their next/font
-     variables live on a page wrapper, so the stack must resolve on each
-     element, not here on :root. */
+     variables live on <html>, so the stack must resolve on each element, not
+     here on :root. */
 
   /* Five text sizes, plus two sizes for printed figures. Phones get the
      smaller step; sizes never scale with the viewport width. */

@@ -1,4 +1,3 @@
-export { Drawer } from "./Drawer";
 export { Modal } from "./Modal";
 export { Popover } from "./Popover";
 export { Sheet } from "./Sheet";

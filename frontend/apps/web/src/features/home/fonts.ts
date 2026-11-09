@@ -1,7 +1,8 @@
 import localFont from "next/font/local";
 
 // Carbon copy faces (docs/design/10-design-tokens.md §4). They fill the variables
-// carbon-copy.css names, so only pages that set them on a wrapper load them.
+// carbon-copy.css names. The root layout sets them on <html>: the site header and
+// footer on every page are set in Schibsted.
 // The files are in the repo (SIL OFL 1.1, licences beside them) so a build never
 // depends on what Google Fonts returns that day. Chinese uses the system's own
 // Chinese face; see the stacks in packages/ui globals.css.

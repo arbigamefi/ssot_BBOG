@@ -7,8 +7,6 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { useRelease } from "../ssot/release/ReleaseProvider";
-import { AppHeader, type AppRoute } from "../components/AppHeader";
-import { SiteFooter } from "../components/SiteFooter";
 import { DISABLE_AGE_GATE_IN_DEV, DISABLE_ONBOARDING_IN_DEV } from "../config/dev-flags";
 import { isCasinoModuleSlug } from "../features/casino/modules";
 import {
@@ -22,29 +20,8 @@ import { OnboardingTour } from "./onboarding/OnboardingTour";
 import { MobileWalletEntryProvider } from "./MobileWalletEntryProvider";
 import { CasinoAvailabilityNotice } from "./CasinoAvailabilityNotice";
 import { InstallPrompt } from "./pwa/InstallPrompt";
-
-function getActiveRoute(pathname: string): AppRoute {
-  if (pathname === "/casino") return "directory";
-  if (pathname === "/portfolio/activity" || pathname.startsWith("/portfolio/activity/")) {
-    return "bets";
-  }
-  if (pathname === "/earn") return "liquidity";
-  if (pathname === "/portfolio/claims") return "claims";
-  if (pathname === "/affiliate" || pathname === "/portfolio/referral") return "referral";
-  if (pathname === "/portfolio") return "account";
-  if (pathname === "/support") return "support";
-  if (pathname === "/status") return "status";
-  if (pathname === "/ops" || pathname.startsWith("/ops/")) return "ops";
-  if (pathname === "/casino/roulette") return "roulette";
-  if (pathname === "/casino/baccarat") return "baccarat";
-  if (pathname === "/casino/sic-bo") return "sicbo";
-  if (pathname === "/casino/dice") return "dice";
-  if (pathname === "/casino/plinko") return "plinko";
-  if (pathname === "/casino/slots") return "slots";
-  if (pathname === "/casino/coin-toss") return "cointoss";
-  if (pathname === "/casino/keno") return "keno";
-  return "none";
-}
+import { SiteFooter } from "./SiteFooter";
+import { SiteHeader } from "./SiteHeader";
 
 function isCasinoGameRoom(pathname: string) {
   const match = /^\/casino\/([^/?#]+)$/.exec(pathname);
@@ -56,26 +33,10 @@ export function isCarbonCopyPage(pathname: string) {
   return pathname === "/" || pathname === "/casino/dice";
 }
 
-function getShellVariant(pathname: string) {
-  if (pathname === "/" || pathname === "/affiliate") return "marketing";
-  if (
-    pathname === "/legal/terms" ||
-    pathname === "/legal/privacy" ||
-    pathname === "/legal/disclaimer"
-  ) {
-    return "legal";
-  }
-  if (isCasinoGameRoom(pathname)) return "game";
-  return "product";
-}
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const t = useTranslations();
   const { readOnly, readOnlyReason, warnings, chainId } = useRelease();
-  const variant = getShellVariant(pathname);
-  const headerVariant =
-    variant === "marketing" ? "transparent" : variant === "game" ? "game" : "default";
 
   return (
     <MobileWalletEntryProvider>
@@ -83,13 +44,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         skipLinkLabel={t("app.skipToContent")}
         fullBleed={isCarbonCopyPage(pathname)}
         footer={<SiteFooter />}
-        header={<AppHeader activeRoute={getActiveRoute(pathname)} variant={headerVariant} />}
+        header={<SiteHeader />}
         readOnlyBanner={
           readOnly ? (
-            <ReadOnlyBanner reason={readOnlyReason ?? t("app.writesDisabled")} details={warnings} />
+            <ReadOnlyBanner
+              title={t("app.readOnlyTitle")}
+              reason={readOnlyReason ?? t("app.writesDisabled")}
+              details={warnings}
+            />
           ) : undefined
         }
-        variant={variant}
+        variant={isCasinoGameRoom(pathname) ? "game" : "product"}
       >
         <SelfExclusionGate>
           <CasinoAvailabilityNotice chainId={chainId} />
