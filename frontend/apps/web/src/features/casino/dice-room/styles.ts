@@ -12,3 +12,17 @@ export const LINE_BUTTON = `inline-grid min-h-10 place-items-center rounded-prin
 export const MAIN_BUTTON = `flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-print border border-transparent bg-ink px-4 text-center leading-tight font-semibold text-paper hover:bg-ink-bright disabled:cursor-default disabled:bg-transparent disabled:border-faded disabled:text-faded ${FOCUS_ON_PAPER}`;
 
 export const DIVIDER = "my-4 border-0 border-t-2 border-dashed border-thermal";
+
+/**
+ * The slip's paper. On a phone it is a sheet docked to the bottom of the screen; a finished
+ * receipt there keeps a plain edge.
+ */
+export const SHEET =
+  "print-sheet relative rounded-sheet px-6 pt-7 pb-[22px] max-[720px]:table-sheet max-[720px]:px-4 max-[720px]:pt-0 max-[720px]:pb-[calc(12px+env(safe-area-inset-bottom))]";
+
+/** What a closed phone sheet hides: everything but its summary line and its action. */
+export const SHEET_FULL = "max-[720px]:group-data-closed/sheet:hidden";
+
+/** The phone sheet's plain edges and padding, for a torn receipt. */
+export const SHEET_PHONE =
+  "max-[720px]:table-sheet max-[720px]:[mask:none] max-[720px]:px-4 max-[720px]:pt-0 max-[720px]:pb-[calc(12px+env(safe-area-inset-bottom))]";

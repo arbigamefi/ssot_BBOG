@@ -13,6 +13,7 @@ import { getBetErrorKind } from "../room/feedback";
 import { isCasinoTerminalRoundResult } from "../room/resolution";
 import type { GameRoom } from "../room/use-game-room";
 import { DiceReceipt } from "./dice-receipt";
+import { SheetHead, type SlipSheet } from "./sheet-head";
 import {
   deriveSlipQuote,
   dicePayout,
@@ -26,36 +27,43 @@ import {
   type SlipAction,
   type SlipNotice
 } from "./slip-model";
-import { DIVIDER, LINE_BUTTON, LINK, MAIN_BUTTON } from "./styles";
-
-/** The slip's paper. A finished receipt is torn off along its lower edge. */
-const SHEET =
-  "print-sheet relative scroll-mt-4 rounded-sheet px-5 pt-6 pb-5 md:px-7 md:pt-8 md:pb-7";
+import { DIVIDER, LINE_BUTTON, LINK, MAIN_BUTTON, SHEET, SHEET_FULL } from "./styles";
 
 /**
- * The bet slip is the quote. Once the bet is placed the same paper prints the receipt, and once
- * it settles the receipt is torn off. The main button keeps one place in every state.
+ * The bet slip is the quote. Once the bet is placed a waiting slip feeds out of the printer's
+ * slot, the receipt prints when the ball stops, and "Bet again" or "Change bet" tears it off. The
+ * main button keeps one place in every state. On a phone the slip is a sheet docked to the bottom
+ * of the screen: closed, it shows one summary line and the action.
  */
 export function DiceSlip({
   room,
   access,
   chainName,
-  houseEdgeRate
+  houseEdgeRate,
+  holdReceipt,
+  className
 }: {
   room: GameRoom;
   access: CasinoAccess;
   chainName: string;
   houseEdgeRate: string;
+  /** The ball is still rolling to the result; the receipt prints once it stops. */
+  holdReceipt: boolean;
+  className: string;
 }) {
   const t = useTranslations("casino.dice");
   const { casinoRound } = room;
   const status = casinoRound.state.status;
   const signing = status === "planning" || status === "submitting";
   const result =
-    room.showResult && isCasinoTerminalRoundResult(room.resultProof) ? room.resultProof : null;
+    room.showResult && !holdReceipt && isCasinoTerminalRoundResult(room.resultProof)
+      ? room.resultProof
+      : null;
   const printing = !result && !signing && room.isBetPanelPending;
   const phase = room.placeBetButtonPhase;
   const [receiptNews, setReceiptNews] = React.useState("");
+  const [open, setOpen] = React.useState(false);
+  const sheet = { open, toggle: () => setOpen((current) => !current) };
 
   // One polite line per change a screen reader user cannot see.
   const announcement = result
@@ -69,7 +77,10 @@ export function DiceSlip({
           : "";
 
   return (
-    <>
+    <div
+      data-closed={open ? undefined : ""}
+      className={`group/sheet overflow-clip px-2 [overflow-clip-margin:8px] max-[720px]:fixed max-[720px]:inset-x-0 max-[720px]:top-auto max-[720px]:bottom-0 max-[720px]:z-30 max-[720px]:max-h-[86vh] max-[720px]:overflow-auto max-[720px]:overscroll-contain max-[720px]:px-0 ${className}`}
+    >
       {result ? (
         <DiceReceipt
           room={room}
@@ -77,16 +88,17 @@ export function DiceSlip({
           chainName={chainName}
           houseEdgeRate={houseEdgeRate}
           onAnnounce={setReceiptNews}
+          sheet={sheet}
         />
       ) : printing ? (
-        <PrintingSlip room={room} />
+        <PrintingSlip room={room} sheet={sheet} />
       ) : (
-        <QuoteSlip room={room} access={access} chainName={chainName} />
+        <QuoteSlip room={room} access={access} chainName={chainName} sheet={sheet} />
       )}
       <p className="sr-only" aria-live="polite">
         {announcement}
       </p>
-    </>
+    </div>
   );
 }
 
@@ -119,16 +131,16 @@ function QuoteLine({ label, value }: { label: string; value: string }) {
 function QuoteSlip({
   room,
   access,
-  chainName
+  chainName,
+  sheet
 }: {
   room: GameRoom;
   access: CasinoAccess;
   chainName: string;
+  sheet: SlipSheet;
 }) {
   const t = useTranslations("casino.dice");
   const gameLine = useGameLine(room);
-  const slipRef = React.useRef<HTMLElement>(null);
-  const actRef = React.useRef<HTMLDivElement>(null);
   const { casinoRound, assetDecimals: decimals, assetSymbol: symbol } = room;
   const { state } = casinoRound;
   const status = state.status;
@@ -169,7 +181,6 @@ function QuoteSlip({
   const locked = signing || access === "preview";
   const amount = (raw: bigint) => formatQuote(raw, decimals);
   const setStake = (raw: bigint) => room.setBetAmount(stakeText(raw, decimals));
-  const docked = useDockedAction(slipRef, actRef);
 
   const [roundsText, setRoundsText] = React.useState(String(rounds));
   React.useEffect(() => setRoundsText(String(rounds)), [rounds]);
@@ -180,21 +191,22 @@ function QuoteSlip({
   const winText = winPays == null ? "—" : `${amount(winPays)} ${symbol}`;
   const bad = ["min", "overMax", "balance"].includes(quote.notice?.kind ?? "");
 
-  const place = () => {
-    // Placed from the docked bar: bring the slip up, since it prints the receipt.
-    if (docked.docked) {
-      const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? true;
-      slipRef.current?.scrollIntoView({ block: "start", behavior: still ? "auto" : "smooth" });
-    }
-    void casinoRound.placeBet();
-  };
+  const place = () => void casinoRound.placeBet();
 
   return (
-    <article ref={slipRef} aria-label={t("slip.label")} className={SHEET}>
-      <SlipHeader right={t("slip.title")} />
-      <p className="mt-4 text-lede font-semibold">{gameLine}</p>
-      <hr className={DIVIDER} />
-      <div className="hidden lg:block">
+    <article aria-label={t("slip.label")} className={SHEET}>
+      <SheetHead
+        sheet={sheet}
+        title={rounds > 1 ? t("slip.gameRounds", { game: gameLine, rounds }) : gameLine}
+      >
+        <span className="text-note whitespace-nowrap text-faded">
+          {winLabel} {winText}
+        </span>
+      </SheetHead>
+      <div className={SHEET_FULL}>
+        <SlipHeader right={t("slip.title")} />
+        <p className="mt-4 text-lede font-semibold">{gameLine}</p>
+        <hr className={DIVIDER} />
         <ul>
           {rounds > 1 ? (
             <>
@@ -212,7 +224,7 @@ function QuoteSlip({
         <hr className={DIVIDER} />
       </div>
 
-      <div className="flex items-center justify-between gap-4">
+      <div className={`flex items-center justify-between gap-4 ${SHEET_FULL}`}>
         <label htmlFor="dice-rounds" className="font-semibold">
           {t("slip.rounds")}
         </label>
@@ -254,7 +266,9 @@ function QuoteSlip({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div
+        className={`mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 ${SHEET_FULL}`}
+      >
         <label htmlFor="dice-stake" className="font-semibold">
           {rounds > 1 ? t("slip.stakePer") : t("slip.stake")}
         </label>
@@ -290,13 +304,7 @@ function QuoteSlip({
         </div>
       </div>
 
-      <div
-        ref={actRef}
-        style={docked.style}
-        className={`mt-4 max-lg:z-20 max-lg:-mx-5 max-lg:border-t max-lg:border-thermal max-lg:bg-paper max-lg:px-5 max-lg:pt-3 max-lg:pb-[calc(12px+env(safe-area-inset-bottom))] md:max-lg:-mx-7 md:max-lg:px-7 ${
-          docked.docked ? "fixed bottom-0" : "max-lg:sticky max-lg:bottom-0"
-        }`}
-      >
+      <div className="mt-4 max-[720px]:group-data-closed/sheet:mt-2">
         {quote.notice ? (
           <SlipNoticeText
             notice={quote.notice}
@@ -306,12 +314,6 @@ function QuoteSlip({
             maxRounds={maxRounds}
           />
         ) : null}
-        <p className="mb-2 flex flex-wrap justify-between gap-x-3 text-note text-faded lg:hidden">
-          <span className="whitespace-nowrap">
-            {winLabel} <b className="font-semibold text-ink">{winText}</b>
-          </span>
-          <span className="whitespace-nowrap">{t("slip.feeShort", { fee: feeText })}</span>
-        </p>
         <div
           className={`flex flex-wrap gap-1 rounded-sheet border-ink max-md:[&>*:last-child]:flex-[1_0_auto] ${
             bad ? "border-2 p-[3px]" : "border p-1"
@@ -346,7 +348,7 @@ function QuoteSlip({
       </div>
 
       {access === "preview" ? null : (
-        <p className="mt-4 text-note text-faded">
+        <p className={`mt-4 text-note text-faded ${SHEET_FULL}`}>
           {hasAccount
             ? room.walletBalance
               ? t("slip.balance", { amount: amount(room.walletBalance.raw), symbol })
@@ -513,57 +515,8 @@ function MainButton({
   }
 }
 
-/**
- * Below the two-column layout the slip's action rides along the bottom of the screen. Sticky
- * positioning does that once the top of the slip is on screen; until then the action is docked
- * to the bottom of the screen at the slip's width.
- */
-function useDockedAction(
-  slipRef: React.RefObject<HTMLElement | null>,
-  actRef: React.RefObject<HTMLDivElement | null>
-) {
-  const [dock, setDock] = React.useState<{ left: number; width: number } | null>(null);
-  React.useEffect(() => {
-    const narrow = window.matchMedia?.("(max-width: 1023.98px)");
-    if (!narrow) return;
-    let frame = 0;
-    const measure = () => {
-      const slip = slipRef.current;
-      const act = actRef.current;
-      if (!slip || !act) return;
-      const box = slip.getBoundingClientRect();
-      const top = parseFloat(getComputedStyle(slip).paddingTop) || 0;
-      // The action keeps its 16px top margin while it rides inside the slip.
-      const docked = narrow.matches && box.top + top + 16 + act.offsetHeight > window.innerHeight;
-      setDock((current) => {
-        if (!docked) return null;
-        if (current?.left === box.left && current.width === box.width) return current;
-        return { left: box.left, width: box.width };
-      });
-    };
-    const schedule = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(measure);
-    };
-    schedule();
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
-    // Web fonts move the slip once they load.
-    void document.fonts?.ready.then(schedule);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-    };
-  }, [actRef, slipRef]);
-  return {
-    docked: dock != null,
-    style: dock ? { left: dock.left, width: dock.width, margin: 0 } : undefined
-  };
-}
-
 /** Placed and waiting: the paper is printing, so its edge is still plain. */
-function PrintingSlip({ room }: { room: GameRoom }) {
+function PrintingSlip({ room, sheet }: { room: GameRoom; sheet: SlipSheet }) {
   const t = useTranslations("casino.dice");
   const locale = useLocale();
   const gameLine = useGameLine(room);
@@ -631,27 +584,42 @@ function PrintingSlip({ room }: { room: GameRoom }) {
   const betId = bet?.betId ?? casinoRound.activeBetId;
 
   return (
-    <article aria-label={t("slip.label")} aria-busy="true" className={SHEET}>
-      <SlipHeader
-        right={betId != null ? t("receipt.bet", { id: betId.toString() }) : t("slip.title")}
-      />
-      <p className="mt-4 text-lede font-semibold">{gameLine}</p>
-      <hr className={DIVIDER} />
-      <div role="status">
+    <article
+      aria-label={t("slip.label")}
+      aria-busy="true"
+      className={`${SHEET} motion-safe:animate-print [--print-delay:0s] [--print-time:0.5s] max-[720px]:animate-none`}
+    >
+      <SheetHead sheet={sheet} title={title}>
+        {phase === "waiting_vrf" ? (
+          <span className="text-note whitespace-nowrap text-faded tabular-nums">
+            {t("print.seconds", { seconds })}
+          </span>
+        ) : null}
+      </SheetHead>
+      <div className={SHEET_FULL}>
+        <SlipHeader
+          right={betId != null ? t("receipt.bet", { id: betId.toString() }) : t("slip.title")}
+        />
+        <p className="mt-4 text-lede font-semibold">{gameLine}</p>
+        <hr className={DIVIDER} />
+      </div>
+      <div role="status" className={SHEET_FULL}>
         <p className="text-lede font-semibold">{title}</p>
         {feeding ? (
           <div aria-hidden="true" className="print-feed my-3 h-3 motion-safe:animate-feed" />
         ) : null}
         <p className={`text-note text-faded ${feeding ? "" : "mt-2"}`}>{note}</p>
       </div>
-      <hr className={DIVIDER} />
-      <ul>
-        <QuoteLine label={t("receipt.lines.stake")} value={`${amount(stake)} ${symbol}`} />
-        <QuoteLine
-          label={rounds > 1 ? t("slip.eachWin") : t("slip.ifWin")}
-          value={winPays == null ? "—" : `${amount(winPays)} ${symbol}`}
-        />
-      </ul>
+      <div className={SHEET_FULL}>
+        <hr className={DIVIDER} />
+        <ul>
+          <QuoteLine label={t("receipt.lines.stake")} value={`${amount(stake)} ${symbol}`} />
+          <QuoteLine
+            label={rounds > 1 ? t("slip.eachWin") : t("slip.ifWin")}
+            value={winPays == null ? "—" : `${amount(winPays)} ${symbol}`}
+          />
+        </ul>
+      </div>
       {action ? (
         <div className="mt-4">
           <button type="button" onClick={action.run} className={`${MAIN_BUTTON} w-full`}>
@@ -660,7 +628,7 @@ function PrintingSlip({ room }: { room: GameRoom }) {
         </div>
       ) : null}
       {phase === "failed" || phase === "result_unbooked" ? (
-        <p className="mt-4 text-note">
+        <p className="mt-4 text-note max-[720px]:mb-2">
           <Link
             href={betId != null ? `/portfolio/activity/${betId.toString()}` : "/portfolio/activity"}
             className={LINK}
@@ -673,7 +641,8 @@ function PrintingSlip({ room }: { room: GameRoom }) {
   );
 }
 
-function useNow(ticking: boolean) {
+/** The time now, ticking each second while asked to. */
+export function useNow(ticking: boolean) {
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
     if (!ticking) return;

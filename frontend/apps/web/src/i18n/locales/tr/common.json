@@ -1904,21 +1904,28 @@
       "head": {
         "crumb": "Tüm oyunlar",
         "title": "Zar",
-        "lede": "Chainlink VRF 1 ile 100 arasında bir sayı atar. Sayı çizginin sizin tarafınıza düşerse kazanırsınız."
+        "lede": "Chainlink VRF 1 ile 100 arasında bir sayı atar ve top o sayıda durur. Sayı çizginin sizin tarafınıza düşerse kazanırsınız."
       },
       "table": {
-        "title": "Şansınız",
+        "title": "Masa",
         "chance": "Kazanma şansı",
         "pays": "Öder",
-        "winOn": "{from}–{to} kazanır",
-        "loseOn": "{from}–{to} kaybeder",
         "line": "Çizgi",
         "valueText": "{from} ile {to} arası kazanır. Şans %{chance}, bahsin {pays} katını öder.",
         "side": "Taraf",
-        "low": "Alt",
-        "high": "Üst",
-        "lineDown": "Çizgiyi bir aşağı al",
-        "lineUp": "Çizgiyi bir yukarı al"
+        "under": "Alt",
+        "over": "Üst",
+        "range": "{from} ile {to} arası",
+        "rule": "100 ÷ kazanan sayı adedi kadar öder, {rate} kasa payı düşülür. Top, Chainlink VRF'nin attığı sayıda durur.",
+        "status": {
+          "ready": "Çizgiyi sürükleyin, sonra bir taraf seçin.",
+          "waiting": "Rastgele sayı bekleniyor. Sayı gelene kadar top yuvarlanır.",
+          "round": "Tur {k} / {n}"
+        },
+        "sound": {
+          "on": "Ses açık",
+          "off": "Ses kapalı"
+        }
       },
       "slip": {
         "label": "Bahis kuponu",
@@ -1929,7 +1936,6 @@
         "total": "Toplam bahis",
         "fee": "Rastgelelik ücreti",
         "feeUpTo": "en fazla {fee}",
-        "feeShort": "Ücret ≤ {fee}",
         "rounds": "Tur",
         "fewer": "Bir tur az",
         "more": "Bir tur fazla",
@@ -1940,7 +1946,8 @@
         "max": "Maks. {amount}",
         "maxUnknown": "Maks.",
         "balance": "Bakiye {amount} {symbol}.",
-        "connectHint": "Bakiyenizi burada görmek için bir cüzdan bağlayın."
+        "connectHint": "Bakiyenizi burada görmek için bir cüzdan bağlayın.",
+        "gameRounds": "{game}, {rounds} tur"
       },
       "action": {
         "telegram": "Telegram'a katıl",
@@ -2181,7 +2188,19 @@
           "title": "Bu bahis burada güncellenmeyi bıraktı",
           "note": "Bahis hâlâ zincirde. Durumunu görmek için açın."
         },
-        "open": "Bu bahsi aç"
+        "open": "Bu bahsi aç",
+        "seconds": "{seconds} sn"
+      },
+      "printer": {
+        "ready": "Hazır",
+        "waiting": "Rastgele sayı bekleniyor, {seconds} sn",
+        "received": "Sayı geldi",
+        "printing": "Makbuz yazdırılıyor",
+        "printed": "Makbuz yazdırıldı"
+      },
+      "sheet": {
+        "open": "Kuponun tamamını göster",
+        "close": "Daha az göster"
       },
       "receipt": {
         "label": "{id} numaralı bahsin fişi",

@@ -4,7 +4,6 @@ import * as React from "react";
 
 /** How long each game's stage animates a result before the reveal counts as done without its callback. */
 const REVEAL_DURATION_MS: Record<string, number> = {
-  dice: 2_000,
   "coin-toss": 1_600,
   roulette: 3_000,
   plinko: 6_000,
@@ -13,6 +12,15 @@ const REVEAL_DURATION_MS: Record<string, number> = {
   baccarat: 4_200,
   "sic-bo": 2_100
 };
+
+/**
+ * The dice ball is on the first roll 4 s after the number arrives and on each later one 2.42 s
+ * after the last (dice-room/ball-motion.ts), frames or not; the fallback leaves it half a second.
+ */
+function revealDurationMs(gameSlug: string, rounds: number) {
+  if (gameSlug === "dice") return 4_500 + (Math.max(1, rounds) - 1) * 2_500;
+  return REVEAL_DURATION_MS[gameSlug] ?? 0;
+}
 
 export type StageReveal = { betId: bigint; phase: "revealing" | "revealed" };
 
@@ -32,9 +40,9 @@ export function useStageReveal() {
   }, []);
 
   const startStageReveal = React.useCallback(
-    (betId: bigint, gameSlug: string) => {
+    (betId: bigint, gameSlug: string, rounds = 1) => {
       clearTimer();
-      const durationMs = REVEAL_DURATION_MS[gameSlug] ?? 0;
+      const durationMs = revealDurationMs(gameSlug, rounds);
       if (durationMs === 0) {
         setStageReveal({ betId, phase: "revealed" });
         return;
