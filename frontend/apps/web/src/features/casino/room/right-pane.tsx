@@ -39,14 +39,6 @@ const CoinTossStage = dynamic(
   }
 );
 
-const RouletteStage = dynamic(
-  () => import("../modules/roulette/stage").then((mod) => mod.RouletteStage),
-  {
-    loading: StageLoading,
-    ssr: false
-  }
-);
-
 const KenoStage = dynamic(() => import("../modules/keno/stage").then((mod) => mod.KenoStage), {
   loading: StageLoading,
   ssr: false
@@ -89,7 +81,6 @@ export function GameRoomRightPane({
   showResult,
   resultNum,
   houseEdgeBps,
-  rouletteSpots,
   kenoSpots,
   plinkoRisk,
   baccaratSide,
@@ -107,9 +98,7 @@ export function GameRoomRightPane({
   onResultClose,
   onResultPlayAgain,
   onCoinRevealComplete,
-  onRouletteRevealComplete,
   onCoinSideChange,
-  onRouletteChange,
   onKenoChange,
   onKenoResetResult,
   onKenoRevealComplete,
@@ -131,7 +120,6 @@ export function GameRoomRightPane({
   showResult: boolean;
   resultNum: number | null;
   houseEdgeBps: number;
-  rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
   baccaratSide: BaccaratSide;
@@ -149,9 +137,7 @@ export function GameRoomRightPane({
   onResultClose?: () => void;
   onResultPlayAgain?: () => void;
   onCoinRevealComplete?: () => void;
-  onRouletteRevealComplete?: () => void;
   onCoinSideChange: (side: CoinSide) => void;
-  onRouletteChange: (spots: string[]) => void;
   onKenoChange: (spots: number[]) => void;
   onKenoResetResult: () => void;
   onKenoRevealComplete?: () => void;
@@ -172,11 +158,9 @@ export function GameRoomRightPane({
           ? "lg:min-h-[38rem]"
           : gameSlug === "coin-toss"
             ? "lg:min-h-[34rem]"
-            : gameSlug === "roulette"
+            : gameSlug === "plinko"
               ? "lg:min-h-[38rem]"
-              : gameSlug === "plinko"
-                ? "lg:min-h-[38rem]"
-                : "lg:min-h-[34rem]";
+              : "lg:min-h-[34rem]";
   return (
     <div
       className={cn(
@@ -200,19 +184,6 @@ export function GameRoomRightPane({
           coinSide={coinSide}
           onSideChange={onCoinSideChange}
           onRevealComplete={onCoinRevealComplete}
-        />
-      )}
-
-      {gameSlug === "roulette" && (
-        <RouletteStage
-          isPending={isPending}
-          controlsLocked={controlsLocked}
-          isRevealing={Boolean(isRevealing)}
-          showResult={showResult}
-          resultNum={resultNum}
-          spots={rouletteSpots}
-          onChange={onRouletteChange}
-          onRevealComplete={onRouletteRevealComplete}
         />
       )}
 
@@ -297,7 +268,6 @@ export function GameRoomRightPane({
           houseEdgeBps={houseEdgeBps}
           resultNum={resultNum}
           coinSide={coinSide}
-          rouletteSpots={rouletteSpots}
           kenoSpots={kenoSpots}
           kenoResultDrawn={kenoResultDrawn}
           casinoOutcome={casinoOutcome}

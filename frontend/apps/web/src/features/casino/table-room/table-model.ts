@@ -1,6 +1,6 @@
 import type { PlaceBetButtonPhase } from "../room/place-bet-button";
 
-// The dice table's state, as data: how a net win is paid on the felt and what the printer's
+// A game table's state, as data: how a net win is paid on the felt and what the printer's
 // status light says (docs/design/02-voice-and-copy.md §11, 04-page-blueprints.md §4).
 
 export type Celebration = {
@@ -61,7 +61,7 @@ export function printerState({
   }
 }
 
-/** The ball rolls back and forth only while the random number is awaited. */
-export function ballWaits(phase: PlaceBetButtonPhase) {
+/** The table's waiting motion runs only while the random number is awaited. */
+export function awaitsNumber(phase: PlaceBetButtonPhase) {
   return phase === "waiting_vrf" || phase === "timeout_soft";
 }

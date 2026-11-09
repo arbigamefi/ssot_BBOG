@@ -7,12 +7,18 @@ import { useTranslations } from "next-intl";
 import { ProductStateCard } from "../../../../components/ProductStateCard";
 import { PageTransition } from "../../../../components/PageTransition";
 
-import { DiceRoom } from "../../../../features/casino/dice-room/dice-room";
 import { GameClosedState } from "../../../../features/casino/room/game-closed";
 import { useGameRoom } from "../../../../features/casino/room/use-game-room";
 import { getLocalizedGameName } from "./pageClient-helpers";
 
-// The games that have not moved to Carbon copy share the old room shell; it loads with them only.
+// Each room loads with its own game only, so one game's table never weighs on another's page. The
+// games that have not moved to Carbon copy share the old room shell.
+const DiceRoom = dynamic(() =>
+  import("../../../../features/casino/dice-room/dice-room").then((mod) => mod.DiceRoom)
+);
+const RouletteRoom = dynamic(() =>
+  import("../../../../features/casino/roulette-room/roulette-room").then((mod) => mod.RouletteRoom)
+);
 const SharedGameRoom = dynamic(() =>
   import("./shared-game-room").then((mod) => mod.SharedGameRoom)
 );
@@ -39,11 +45,11 @@ export function GamePageClient({ slug }: { slug: string }) {
       </PageTransition>
     );
 
-  // The dice room is rebuilt in Carbon copy; the other games keep the shared shell until they move.
-  if (game.slug === "dice")
+  // Dice and roulette are rebuilt in Carbon copy; the other games keep the shared shell until they move.
+  if (game.slug === "dice" || game.slug === "roulette")
     return (
       <PageTransition pageKey={`game-${slug}`}>
-        <DiceRoom room={room} />
+        {game.slug === "dice" ? <DiceRoom room={room} /> : <RouletteRoom room={room} />}
       </PageTransition>
     );
 

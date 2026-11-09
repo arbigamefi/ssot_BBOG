@@ -5,7 +5,6 @@ import * as React from "react";
 /** How long each game's stage animates a result before the reveal counts as done without its callback. */
 const REVEAL_DURATION_MS: Record<string, number> = {
   "coin-toss": 1_600,
-  roulette: 3_000,
   plinko: 6_000,
   slots: 3_400,
   keno: 4_000,
@@ -15,10 +14,14 @@ const REVEAL_DURATION_MS: Record<string, number> = {
 
 /**
  * The dice ball is on the first roll 4 s after the number arrives and on each later one 2.42 s
- * after the last (dice-room/ball-motion.ts), frames or not; the fallback leaves it half a second.
+ * after the last (dice-room/ball-motion.ts); the roulette ball is in its first pocket 4.83 s after
+ * the number and in each later one 4.38 s after the last (roulette-room/wheel-motion.ts). Both hold
+ * frames or not; the fallback leaves each half a second.
  */
 function revealDurationMs(gameSlug: string, rounds: number) {
-  if (gameSlug === "dice") return 4_500 + (Math.max(1, rounds) - 1) * 2_500;
+  const later = Math.max(1, rounds) - 1;
+  if (gameSlug === "dice") return 4_500 + later * 2_500;
+  if (gameSlug === "roulette") return 5_400 + later * 4_400;
   return REVEAL_DURATION_MS[gameSlug] ?? 0;
 }
 

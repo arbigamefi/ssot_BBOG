@@ -208,7 +208,6 @@ type GameResultContext = {
   houseEdgeBps: number;
   resultNum: number | null;
   coinSide: CoinSide;
-  rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   kenoResultDrawn: readonly number[];
   casinoOutcome?: CasinoOutcome | null;
@@ -280,20 +279,6 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
       {
         label: t("casino.room.result.facts.coinDrawn"),
         value: context.casinoOutcome.rolls.map((roll) => formatCoinSide(roll.value, t)).join(", "),
-        tone: context.casinoOutcome.rolls.some((roll) => roll.won) ? "win" : "loss"
-      }
-    ] satisfies GameResultRow[];
-  }
-
-  if (context.casinoOutcome?.kind === "roulette") {
-    return [
-      {
-        label: t("casino.room.result.facts.rouletteBet"),
-        value: formatList(context.casinoOutcome.selectedNumbers)
-      },
-      {
-        label: t("casino.room.result.facts.rouletteWinningNumber"),
-        value: context.casinoOutcome.rolls.map((roll) => roll.value).join(", "),
         tone: context.casinoOutcome.rolls.some((roll) => roll.won) ? "win" : "loss"
       }
     ] satisfies GameResultRow[];
@@ -471,23 +456,6 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
     return rows;
   }
 
-  if (context.gameSlug === "roulette") {
-    const rows: GameResultRow[] = [
-      {
-        label: t("casino.room.result.facts.rouletteBet"),
-        value: formatList(context.rouletteSpots)
-      }
-    ];
-    if (context.resultNum != null) {
-      rows.push({
-        label: t("casino.room.result.facts.rouletteWinningNumber"),
-        value: context.resultNum.toString(),
-        tone: "accent" as const
-      });
-    }
-    return rows;
-  }
-
   if (context.gameSlug === "keno") {
     const hits = context.kenoResultDrawn.filter((n) => context.kenoSpots.includes(n)).length;
     const rows: GameResultRow[] = [
@@ -603,7 +571,6 @@ export function GameRoomResultOverlay({
   houseEdgeBps,
   resultNum,
   coinSide,
-  rouletteSpots,
   kenoSpots,
   kenoResultDrawn,
   casinoOutcome,
@@ -618,7 +585,6 @@ export function GameRoomResultOverlay({
   houseEdgeBps: number;
   resultNum: number | null;
   coinSide: CoinSide;
-  rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   kenoResultDrawn: readonly number[];
   casinoOutcome?: CasinoOutcome | null;
@@ -662,7 +628,6 @@ export function GameRoomResultOverlay({
             houseEdgeBps,
             resultNum,
             coinSide,
-            rouletteSpots,
             kenoSpots,
             kenoResultDrawn,
             casinoOutcome

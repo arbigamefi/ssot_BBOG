@@ -1141,7 +1141,6 @@
       },
       "history": {
         "recent": {
-          "numbers": "NÚMEROS RECENTES",
           "draws": "SORTEIOS RECENTES",
           "buckets": "BALDES RECENTES",
           "slots": "GIROS RECENTES",
@@ -1298,24 +1297,6 @@
         }
       },
       "selection": {
-        "roulette": {
-          "bets": "Apostas",
-          "clearAll": "Limpar tudo",
-          "empty": "Nenhuma aposta. Clique no pano para apostar.",
-          "labels": {
-            "firstDozen": "1ª dúzia",
-            "secondDozen": "2ª dúzia",
-            "thirdDozen": "3ª dúzia",
-            "even": "Par",
-            "red": "Vermelho",
-            "black": "Preto",
-            "odd": "Ímpar",
-            "firstColumn": "Coluna 1 (2:1)",
-            "secondColumn": "Coluna 2 (2:1)",
-            "thirdColumn": "Coluna 3 (2:1)",
-            "column": "2:1"
-          }
-        },
         "coin": {
           "selectFace": "Escolha o lado",
           "heads": "Cara",
@@ -1437,8 +1418,6 @@
           "vrfFee": "Taxa de número aleatório",
           "coinChoice": "Lado escolhido",
           "coinDrawn": "Lado sorteado",
-          "rouletteBet": "Aposta na roleta",
-          "rouletteWinningNumber": "Número vencedor",
           "kenoPicked": "Números escolhidos",
           "kenoDrawn": "Números sorteados",
           "kenoHits": "Acertos",
@@ -1896,41 +1875,14 @@
         "faucet": "Obter USDC de teste"
       }
     },
-    "dice": {
+    "table": {
       "strip": {
         "preview": "Prévia. As apostas abrem na Base depois que o relatório de auditoria for publicado.",
         "testnet": "Rede de teste {chain}. O {symbol} de teste não tem valor."
       },
-      "head": {
-        "crumb": "Todos os jogos",
-        "title": "Dados",
-        "lede": "O Chainlink VRF sorteia um número de 1 a 100 e a bola para nele. Do seu lado da linha, você ganha."
-      },
-      "table": {
-        "title": "A mesa",
-        "chance": "Chance de ganhar",
-        "pays": "Paga",
-        "line": "Linha",
-        "valueText": "Ganha de {from} a {to}. Chance de {chance}%, paga {pays} vezes a aposta.",
-        "side": "Lado",
-        "under": "Abaixo",
-        "over": "Acima",
-        "range": "{from} a {to}",
-        "rule": "Paga 100 ÷ os números vencedores, menos {rate} de vantagem da casa. A bola para no número que o Chainlink VRF sorteia.",
-        "status": {
-          "ready": "Arraste a linha e escolha um lado.",
-          "waiting": "Aguardando o número aleatório. A bola rola até ele chegar.",
-          "round": "Rodada {k} de {n}"
-        },
-        "sound": {
-          "on": "Som ligado",
-          "off": "Som desligado"
-        }
-      },
       "slip": {
         "label": "Boletim de aposta",
         "title": "Boletim",
-        "game": "Dados, ganha de {from} a {to}",
         "ifWin": "Se ganhar",
         "eachWin": "Cada ganho paga",
         "total": "Aposta total",
@@ -1985,7 +1937,8 @@
         "blocked": {
           "noCapacity": "Sem espaço com estas chances",
           "balance": "{symbol} insuficiente",
-          "unconfirmed": "Aguardando a rede"
+          "unconfirmed": "Aguardando a rede",
+          "selection": "Escolha seus números"
         },
         "checkTransaction": "Verificar a transação",
         "checking": "Verificando a transação",
@@ -2001,7 +1954,7 @@
         },
         "network": {
           "lead": "Sua carteira está em outra rede.",
-          "body": "Os Dados rodam na {chain}."
+          "body": "Este jogo roda na {chain}."
         },
         "min": {
           "lead": "Muito baixo.",
@@ -2050,7 +2003,7 @@
             "body": "As apostas ficam fechadas até eles serem verificados."
           },
           "gameUnavailable": {
-            "lead": "Não foi possível ler as configurações dos Dados.",
+            "lead": "Não foi possível ler as configurações deste jogo.",
             "body": "Verifique de novo daqui a pouco."
           },
           "invalidCount": {
@@ -2100,7 +2053,7 @@
             "body": "Faça a próxima depois que uma delas for liquidada."
           },
           "gameClosed": {
-            "lead": "Os Dados estão fechados.",
+            "lead": "Este jogo está fechado.",
             "body": "Não aceitam novas apostas. As apostas já feitas continuam sendo liquidadas."
           },
           "minimumStake": {
@@ -2113,7 +2066,7 @@
           },
           "network": {
             "lead": "Sua carteira está em outra rede.",
-            "body": "Os Dados rodam na {chain}."
+            "body": "Este jogo roda na {chain}."
           },
           "wallet": {
             "lead": "Sua carteira não está pronta.",
@@ -2202,11 +2155,14 @@
         "open": "Mostrar o boletim completo",
         "close": "Mostrar menos"
       },
+      "announce": {
+        "signing": "Confirme na sua carteira.",
+        "placed": "Aposta feita. Aguardando a aleatoriedade.",
+        "refundable": "Nenhum número aleatório chegou. Você pode reembolsar sua aposta."
+      },
       "receipt": {
         "label": "Recibo da aposta {id}",
         "bet": "Aposta {id}",
-        "rolled": "Saiu {rolls}.",
-        "rolledRounds": "Saiu {rolls}. {won} de {count} ganharam.",
         "net": "Resultado líquido",
         "lines": {
           "stake": "Aposta",
@@ -2235,10 +2191,33 @@
         "change": "Mudar aposta",
         "announce": "{rolled} Resultado líquido {net} {symbol}."
       },
-      "announce": {
-        "signing": "Confirme na sua carteira.",
-        "placed": "Aposta feita. Aguardando a aleatoriedade.",
-        "refundable": "Nenhum número aleatório chegou. Você pode reembolsar sua aposta."
+      "sound": {
+        "on": "Som ligado",
+        "off": "Som desligado"
+      },
+      "round": "Rodada {k} de {n}"
+    },
+    "dice": {
+      "head": {
+        "crumb": "Todos os jogos",
+        "title": "Dados",
+        "lede": "O Chainlink VRF sorteia um número de 1 a 100 e a bola para nele. Do seu lado da linha, você ganha."
+      },
+      "table": {
+        "title": "A mesa",
+        "chance": "Chance de ganhar",
+        "pays": "Paga",
+        "line": "Linha",
+        "valueText": "Ganha de {from} a {to}. Chance de {chance}%, paga {pays} vezes a aposta.",
+        "side": "Lado",
+        "under": "Abaixo",
+        "over": "Acima",
+        "range": "{from} a {to}",
+        "rule": "Paga 100 ÷ os números vencedores, menos {rate} de vantagem da casa. A bola para no número que o Chainlink VRF sorteia.",
+        "status": {
+          "ready": "Arraste a linha e escolha um lado.",
+          "waiting": "Aguardando o número aleatório. A bola rola até ele chegar."
+        }
       },
       "receipts": {
         "title": "Últimos recibos de dados",
@@ -2281,6 +2260,92 @@
         "contract": "Ler o contrato",
         "hours": "{count, plural, one {uma hora} other {# horas}}",
         "minutes": "{count, plural, one {# minuto} other {# minutos}}"
+      },
+      "slip": {
+        "game": "Dados, ganha de {from} a {to}"
+      },
+      "receipt": {
+        "rolled": "Saiu {rolls}.",
+        "rolledRounds": "Saiu {rolls}. {won} de {count} ganharam."
+      }
+    },
+    "roulette": {
+      "head": {
+        "crumb": "Todos os jogos",
+        "title": "Roleta",
+        "lede": "O Chainlink VRF sorteia um número de 0 a 36 e a bola cai na casa dele. Qualquer número sob as suas fichas ganha."
+      },
+      "table": {
+        "title": "A mesa",
+        "covered": "Números",
+        "chance": "Chance de ganhar",
+        "pays": "Paga",
+        "history": "Últimos resultados",
+        "noHistory": "Nenhum giro ainda",
+        "clear": "Tirar fichas",
+        "board": "Pano de apostas",
+        "call": "Apostas encerradas",
+        "column": "Coluna",
+        "columnShort": "Col",
+        "rule": "Uma aposta cobre todos os números sob as suas fichas. Qualquer um deles paga 37 ÷ os números cobertos, menos {rate} de vantagem da casa.",
+        "status": {
+          "ready": "Coloque fichas no pano e faça a aposta.",
+          "all": "Suas fichas cobrem todos os números. Tire uma para apostar.",
+          "waiting": "Aguardando o número aleatório. A bola gira até ele chegar."
+        },
+        "zeroLabel": "Zero",
+        "numberLabel": "{n}, {colour}",
+        "spotLabel": "{name}, {count} números"
+      },
+      "colour": {
+        "red": "vermelho",
+        "black": "preto",
+        "zero": "verde"
+      },
+      "spot": {
+        "number": "número {n}",
+        "low": "1–18",
+        "high": "19–36",
+        "even": "par",
+        "odd": "ímpar",
+        "red": "vermelho",
+        "black": "preto",
+        "dozen": "{from}–{to}",
+        "column": "coluna {c}"
+      },
+      "short": {
+        "number": "{n}",
+        "low": "1–18",
+        "high": "19–36",
+        "even": "Par",
+        "odd": "Ímpar",
+        "red": "Vermelho",
+        "black": "Preto",
+        "dozen": "{from}–{to}",
+        "column": "Coluna {c}"
+      },
+      "slip": {
+        "game": "Roleta, {bet}",
+        "none": "Roleta",
+        "more": "mais {count}",
+        "numbers": "{count} números",
+        "covers": "Cobre {numbers}"
+      },
+      "selection": {
+        "empty": {
+          "lead": "Coloque uma ficha no pano.",
+          "body": "Toque num número ou numa aposta da mesa. Cada ficha soma os seus números a uma só aposta."
+        },
+        "all": {
+          "lead": "Suas fichas cobrem todos os números.",
+          "body": "Uma aposta nos 37 números não pode ganhar mais do que aposta. Tire uma ficha."
+        }
+      },
+      "receipt": {
+        "one": "{n} {colour}",
+        "zero": "0",
+        "rolled": "Saiu {rolls}.",
+        "rolledRounds": "Saiu {rolls}. {won} de {count} ganharam."
       }
     }
   },

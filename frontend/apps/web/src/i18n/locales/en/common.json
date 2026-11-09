@@ -466,24 +466,6 @@
         "maxSummary": "{perRound} per round · {total} total"
       },
       "selection": {
-        "roulette": {
-          "bets": "Bets",
-          "clearAll": "Clear All",
-          "empty": "No bets placed. Click the felt to bet.",
-          "labels": {
-            "firstDozen": "1st 12",
-            "secondDozen": "2nd 12",
-            "thirdDozen": "3rd 12",
-            "even": "Even",
-            "red": "Red",
-            "black": "Black",
-            "odd": "Odd",
-            "firstColumn": "Column 1 (2:1)",
-            "secondColumn": "Column 2 (2:1)",
-            "thirdColumn": "Column 3 (2:1)",
-            "column": "2:1"
-          }
-        },
         "coin": {
           "selectFace": "Select Face",
           "heads": "Heads",
@@ -581,7 +563,6 @@
       },
       "history": {
         "recent": {
-          "numbers": "RECENT NUMBERS",
           "draws": "RECENT DRAWS",
           "buckets": "RECENT BUCKETS",
           "slots": "RECENT SLOTS",
@@ -660,8 +641,6 @@
           "vrfFee": "Random-number fee",
           "coinChoice": "Chosen side",
           "coinDrawn": "Side drawn",
-          "rouletteBet": "Roulette bet",
-          "rouletteWinningNumber": "Winning number",
           "kenoPicked": "Numbers picked",
           "kenoDrawn": "Numbers drawn",
           "kenoHits": "Hits",
@@ -1145,41 +1124,14 @@
         "faucet": "Get test USDC"
       }
     },
-    "dice": {
+    "table": {
       "strip": {
         "preview": "Preview. Betting opens on Base after the audit report is published.",
         "testnet": "{chain} test network. Test {symbol} has no value."
       },
-      "head": {
-        "crumb": "All games",
-        "title": "Dice",
-        "lede": "Chainlink VRF rolls a number from 1 to 100 and the ball stops on it. On your side of the line, you win."
-      },
-      "table": {
-        "title": "The table",
-        "chance": "Win chance",
-        "pays": "Pays",
-        "line": "Line",
-        "valueText": "Win on {from} to {to}. {chance}% chance, pays {pays} times the stake.",
-        "side": "Side",
-        "under": "Roll under",
-        "over": "Roll over",
-        "range": "{from} to {to}",
-        "rule": "Pays 100 ÷ the winning numbers, less a {rate} house edge. The ball stops on the number Chainlink VRF rolls.",
-        "status": {
-          "ready": "Drag the line, then pick a side.",
-          "waiting": "Waiting for the random number. The ball rolls until it arrives.",
-          "round": "Round {k} of {n}"
-        },
-        "sound": {
-          "on": "Sound on",
-          "off": "Sound off"
-        }
-      },
       "slip": {
         "label": "Bet slip",
         "title": "Bet slip",
-        "game": "Dice, win on {from}–{to}",
         "ifWin": "If you win",
         "eachWin": "Each win pays",
         "total": "Total stake",
@@ -1234,7 +1186,8 @@
         "blocked": {
           "noCapacity": "No room at these odds",
           "balance": "Not enough {symbol}",
-          "unconfirmed": "Waiting for the network"
+          "unconfirmed": "Waiting for the network",
+          "selection": "Pick your numbers"
         },
         "checkTransaction": "Check the transaction",
         "checking": "Checking the transaction",
@@ -1250,7 +1203,7 @@
         },
         "network": {
           "lead": "Your wallet is on another network.",
-          "body": "Dice runs on {chain}."
+          "body": "This game runs on {chain}."
         },
         "min": {
           "lead": "Too small.",
@@ -1299,7 +1252,7 @@
             "body": "Betting stays closed until they are checked."
           },
           "gameUnavailable": {
-            "lead": "Dice's settings couldn't be read.",
+            "lead": "This game's settings couldn't be read.",
             "body": "Check again in a moment."
           },
           "invalidCount": {
@@ -1349,7 +1302,7 @@
             "body": "Place the next one after one of them settles."
           },
           "gameClosed": {
-            "lead": "Dice is closed.",
+            "lead": "This game is closed.",
             "body": "It takes no new bets. Bets already placed still settle."
           },
           "minimumStake": {
@@ -1362,7 +1315,7 @@
           },
           "network": {
             "lead": "Your wallet is on another network.",
-            "body": "Dice runs on {chain}."
+            "body": "This game runs on {chain}."
           },
           "wallet": {
             "lead": "Your wallet isn't ready.",
@@ -1451,11 +1404,14 @@
         "open": "Show the full slip",
         "close": "Show less"
       },
+      "announce": {
+        "signing": "Confirm in your wallet.",
+        "placed": "Bet placed. Waiting for randomness.",
+        "refundable": "No random number arrived. You can refund your stake."
+      },
       "receipt": {
         "label": "Receipt for bet {id}",
         "bet": "Bet {id}",
-        "rolled": "Rolled {rolls}.",
-        "rolledRounds": "Rolled {rolls}. {won} of {count} won.",
         "net": "Net result",
         "lines": {
           "stake": "Stake",
@@ -1484,10 +1440,33 @@
         "change": "Change bet",
         "announce": "{rolled} Net result {net} {symbol}."
       },
-      "announce": {
-        "signing": "Confirm in your wallet.",
-        "placed": "Bet placed. Waiting for randomness.",
-        "refundable": "No random number arrived. You can refund your stake."
+      "sound": {
+        "on": "Sound on",
+        "off": "Sound off"
+      },
+      "round": "Round {k} of {n}"
+    },
+    "dice": {
+      "head": {
+        "crumb": "All games",
+        "title": "Dice",
+        "lede": "Chainlink VRF rolls a number from 1 to 100 and the ball stops on it. On your side of the line, you win."
+      },
+      "table": {
+        "title": "The table",
+        "chance": "Win chance",
+        "pays": "Pays",
+        "line": "Line",
+        "valueText": "Win on {from} to {to}. {chance}% chance, pays {pays} times the stake.",
+        "side": "Side",
+        "under": "Roll under",
+        "over": "Roll over",
+        "range": "{from} to {to}",
+        "rule": "Pays 100 ÷ the winning numbers, less a {rate} house edge. The ball stops on the number Chainlink VRF rolls.",
+        "status": {
+          "ready": "Drag the line, then pick a side.",
+          "waiting": "Waiting for the random number. The ball rolls until it arrives."
+        }
       },
       "receipts": {
         "title": "Latest dice receipts",
@@ -1530,6 +1509,92 @@
         "contract": "Read the contract",
         "hours": "{count, plural, one {an hour} other {# hours}}",
         "minutes": "{count, plural, one {# minute} other {# minutes}}"
+      },
+      "slip": {
+        "game": "Dice, win on {from}–{to}"
+      },
+      "receipt": {
+        "rolled": "Rolled {rolls}.",
+        "rolledRounds": "Rolled {rolls}. {won} of {count} won."
+      }
+    },
+    "roulette": {
+      "head": {
+        "crumb": "All games",
+        "title": "Roulette",
+        "lede": "Chainlink VRF picks a number from 0 to 36 and the ball drops into its pocket. Any number under your chips wins."
+      },
+      "table": {
+        "title": "The table",
+        "covered": "Numbers",
+        "chance": "Win chance",
+        "pays": "Pays",
+        "history": "Last results",
+        "noHistory": "No spins yet",
+        "clear": "Clear chips",
+        "board": "Betting layout",
+        "call": "No more bets",
+        "column": "Column",
+        "columnShort": "Col",
+        "rule": "One bet covers every number your chips are on. Any of them pays 37 ÷ the numbers covered, less a {rate} house edge.",
+        "status": {
+          "ready": "Put chips on the layout, then place your bet.",
+          "all": "Your chips cover every number. Take one off to bet.",
+          "waiting": "Waiting for the random number. The ball spins until it arrives."
+        },
+        "zeroLabel": "Zero",
+        "numberLabel": "{n}, {colour}",
+        "spotLabel": "{name}, {count} numbers"
+      },
+      "colour": {
+        "red": "red",
+        "black": "black",
+        "zero": "green"
+      },
+      "spot": {
+        "number": "number {n}",
+        "low": "1–18",
+        "high": "19–36",
+        "even": "even",
+        "odd": "odd",
+        "red": "red",
+        "black": "black",
+        "dozen": "{from}–{to}",
+        "column": "column {c}"
+      },
+      "short": {
+        "number": "{n}",
+        "low": "1–18",
+        "high": "19–36",
+        "even": "Even",
+        "odd": "Odd",
+        "red": "Red",
+        "black": "Black",
+        "dozen": "{from}–{to}",
+        "column": "Column {c}"
+      },
+      "slip": {
+        "game": "Roulette, {bet}",
+        "none": "Roulette",
+        "more": "{count} more",
+        "numbers": "{count} numbers",
+        "covers": "Covers {numbers}"
+      },
+      "selection": {
+        "empty": {
+          "lead": "Put a chip on the layout.",
+          "body": "Tap a number or a bet on the felt. Every chip adds its numbers to one bet."
+        },
+        "all": {
+          "lead": "Your chips cover every number.",
+          "body": "A bet on all 37 numbers can't win more than it stakes. Take a chip off."
+        }
+      },
+      "receipt": {
+        "one": "{n} {colour}",
+        "zero": "0",
+        "rolled": "Came up {rolls}.",
+        "rolledRounds": "Came up {rolls}. {won} of {count} won."
       }
     }
   },

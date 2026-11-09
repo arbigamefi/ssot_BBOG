@@ -38,6 +38,19 @@ describe("useStageReveal", () => {
     expect(result.current.stageReveal?.phase).toBe("revealed");
   });
 
+  it("gives the roulette ball time for every round's deadline", () => {
+    const { result } = renderHook(() => useStageReveal());
+    act(() => result.current.startStageReveal(5n, "roulette", 2));
+    act(() => {
+      vi.advanceTimersByTime(9_799);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealing");
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealed");
+  });
+
   it("lets the animation's callback finish the reveal early", () => {
     const { result } = renderHook(() => useStageReveal());
     act(() => result.current.startStageReveal(8n, "plinko"));

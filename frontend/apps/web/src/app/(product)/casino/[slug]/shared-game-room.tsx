@@ -136,7 +136,6 @@ export function SharedGameRoom({ slug, room }: { slug: string; room: GameRoom })
         showResult={Boolean(room.stageReveal || room.showResult)}
         resultNum={room.resultNum}
         houseEdgeBps={stageHouseEdgeBps}
-        rouletteSpots={room.rouletteSpots}
         kenoSpots={room.kenoSpots}
         plinkoRisk={room.plinkoRisk}
         baccaratSide={room.baccaratSide}
@@ -154,9 +153,7 @@ export function SharedGameRoom({ slug, room }: { slug: string; room: GameRoom })
         onResultClose={room.handleResultClose}
         onResultPlayAgain={room.handleResultPlayAgain}
         onCoinRevealComplete={room.completeStageReveal}
-        onRouletteRevealComplete={room.completeStageReveal}
         onCoinSideChange={room.setCoinSide}
-        onRouletteChange={room.setRouletteSpots}
         onKenoChange={room.setKenoSpots}
         onKenoResetResult={room.clearKenoResult}
         onKenoRevealComplete={room.completeStageReveal}

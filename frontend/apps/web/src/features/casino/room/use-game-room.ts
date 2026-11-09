@@ -116,7 +116,8 @@ export function useGameRoom(slug: string) {
   const [diceTarget, setDiceTarget] = React.useState<number>(50);
   const [diceDirection, setDiceDirection] = React.useState<DiceDirection>("under");
   const [coinSide, setCoinSide] = React.useState<CoinSide>("HEADS");
-  const [rouletteSpots, setRouletteSpots] = React.useState<string[]>([]);
+  // The roulette table opens with a chip on red, ready to play.
+  const [rouletteSpots, setRouletteSpots] = React.useState<string[]>(["RED"]);
   const [kenoSpots, setKenoSpots] = React.useState<number[]>([]);
   const [plinkoRisk, setPlinkoRisk] = React.useState<PlinkoRisk>("medium");
   const [baccaratSide, setBaccaratSide] = React.useState<BaccaratSide>("player");

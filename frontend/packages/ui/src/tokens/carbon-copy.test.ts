@@ -99,8 +99,23 @@ describe("Carbon copy palette", () => {
     expect(ratio(over(0.24, "felt"), rgb("felt"))).toBeLessThan(3);
   });
 
+  it.each(["pocket-red", "pocket-black", "pocket-green"])(
+    "prints a roulette number in paper on %s, and the pocket shows on the felt",
+    (pocket) => {
+      expect(contrast("paper", pocket)).toBeGreaterThanOrEqual(4.5);
+      expect(channels(pocket)).not.toEqual(channels("felt"));
+    }
+  );
+
   it("maps the table's materials onto utilities", () => {
-    for (const name of ["felt", "felt-edge", "rail"]) {
+    for (const name of [
+      "felt",
+      "felt-edge",
+      "rail",
+      "pocket-red",
+      "pocket-black",
+      "pocket-green"
+    ]) {
       expect(globals).toContain(`--color-${name}: hsl(var(--${name}));`);
     }
     for (const name of [

@@ -10,9 +10,9 @@ import { PrintedFigure } from "../../home/printed-figure";
 import { buildHomeReceipt } from "../../home/receipts";
 import { readCasinoOutcome } from "../room/outcome";
 import type { GameRoom } from "../room/use-game-room";
-import { formatRolls } from "./dice-receipt";
-import { diceWinRange } from "./slip-model";
-import { FOCUS_ON_PAPER, LINK } from "./styles";
+import { formatRolls } from "../table-room/room-receipt";
+import { FOCUS_ON_PAPER, LINK } from "../table-room/styles";
+import { diceWinRange } from "./dice-model";
 
 /** Every section sits on one 12-column grid inside the page width. */
 const SECTION_GRID =

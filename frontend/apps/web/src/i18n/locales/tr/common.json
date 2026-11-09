@@ -1141,7 +1141,6 @@
       },
       "history": {
         "recent": {
-          "numbers": "SON SAYILAR",
           "draws": "SON ÇEKİLİŞLER",
           "buckets": "SON KOVALAR",
           "slots": "SON DÖNÜŞLER",
@@ -1298,24 +1297,6 @@
         }
       },
       "selection": {
-        "roulette": {
-          "bets": "Bahisler",
-          "clearAll": "Tümünü temizle",
-          "empty": "Bahis yok. Bahis yapmak için çuhaya tıklayın.",
-          "labels": {
-            "firstDozen": "1. düzine",
-            "secondDozen": "2. düzine",
-            "thirdDozen": "3. düzine",
-            "even": "Çift",
-            "red": "Kırmızı",
-            "black": "Siyah",
-            "odd": "Tek",
-            "firstColumn": "Sütun 1 (2:1)",
-            "secondColumn": "Sütun 2 (2:1)",
-            "thirdColumn": "Sütun 3 (2:1)",
-            "column": "2:1"
-          }
-        },
         "coin": {
           "selectFace": "Taraf seç",
           "heads": "Yazı",
@@ -1437,8 +1418,6 @@
           "vrfFee": "Rastgele sayı ücreti",
           "coinChoice": "Seçilen taraf",
           "coinDrawn": "Çıkan taraf",
-          "rouletteBet": "Rulet bahsi",
-          "rouletteWinningNumber": "Kazanan sayı",
           "kenoPicked": "Seçilen sayılar",
           "kenoDrawn": "Çekilen sayılar",
           "kenoHits": "İsabetler",
@@ -1896,41 +1875,14 @@
         "faucet": "Test USDC al"
       }
     },
-    "dice": {
+    "table": {
       "strip": {
         "preview": "Önizleme. Bahisler, denetim raporu yayımlandıktan sonra Base üzerinde açılır.",
         "testnet": "{chain} test ağı. Test {symbol} tokenlarının değeri yoktur."
       },
-      "head": {
-        "crumb": "Tüm oyunlar",
-        "title": "Zar",
-        "lede": "Chainlink VRF 1 ile 100 arasında bir sayı atar ve top o sayıda durur. Sayı çizginin sizin tarafınıza düşerse kazanırsınız."
-      },
-      "table": {
-        "title": "Masa",
-        "chance": "Kazanma şansı",
-        "pays": "Öder",
-        "line": "Çizgi",
-        "valueText": "{from} ile {to} arası kazanır. Şans %{chance}, bahsin {pays} katını öder.",
-        "side": "Taraf",
-        "under": "Alt",
-        "over": "Üst",
-        "range": "{from} ile {to} arası",
-        "rule": "100 ÷ kazanan sayı adedi kadar öder, {rate} kasa payı düşülür. Top, Chainlink VRF'nin attığı sayıda durur.",
-        "status": {
-          "ready": "Çizgiyi sürükleyin, sonra bir taraf seçin.",
-          "waiting": "Rastgele sayı bekleniyor. Sayı gelene kadar top yuvarlanır.",
-          "round": "Tur {k} / {n}"
-        },
-        "sound": {
-          "on": "Ses açık",
-          "off": "Ses kapalı"
-        }
-      },
       "slip": {
         "label": "Bahis kuponu",
         "title": "Kupon",
-        "game": "Zar, {from}–{to} kazanır",
         "ifWin": "Kazanırsanız",
         "eachWin": "Her kazanç öder",
         "total": "Toplam bahis",
@@ -1985,7 +1937,8 @@
         "blocked": {
           "noCapacity": "Bu şansta yer yok",
           "balance": "Yetersiz {symbol}",
-          "unconfirmed": "Ağ bekleniyor"
+          "unconfirmed": "Ağ bekleniyor",
+          "selection": "Sayılarınızı seçin"
         },
         "checkTransaction": "İşlemi kontrol et",
         "checking": "İşlem kontrol ediliyor",
@@ -2001,7 +1954,7 @@
         },
         "network": {
           "lead": "Cüzdanınız başka bir ağda.",
-          "body": "Zar {chain} üzerinde çalışır."
+          "body": "Bu oyun {chain} üzerinde çalışır."
         },
         "min": {
           "lead": "Çok düşük.",
@@ -2050,7 +2003,7 @@
             "body": "Kontrol edilene kadar bahisler kapalı kalır."
           },
           "gameUnavailable": {
-            "lead": "Zar ayarları okunamadı.",
+            "lead": "Bu oyunun ayarları okunamadı.",
             "body": "Biraz sonra tekrar kontrol edin."
           },
           "invalidCount": {
@@ -2100,7 +2053,7 @@
             "body": "Birisi sonuçlandıktan sonra yenisini yapın."
           },
           "gameClosed": {
-            "lead": "Zar kapalı.",
+            "lead": "Bu oyun kapalı.",
             "body": "Yeni bahis almıyor. Yapılmış bahisler sonuçlanmaya devam eder."
           },
           "minimumStake": {
@@ -2113,7 +2066,7 @@
           },
           "network": {
             "lead": "Cüzdanınız başka bir ağda.",
-            "body": "Zar {chain} üzerinde çalışır."
+            "body": "Bu oyun {chain} üzerinde çalışır."
           },
           "wallet": {
             "lead": "Cüzdanınız hazır değil.",
@@ -2202,11 +2155,14 @@
         "open": "Kuponun tamamını göster",
         "close": "Daha az göster"
       },
+      "announce": {
+        "signing": "Cüzdanınızda onaylayın.",
+        "placed": "Bahis yapıldı. Rastgele sayı bekleniyor.",
+        "refundable": "Rastgele sayı gelmedi. Bahsinizi iade alabilirsiniz."
+      },
       "receipt": {
         "label": "{id} numaralı bahsin fişi",
         "bet": "Bahis {id}",
-        "rolled": "Gelen: {rolls}.",
-        "rolledRounds": "Gelen: {rolls}. {count} turun {won} tanesi kazandı.",
         "net": "Net sonuç",
         "lines": {
           "stake": "Bahis",
@@ -2235,10 +2191,33 @@
         "change": "Bahsi değiştir",
         "announce": "{rolled} Net sonuç {net} {symbol}."
       },
-      "announce": {
-        "signing": "Cüzdanınızda onaylayın.",
-        "placed": "Bahis yapıldı. Rastgele sayı bekleniyor.",
-        "refundable": "Rastgele sayı gelmedi. Bahsinizi iade alabilirsiniz."
+      "sound": {
+        "on": "Ses açık",
+        "off": "Ses kapalı"
+      },
+      "round": "Tur {k} / {n}"
+    },
+    "dice": {
+      "head": {
+        "crumb": "Tüm oyunlar",
+        "title": "Zar",
+        "lede": "Chainlink VRF 1 ile 100 arasında bir sayı atar ve top o sayıda durur. Sayı çizginin sizin tarafınıza düşerse kazanırsınız."
+      },
+      "table": {
+        "title": "Masa",
+        "chance": "Kazanma şansı",
+        "pays": "Öder",
+        "line": "Çizgi",
+        "valueText": "{from} ile {to} arası kazanır. Şans %{chance}, bahsin {pays} katını öder.",
+        "side": "Taraf",
+        "under": "Alt",
+        "over": "Üst",
+        "range": "{from} ile {to} arası",
+        "rule": "100 ÷ kazanan sayı adedi kadar öder, {rate} kasa payı düşülür. Top, Chainlink VRF'nin attığı sayıda durur.",
+        "status": {
+          "ready": "Çizgiyi sürükleyin, sonra bir taraf seçin.",
+          "waiting": "Rastgele sayı bekleniyor. Sayı gelene kadar top yuvarlanır."
+        }
       },
       "receipts": {
         "title": "Son zar fişleri",
@@ -2281,6 +2260,92 @@
         "contract": "Sözleşmeyi oku",
         "hours": "{count, plural, one {bir saat} other {# saat}}",
         "minutes": "{count, plural, one {# dakika} other {# dakika}}"
+      },
+      "slip": {
+        "game": "Zar, {from}–{to} kazanır"
+      },
+      "receipt": {
+        "rolled": "Gelen: {rolls}.",
+        "rolledRounds": "Gelen: {rolls}. {count} turun {won} tanesi kazandı."
+      }
+    },
+    "roulette": {
+      "head": {
+        "crumb": "Tüm oyunlar",
+        "title": "Rulet",
+        "lede": "Chainlink VRF 0 ile 36 arasında bir sayı seçer ve top o sayının cebine düşer. Fişlerinizin altındaki her sayı kazanır."
+      },
+      "table": {
+        "title": "Masa",
+        "covered": "Sayı",
+        "chance": "Kazanma şansı",
+        "pays": "Öder",
+        "history": "Son sonuçlar",
+        "noHistory": "Henüz çevrilmedi",
+        "clear": "Fişleri kaldır",
+        "board": "Bahis alanı",
+        "call": "Bahisler kapandı",
+        "column": "Sütun",
+        "columnShort": "Süt",
+        "rule": "Tek bahis, fişlerinizin altındaki tüm sayıları kapsar. Herhangi biri 37 ÷ kapsanan sayı adedi kadar öder, {rate} kasa payı düşülür.",
+        "status": {
+          "ready": "Bahis alanına fiş koyun, sonra bahsinizi yapın.",
+          "all": "Fişleriniz tüm sayıları kapsıyor. Bahis için birini kaldırın.",
+          "waiting": "Rastgele sayı bekleniyor. Sayı gelene kadar top döner."
+        },
+        "zeroLabel": "Sıfır",
+        "numberLabel": "{n}, {colour}",
+        "spotLabel": "{name}, {count} sayı"
+      },
+      "colour": {
+        "red": "kırmızı",
+        "black": "siyah",
+        "zero": "yeşil"
+      },
+      "spot": {
+        "number": "{n} numara",
+        "low": "1–18",
+        "high": "19–36",
+        "even": "çift",
+        "odd": "tek",
+        "red": "kırmızı",
+        "black": "siyah",
+        "dozen": "{from}–{to}",
+        "column": "{c}. sütun"
+      },
+      "short": {
+        "number": "{n}",
+        "low": "1–18",
+        "high": "19–36",
+        "even": "Çift",
+        "odd": "Tek",
+        "red": "Kırmızı",
+        "black": "Siyah",
+        "dozen": "{from}–{to}",
+        "column": "{c}. sütun"
+      },
+      "slip": {
+        "game": "Rulet, {bet}",
+        "none": "Rulet",
+        "more": "{count} tane daha",
+        "numbers": "{count} sayı",
+        "covers": "Kapsar: {numbers}"
+      },
+      "selection": {
+        "empty": {
+          "lead": "Bahis alanına bir fiş koyun.",
+          "body": "Masadaki bir sayıya ya da bahse dokunun. Her fiş kendi sayılarını tek bir bahse ekler."
+        },
+        "all": {
+          "lead": "Fişleriniz tüm sayıları kapsıyor.",
+          "body": "37 sayının hepsine yapılan bahis, yatırılandan fazlasını kazanamaz. Bir fişi kaldırın."
+        }
+      },
+      "receipt": {
+        "one": "{n} {colour}",
+        "zero": "0",
+        "rolled": "Gelen: {rolls}.",
+        "rolledRounds": "Gelen: {rolls}. {count} turun {won} tanesi kazandı."
       }
     }
   },
