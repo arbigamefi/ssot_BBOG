@@ -91,6 +91,17 @@
   --color-on-carbon-muted: hsl(var(--on-carbon-muted));
   --color-rule-carbon: hsl(var(--paper) / 0.22);
 
+  /* The table layer (01-brand.md §2): only on a game table. */
+  --color-felt: hsl(var(--felt));
+  --color-felt-edge: hsl(var(--felt-edge));
+  --color-rail: hsl(var(--rail));
+  --color-print: hsl(var(--paper) / 0.92);
+  --color-print-soft: hsl(var(--paper) / 0.6);
+  --color-print-faint: hsl(var(--paper) / 0.24);
+  --color-chip: hsl(var(--ink));
+  --color-chip-inlay: hsl(var(--paper));
+  --color-lamp: hsl(var(--lamp) / 0.17);
+
   /* Schibsted Grotesk at 400, 600 and 800 sets every word; Doto 800 prints
      figures only. The next/font variables are set on <html> by the root
      layout (apps/web features/home/fonts.ts), so these stacks stay inline
@@ -132,17 +143,28 @@
 
   --radius-print: var(--corner-print);
   --radius-sheet: var(--corner-sheet);
+  --radius-spot: var(--corner-spot);
 
   /* Printing (docs/design/12-motion.md §3). Use with motion-safe: only. */
   --animate-print: print var(--print-time, 2.4s) steps(16, end) var(--print-delay, 0.5s) both;
   --animate-stamp: stamp 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.4)
     calc(var(--print-delay, 0.5s) + var(--print-time, 2.4s) + 0.1s) both;
   --animate-tear: tear 0.34s ease-in forwards;
-  /* The dice room: a result prints line by line, the feed bar runs while the
-     random number is awaited, and a roll is punched into the scale. */
-  --animate-reveal: reveal 1.2s steps(12, end) both;
+  /* The feed bar of a slip that waits for its random number. */
   --animate-feed: feed 1.8s steps(30, end) infinite;
-  --animate-punch: punch 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+
+  /* The table (12-motion.md §5). A net win only: the winning print glows, the
+     lamp warms (more for 10x or more) and the net amount comes in; the
+     result tag settles; the printer's light blinks while it waits or prints. */
+  --animate-print-glow: print-glow 1.6s ease-out both;
+  --animate-lamp-warm: lamp-warm 1.6s ease-out both;
+  --animate-lamp-warm-big: lamp-warm-big 2.6s ease-out both;
+  --animate-pay-in: pay-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  --animate-pay-pulse:
+    pay-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both, pay-pulse 1.2s ease-in-out 0.5s 2;
+  --animate-settle: settle 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+  --animate-led-wait: led-blink 1.1s ease-in-out infinite;
+  --animate-led-print: led-blink 0.28s steps(2, jump-none) infinite;
 
   /* ── Radius ─────────────────────────────────────────────────────── */
   --radius-sm: var(--radius-sm);
@@ -209,15 +231,6 @@
   }
 }
 
-@keyframes reveal {
-  from {
-    clip-path: inset(0 0 100% 0);
-  }
-  to {
-    clip-path: inset(0 0 -16px 0);
-  }
-}
-
 @keyframes feed {
   from {
     clip-path: inset(0 100% 0 0);
@@ -227,10 +240,67 @@
   }
 }
 
-@keyframes punch {
+@keyframes print-glow {
+  0% {
+    filter: none;
+  }
+  25% {
+    filter: brightness(2) drop-shadow(0 0 6px hsl(var(--paper) / 0.5));
+  }
+  100% {
+    filter: brightness(1.3);
+  }
+}
+
+@keyframes lamp-warm {
+  30% {
+    transform: scale(1.12);
+    filter: brightness(2.2);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes lamp-warm-big {
+  25% {
+    transform: scale(1.3);
+    filter: brightness(3.6);
+  }
+  60% {
+    transform: scale(1.15);
+    filter: brightness(2.2);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1.4);
+  }
+}
+
+@keyframes pay-in {
   from {
-    scale: 1.6;
     opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+}
+
+@keyframes pay-pulse {
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes settle {
+  from {
+    translate: 0 -8px;
+  }
+}
+
+@keyframes led-blink {
+  50% {
+    opacity: 0.25;
+    box-shadow: none;
   }
 }
 
@@ -388,26 +458,10 @@
   mix-blend-mode: multiply;
 }
 
-/* Ink dots: the winning side of the dice scale. */
-@utility print-dots {
-  background: radial-gradient(circle, hsl(var(--ink)) 1.3px, transparent 1.7px) 0 0 / 6px 6px;
-}
-
 /* One row of ink dots: the feed bar of a receipt that is still printing. */
 @utility print-feed {
   background: radial-gradient(circle, hsl(var(--ink)) 1.3px, transparent 1.7px) 0 50% / 6px 12px
     repeat-x;
-}
-
-/* The ticks of the dice scale: a long tick every tenth, a short one every hundredth.
-   Phones set --tick-major and --tick-minor to 25% and 5%. */
-@utility print-ticks {
-  border-right: 1px solid hsl(var(--faded));
-  background:
-    linear-gradient(90deg, hsl(var(--faded)) 1px, transparent 1px) 0 0 / var(--tick-major, 10%) 10px
-      repeat-x,
-    linear-gradient(90deg, hsl(var(--thermal)) 1px, transparent 1px) 0 0 / var(--tick-minor, 1%) 6px
-      repeat-x;
 }
 
 /* A ticket stub's tear-off part: a dashed perforation with a half-disc notch at each end. */
@@ -434,4 +488,200 @@
     border-bottom: 0;
     border-radius: 12px 12px 0 0;
   }
+}
+
+/* ── The table layer (docs/design/01-brand.md §2, 10-design-tokens.md §3) ──
+ * A game table is a physical object: felt in a padded rail under one lamp,
+ * a carved lane, an ivory ball, chips. These materials are its only shadows
+ * and gradients; nothing on a page or on paper uses them.
+ * Sizes are variables on the felt so a phone can scale the whole table. */
+
+/* The felt inside its rail, lit from above. Holds the table's sizes. */
+@utility table-felt {
+  --rail-width: 20px;
+  --ball-size: 48px;
+  --groove-size: 62px;
+  --lane-top: 70px;
+  --chip-size: 34px;
+  border: var(--rail-width) solid transparent;
+  border-radius: 48px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")
+      padding-box,
+    radial-gradient(120% 90% at 50% 0%, hsl(var(--felt)) 0%, hsl(var(--felt-edge)) 100%) padding-box,
+    radial-gradient(140% 120% at 50% 0%, hsl(var(--table-sheen) / 0.08), transparent 40%) border-box,
+    linear-gradient(hsl(var(--rail-hi)), hsl(var(--rail)) 26%, hsl(var(--rail-lo))) border-box;
+  box-shadow:
+    inset 0 0 0 1px hsl(var(--table-shade) / 0.55),
+    inset 0 26px 40px -22px hsl(var(--table-shade) / 0.75),
+    inset 0 -18px 30px -24px hsl(var(--table-shade) / 0.6),
+    0 0 0 1px hsl(var(--table-sheen) / 0.07),
+    0 40px 80px -30px hsl(var(--table-shade) / 0.7);
+  color: hsl(var(--paper) / 0.92);
+  @media (max-width: 720px) {
+    --rail-width: 12px;
+    --ball-size: 34px;
+    --groove-size: 44px;
+    --lane-top: 58px;
+    --chip-size: 28px;
+    border-radius: 30px;
+  }
+}
+
+/* The pool of light from the lamp over the table. */
+@utility table-lamp {
+  background: radial-gradient(closest-side, hsl(var(--lamp) / 0.17), transparent);
+}
+
+/* The lane carved into the felt that the ball rolls in. */
+@utility table-groove {
+  height: var(--groove-size);
+  border-radius: calc(var(--groove-size) / 2);
+  background: linear-gradient(hsl(var(--groove-lo)) 10%, hsl(var(--groove-hi)));
+  box-shadow:
+    inset 0 7px 12px hsl(var(--table-shade) / 0.65),
+    inset 0 -2px 0 hsl(var(--table-sheen) / 0.06),
+    0 0 0 4px hsl(var(--table-shade) / 0.18),
+    0 0 0 5px hsl(var(--paper) / 0.09),
+    0 2px 0 5px hsl(var(--table-sheen) / 0.04);
+}
+
+/* The winning numbers, printed in the lane as a field of dots. */
+@utility table-zone {
+  border-radius: calc(var(--groove-size) / 2 - 6px);
+  background: radial-gradient(circle, hsl(var(--paper) / 0.6) 1.3px, transparent 1.8px) 0 0 / 7px
+    7px;
+}
+
+/* The ivory ball: its shading stays under the lamp, its mark turns as it rolls. */
+@utility table-ball {
+  width: var(--ball-size);
+  height: var(--ball-size);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 34% 28%,
+    hsl(var(--ivory-hi)) 0%,
+    hsl(var(--ivory)) 44%,
+    hsl(var(--ivory-lo)) 100%
+  );
+  box-shadow:
+    0 7px 9px -2px hsl(var(--table-shade) / 0.6),
+    inset 0 -3px 6px hsl(var(--table-shade) / 0.2);
+  &::after {
+    content: "";
+    position: absolute;
+    top: 12%;
+    left: 20%;
+    width: 26%;
+    height: 18%;
+    border-radius: 50%;
+    background: hsl(var(--table-sheen) / 0.85);
+    filter: blur(1.5px);
+    transform: rotate(-30deg);
+  }
+}
+
+/* The mark on the ball, so its roll can be seen. */
+@utility table-ball-mark {
+  border-radius: 50%;
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: hsl(var(--ink));
+  }
+  &::before {
+    width: 20%;
+    height: 20%;
+    top: 11%;
+    left: 40%;
+    opacity: 0.85;
+  }
+  &::after {
+    width: 12%;
+    height: 12%;
+    bottom: 14%;
+    left: 44%;
+    opacity: 0.55;
+  }
+}
+
+/* The number under the ball. Once the ball stops it is printed on a paper tag. */
+@utility table-readout {
+  border-radius: 6px;
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: -7px;
+    left: 50%;
+    margin-left: -7px;
+    border: 7px solid transparent;
+    border-bottom: 0;
+  }
+  &[data-landed] {
+    background: hsl(var(--paper));
+    color: hsl(var(--ink));
+    box-shadow: 0 4px 8px hsl(var(--table-shade) / 0.35);
+  }
+  &[data-landed]::after {
+    border-top-color: hsl(var(--paper));
+  }
+}
+
+/* The paper puck that marks the line. */
+@utility table-puck {
+  border-radius: 50%;
+  background: hsl(var(--paper));
+  color: hsl(var(--ink));
+  box-shadow:
+    inset 0 0 0 3px hsl(var(--paper)),
+    inset 0 0 0 4.5px hsl(var(--ink)),
+    0 4px 6px hsl(var(--table-shade) / 0.5);
+}
+
+/* The 1–100 scale printed under the lane: a long tick every tenth, a short one
+   every fiftieth. */
+@utility table-ticks {
+  border-right: 1px solid hsl(var(--paper) / 0.6);
+  background:
+    linear-gradient(90deg, hsl(var(--paper) / 0.6) 1px, transparent 1px) 0 0 / 10% 10px repeat-x,
+    linear-gradient(90deg, hsl(var(--paper) / 0.24) 1px, transparent 1px) 0 0 / 2% 6px repeat-x;
+}
+
+/* A chip: ink and paper segments around a paper inlay. */
+@utility table-chip {
+  width: var(--chip-size);
+  height: var(--chip-size);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, hsl(var(--paper)) 0 7px, transparent 7.5px),
+    repeating-conic-gradient(hsl(var(--ink)) 0 15deg, hsl(var(--paper)) 15deg 30deg);
+  box-shadow:
+    inset 0 0 0 3px hsl(var(--paper)),
+    0 3px 4px hsl(var(--table-shade) / 0.5);
+}
+
+/* The net amount of a win, lit on the felt; brighter for 10x or more. */
+@utility table-pay-glow {
+  text-shadow: 0 0 14px hsl(var(--lamp) / 0.45);
+  &[data-big] {
+    text-shadow: 0 0 22px hsl(var(--lamp) / 0.7);
+  }
+}
+
+/* The printer's status light, lit while it waits or prints. */
+@utility table-led {
+  border-radius: 50%;
+  background: hsl(var(--paper) / 0.22);
+  &[data-lit] {
+    background: hsl(var(--paper));
+    box-shadow: 0 0 6px 1px hsl(var(--paper) / 0.5);
+  }
+}
+
+/* On a phone the slip is a sheet docked to the bottom of the screen. */
+@utility table-sheet {
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -14px 34px hsl(var(--table-shade) / 0.5);
 }

@@ -1156,21 +1156,28 @@
       "head": {
         "crumb": "All games",
         "title": "Dice",
-        "lede": "Chainlink VRF rolls a number from 1 to 100. Land on your side of the line and you win."
+        "lede": "Chainlink VRF rolls a number from 1 to 100 and the ball stops on it. On your side of the line, you win."
       },
       "table": {
-        "title": "Your odds",
+        "title": "The table",
         "chance": "Win chance",
         "pays": "Pays",
-        "winOn": "Win on {from}–{to}",
-        "loseOn": "Lose on {from}–{to}",
         "line": "Line",
         "valueText": "Win on {from} to {to}. {chance}% chance, pays {pays} times the stake.",
         "side": "Side",
-        "low": "Low",
-        "high": "High",
-        "lineDown": "Move the line down one",
-        "lineUp": "Move the line up one"
+        "under": "Roll under",
+        "over": "Roll over",
+        "range": "{from} to {to}",
+        "rule": "Pays 100 ÷ the winning numbers, less a {rate} house edge. The ball stops on the number Chainlink VRF rolls.",
+        "status": {
+          "ready": "Drag the line, then pick a side.",
+          "waiting": "Waiting for the random number. The ball rolls until it arrives.",
+          "round": "Round {k} of {n}"
+        },
+        "sound": {
+          "on": "Sound on",
+          "off": "Sound off"
+        }
       },
       "slip": {
         "label": "Bet slip",
@@ -1181,7 +1188,6 @@
         "total": "Total stake",
         "fee": "Randomness fee",
         "feeUpTo": "up to {fee}",
-        "feeShort": "Fee ≤ {fee}",
         "rounds": "Rounds",
         "fewer": "One round fewer",
         "more": "One more round",
@@ -1192,7 +1198,8 @@
         "max": "Max {amount}",
         "maxUnknown": "Max",
         "balance": "Balance {amount} {symbol}.",
-        "connectHint": "Connect a wallet to see your balance here."
+        "connectHint": "Connect a wallet to see your balance here.",
+        "gameRounds": "{game}, {rounds} rounds"
       },
       "action": {
         "telegram": "Join on Telegram",
@@ -1433,7 +1440,19 @@
           "title": "This bet stopped updating here",
           "note": "It is still on-chain. Open it to see where it stands."
         },
-        "open": "Open this bet"
+        "open": "Open this bet",
+        "seconds": "{seconds} s"
+      },
+      "printer": {
+        "ready": "Ready",
+        "waiting": "Waiting for the random number, {seconds} s",
+        "received": "Number received",
+        "printing": "Printing receipt",
+        "printed": "Receipt printed"
+      },
+      "sheet": {
+        "open": "Show the full slip",
+        "close": "Show less"
       },
       "receipt": {
         "label": "Receipt for bet {id}",
@@ -1493,7 +1512,7 @@
         },
         "line": {
           "title": "Your line",
-          "body": "Low wins on your line or any number under it. High wins on any number above it. Your win chance runs from 2% to 97%; any higher and a win would pay back no more than your stake."
+          "body": "Roll under wins on your line or any number under it. Roll over wins on any number above it. Your win chance runs from 2% to 97%; any higher and a win would pay back no more than your stake."
         },
         "payout": {
           "title": "The payout",

@@ -1886,21 +1886,28 @@
       "head": {
         "crumb": "Todos os jogos",
         "title": "Dados",
-        "lede": "O Chainlink VRF sorteia um número de 1 a 100. Caiu do seu lado da linha, você ganha."
+        "lede": "O Chainlink VRF sorteia um número de 1 a 100 e a bola para nele. Do seu lado da linha, você ganha."
       },
       "table": {
-        "title": "Suas chances",
+        "title": "A mesa",
         "chance": "Chance de ganhar",
         "pays": "Paga",
-        "winOn": "Ganha de {from} a {to}",
-        "loseOn": "Perde de {from} a {to}",
         "line": "Linha",
         "valueText": "Ganha de {from} a {to}. Chance de {chance}%, paga {pays} vezes a aposta.",
         "side": "Lado",
-        "low": "Baixo",
-        "high": "Alto",
-        "lineDown": "Descer a linha em um",
-        "lineUp": "Subir a linha em um"
+        "under": "Abaixo",
+        "over": "Acima",
+        "range": "{from} a {to}",
+        "rule": "Paga 100 ÷ os números vencedores, menos {rate} de vantagem da casa. A bola para no número que o Chainlink VRF sorteia.",
+        "status": {
+          "ready": "Arraste a linha e escolha um lado.",
+          "waiting": "Aguardando o número aleatório. A bola rola até ele chegar.",
+          "round": "Rodada {k} de {n}"
+        },
+        "sound": {
+          "on": "Som ligado",
+          "off": "Som desligado"
+        }
       },
       "slip": {
         "label": "Boletim de aposta",
@@ -1911,7 +1918,6 @@
         "total": "Aposta total",
         "fee": "Taxa de aleatoriedade",
         "feeUpTo": "até {fee}",
-        "feeShort": "Taxa ≤ {fee}",
         "rounds": "Rodadas",
         "fewer": "Uma rodada a menos",
         "more": "Uma rodada a mais",
@@ -1922,7 +1928,8 @@
         "max": "Máx. {amount}",
         "maxUnknown": "Máx.",
         "balance": "Saldo {amount} {symbol}.",
-        "connectHint": "Conecte uma carteira para ver seu saldo aqui."
+        "connectHint": "Conecte uma carteira para ver seu saldo aqui.",
+        "gameRounds": "{game}, {rounds} rodadas"
       },
       "action": {
         "telegram": "Entrar no Telegram",
@@ -2163,7 +2170,19 @@
           "title": "Esta aposta parou de atualizar aqui",
           "note": "Ela continua on-chain. Abra para ver onde ela está."
         },
-        "open": "Abrir esta aposta"
+        "open": "Abrir esta aposta",
+        "seconds": "{seconds} s"
+      },
+      "printer": {
+        "ready": "Pronta",
+        "waiting": "Aguardando o número aleatório, {seconds} s",
+        "received": "Número recebido",
+        "printing": "Imprimindo o recibo",
+        "printed": "Recibo impresso"
+      },
+      "sheet": {
+        "open": "Mostrar o boletim completo",
+        "close": "Mostrar menos"
       },
       "receipt": {
         "label": "Recibo da aposta {id}",
@@ -2223,7 +2242,7 @@
         },
         "line": {
           "title": "Sua linha",
-          "body": "Baixo ganha na sua linha ou em qualquer número abaixo dela. Alto ganha em qualquer número acima dela. Sua chance de ganhar vai de 2% a 97%; acima disso, um ganho não pagaria mais do que a aposta."
+          "body": "Abaixo ganha na sua linha ou em qualquer número abaixo dela. Acima ganha em qualquer número acima dela. Sua chance de ganhar vai de 2% a 97%; acima disso, um ganho não pagaria mais do que a aposta."
         },
         "payout": {
           "title": "O pagamento",

@@ -13,16 +13,29 @@ describe("useStageReveal", () => {
 
   it("reveals after the game's animation time when no callback arrives", () => {
     const { result } = renderHook(() => useStageReveal());
-    act(() => result.current.startStageReveal(7n, "dice"));
+    act(() => result.current.startStageReveal(7n, "sic-bo"));
     expect(result.current.stageReveal).toEqual({ betId: 7n, phase: "revealing" });
     act(() => {
-      vi.advanceTimersByTime(1_999);
+      vi.advanceTimersByTime(2_099);
     });
     expect(result.current.stageReveal?.phase).toBe("revealing");
     act(() => {
       vi.advanceTimersByTime(1);
     });
     expect(result.current.stageReveal).toEqual({ betId: 7n, phase: "revealed" });
+  });
+
+  it("gives the dice ball time for every round's deadline", () => {
+    const { result } = renderHook(() => useStageReveal());
+    act(() => result.current.startStageReveal(6n, "dice", 3));
+    act(() => {
+      vi.advanceTimersByTime(9_499);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealing");
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealed");
   });
 
   it("lets the animation's callback finish the reveal early", () => {

@@ -353,7 +353,7 @@ export function useGameRoom(slug: string) {
         revealedBetIdRef.current = bet.betId;
         setIsPending(false);
         setResultProof(buildCasinoRoundResult({ bet }));
-        startStageReveal(bet.betId, game.slug);
+        startStageReveal(bet.betId, game.slug, bet.betCount);
       }
     });
   }, [casinoRound.activeBet, game, sdk?.gameHub, startStageReveal, terminalBet]);

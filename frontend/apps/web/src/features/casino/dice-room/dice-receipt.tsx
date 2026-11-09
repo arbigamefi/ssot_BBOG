@@ -9,8 +9,9 @@ import { PrintedFigure } from "../../home/printed-figure";
 import { joined, shortId } from "../../home/receipts";
 import type { CasinoTerminalRoundResult } from "../room/resolution";
 import type { GameRoom } from "../room/use-game-room";
+import { SheetHead, type SlipSheet } from "./sheet-head";
 import { buildSlipReceipt, diceWinRange } from "./slip-model";
-import { DIVIDER, LINE_BUTTON, LINK, MAIN_BUTTON } from "./styles";
+import { DIVIDER, LINE_BUTTON, LINK, MAIN_BUTTON, SHEET_FULL, SHEET_PHONE } from "./styles";
 
 type Tearing = "again" | "change" | null;
 
@@ -20,15 +21,18 @@ export function formatRolls(locale: string, rolls: readonly number[]) {
 }
 
 /**
- * The settled slip: the rolls, the stamp and the exact amounts, torn off along its lower edge.
- * "Bet again" and "Change bet" tear it away; the receipt stays on its public page.
+ * The settled slip, printed out of the slot once the ball has stopped: the rolls, the stamp and
+ * the exact amounts, torn along its lower edge. "Bet again" and "Change bet" tear it away; the
+ * receipt stays on its public page. A closed phone sheet shows the roll, the net result and the
+ * two actions.
  */
 export function DiceReceipt({
   room,
   result,
   chainName,
   houseEdgeRate,
-  onAnnounce
+  onAnnounce,
+  sheet
 }: {
   room: GameRoom;
   result: CasinoTerminalRoundResult;
@@ -36,6 +40,7 @@ export function DiceReceipt({
   houseEdgeRate: string;
   /** Says the result once, in the room's live region. */
   onAnnounce: (text: string) => void;
+  sheet: SlipSheet;
 }) {
   const t = useTranslations("casino.dice.receipt");
   const tSlip = useTranslations("casino.dice.slip");
@@ -92,24 +97,29 @@ export function DiceReceipt({
           return;
         finish(tearing);
       }}
-      className={`print-sheet print-torn relative scroll-mt-4 rounded-t-sheet px-5 pt-6 pb-10 md:px-7 md:pt-8 md:pb-11 ${
-        tearing ? "motion-safe:animate-tear" : ""
+      className={`print-sheet print-torn relative rounded-t-sheet px-6 pt-7 pb-10 ${SHEET_PHONE} ${
+        tearing
+          ? "motion-safe:animate-tear"
+          : "motion-safe:animate-print [--print-delay:0s] [--print-time:1.4s] max-[720px]:animate-none"
       }`}
     >
-      <header className="flex items-baseline justify-between gap-3 text-note text-faded">
-        <b className="font-semibold text-ink">ArbiGameFi</b>
-        <span>{t("bet", { id: receipt.betId })}</span>
-      </header>
-      <p className="mt-4 pr-20 text-lede font-semibold">{tSlip("game", { from, to })}</p>
-      {rolled ? <p className="mt-1 pr-20 font-semibold break-keep">{rolled}</p> : null}
-      <p className="pr-20 text-note text-faded">{chainName}</p>
-      <div
-        aria-hidden="true"
-        className="print-stamp absolute top-[60px] right-3 grid size-[76px] place-items-center text-center text-note leading-tight font-extrabold motion-safe:animate-stamp md:top-16 md:right-4 md:size-[84px]"
-      >
-        {t(`stamp.${receipt.stamp}`)}
-      </div>
-      <div className="motion-safe:animate-reveal">
+      <SheetHead sheet={sheet} title={rolled ?? tSlip("game", { from, to })}>
+        <PrintedFigure value={receipt.net} className="text-[22px] leading-none" />
+      </SheetHead>
+      <div className={SHEET_FULL}>
+        <header className="flex items-baseline justify-between gap-3 text-note text-faded">
+          <b className="font-semibold text-ink">ArbiGameFi</b>
+          <span>{t("bet", { id: receipt.betId })}</span>
+        </header>
+        <p className="mt-4 pr-24 text-lede font-semibold">{tSlip("game", { from, to })}</p>
+        {rolled ? <p className="mt-1 pr-24 font-semibold break-keep">{rolled}</p> : null}
+        <p className="pr-24 text-note text-faded">{chainName}</p>
+        <div
+          aria-hidden="true"
+          className="print-stamp absolute top-16 right-4 grid size-[84px] place-items-center text-center text-note leading-tight font-extrabold motion-safe:animate-stamp max-[720px]:top-[118px] max-[720px]:size-[76px] max-[720px]:[animation-delay:0.15s]"
+        >
+          {t(`stamp.${receipt.stamp}`)}
+        </div>
         <hr className={DIVIDER} />
         <p className="text-note text-faded">{t("net")}</p>
         <p className="mt-2 text-total">
@@ -141,7 +151,7 @@ export function DiceReceipt({
           </Link>
         </p>
       </div>
-      <div className="mt-5 grid grid-cols-2 gap-2">
+      <div className="mt-5 grid grid-cols-2 gap-2 max-[720px]:group-data-closed/sheet:mt-2">
         <button type="button" onClick={() => tear("again")} className={MAIN_BUTTON}>
           <b className="font-semibold">{t("again")}</b>
         </button>

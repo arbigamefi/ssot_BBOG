@@ -11,7 +11,11 @@
  * - Headings on paper are carbon; secondary text on paper is faded.
  * - Thermal draws lines that separate content. It is too light (1.73:1 on
  *   paper) for the edge of a control; inputs use faded.
- * - There are no win or lose colours: a win is printed, a loss is blank paper.
+ * - There are no win or lose colours on paper: a win is printed, a loss is
+ *   blank paper.
+ * - A game table is the one physical object (01-brand.md §2): felt in a padded
+ *   rail under one lamp, its layout printed on the felt in paper-white ink.
+ *   The table tokens below are used only there, never on a page or on paper.
  *
  * Values are HSL channels so utilities can add alpha: hsl(var(--ink) / 0.4).
  * Pages rebuilt in Carbon copy use only these tokens; arbi-dark.css serves
@@ -27,6 +31,21 @@
   --thermal: 232.5 12.9% 75.7%; /* #B9BBC9 */
   --on-carbon-muted: 234.9 41.2% 83.3%; /* #C3C6E6 */
   --slot-shade: 0 0% 0%; /* the printer slot's inner shadow, never a surface */
+
+  /* The table layer. Print on the felt is paper at 92%, 60% and 24%. */
+  --felt: 236.6 51.2% 33.7%; /* #2A2F82, felt under the lamp */
+  --felt-edge: 236.9 56.9% 20%; /* #161950, felt away from the lamp */
+  --groove-hi: 236.8 55.2% 26.3%; /* #1E2268, the lane's lit side */
+  --groove-lo: 236.6 63.9% 16.3%; /* #0F1244, the lane's shaded side */
+  --rail: 236.7 60% 11.8%; /* #0C0E30, the padded rail */
+  --rail-hi: 236.2 45.7% 27.5%; /* #262A66, the rail's top edge */
+  --rail-lo: 237.6 67.6% 7.3%; /* #06071F, the rail's underside */
+  --ivory-hi: 45 100% 98.4%; /* #FFFDF7, the ball's highlight */
+  --ivory: 43.2 36.2% 86.5%; /* #E9E2D0, the ball */
+  --ivory-lo: 42.2 19.6% 62.9%; /* #B3A88E, the ball's shaded side */
+  --lamp: 39.2 100% 90.4%; /* #FFEECE, the overhead lamp, only ever as light */
+  --table-shade: 0 0% 0%; /* shadows cast on and by the table, never a surface */
+  --table-sheen: 0 0% 100%; /* light caught by the rail and the groove's lip */
 
   /* The two faces (Schibsted Grotesk for words, Doto for printed figures)
      are set where the utilities are defined, in globals.css: their next/font
@@ -60,6 +79,7 @@
 
   --corner-print: 4px; /* inputs, stubs, small printed parts */
   --corner-sheet: 8px; /* receipts, slips, buttons */
+  --corner-spot: 16px; /* a betting spot printed on a table's felt */
 }
 
 /* Seven-character Chinese headlines need a smaller display size to break

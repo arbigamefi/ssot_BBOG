@@ -2,12 +2,13 @@
 
 | Owner | Frontend Lead + Product |
 | Status | Active |
-| Last Updated | 2026-11-04 |
+| Last Updated | 2026-11-09 |
 | Depends on | `../strategy/fullstack-product-architecture.md`, `10-design-tokens.md` |
 | Supersedes | The 2026-05-18 dark-dashboard direction |
 
 The ArbiGameFi brand is **Carbon copy** (复写联). The owner adopted it on 2026-11-03 after
-reviewing the home page and dice room concepts.
+reviewing the home page and dice room concepts, and added the table layer on 2026-11-09 after
+the receipt-only dice room "didn't feel like a game".
 
 ## 1. What the brand has to prove
 
@@ -26,8 +27,12 @@ settlement receipt is the product's strongest asset, so it is the visual languag
 an illustration on a card.
 
 - The home page shows real receipts as evidence.
-- A game room is one sheet of paper. It starts as the quote (the slip), prints into the receipt
-  when the bet is sent, and is torn off when the bet settles.
+- A game room has two layers: **the table is immersion, the paper is trust.**
+  - **The table** is the game: a physical object (felt, a padded rail, the layout printed on
+    the felt, a ball, chips) whose motion follows the bet's chain state. The dice ball rolls
+    while Chainlink VRF has not answered and stops on the number it returns.
+  - **The paper** is the proof: one sheet that starts as the quote (the slip), prints into the
+    receipt when the ball stops, and is torn off for the next bet.
 
 ## 3. Colour roles
 
@@ -49,6 +54,9 @@ Rules:
 - No other hue exists. Games, liquidity and portfolio get no colour families of their own.
 - A page alternates carbon and paper sections. The home page puts the hero and liquidity on
   carbon, and verification, games and steps on paper.
+
+The table layer has its own materials (`felt`, `rail`, `groove`, `print`, `ivory`, `lamp`,
+`chip`). They are used only on a game table, never on a page surface or on paper.
 
 Values and contrast figures are in [`10-design-tokens.md`](./10-design-tokens.md).
 
@@ -84,13 +92,22 @@ edges.
 
 ## 6. Printed objects
 
-Only printed objects are boxed: receipts, slips, ticket stubs, stamps and the dice scale strip.
-Nothing else on the site is a card. Lists sit under a 1px top line on the page grid.
+On the page and on paper, only printed objects are boxed: receipts, slips, ticket stubs and
+stamps. Nothing else on the site is a card. Lists sit under a 1px top line on the page grid.
+
+A game table is the one object outside this rule. It is drawn as a thing on the page (felt in a
+rail, under a lamp), and its layout is printed on the felt in paper-white ink, never as cards.
 
 ## 7. Wins and losses
 
-There are no win or lose colours. A win is printed in ink; a loss is blank paper. No confetti,
-no celebration copy: the receipt states the facts, including the house edge taken from a win.
+On paper there are no win or lose colours. A win is printed in ink; a loss is blank paper. No
+confetti and no celebration copy: the receipt states the facts, including the house edge taken
+from a win.
+
+On the table a net win is paid the way a dealer pays it: chips slide from the house onto the
+bet, the net amount lights up on the felt, the winning print brightens and the lamp warms, more
+for a bigger multiple. A loss, or a payout below the stake, gets nothing. The rules are in
+`02-voice-and-copy.md` §11.
 
 ## 8. Logo
 
@@ -103,8 +120,9 @@ no celebration copy: the receipt states the facts, including the house edge take
 Allowed: real receipts and chain data, diagrams drawn from the brand's lines, and the icons
 already in use.
 
-Not allowed: casino photography, chips, coins, stadiums, AI illustrations, mascots, decorative
-external image URLs and per-game visual brands.
+Not allowed: casino photography, coins, stadiums, AI illustrations, mascots, decorative
+external image URLs and per-game visual brands. Chips appear only as table objects drawn from
+the table tokens, never as pictures.
 
 ## 10. What the brand leaves out
 
@@ -122,12 +140,13 @@ not moved keeps the old dark tokens, and nothing new is built on them. The old t
 deleted with the last page.
 
 Moved so far: the home page (`app/(marketing)`, `features/home`), the dice room
-(`features/casino/dice-room`) and the site header and footer (`app-shell/SiteHeader.tsx`,
-`SiteFooter.tsx`, with the one navigation of `03-information-architecture.md` §4). The header sits
-on carbon above every page, including pages that have not moved; the root layout loads the
-Carbon copy faces for it. `isCarbonCopyPage` in `app-shell/AppShell.tsx` lists the moved pages.
-The other game rooms keep the shared room shell; every room reads the same controller
-(`features/casino/room/use-game-room.ts`), so a room moves by rendering its own table and slip.
+(`features/casino/dice-room`), whose table is the reference for the other games' tables, and the
+site header and footer (`app-shell/SiteHeader.tsx`, `SiteFooter.tsx`, with the one navigation of
+`03-information-architecture.md` §4). The header sits on carbon above every page, including pages
+that have not moved; the root layout loads the Carbon copy faces for it. `isCarbonCopyPage` in
+`app-shell/AppShell.tsx` lists the moved pages. The other game rooms keep the shared room shell;
+every room reads the same controller (`features/casino/room/use-game-room.ts`), so a room moves by
+rendering its own table and slip.
 
 ## 12. Verification
 

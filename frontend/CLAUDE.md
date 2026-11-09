@@ -64,8 +64,15 @@ time (`01-brand.md` §11).
   `text-faded`, `text-display`, `font-print`, `rounded-sheet`, …).
 - Ink never sits on carbon. Input edges on paper use `faded`, never `thermal`.
 - `font-print` (Doto) prints figures only. Rebuilt pages use no monospace face.
-- Only printed objects are boxed (receipt, slip, ticket stub, stamp, scale):
-  no cards, no decorative shadows, no win or lose colours, no confetti.
+- On pages and paper, only printed objects are boxed (receipt, slip, ticket
+  stub, stamp): no cards, no decorative shadows, no win or lose colours, no
+  confetti.
+- A game room has two layers: the table is immersion, the paper is trust. The
+  table (felt, rail, lane, ball, chips) uses only the table tokens and
+  `table-*` utilities, never off a table; its motion follows the bet's chain
+  state, never a script, and the receipt never waits on animation frames. Celebrate net
+  wins only, in proportion, with sound off by default and nothing for a loss
+  (`02-voice-and-copy.md` §11). No confetti on the table either.
 - Use the terms in `../docs/design/02-voice-and-copy.md` §2 in every locale
   (Liquidity, House pool, Rewards, Stake, Win chance, …). Contract names appear
   only under technical details.
