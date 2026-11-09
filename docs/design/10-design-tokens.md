@@ -2,7 +2,7 @@
 
 | Owner | Frontend Lead + Design Lead |
 | Status | Active |
-| Last Updated | 2026-11-03 |
+| Last Updated | 2026-11-09 |
 | Depends on | `01-brand.md`, `11-component-library.md` |
 | Supersedes | Draft v1 duplicated token spec |
 
@@ -66,6 +66,34 @@ Contrast (WCAG 2.1), checked by `tokens/carbon-copy.test.ts`:
 There are no success, warning or danger colours on a rebuilt page. A failure is stated in words
 above the action that fixes it (`02-voice-and-copy.md` §4).
 
+### The table layer
+
+A game table (`01-brand.md` §2) has its own materials. They are used only on a table, never on a
+page surface or on paper.
+
+| Utility / token      | Token                                 | Value                           | Role                                             |
+| -------------------- | ------------------------------------- | ------------------------------- | ------------------------------------------------ |
+| `felt`               | `--felt`                              | `#2A2F82`                       | Felt under the lamp                              |
+| `felt-edge`          | `--felt-edge`                         | `#161950`                       | Felt away from the lamp                          |
+| `rail`               | `--rail`                              | `#0C0E30`                       | The padded rail                                  |
+| (in `table-felt`)    | `--rail-hi`, `--rail-lo`              | `#262A66`, `#06071F`            | The rail's top edge and underside                |
+| (in `table-groove`)  | `--groove-hi`, `--groove-lo`          | `#1E2268`, `#0F1244`            | The lane's lit and shaded sides                  |
+| `print`              | paper at 92%                          |                                 | Figures and print on the felt                    |
+| `print-soft`         | paper at 60%                          |                                 | Labels, the scale, the rule, spot edges          |
+| `print-faint`        | paper at 24%                          |                                 | Minor ticks and empty chip rings only, no text   |
+| (in `table-ball`)    | `--ivory-hi`, `--ivory`, `--ivory-lo` | `#FFFDF7`, `#E9E2D0`, `#B3A88E` | The ball's highlight, body and shade             |
+| `lamp`               | `--lamp` at 17%                       | `#FFEECE`                       | The lamp's pool of light; the warm glow of a win |
+| `chip`, `chip-inlay` | ink, paper                            |                                 | A chip's segments and inlay                      |
+| (shadows only)       | `--table-shade`, `--table-sheen`      | black, white                    | Shadows on the table; light on the rail and lip  |
+
+Print on the felt (checked by `tokens/carbon-copy.test.ts`): `print` 7:1 or more on felt and
+felt-edge, `print-soft` 4.5:1 or more; `print-faint` is under 3:1 and never sets text.
+
+The materials are `@utility` rules in `globals.css`: `table-felt` (felt, rail, its sizes),
+`table-lamp`, `table-groove`, `table-zone`, `table-ball`, `table-ball-mark`, `table-readout`,
+`table-puck`, `table-ticks`, `table-chip`, `table-pay-glow`, `table-led` and `table-sheet` (the
+phone's docked slip). Product UI uses these and the tokens, never hex.
+
 ## 4. Typography
 
 | Utility        | Phone | From 48rem | Line height         | Use                                |
@@ -105,11 +133,15 @@ above the action that fixes it (`02-voice-and-copy.md` §4).
 ## 6. Radius, Lines And Elevation
 
 - `rounded-print` (4px): inputs, stubs and small printed parts. `rounded-sheet` (8px):
-  receipts, slips and buttons. `rounded-full`: stamps and dots. Nothing else.
+  receipts, slips and buttons. `rounded-spot` (16px): a betting spot printed on a table's felt.
+  `rounded-full`: stamps, dots, chips and switches. A table's felt, lane and readout carry their
+  own radii inside their `table-*` utilities. Nothing else.
 - Lines (`01-brand.md` §5): `border` 1px solid, `border-2 border-dashed`, `border-2
 border-dotted`, and a 2px ring. No other widths or styles.
-- One shadow: the phone action bar while it is docked to the bottom of the screen. Everything
-  else is separated by its edge or its surface, not a shadow.
+- On a page and on paper there are no shadows except the printer slot's recess
+  (`print-slot`): things are separated by their edge or their surface.
+- A game table is a physical object and casts and holds real shadows (the rail, the lane, the
+  ball, the puck, chips, the docked phone slip). They live only in the `table-*` utilities.
 
 ## 7. Theme
 
@@ -118,7 +150,9 @@ or dark toggle, and components never branch on `dark:` variants.
 
 ## 8. Do Not Do
 
-- Do not use `bg-[#...]`, `text-[#...]`, `border-[#...]`, or `shadow-[...]`.
+- Do not use `bg-[#...]`, `text-[#...]`, `border-[#...]`, or `shadow-[...]`; a table's
+  shadows are `table-*` utilities.
+- Do not use the table tokens off a game table.
 - Do not reintroduce `visual-system.ts` or `--ag-*` variables.
 - Do not add per-game colour maps.
 - Do not add `rounded-[...]` or one-off radii.

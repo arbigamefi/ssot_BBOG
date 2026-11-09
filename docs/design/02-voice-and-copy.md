@@ -2,7 +2,7 @@
 
 | Owner | Product + Frontend |
 | Status | Active |
-| Last Updated | 2026-11-03 |
+| Last Updated | 2026-11-09 |
 | Depends on | `01-brand.md`, `../strategy/fullstack-product-architecture.md`, `../frontend/21-i18n.md` |
 | Supersedes | Draft v1 copy manual |
 
@@ -33,21 +33,25 @@ Avoid:
 One name per concept, in every locale. Contract names (`Bank`, `LiquidityVault`, `GameHub`)
 appear only under technical details, next to the address.
 
-| Concept                                   | English             | 中文         |
-| ----------------------------------------- | ------------------- | ------------ |
-| The games area                            | Casino              | 游戏         |
-| One game                                  | Game (not "room")   | 游戏         |
-| The liquidity page, nav item and product  | Liquidity           | 流动性       |
-| The money that pays winners               | House pool          | 庄池         |
-| People who deposit into it                | Liquidity providers | 流动性提供者 |
-| A liquidity position                      | Deposit NFT         | 存款 NFT     |
-| Referral and rebate rewards, paid in USDC | Rewards             | 奖励         |
-| What a player can withdraw                | Claimable balance   | 可领取余额   |
-| The share of a win kept by the house      | House edge          | 庄家优势     |
-| The amount bet                            | Stake               | 下注额       |
-| The probability of winning                | Win chance          | 中奖概率     |
-| The Chainlink VRF charge                  | Randomness fee      | 随机数费用   |
-| The settlement record                     | Receipt             | 凭证         |
+| Concept                                   | English             | 中文           |
+| ----------------------------------------- | ------------------- | -------------- |
+| The games area                            | Casino              | 游戏           |
+| One game                                  | Game (not "room")   | 游戏           |
+| The liquidity page, nav item and product  | Liquidity           | 流动性         |
+| The money that pays winners               | House pool          | 庄池           |
+| People who deposit into it                | Liquidity providers | 流动性提供者   |
+| A liquidity position                      | Deposit NFT         | 存款 NFT       |
+| Referral and rebate rewards, paid in USDC | Rewards             | 奖励           |
+| What a player can withdraw                | Claimable balance   | 可领取余额     |
+| The share of a win kept by the house      | House edge          | 庄家优势       |
+| The amount bet                            | Stake               | 下注额         |
+| The probability of winning                | Win chance          | 中奖概率       |
+| The Chainlink VRF charge                  | Randomness fee      | 随机数费用     |
+| The settlement record                     | Receipt             | 凭证           |
+| The dice bet on the low side of the line  | Roll under          | 押小           |
+| The dice bet on the high side of the line | Roll over           | 押大           |
+| The dice line the player drags            | Line                | 分界线         |
+| The table's sound switch                  | Sound on, Sound off | 声音开，声音关 |
 
 Retired on the player site: Bankroll, Pools, Bank, Vault, XP and Room. The Chinese site never
 says 赌场.
@@ -152,6 +156,10 @@ Copy depends on what the build offers (`getCasinoAccess`):
 The official channels are Telegram (t.me/arbigamefi) and X (@arbi_game_fi), read from
 `config/site.ts`. The site collects no email addresses.
 
+The printer's status line in a game room reads, in order: Ready (就绪); Waiting for the random
+number, N s (等随机数，N 秒); Number received (随机数已到); Printing receipt (正在打印凭证);
+Receipt printed (凭证已打印). A multi-round bet's table reads "Round k of n" (第 k 局，共 n 局).
+
 ## 9. i18n
 
 Visible product copy must use the i18n key system. English-only inline copy is
@@ -160,6 +168,27 @@ crash fallback where providers may be unavailable.
 
 Chinese copy is written for Chinese readers, not translated word for word. It uses the terms in
 §2 and full-width punctuation.
+
+## 11. Celebration
+
+A game table may pay a win the way a dealer does; the paper never celebrates
+(`01-brand.md` §7).
+
+- **Net wins only.** The table reacts only when the bet's net result is above zero. A loss, a
+  push and a payout below the stake (a multi-round bet that won some rounds) get no effect and no
+  sound.
+- **In proportion.** The reaction grows with the payout as a multiple of the stake: two chips
+  under 2×, three from 2×, five from 5×, seven and a pulse from 10×. The net amount lights up on
+  the felt; it is the receipt's net result, never a rounder or larger figure.
+- **Never a loss shown as a win.** No "You won" for a payout below the stake, no gross payout
+  dressed as a win, no sound or light that a loss could trigger.
+- **No staged near miss.** The ball rolls to the number the contract read and stops. It never
+  slows at the line, stops short and rolls on, or lingers next to a winning number.
+- **No celebration copy.** No "Big win!", "Jackpot" or exclamation marks; figures speak.
+- **Sound is off by default.** The player turns it on with the switch on the felt and the choice
+  is remembered on that device. Sounds are short and synthesised: the ball rolling, a tick at
+  each end of the lane, the ball landing, a chip clink. There is never a sound for a loss.
+- **Reduced motion** keeps the facts (the net amount, the chips in place) and drops the motion.
 
 ## 10. Verification
 

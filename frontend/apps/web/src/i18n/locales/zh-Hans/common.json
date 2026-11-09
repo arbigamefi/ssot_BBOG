@@ -1088,21 +1088,28 @@
       "head": {
         "crumb": "全部游戏",
         "title": "骰子",
-        "lede": "Chainlink VRF 掷出 1 到 100 之间的一个数。落在你选的那一边，你就赢。"
+        "lede": "Chainlink VRF 从 1 到 100 里掷出一个数，球就停在这个数上。落在你这一边就赢。"
       },
       "table": {
-        "title": "你的赔率",
+        "title": "牌桌",
         "chance": "中奖概率",
         "pays": "赔付",
-        "winOn": "{from}–{to} 赢",
-        "loseOn": "{from}–{to} 输",
         "line": "分界线",
         "valueText": "掷出 {from} 到 {to} 赢。中奖概率 {chance}%，赔付是下注额的 {pays} 倍。",
         "side": "方向",
-        "low": "小",
-        "high": "大",
-        "lineDown": "分界线减一",
-        "lineUp": "分界线加一"
+        "under": "押小",
+        "over": "押大",
+        "range": "{from} 到 {to}",
+        "rule": "赔付 = 100 ÷ 赢的数字个数，扣 {rate} 庄家优势。球停在 Chainlink VRF 掷出的数上。",
+        "status": {
+          "ready": "拖动分界线，再选一边。",
+          "waiting": "正在等随机数。数到之前，球一直在滚。",
+          "round": "第 {k} 局，共 {n} 局"
+        },
+        "sound": {
+          "on": "声音开",
+          "off": "声音关"
+        }
       },
       "slip": {
         "label": "下注单",
@@ -1113,7 +1120,6 @@
         "total": "总下注额",
         "fee": "随机数费用",
         "feeUpTo": "最多 {fee}",
-        "feeShort": "费用 ≤ {fee}",
         "rounds": "局数",
         "fewer": "少一局",
         "more": "多一局",
@@ -1124,7 +1130,8 @@
         "max": "最大 {amount}",
         "maxUnknown": "最大",
         "balance": "余额 {amount} {symbol}。",
-        "connectHint": "连接钱包后，这里显示你的余额。"
+        "connectHint": "连接钱包后，这里显示你的余额。",
+        "gameRounds": "{game}，{rounds} 局"
       },
       "action": {
         "telegram": "加入 Telegram 频道",
@@ -1365,7 +1372,19 @@
           "title": "这一注在这里停止了更新",
           "note": "它仍在链上。打开看看现在的状态。"
         },
-        "open": "打开这一注"
+        "open": "打开这一注",
+        "seconds": "{seconds} 秒"
+      },
+      "printer": {
+        "ready": "就绪",
+        "waiting": "等随机数，{seconds} 秒",
+        "received": "随机数已到",
+        "printing": "正在打印凭证",
+        "printed": "凭证已打印"
+      },
+      "sheet": {
+        "open": "展开完整下注单",
+        "close": "收起"
       },
       "receipt": {
         "label": "第 {id} 注的凭证",
@@ -1425,7 +1444,7 @@
         },
         "line": {
           "title": "你的分界线",
-          "body": "选小，掷出分界线或更小的数就赢；选大，掷出比分界线大的数就赢。中奖概率从 2% 到 97%；再高的话，赢了也拿不回比下注额更多的钱。"
+          "body": "押小，掷出分界线或更小的数就赢；押大，掷出比分界线大的数就赢。中奖概率从 2% 到 97%；再高的话，赢了也拿不回比下注额更多的钱。"
         },
         "payout": {
           "title": "赔付",

@@ -14,7 +14,7 @@ import { diceWinRange } from "./slip-model";
 import { FOCUS_ON_PAPER, LINK } from "./styles";
 
 /** Every section sits on one 12-column grid inside the page width. */
-export const SECTION_GRID =
+const SECTION_GRID =
   "mx-auto box-content grid max-w-page grid-cols-1 gap-x-columns px-gutter lg:grid-cols-12";
 const HEADING = "text-heading font-extrabold text-balance break-keep";
 

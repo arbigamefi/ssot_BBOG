@@ -73,7 +73,14 @@ function makeRoom(overrides: RoomOverrides = {}) {
 function renderSlip(room: GameRoom, access: CasinoAccess = "testnet") {
   return render(
     <NextIntlClientProvider locale="en" messages={en}>
-      <DiceSlip room={room} access={access} chainName="Base Sepolia" houseEdgeRate="2%" />
+      <DiceSlip
+        room={room}
+        access={access}
+        chainName="Base Sepolia"
+        houseEdgeRate="2%"
+        holdReceipt={false}
+        className=""
+      />
     </NextIntlClientProvider>
   );
 }
@@ -89,7 +96,7 @@ describe("DiceSlip", () => {
   it("quotes the bet and places it with the main button", () => {
     const room = makeRoom();
     renderSlip(room);
-    expect(slip().getByText("Dice, win on 1–50")).toBeDefined();
+    expect(slip().getAllByText("Dice, win on 1–50")).toHaveLength(2);
     expect(slip().getAllByText("1.96 USDC").length).toBeGreaterThan(0);
     expect(slip().getByText("up to 0.00005583 ETH")).toBeDefined();
     expect(slip().getByText("Balance 12.40 USDC.")).toBeDefined();
@@ -207,7 +214,8 @@ describe("DiceSlip", () => {
       })
     );
     expect(slip().getByText("Bet 7")).toBeDefined();
-    expect(slip().getByText("Waiting for randomness")).toBeDefined();
+    // The phone sheet's summary line says it too.
+    expect(slip().getAllByText("Waiting for randomness")).toHaveLength(2);
     expect(screen.getByText("Bet placed. Waiting for randomness.")).toBeDefined();
   });
 
@@ -221,7 +229,7 @@ describe("DiceSlip", () => {
       }
     });
     renderSlip(room);
-    expect(slip().getByText("No random number arrived")).toBeDefined();
+    expect(slip().getAllByText("No random number arrived")).toHaveLength(2);
     fireEvent.click(slip().getByRole("button", { name: "Refund 1.00 USDC" }));
     expect(room.casinoRound.manualRefund).toHaveBeenCalledTimes(1);
   });
@@ -262,7 +270,7 @@ describe("DiceReceipt", () => {
     renderSlip(settled);
     const receipt = within(screen.getByRole("article", { name: "Receipt for bet 5" }));
     expect(receipt.getByText("Dice, win on 6–100")).toBeDefined();
-    expect(receipt.getByText("Rolled 67.")).toBeDefined();
+    expect(receipt.getAllByText("Rolled 67.")).toHaveLength(2);
     expect(receipt.getAllByText("Paid to wallet")).toHaveLength(2);
     expect(receipt.getByText("House edge, 2%")).toBeDefined();
     expect(receipt.getByText("0.825263")).toBeDefined();
@@ -272,11 +280,43 @@ describe("DiceReceipt", () => {
     expect(screen.getByText("Rolled 67. Net result +0.025263 USDC.")).toBeDefined();
   });
 
+  it("waits for the ball to stop before it prints", () => {
+    render(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <DiceSlip
+          room={{ ...settled, isBetPanelPending: true } as GameRoom}
+          access="testnet"
+          chainName="Base Sepolia"
+          houseEdgeRate="2%"
+          holdReceipt
+          className=""
+        />
+      </NextIntlClientProvider>
+    );
+    expect(screen.queryByRole("article", { name: "Receipt for bet 5" })).toBeNull();
+  });
+
   it("tears the receipt off for the next bet or a change", () => {
     renderSlip(settled);
     fireEvent.click(screen.getByRole("button", { name: "Bet again" }));
     expect(settled.handleResultPlayAgain).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "Change bet" }));
     expect(settled.handleResultClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("the phone sheet", () => {
+  afterEach(cleanup);
+
+  it("opens the full slip from its summary line", () => {
+    renderSlip(makeRoom());
+    const head = screen.getByRole("button", { name: "Dice, win on 1–50. Show the full slip" });
+    expect(head.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(head);
+    expect(
+      screen
+        .getByRole("button", { name: "Dice, win on 1–50. Show less" })
+        .getAttribute("aria-expanded")
+    ).toBe("true");
   });
 });
