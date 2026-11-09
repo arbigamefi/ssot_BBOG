@@ -6,7 +6,13 @@ import { NextIntlClientProvider } from "next-intl";
 import type { CasinoAccess } from "../../../app-shell/casino-access";
 import en from "../../../i18n/locales/en/common.json";
 import type { GameRoom } from "../room/use-game-room";
-import { DiceSlip } from "./dice-slip";
+import { RoomSlip } from "../table-room/room-slip";
+import { useDiceSlipGame } from "./dice-slip-game";
+
+/** The slip as the dice room renders it. */
+function DiceSlip(props: Omit<React.ComponentProps<typeof RoomSlip>, "game">) {
+  return <RoomSlip game={useDiceSlipGame(props.room)} {...props} />;
+}
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: any) => (

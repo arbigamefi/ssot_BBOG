@@ -12,7 +12,6 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
     ({
       "casino.room.stage.loading": "Loading stage",
-      "casino.room.history.recent.numbers": "RECENT NUMBERS",
       "casino.room.history.recent.draws": "RECENT DRAWS",
       "casino.room.history.recent.buckets": "RECENT BUCKETS",
       "casino.room.history.recent.slots": "RECENT SLOTS",
@@ -66,8 +65,6 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.pending": "Pending",
       "casino.room.result.facts.coinChoice": "Chosen side",
       "casino.room.result.facts.coinDrawn": "Side drawn",
-      "casino.room.result.facts.rouletteBet": "Roulette bet",
-      "casino.room.result.facts.rouletteWinningNumber": "Winning number",
       "casino.room.result.facts.kenoPicked": "Numbers picked",
       "casino.room.result.facts.kenoDrawn": "Numbers drawn",
       "casino.room.result.facts.kenoHits": "Hits",
@@ -158,7 +155,6 @@ const baseProps = {
   multiplier: 1.98,
   houseEdgeBps: 200,
   winChance: 50,
-  rouletteSpots: [],
   kenoSpots: [],
   plinkoRisk: "medium" as const,
   baccaratSide: "player" as const,
@@ -174,7 +170,6 @@ const baseProps = {
   assetDecimals: 6,
   onResultClose: vi.fn(),
   onCoinSideChange: vi.fn(),
-  onRouletteChange: vi.fn(),
   onKenoChange: vi.fn(),
   onKenoResetResult: vi.fn(),
   onPlinkoRiskChange: vi.fn(),
@@ -218,7 +213,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="roulette"
+        gameSlug="keno"
         showResult
         resultNum={17}
         resultProof={{
@@ -244,7 +239,7 @@ describe("GameRoomRightPane", () => {
       />
     );
 
-    expect(screen.getByText("RECENT NUMBERS")).toBeDefined();
+    expect(screen.getByText("RECENT DRAWS")).toBeDefined();
     expect(screen.getByText("SETTLED")).toBeDefined();
     expect((await screen.findAllByText("Won bet")).length).toBeGreaterThan(0);
     expect(screen.getByText("Bet details")).toBeDefined();
@@ -261,7 +256,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="roulette"
+        gameSlug="keno"
         showResult
         resultNum={17}
         resultProof={{
@@ -298,7 +293,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="roulette"
+        gameSlug="keno"
         showResult
         resultProof={{
           kind: "indexing",
@@ -320,7 +315,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="roulette"
+        gameSlug="keno"
         showResult
         resultNum={17}
         resultProof={{
@@ -334,9 +329,9 @@ describe("GameRoomRightPane", () => {
           resolvedAt: 1_778_888_888
         }}
         casinoOutcome={{
-          kind: "roulette",
-          selectedNumbers: [17],
-          rolls: [{ value: 17, won: true }],
+          kind: "keno",
+          pickedNumbers: [17],
+          draws: [{ numbers: [17], hits: 1, won: true }],
           payoutGross: 20_000_000n,
           payoutNet: 19_600_000n,
           refundAmount: 0n,

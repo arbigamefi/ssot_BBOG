@@ -9,23 +9,19 @@ import type { CasinoOutcome } from "../room/outcome";
 import { diceTargetBounds, type DiceDirection } from "../room/payouts";
 import type { PlaceBetButtonPhase } from "../room/place-bet-button";
 import { at, createBallMotion, numberAt, type BallMotion } from "./ball-motion";
-import { formatRolls } from "./dice-receipt";
-import { diceMultiplier, diceWinRange, diceWins } from "./slip-model";
-import { ballWaits, celebrate, type Celebration } from "./table-model";
-import type { TableSound } from "./table-sound";
+import { formatRolls } from "../table-room/room-receipt";
+import { PaidChips, reducedMotion, SoundButton, useTableSound } from "../table-room/table-controls";
+import { awaitsNumber, celebrate, type Celebration } from "../table-room/table-model";
+import { diceMultiplier, diceWinRange, diceWins } from "./dice-model";
 
 type DiceOutcome = Extract<CasinoOutcome, { kind: "dice" }>;
 type Pin = { value: number; won: boolean };
 
 /** The lane's padding: the scale runs from 6px in from each end. */
 const INSET = 6;
-const SOUND_KEY = "agf-table-sound";
 const TICKS = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 /** Where a number or the line sits along the lane, as CSS. */
 const along = (fraction: number) => `calc(${INSET}px + ${fraction} * (100% - ${2 * INSET}px))`;
-const reducedMotion = () =>
-  typeof window === "undefined" ||
-  (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? true);
 
 /**
  * The dice table: indigo felt in a padded rail under one lamp, the layout printed on it, an ivory
@@ -68,6 +64,7 @@ export function DiceTable({
   onLanded: () => void;
 }) {
   const t = useTranslations("casino.dice");
+  const tt = useTranslations("casino.table");
   const locale = useLocale();
   const feltRef = React.useRef<HTMLElement>(null);
   const grooveRef = React.useRef<HTMLDivElement>(null);
@@ -175,7 +172,7 @@ export function DiceTable({
 
   // Waiting for the random number: the ball rolls back and forth. It stops for a refund, but
   // rolls on when the number arrives, so it keeps its speed and heading.
-  const waiting = ballWaits(phase) && !outcome;
+  const waiting = awaitsNumber(phase) && !outcome;
   const hasOutcome = Boolean(outcome);
   React.useEffect(() => {
     const motion = motionRef.current;
@@ -272,7 +269,7 @@ export function DiceTable({
   const status = waiting
     ? t("table.status.waiting")
     : round
-      ? t("table.status.round", { k: round.k, n: round.n })
+      ? tt("round", { k: round.k, n: round.n })
       : done && pins.length > 0
         ? pins.length > 1
           ? t("receipt.rolledRounds", {
@@ -326,20 +323,10 @@ export function DiceTable({
           </span>
         </p>
         <div className="ml-auto grid justify-items-end gap-2.5 text-right @max-[640px]/felt:ml-0 @max-[640px]/felt:basis-full @max-[640px]/felt:justify-items-start @max-[640px]/felt:gap-1.5 @max-[640px]/felt:text-left">
-          <button
-            type="button"
-            aria-pressed={sound.on}
-            aria-label={sound.on ? t("table.sound.on") : t("table.sound.off")}
-            onClick={sound.toggle}
-            className={`inline-flex h-8 items-center gap-2 rounded-full border pr-3 pl-2.5 text-note focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper @max-[640px]/felt:absolute @max-[640px]/felt:top-3.5 @max-[640px]/felt:right-3.5 @max-[640px]/felt:pr-2.5 ${
-              sound.on ? "border-print-soft text-print" : "border-print-faint text-print-soft"
-            }`}
-          >
-            <SoundIcon on={sound.on} />
-            <span className="@max-[640px]/felt:sr-only">
-              {sound.on ? t("table.sound.on") : t("table.sound.off")}
-            </span>
-          </button>
+          <SoundButton
+            sound={sound}
+            compact="@max-[640px]/felt:absolute @max-[640px]/felt:top-3.5 @max-[640px]/felt:right-3.5 @max-[640px]/felt:pr-2.5 @max-[640px]/felt:[&_[data-label]]:sr-only"
+          />
           {net && win ? (
             <p
               aria-hidden="true"
@@ -509,146 +496,5 @@ export function DiceTable({
         />
       ) : null}
     </section>
-  );
-}
-
-/** Chips slide from the house edge of the felt onto the chip on the bet, and stay there. */
-function PaidChips({
-  count,
-  feltRef,
-  spotRef,
-  sound
-}: {
-  count: number;
-  feltRef: React.RefObject<HTMLElement | null>;
-  spotRef: React.RefObject<HTMLSpanElement | null>;
-  sound: React.RefObject<TableSound | null>;
-}) {
-  const layerRef = React.useRef<HTMLDivElement>(null);
-
-  React.useLayoutEffect(() => {
-    const layer = layerRef.current;
-    const felt = feltRef.current;
-    if (!layer || !felt) return;
-    const chips = Array.from(layer.children) as HTMLElement[];
-    const place = () => {
-      const spot = spotRef.current?.getBoundingClientRect();
-      const box = felt.getBoundingClientRect();
-      if (!spot) return null;
-      const x = spot.left - (box.left + felt.clientLeft);
-      const y = spot.top - (box.top + felt.clientTop);
-      chips.forEach((chip, k) => {
-        chip.style.transform = `translate(${x + (k % 2 ? 1 : -1)}px, ${y - 4 * (k + 1)}px)`;
-      });
-      return spot.width;
-    };
-    const size = place();
-    const timers: Array<ReturnType<typeof setTimeout>> = [];
-    if (size != null && !reducedMotion()) {
-      const fromX = felt.clientWidth / 2 - size / 2;
-      chips.forEach((chip, k) => {
-        const spread = (k - (count - 1) / 2) * 14;
-        chip.animate?.(
-          [
-            { transform: `translate(${fromX + spread}px, ${-size - 8}px)` },
-            { transform: chip.style.transform }
-          ],
-          {
-            duration: 560,
-            delay: 120 + k * 110,
-            easing: "cubic-bezier(.2, .8, .3, 1)",
-            fill: "backwards"
-          }
-        );
-        timers.push(setTimeout(() => sound.current?.clink(k), 120 + k * 110 + 540));
-      });
-    } else {
-      sound.current?.clink(0);
-    }
-    window.addEventListener("resize", place);
-    return () => {
-      window.removeEventListener("resize", place);
-      timers.forEach(clearTimeout);
-    };
-    // The chips are paid once.
-  }, []);
-
-  return (
-    <div ref={layerRef} aria-hidden="true" className="pointer-events-none absolute inset-0 z-5">
-      {Array.from({ length: count }, (_, k) => (
-        <i key={k} className="table-chip absolute top-0 left-0" />
-      ))}
-    </div>
-  );
-}
-
-type SoundSwitch = {
-  engine: React.RefObject<TableSound | null>;
-  on: boolean;
-  toggle: () => void;
-};
-
-/**
- * The table's sound: off until the player turns it on, remembered on this device. The synthesiser
- * is loaded only once sound is on.
- */
-function useTableSound(): SoundSwitch {
-  const engine = React.useRef<TableSound | null>(null);
-  const [on, setOn] = React.useState(false);
-
-  React.useEffect(() => {
-    try {
-      if (window.localStorage.getItem(SOUND_KEY) === "on") setOn(true);
-    } catch {
-      // Storage may be blocked; sound stays off.
-    }
-  }, []);
-
-  React.useEffect(() => {
-    if (!on) return;
-    let cancelled = false;
-    void import("./table-sound").then(({ createTableSound }) => {
-      if (!cancelled) engine.current = createTableSound();
-    });
-    return () => {
-      cancelled = true;
-      engine.current?.close();
-      engine.current = null;
-    };
-  }, [on]);
-
-  const toggle = React.useCallback(() => {
-    setOn((current) => {
-      try {
-        window.localStorage.setItem(SOUND_KEY, current ? "off" : "on");
-      } catch {
-        // The choice lasts for this visit only.
-      }
-      return !current;
-    });
-  }, []);
-
-  return React.useMemo(() => ({ engine, on, toggle }), [on, toggle]);
-}
-
-function SoundIcon({ on }: { on: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinejoin="round"
-      strokeLinecap="round"
-    >
-      <path d="M2 6h2.5L8 3v10L4.5 10H2z" fill="currentColor" />
-      {on ? (
-        <path d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12.5 3.5a6.3 6.3 0 0 1 0 9" />
-      ) : (
-        <path d="M11 6l4 4M15 6l-4 4" />
-      )}
-    </svg>
   );
 }

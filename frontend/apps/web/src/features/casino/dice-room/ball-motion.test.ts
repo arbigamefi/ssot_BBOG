@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { at, createBallMotion, FIRST_ROLL_DEADLINE_MS, ROUND_GAP_MS } from "./ball-motion";
-import { celebrate, printerState } from "./table-model";
+import { celebrate, printerState } from "../table-room/table-model";
 
 const FRAME = 1000 / 60;
 // Called as methods of this object, as the controller calls them.

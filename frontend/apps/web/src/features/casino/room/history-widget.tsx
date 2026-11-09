@@ -18,7 +18,6 @@ export type RecentBetSummary = {
 type Translate = ReturnType<typeof useTranslations>;
 
 function getRecentLabel(gameSlug: string, t: Translate) {
-  if (gameSlug === "roulette") return t("casino.room.history.recent.numbers");
   if (gameSlug === "keno") return t("casino.room.history.recent.draws");
   if (gameSlug === "plinko") return t("casino.room.history.recent.buckets");
   if (gameSlug === "slots") return t("casino.room.history.recent.slots");
@@ -45,18 +44,6 @@ function getBetStateClass(state: string) {
 function HistoryValue({ gameSlug, value }: { gameSlug: string; value: number }) {
   if (gameSlug === "coin-toss") return value === 1 ? "H" : "T";
   if (gameSlug === "keno") return value;
-  if (gameSlug === "roulette") {
-    return (
-      <span
-        className={cn(
-          "flex h-5 w-5 items-center justify-center rounded-full text-[8px]",
-          value === 0 ? "bg-success" : RED_NUMBER_SET.has(value) ? "bg-danger" : "bg-surface-3"
-        )}
-      >
-        {value}
-      </span>
-    );
-  }
   return value;
 }
 

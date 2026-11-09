@@ -101,6 +101,9 @@
   --color-chip: hsl(var(--ink));
   --color-chip-inlay: hsl(var(--paper));
   --color-lamp: hsl(var(--lamp) / 0.17);
+  --color-pocket-red: hsl(var(--pocket-red));
+  --color-pocket-black: hsl(var(--pocket-black));
+  --color-pocket-green: hsl(var(--pocket-green));
 
   /* Schibsted Grotesk at 400, 600 and 800 sets every word; Doto 800 prints
      figures only. The next/font variables are set on the wrapper of a page
@@ -649,17 +652,371 @@
     linear-gradient(90deg, hsl(var(--paper) / 0.24) 1px, transparent 1px) 0 0 / 2% 6px repeat-x;
 }
 
-/* A chip: ink and paper segments around a paper inlay. */
+/* A chip: ink and paper segments around a paper inlay, all in proportion to its size. */
 @utility table-chip {
   width: var(--chip-size);
   height: var(--chip-size);
   border-radius: 50%;
   background:
-    radial-gradient(circle, hsl(var(--paper)) 0 7px, transparent 7.5px),
+    radial-gradient(
+      circle,
+      hsl(var(--paper)) 0 calc(var(--chip-size) * 0.206),
+      transparent calc(var(--chip-size) * 0.22)
+    ),
     repeating-conic-gradient(hsl(var(--ink)) 0 15deg, hsl(var(--paper)) 15deg 30deg);
   box-shadow:
-    inset 0 0 0 3px hsl(var(--paper)),
+    inset 0 0 0 calc(var(--chip-size) * 0.09) hsl(var(--paper)),
     0 3px 4px hsl(var(--table-shade) / 0.5);
+}
+
+/* Roulette's wheel, drawn tilted inside its SVG (roulette-room/roulette-wheel.tsx). Parts are
+   marked with data-w, gradient stops with data-s, pockets with data-c and data-n. Once the ball
+   is in, the head is marked data-landed and the winning pocket data-lit; the rest dims. */
+@utility table-wheel {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 8% 0 -6%;
+    z-index: -1;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, hsl(var(--table-shade) / 0.55), transparent);
+  }
+  & svg {
+    overflow: visible;
+  }
+  & [data-c="red"] {
+    fill: hsl(var(--pocket-red));
+  }
+  & [data-c="black"] {
+    fill: hsl(var(--pocket-black));
+  }
+  & [data-c="zero"] {
+    fill: hsl(var(--pocket-green));
+  }
+  & [data-w="floor"] {
+    opacity: 0.5;
+  }
+  & [data-w="num"] {
+    font-size: 10px;
+    font-weight: 700;
+    fill: hsl(var(--paper));
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  & [data-w="fret"] {
+    stroke: hsl(var(--ivory-hi) / 0.85);
+    stroke-width: 1.3;
+    stroke-linecap: round;
+  }
+  & [data-w="bowl"] {
+    fill: hsl(var(--rail-lo));
+    stroke: hsl(var(--table-shade) / 0.6);
+    stroke-width: 2;
+  }
+  & [data-w="glint"] {
+    fill: none;
+    stroke: hsl(var(--table-sheen) / 0.4);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+  & [data-w="gloss"] {
+    fill: none;
+    stroke: hsl(var(--table-sheen) / 0.16);
+    stroke-width: 1.5;
+  }
+  & [data-w="band"] {
+    fill: none;
+    stroke: hsl(var(--ivory-lo));
+    stroke-width: 2.2;
+  }
+  & [data-w="band-inner"] {
+    fill: none;
+    stroke: hsl(var(--ivory) / 0.7);
+    stroke-width: 1.6;
+  }
+  & [data-w="line"] {
+    fill: none;
+    stroke: hsl(var(--ivory) / 0.45);
+    stroke-width: 1;
+  }
+  & [data-w="cone-line"] {
+    fill: none;
+    stroke: hsl(var(--ivory) / 0.18);
+    stroke-width: 1;
+  }
+  & [data-w="head-base"] {
+    fill: hsl(var(--rail-lo));
+  }
+  & [data-w="track"] {
+    fill: hsl(var(--groove-lo));
+  }
+  & [data-w="deflector"] {
+    fill: hsl(var(--ivory-lo));
+  }
+  & [data-w="arm"] {
+    stroke: hsl(var(--ivory-lo));
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+  & [data-w="knob"] {
+    fill: hsl(var(--ivory));
+  }
+  & [data-w="turret"] {
+    stroke: hsl(var(--ivory-lo));
+    stroke-width: 1.5;
+  }
+  & [data-w="lamp"] {
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  & [data-w="ball-shadow"] {
+    fill: hsl(var(--table-shade) / 0.55);
+  }
+  & [data-w="ball-glint"] {
+    fill: hsl(var(--table-sheen) / 0.9);
+  }
+  & [data-s="rail"] {
+    stop-color: hsl(var(--rail));
+  }
+  & [data-s="rail-hi"] {
+    stop-color: hsl(var(--rail-hi));
+  }
+  & [data-s="rail-lo"] {
+    stop-color: hsl(var(--rail-lo));
+  }
+  & [data-s="groove-hi"] {
+    stop-color: hsl(var(--groove-hi));
+  }
+  & [data-s="felt-edge"] {
+    stop-color: hsl(var(--felt-edge));
+  }
+  & [data-s="ivory-hi"] {
+    stop-color: hsl(var(--ivory-hi));
+  }
+  & [data-s="ivory"] {
+    stop-color: hsl(var(--ivory));
+  }
+  & [data-s="ivory-lo"] {
+    stop-color: hsl(var(--ivory-lo));
+  }
+  & [data-s="sheen"] {
+    stop-color: hsl(var(--table-sheen));
+  }
+  & [data-s="lamp"] {
+    stop-color: hsl(var(--lamp));
+  }
+  & [data-n] {
+    transition:
+      opacity 0.35s ease,
+      filter 0.35s ease;
+  }
+  & [data-landed] [data-n]:not([data-lit]) {
+    opacity: 0.4;
+  }
+  & [data-landed] [data-w="floor"]:not([data-lit]) {
+    opacity: 0.22;
+  }
+  & [data-landed] path[data-lit]:not([data-w="floor"]) {
+    filter: brightness(1.45);
+  }
+  & [data-w="lit-ring"] {
+    fill: none;
+    stroke: hsl(var(--paper));
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  & [data-landed] [data-w="lit-ring"] {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px hsl(var(--lamp) / 0.9));
+  }
+}
+
+/* A roulette result: a ball in its pocket's colour with its number on it (data-c red, black or
+   zero). On the felt it is lit and casts a shadow; printed on paper (data-on="paper") it is flat.
+   The element sets its size. */
+@utility pocket-ball {
+  --c: var(--pocket-black);
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, hsl(var(--table-sheen) / 0.32), transparent 48%),
+    hsl(var(--c));
+  box-shadow:
+    inset 0 0 0 1.5px hsl(var(--paper) / 0.75),
+    0 2px 3px hsl(var(--table-shade) / 0.35);
+  color: hsl(var(--paper));
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  &[data-c="red"] {
+    --c: var(--pocket-red);
+  }
+  &[data-c="zero"] {
+    --c: var(--pocket-green);
+  }
+  &[data-latest] {
+    box-shadow:
+      inset 0 0 0 1.5px hsl(var(--paper) / 0.75),
+      0 0 0 2px hsl(var(--felt)),
+      0 0 0 3.5px hsl(var(--paper));
+  }
+  &[data-size="lg"] {
+    background:
+      radial-gradient(circle at 34% 28%, hsl(var(--table-sheen) / 0.38), transparent 46%),
+      hsl(var(--c));
+    box-shadow:
+      inset 0 0 0 3px hsl(var(--paper) / 0.85),
+      0 6px 12px hsl(var(--table-shade) / 0.5);
+  }
+  &[data-on="paper"] {
+    background: hsl(var(--c));
+    box-shadow: none;
+  }
+}
+
+/* A spot on the roulette layout, printed on the felt. Every cell draws its edges as an outline
+   centred on the line it shares, so shared edges stay one line thick; numbers sit on their pocket
+   colour (data-c), inset from the lines. The layout is marked data-chips once a chip is down. A
+   spot is data-covered when the bet covers its number, data-preview while a hover, focus or long
+   press shows what a spot covers, data-hit or data-paid when it won, data-dolly for the number
+   that came up. A pressed spot carries a chip, sized by --chip-size. */
+@utility table-spot {
+  --ring-gap: 4px;
+  --ring-line: 2px;
+  --ring-in: inset 0 0 0 var(--ring-gap) hsl(var(--felt));
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 4px;
+  border: 0;
+  border-radius: 0;
+  outline: 1.5px solid hsl(var(--paper) / 0.62);
+  outline-offset: -0.75px;
+  background: transparent;
+  color: hsl(var(--paper) / 0.92);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    opacity 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+  &[data-c="red"] {
+    background: hsl(var(--pocket-red)) content-box;
+  }
+  &[data-c="black"] {
+    background: hsl(var(--pocket-black)) content-box;
+  }
+  &[data-c="zero"] {
+    background: hsl(var(--pocket-green)) content-box;
+    color: hsl(var(--paper));
+  }
+  &:disabled {
+    cursor: default;
+  }
+  &:focus-visible {
+    z-index: 2;
+    box-shadow: inset 0 0 0 4px hsl(var(--paper));
+  }
+  &[data-c]:not([data-covered]):is([data-chips] *) {
+    color: hsl(var(--paper) / 0.24);
+  }
+  &[data-c="red"]:not([data-covered]):is([data-chips] *) {
+    background-color: color-mix(in srgb, hsl(var(--pocket-red)) 38%, hsl(var(--felt)));
+  }
+  &[data-c="black"]:not([data-covered]):is([data-chips] *) {
+    background-color: color-mix(in srgb, hsl(var(--pocket-black)) 45%, hsl(var(--felt)));
+  }
+  &[data-c="zero"]:not([data-covered]):is([data-chips] *) {
+    background-color: color-mix(in srgb, hsl(var(--pocket-green)) 40%, hsl(var(--felt)));
+  }
+  &[data-covered] {
+    box-shadow:
+      var(--ring-in),
+      inset 0 0 0 calc(var(--ring-gap) + var(--ring-line)) hsl(var(--paper));
+  }
+  &[data-preview] {
+    color: hsl(var(--paper));
+    filter: brightness(1.3);
+  }
+  &[data-preview]:not([data-c]) {
+    background-color: hsl(var(--paper) / 0.1);
+  }
+  &[data-preview][data-c="red"] {
+    background-color: hsl(var(--pocket-red));
+  }
+  &[data-preview][data-c="black"] {
+    background-color: hsl(var(--pocket-black));
+  }
+  &[data-preview][data-c="zero"] {
+    background-color: hsl(var(--pocket-green));
+  }
+  &[data-preview][data-c]:not([data-covered]) {
+    box-shadow:
+      var(--ring-in),
+      inset 0 0 0 calc(var(--ring-gap) + var(--ring-line)) hsl(var(--paper) / 0.6);
+  }
+  &[data-hit],
+  &[data-paid] {
+    z-index: 1;
+    filter: brightness(1.3);
+    box-shadow:
+      var(--ring-in),
+      inset 0 0 0 calc(var(--ring-gap) + var(--ring-line)) hsl(var(--paper)),
+      0 0 18px 4px hsl(var(--lamp) / 0.55);
+    @media (prefers-reduced-motion: no-preference) {
+      animation: print-glow 1.6s ease-out both;
+    }
+  }
+  &[aria-pressed="true"]::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--chip-size);
+    height: var(--chip-size);
+    margin: calc(var(--chip-size) / -2) 0 0 calc(var(--chip-size) / -2);
+    border-radius: 50%;
+    background:
+      radial-gradient(
+        circle,
+        hsl(var(--paper)) 0 calc(var(--chip-size) * 0.206),
+        transparent calc(var(--chip-size) * 0.22)
+      ),
+      repeating-conic-gradient(hsl(var(--ink)) 0 15deg, hsl(var(--paper)) 15deg 30deg);
+    box-shadow:
+      inset 0 0 0 calc(var(--chip-size) * 0.1) hsl(var(--paper)),
+      0 2px 3px hsl(var(--table-shade) / 0.5);
+  }
+  /* A chip on a closed bet gets a fine ring: it cannot be moved. */
+  &[aria-pressed="true"]:disabled::after {
+    outline: 1.5px solid hsl(var(--paper) / 0.6);
+    outline-offset: 2px;
+  }
+  &[data-dolly]::before {
+    content: "";
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    z-index: 1;
+    width: calc(var(--chip-size) * 0.6);
+    height: calc(var(--chip-size) * 0.6);
+    border-radius: 50%;
+    background: hsl(var(--paper));
+    box-shadow:
+      inset 0 0 0 2px hsl(var(--paper)),
+      inset 0 0 0 3.5px hsl(var(--ink)),
+      0 2px 3px hsl(var(--table-shade) / 0.5);
+  }
+  /* A phone: thinner rings around taller numbers. */
+  @container felt (max-width: 460px) {
+    --ring-gap: 2px;
+    --ring-line: 1.5px;
+    padding: 2px;
+  }
 }
 
 /* The net amount of a win, lit on the felt; brighter for 10x or more. */

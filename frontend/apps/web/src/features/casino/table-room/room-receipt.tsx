@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 
 import { getExplorerTxUrl } from "../../../app-shell/chain-registry";
 import { PrintedFigure } from "../../home/printed-figure";
@@ -10,13 +10,23 @@ import { joined, shortId } from "../../home/receipts";
 import type { CasinoTerminalRoundResult } from "../room/resolution";
 import type { GameRoom } from "../room/use-game-room";
 import { SheetHead, type SlipSheet } from "./sheet-head";
-import { buildSlipReceipt, diceWinRange } from "./slip-model";
+import { buildSlipReceipt } from "./slip-model";
 import { DIVIDER, LINE_BUTTON, LINK, MAIN_BUTTON, SHEET_FULL, SHEET_PHONE } from "./styles";
 
 type Tearing = "again" | "change" | null;
 
-/** The rolls of a dice bet as a list in the reader's language: "66, 45, 30, 48 and 20". */
-export function formatRolls(locale: string, rolls: readonly number[]) {
+/** The receipt's lines about the game in the room. */
+export type ReceiptGame = {
+  /** The bet in one line: "Dice, win on 1–50". */
+  line: string;
+  /** The numbers it covers, when the line does not say. */
+  covers?: string;
+  /** What came up, as words for the summary line and screen readers, and as print. */
+  rolled: { text: string; print?: React.ReactNode } | null;
+};
+
+/** Rolls as a list in the reader's language: "66, 45, 30, 48 and 20". */
+export function formatRolls(locale: string, rolls: readonly (number | string)[]) {
   return new Intl.ListFormat(locale, { type: "conjunction" }).format(rolls.map(String));
 }
 
@@ -26,7 +36,8 @@ export function formatRolls(locale: string, rolls: readonly number[]) {
  * receipt stays on its public page. A closed phone sheet shows the roll, the net result and the
  * two actions.
  */
-export function DiceReceipt({
+export function RoomReceipt({
+  game,
   room,
   result,
   chainName,
@@ -34,6 +45,7 @@ export function DiceReceipt({
   onAnnounce,
   sheet
 }: {
+  game: ReceiptGame;
   room: GameRoom;
   result: CasinoTerminalRoundResult;
   chainName: string;
@@ -42,31 +54,11 @@ export function DiceReceipt({
   onAnnounce: (text: string) => void;
   sheet: SlipSheet;
 }) {
-  const t = useTranslations("casino.dice.receipt");
-  const tSlip = useTranslations("casino.dice.slip");
-  const locale = useLocale();
+  const t = useTranslations("casino.table.receipt");
   const [tearing, setTearing] = React.useState<Tearing>(null);
   const { assetSymbol: symbol, assetDecimals: decimals, chainId } = room;
-  const outcome = room.casinoOutcome?.kind === "dice" ? room.casinoOutcome : null;
-  const receipt = buildSlipReceipt(result, outcome, decimals);
-  const direction = outcome?.direction ?? room.diceDirection;
-  const line = outcome?.target ?? room.diceTarget;
-  const [from, to] = diceWinRange(direction, line);
-  const rolls = outcome?.rolls ?? [];
-  const won = rolls.filter((roll) => roll.won).length;
-  const rolled =
-    rolls.length === 0
-      ? null
-      : rolls.length > 1
-        ? t("rolledRounds", {
-            rolls: formatRolls(
-              locale,
-              rolls.map((roll) => roll.value)
-            ),
-            won,
-            count: rolls.length
-          })
-        : t("rolled", { rolls: String(rolls[0]!.value) });
+  const receipt = buildSlipReceipt(result, room.casinoOutcome, decimals);
+  const rolled = game.rolled?.text ?? null;
   const net = `${receipt.net.sign}${joined(receipt.net)}`;
   const lineLabel = (key: (typeof receipt.lines)[number]["key"]) =>
     key === "houseEdge" ? t("lines.houseEdge", { rate: houseEdgeRate }) : t(`lines.${key}`);
@@ -103,7 +95,7 @@ export function DiceReceipt({
           : "motion-safe:animate-print [--print-delay:0s] [--print-time:1.4s] max-[720px]:animate-none"
       }`}
     >
-      <SheetHead sheet={sheet} title={rolled ?? tSlip("game", { from, to })}>
+      <SheetHead sheet={sheet} title={rolled ?? game.line} display={game.rolled?.print}>
         <PrintedFigure value={receipt.net} className="text-[22px] leading-none" />
       </SheetHead>
       <div className={SHEET_FULL}>
@@ -111,8 +103,11 @@ export function DiceReceipt({
           <b className="font-semibold text-ink">ArbiGameFi</b>
           <span>{t("bet", { id: receipt.betId })}</span>
         </header>
-        <p className="mt-4 pr-24 text-lede font-semibold">{tSlip("game", { from, to })}</p>
-        {rolled ? <p className="mt-1 pr-24 font-semibold break-keep">{rolled}</p> : null}
+        <p className="mt-4 pr-24 text-lede font-semibold">{game.line}</p>
+        {game.covers ? <p className="mt-1 pr-24 text-note text-faded">{game.covers}</p> : null}
+        {rolled ? (
+          <p className="mt-1 pr-24 font-semibold break-keep">{game.rolled?.print ?? rolled}</p>
+        ) : null}
         <p className="pr-24 text-note text-faded">{chainName}</p>
         <div
           aria-hidden="true"

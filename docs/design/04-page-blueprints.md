@@ -67,7 +67,8 @@ Must show:
 
 Purpose: the betting room. It has two layers (`01-brand.md` §2): **the table is immersion, the
 paper is trust.** The dice room is the reference; other games keep its structure and draw their
-own table.
+own table. Dice and roulette are rebuilt; the other games still use the shared room shell until
+their tables are drawn.
 
 ### Layout
 
@@ -102,6 +103,29 @@ own table.
   rest, a pin marks each landing (filled when that round won) and the status reads "Round k of
   n". The ball is on the number 4s after the number arrives even when the tab gets no frames.
 - A net win is paid on the table (`02-voice-and-copy.md` §11). A loss gets nothing.
+
+### The table (roulette)
+
+- The same felt, rail and lamp. The felt holds a tilted single-zero wheel (red and black pockets,
+  a green zero, deflectors and a four-armed turret), and under it the horizontal layout printed
+  in paper-white ink, on every screen size: 0, the 3 × 12 numbers, the three columns, the dozens
+  and the six outside bets (1–18, Even, red, black, Odd, 19–36).
+- **One bet is the union of the chips.** Each spot the player taps gets a chip; the numbers under
+  all chips are one bet that pays `floor(stake × 37 ÷ k)` on any of its `k` numbers, less the
+  release's house edge. Win chance is printed to one decimal; the figures (Numbers, Win chance,
+  Pays) sit between the wheel and the layout. The table opens with a chip on red.
+- Hover, keyboard focus or a 380ms long press previews the numbers a spot covers; a long press
+  places no chip. Clear chips empties the layout. An empty layout or one that covers all 37
+  numbers cannot be bet, and the slip says why.
+- While the bet is placed "No more bets" lies across the layout for 1.5s. On a phone the felt
+  scrolls into view after the bet, so the wheel is on screen when the number arrives.
+- **The ball follows the bet's chain state** (`12-motion.md` §5): it circles the track until the
+  number arrives, then drops into that pocket. The pocket lights, the other pockets dim, a dolly
+  marks the winning number on the layout and a big result ball (68px, 52px on a phone) sits at
+  the wheel's top right.
+- Results are coloured number balls (red, black, green) in the status line, the last 12 results,
+  the slip's head and the receipt; screen readers hear "17, black".
+- A net win is paid in chips onto the winning spot. A loss gets nothing.
 
 ### The paper
 

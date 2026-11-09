@@ -4,13 +4,9 @@ import type { CasinoTerminalRoundResult } from "../room/resolution";
 import {
   buildSlipReceipt,
   deriveSlipQuote,
-  diceLoseRange,
-  diceMultiplier,
-  dicePayout,
-  diceWinRange,
-  diceWins,
   formatQuote,
   formatStake,
+  payoutFor,
   quoteRaw,
   slipMaxStake,
   stakeText,
@@ -34,29 +30,6 @@ const READY: SlipQuoteInput = {
   balance: unit(12.4),
   decimals: USDC
 };
-
-describe("dice odds", () => {
-  it("wins on the line or under it when low, and above it when high", () => {
-    expect(diceWins("under", 50)).toBe(50);
-    expect(diceWinRange("under", 50)).toEqual([1, 50]);
-    expect(diceLoseRange("under", 50)).toEqual([51, 100]);
-    expect(diceWins("over", 80)).toBe(20);
-    expect(diceWinRange("over", 80)).toEqual([81, 100]);
-    expect(diceLoseRange("over", 80)).toEqual([1, 80]);
-  });
-
-  it("pays as DiceModule and GameHub do: floor the gross, then floor the edge", () => {
-    // Bet 5 on Base Sepolia: high over 5, 0.8 USDC.
-    expect(dicePayout(800_000n, 95, 200)).toBe(825_263n);
-    expect(dicePayout(1_000_000n, 50, 200)).toBe(1_960_000n);
-    expect(dicePayout(1_000_000n, 0, 200)).toBe(0n);
-  });
-
-  it("quotes the multiplier cut to two decimals", () => {
-    expect(diceMultiplier(50, 200)).toEqual({ sign: "", whole: "1", fraction: "96" });
-    expect(diceMultiplier(3, 200)).toEqual({ sign: "", whole: "32", fraction: "66" });
-  });
-});
 
 describe("quoted amounts", () => {
   it("cut to two decimals from one unit and four below it, never rounding up", () => {
@@ -82,7 +55,27 @@ describe("quoted amounts", () => {
   });
 });
 
+describe("payoutFor", () => {
+  it("floors the gross payout, then the house edge on it, as the modules and GameHub do", () => {
+    // Roulette, 12 numbers, 1.00 at a 2% edge: gross 3.083333, edge 0.061666, paid 3.021667.
+    expect(payoutFor(unit(1), 37, 12, 200)).toBe(3_021_667n);
+    expect(payoutFor(unit(1), 37, 0, 200)).toBe(0n);
+    expect(payoutFor(unit(1), 100, 50, 200)).toBe(1_960_000n);
+  });
+});
+
 describe("deriveSlipQuote", () => {
+  it("asks for a selection before anything about the stake", () => {
+    expect(deriveSlipQuote({ ...READY, selection: "empty", perRound: 0n })).toEqual({
+      action: { kind: "blocked", why: "selection" },
+      notice: { kind: "selection", why: "empty" }
+    });
+    expect(deriveSlipQuote({ ...READY, selection: "all" }).notice).toEqual({
+      kind: "selection",
+      why: "all"
+    });
+  });
+
   it("places the bet when nothing is in the way", () => {
     expect(deriveSlipQuote(READY)).toEqual({ action: { kind: "place", approval: false } });
     expect(deriveSlipQuote({ ...READY, needsApproval: true }).action).toEqual({

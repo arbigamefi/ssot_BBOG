@@ -161,9 +161,6 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
       "casino.room.betPanel.placeBet.placeBet": "PLACE BET",
-      "casino.room.selection.roulette.bets": "Bets",
-      "casino.room.selection.roulette.clearAll": "Clear All",
-      "casino.room.selection.roulette.empty": "No bets placed. Click the felt to bet.",
       "casino.room.selection.coin.selectFace": "Select Face",
       "casino.room.selection.coin.heads": "Heads",
       "casino.room.selection.coin.tails": "Tails",
@@ -195,7 +192,6 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.slots.result": "Slots result",
       "casino.room.stage.slots.classic": "Classic profile",
       "casino.room.history.recent.rolls": "RECENT ROLLS",
-      "casino.room.history.recent.numbers": "RECENT NUMBERS",
       "casino.room.history.recent.draws": "RECENT DRAWS",
       "casino.room.history.recent.buckets": "RECENT BUCKETS",
       "casino.room.history.recent.slots": "RECENT SLOTS",
@@ -229,10 +225,11 @@ vi.mock("next-intl", () => ({
       "casino.room.closed.viewBets": "View your bets",
       "casino.room.closed.browse": "Browse open games",
       "casino.dice.head.title": "Dice",
-      "casino.dice.strip.preview":
+      "casino.roulette.head.title": "Roulette",
+      "casino.table.strip.preview":
         "Preview. Betting opens on Base after the audit report is published.",
-      "casino.dice.action.telegram": "Join on Telegram",
-      "casino.dice.slip.label": "Bet slip"
+      "casino.table.action.telegram": "Join on Telegram",
+      "casino.table.slip.label": "Bet slip"
     })[namespace ? `${namespace}.${relativeKey}` : relativeKey] ?? relativeKey
 }));
 
@@ -357,6 +354,13 @@ const MOCK_RELEASE = {
       label: "Roulette",
       module: "0x1111111111111111111111111111111111111111",
       paramsEncoding: "abi.encode(uint8 kind, uint40 payload)"
+    },
+    {
+      gameId: "0x3333333333333333333333333333333333333333333333333333333333333333",
+      slug: "coin-toss",
+      label: "Coin Toss",
+      module: "0x3333333333333333333333333333333333333333",
+      paramsEncoding: "abi.encode(bool isHeads)"
     }
   ]
 };
@@ -488,10 +492,10 @@ describe("GamePageClient", () => {
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
 
-    renderRoom("roulette");
+    renderRoom("coin-toss");
 
     // The shared shell loads as its own chunk.
-    expect(await screen.findByText("European Roulette")).toBeDefined();
+    expect(await screen.findByText("Coin Toss")).toBeDefined();
     // Betting is not enabled for the website in tests, so the room is labelled a preview.
     expect(screen.getByText("Preview SSOT Module")).toBeDefined();
     expect(screen.queryByText("Live SSOT Module")).toBeNull();
@@ -503,27 +507,28 @@ describe("GamePageClient", () => {
     vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
-    const { unmount } = renderRoom("roulette");
+    const { unmount } = renderRoom("coin-toss");
     expect(await screen.findByText("Testnet SSOT Module")).toBeDefined();
     expect(screen.queryByText("Live SSOT Module")).toBeNull();
     expect(screen.queryByText("Preview SSOT Module")).toBeNull();
     unmount();
 
     state.chainId = 8453;
-    renderRoom("roulette");
+    renderRoom("coin-toss");
     expect(await screen.findByText("Live SSOT Module")).toBeDefined();
     expect(screen.queryByText("Testnet SSOT Module")).toBeNull();
     state.chainId = 84532;
     vi.unstubAllEnvs();
   });
 
-  it("renders dice as the Carbon copy room, with no shared shell", () => {
+  it("renders dice as the Carbon copy room, with no shared shell", async () => {
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
 
     renderRoom("dice");
 
-    expect(screen.getByRole("heading", { level: 1, name: "Dice" })).toBeDefined();
+    // Each room loads as its own chunk.
+    expect(await screen.findByRole("heading", { level: 1, name: "Dice" })).toBeDefined();
     expect(
       screen.getByText("Preview. Betting opens on Base after the audit report is published.")
     ).toBeDefined();
@@ -535,30 +540,19 @@ describe("GamePageClient", () => {
     expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
   });
 
-  it("renders roulette as a standard European table room", async () => {
+  it("renders roulette as the Carbon copy room, with no shared shell", async () => {
     state.release = MOCK_RELEASE;
 
     renderRoom("roulette");
 
-    expect(await screen.findByText("European Roulette")).toBeDefined();
-    expect(screen.getByLabelText("Wallet Balance")).toBeDefined();
-    expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
+    expect(await screen.findByRole("heading", { level: 1, name: "Roulette" })).toBeDefined();
+    expect(screen.getByRole("article", { name: "Bet slip" })).toBeDefined();
+    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
+    expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
   });
 
   it("renders coin toss as a canonical room shell", async () => {
-    state.release = {
-      ...MOCK_RELEASE,
-      gamesMeta: [
-        ...MOCK_RELEASE.gamesMeta,
-        {
-          gameId: "0x3333333333333333333333333333333333333333333333333333333333333333",
-          slug: "coin-toss",
-          label: "Coin Toss",
-          module: "0x3333333333333333333333333333333333333333",
-          paramsEncoding: "abi.encode(bool isHeads)"
-        }
-      ]
-    };
+    state.release = MOCK_RELEASE;
 
     renderRoom("coin-toss");
 

@@ -12,13 +12,11 @@ import { casinoVrfFeeBudget, formatNativeFee, toUnixMs } from "../room/casino-ro
 import { getBetErrorKind } from "../room/feedback";
 import { isCasinoTerminalRoundResult } from "../room/resolution";
 import type { GameRoom } from "../room/use-game-room";
-import { DiceReceipt } from "./dice-receipt";
+import { useNow } from "./printer";
+import { RoomReceipt, type ReceiptGame } from "./room-receipt";
 import { SheetHead, type SlipSheet } from "./sheet-head";
 import {
   deriveSlipQuote,
-  dicePayout,
-  diceWinRange,
-  diceWins,
   formatQuote,
   formatStake,
   quoteRaw,
@@ -29,13 +27,34 @@ import {
 } from "./slip-model";
 import { DIVIDER, LINE_BUTTON, LINK, MAIN_BUTTON, SHEET, SHEET_FULL } from "./styles";
 
+/** What the slip needs to know about the game in the room. */
+export type SlipGame = {
+  /** Prefixes the slip's field ids: "dice", "roulette". */
+  id: string;
+  /** The bet in one line: "Dice, win on 1–50", "Roulette, 1–12 + 17". */
+  line: string;
+  /** The numbers it covers, when the line does not say: "Covers 1–12, 17". */
+  covers?: string;
+  /** The win chance in the notice for a stake over the limit: "50", "32.4". */
+  chance: string;
+  /** One winning round's payout at a house edge. */
+  payout: (perRound: bigint, houseEdgeBps: number) => bigint;
+  /** A game that needs a selection first, while it has none, or all of it. */
+  selection?: "empty" | "all";
+  /** What the slip says then. */
+  selectionNotice?: { lead: string; body: string };
+  /** The receipt's lines about the game. */
+  receipt: ReceiptGame;
+};
+
 /**
  * The bet slip is the quote. Once the bet is placed a waiting slip feeds out of the printer's
  * slot, the receipt prints when the ball stops, and "Bet again" or "Change bet" tears it off. The
  * main button keeps one place in every state. On a phone the slip is a sheet docked to the bottom
  * of the screen: closed, it shows one summary line and the action.
  */
-export function DiceSlip({
+export function RoomSlip({
+  game,
   room,
   access,
   chainName,
@@ -43,6 +62,7 @@ export function DiceSlip({
   holdReceipt,
   className
 }: {
+  game: SlipGame;
   room: GameRoom;
   access: CasinoAccess;
   chainName: string;
@@ -51,7 +71,7 @@ export function DiceSlip({
   holdReceipt: boolean;
   className: string;
 }) {
-  const t = useTranslations("casino.dice");
+  const t = useTranslations("casino.table");
   const { casinoRound } = room;
   const status = casinoRound.state.status;
   const signing = status === "planning" || status === "submitting";
@@ -78,11 +98,13 @@ export function DiceSlip({
 
   return (
     <div
+      data-slip=""
       data-closed={open ? undefined : ""}
       className={`group/sheet overflow-clip px-2 [overflow-clip-margin:8px] max-[720px]:fixed max-[720px]:inset-x-0 max-[720px]:top-auto max-[720px]:bottom-0 max-[720px]:z-30 max-[720px]:max-h-[86vh] max-[720px]:overflow-auto max-[720px]:overscroll-contain max-[720px]:px-0 ${className}`}
     >
       {result ? (
-        <DiceReceipt
+        <RoomReceipt
+          game={game.receipt}
           room={room}
           result={result}
           chainName={chainName}
@@ -91,22 +113,15 @@ export function DiceSlip({
           sheet={sheet}
         />
       ) : printing ? (
-        <PrintingSlip room={room} sheet={sheet} />
+        <PrintingSlip game={game} room={room} sheet={sheet} />
       ) : (
-        <QuoteSlip room={room} access={access} chainName={chainName} sheet={sheet} />
+        <QuoteSlip game={game} room={room} access={access} chainName={chainName} sheet={sheet} />
       )}
       <p className="sr-only" aria-live="polite">
         {announcement}
       </p>
     </div>
   );
-}
-
-/** "Dice, win on 1–50". */
-function useGameLine(room: GameRoom) {
-  const t = useTranslations("casino.dice.slip");
-  const [from, to] = diceWinRange(room.diceDirection, room.diceTarget);
-  return t("game", { from, to });
 }
 
 function SlipHeader({ right }: { right: string }) {
@@ -128,19 +143,31 @@ function QuoteLine({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** The bet's line, and under it the numbers it covers when the line does not say. */
+function GameLine({ game }: { game: SlipGame }) {
+  return (
+    <>
+      <p className="mt-4 text-lede font-semibold">{game.line}</p>
+      {game.covers ? <p className="mt-1 text-note text-faded">{game.covers}</p> : null}
+    </>
+  );
+}
+
 function QuoteSlip({
+  game,
   room,
   access,
   chainName,
   sheet
 }: {
+  game: SlipGame;
   room: GameRoom;
   access: CasinoAccess;
   chainName: string;
   sheet: SlipSheet;
 }) {
-  const t = useTranslations("casino.dice");
-  const gameLine = useGameLine(room);
+  const t = useTranslations("casino.table");
+  const gameLine = game.line;
   const { casinoRound, assetDecimals: decimals, assetSymbol: symbol } = room;
   const { state } = casinoRound;
   const status = state.status;
@@ -149,9 +176,9 @@ function QuoteSlip({
   const rounds = room.betCount;
   const perRound = betAmountInputToRaw(room.betAmount, decimals);
   const total = perRound * BigInt(Math.max(1, rounds));
-  const wins = diceWins(room.diceDirection, room.diceTarget);
   const bps = room.houseEdgeBps;
-  const winPays = bps == null || perRound === 0n ? undefined : dicePayout(perRound, wins, bps);
+  const winPays =
+    bps == null || perRound === 0n || game.selection ? undefined : game.payout(perRound, bps);
   const fee = casinoVrfFeeBudget(casinoRound.vrfQuote);
   const feeText = fee == null ? "—" : formatNativeFee(fee, "ETH", "up");
   const minPerRound = room.poolSnapshot?.minBetAmount ?? 0n;
@@ -174,7 +201,8 @@ function QuoteSlip({
     minPerRound,
     poolMaxPerRound,
     balance,
-    decimals
+    decimals,
+    selection: game.selection
   });
   const minStake = quoteRaw(minPerRound, decimals, "up");
   const maxStake = slipMaxStake({ poolMaxPerRound, balance, rounds, decimals });
@@ -205,7 +233,7 @@ function QuoteSlip({
       </SheetHead>
       <div className={SHEET_FULL}>
         <SlipHeader right={t("slip.title")} />
-        <p className="mt-4 text-lede font-semibold">{gameLine}</p>
+        <GameLine game={game} />
         <hr className={DIVIDER} />
         <ul>
           {rounds > 1 ? (
@@ -225,7 +253,7 @@ function QuoteSlip({
       </div>
 
       <div className={`flex items-center justify-between gap-4 ${SHEET_FULL}`}>
-        <label htmlFor="dice-rounds" className="font-semibold">
+        <label htmlFor={`${game.id}-rounds`} className="font-semibold">
           {t("slip.rounds")}
         </label>
         <div className="inline-flex items-center gap-2">
@@ -239,7 +267,7 @@ function QuoteSlip({
             −
           </button>
           <input
-            id="dice-rounds"
+            id={`${game.id}-rounds`}
             type="text"
             inputMode="numeric"
             autoComplete="off"
@@ -269,7 +297,7 @@ function QuoteSlip({
       <div
         className={`mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 ${SHEET_FULL}`}
       >
-        <label htmlFor="dice-stake" className="font-semibold">
+        <label htmlFor={`${game.id}-stake`} className="font-semibold">
           {rounds > 1 ? t("slip.stakePer") : t("slip.stake")}
         </label>
         <div className="flex gap-2">
@@ -308,9 +336,9 @@ function QuoteSlip({
         {quote.notice ? (
           <SlipNoticeText
             notice={quote.notice}
+            game={game}
             room={room}
             chainName={chainName}
-            wins={wins}
             maxRounds={maxRounds}
           />
         ) : null}
@@ -321,7 +349,7 @@ function QuoteSlip({
         >
           <span className="flex min-w-0 flex-[1000_1_112px] items-center md:flex-1">
             <input
-              id="dice-stake"
+              id={`${game.id}-stake`}
               type="text"
               inputMode="decimal"
               autoComplete="off"
@@ -367,18 +395,18 @@ function clampStake(value: bigint, min: bigint, max: bigint | undefined) {
 
 function SlipNoticeText({
   notice,
+  game,
   room,
   chainName,
-  wins,
   maxRounds
 }: {
   notice: SlipNotice;
+  game: SlipGame;
   room: GameRoom;
   chainName: string;
-  wins: number;
   maxRounds: number;
 }) {
-  const t = useTranslations("casino.dice.notice");
+  const t = useTranslations("casino.table.notice");
   const symbol = room.assetSymbol;
   const amount = (raw: bigint) => formatQuote(raw, room.assetDecimals);
   const [lead, body] = (() => {
@@ -402,12 +430,12 @@ function SlipNoticeText({
           t("overMax.lead"),
           room.betCount > 1
             ? t("overMax.bodyPerRound", {
-                chance: wins,
+                chance: game.chance,
                 amount: formatStake(notice.max, room.assetDecimals),
                 symbol
               })
             : t("overMax.body", {
-                chance: wins,
+                chance: game.chance,
                 amount: formatStake(notice.max, room.assetDecimals),
                 symbol
               })
@@ -424,6 +452,8 @@ function SlipNoticeText({
           t(`error.${notice.error}.lead`, { symbol }),
           t(`error.${notice.error}.body`, { symbol, chain: chainName })
         ];
+      case "selection":
+        return [game.selectionNotice?.lead ?? "", game.selectionNotice?.body ?? ""];
     }
   })();
   return (
@@ -451,7 +481,7 @@ function MainButton({
   onPlace: () => void;
   onSetStake: (raw: bigint) => void;
 }) {
-  const t = useTranslations("casino.dice.action");
+  const t = useTranslations("casino.table.action");
   const symbol = room.assetSymbol;
   const amount = (raw: bigint) => formatQuote(raw, room.assetDecimals);
   const { casinoRound } = room;
@@ -516,10 +546,9 @@ function MainButton({
 }
 
 /** Placed and waiting: the paper is printing, so its edge is still plain. */
-function PrintingSlip({ room, sheet }: { room: GameRoom; sheet: SlipSheet }) {
-  const t = useTranslations("casino.dice");
+function PrintingSlip({ game, room, sheet }: { game: SlipGame; room: GameRoom; sheet: SlipSheet }) {
+  const t = useTranslations("casino.table");
   const locale = useLocale();
-  const gameLine = useGameLine(room);
   const { casinoRound, assetSymbol: symbol, assetDecimals: decimals } = room;
   const bet = casinoRound.activeBet;
   const phase = room.placeBetButtonPhase;
@@ -528,8 +557,7 @@ function PrintingSlip({ room, sheet }: { room: GameRoom; sheet: SlipSheet }) {
   const perRound = bet?.amountPerRoll ?? betAmountInputToRaw(room.betAmount, decimals);
   const stake = bet?.stake ?? perRound * BigInt(Math.max(1, room.betCount));
   const bps = bet?.houseEdgeBps ?? room.houseEdgeBps;
-  const wins = diceWins(room.diceDirection, room.diceTarget);
-  const winPays = bps == null ? undefined : dicePayout(perRound, wins, bps);
+  const winPays = bps == null ? undefined : game.payout(perRound, bps);
   const rounds = bet?.betCount ?? room.betCount;
   const placedMs = toUnixMs(bet?.placedAt);
   const seconds = placedMs ? Math.max(0, Math.floor((now - placedMs) / 1000)) : 0;
@@ -600,7 +628,7 @@ function PrintingSlip({ room, sheet }: { room: GameRoom; sheet: SlipSheet }) {
         <SlipHeader
           right={betId != null ? t("receipt.bet", { id: betId.toString() }) : t("slip.title")}
         />
-        <p className="mt-4 text-lede font-semibold">{gameLine}</p>
+        <GameLine game={game} />
         <hr className={DIVIDER} />
       </div>
       <div role="status" className={SHEET_FULL}>
@@ -639,16 +667,4 @@ function PrintingSlip({ room, sheet }: { room: GameRoom; sheet: SlipSheet }) {
       ) : null}
     </article>
   );
-}
-
-/** The time now, ticking each second while asked to. */
-export function useNow(ticking: boolean) {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    if (!ticking) return;
-    setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, [ticking]);
-  return now;
 }

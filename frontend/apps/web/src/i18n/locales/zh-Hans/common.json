@@ -466,24 +466,6 @@
         "maxSummary": "每轮 {perRound} · 整仓 {total}"
       },
       "selection": {
-        "roulette": {
-          "bets": "投注",
-          "clearAll": "全部清除",
-          "empty": "还没有投注。点击桌面选择投注项。",
-          "labels": {
-            "firstDozen": "第 1 打",
-            "secondDozen": "第 2 打",
-            "thirdDozen": "第 3 打",
-            "even": "双数",
-            "red": "红",
-            "black": "黑",
-            "odd": "单数",
-            "firstColumn": "第 1 列 (2:1)",
-            "secondColumn": "第 2 列 (2:1)",
-            "thirdColumn": "第 3 列 (2:1)",
-            "column": "2:1"
-          }
-        },
         "coin": {
           "selectFace": "选择正反面",
           "heads": "正面",
@@ -581,7 +563,6 @@
       },
       "history": {
         "recent": {
-          "numbers": "最近号码",
           "draws": "最近开奖",
           "buckets": "最近槽位",
           "slots": "最近转轴",
@@ -660,8 +641,6 @@
           "vrfFee": "随机数费用",
           "coinChoice": "选择面",
           "coinDrawn": "开出面",
-          "rouletteBet": "轮盘投注",
-          "rouletteWinningNumber": "中奖号码",
           "kenoPicked": "已选号码",
           "kenoDrawn": "开奖号码",
           "kenoHits": "命中数",
@@ -1145,41 +1124,14 @@
         "faucet": "领取测试 USDC"
       }
     },
-    "dice": {
+    "table": {
       "strip": {
         "preview": "预览版。审计报告公布后，Base 上开放下注。",
         "testnet": "{chain} 测试网。测试 {symbol} 没有价值。"
       },
-      "head": {
-        "crumb": "全部游戏",
-        "title": "骰子",
-        "lede": "Chainlink VRF 从 1 到 100 里掷出一个数，球就停在这个数上。落在你这一边就赢。"
-      },
-      "table": {
-        "title": "牌桌",
-        "chance": "中奖概率",
-        "pays": "赔付",
-        "line": "分界线",
-        "valueText": "掷出 {from} 到 {to} 赢。中奖概率 {chance}%，赔付是下注额的 {pays} 倍。",
-        "side": "方向",
-        "under": "押小",
-        "over": "押大",
-        "range": "{from} 到 {to}",
-        "rule": "赔付 = 100 ÷ 赢的数字个数，扣 {rate} 庄家优势。球停在 Chainlink VRF 掷出的数上。",
-        "status": {
-          "ready": "拖动分界线，再选一边。",
-          "waiting": "正在等随机数。数到之前，球一直在滚。",
-          "round": "第 {k} 局，共 {n} 局"
-        },
-        "sound": {
-          "on": "声音开",
-          "off": "声音关"
-        }
-      },
       "slip": {
         "label": "下注单",
         "title": "下注单",
-        "game": "骰子，{from}–{to} 赢",
         "ifWin": "赢了可得",
         "eachWin": "每赢一局得",
         "total": "总下注额",
@@ -1234,7 +1186,8 @@
         "blocked": {
           "noCapacity": "这个赔率下接不了",
           "balance": "{symbol} 不够",
-          "unconfirmed": "正在等网络确认"
+          "unconfirmed": "正在等网络确认",
+          "selection": "先选号码"
         },
         "checkTransaction": "查看这笔交易",
         "checking": "正在查看交易",
@@ -1250,7 +1203,7 @@
         },
         "network": {
           "lead": "钱包连在另一个网络上。",
-          "body": "骰子运行在 {chain} 上。"
+          "body": "这个游戏运行在 {chain} 上。"
         },
         "min": {
           "lead": "下注额太小。",
@@ -1299,7 +1252,7 @@
             "body": "核对之前暂停下注。"
           },
           "gameUnavailable": {
-            "lead": "骰子的设置暂时读不到。",
+            "lead": "这个游戏的设置暂时读不到。",
             "body": "稍后再检查一次。"
           },
           "invalidCount": {
@@ -1349,7 +1302,7 @@
             "body": "等其中一注结算后再下。"
           },
           "gameClosed": {
-            "lead": "骰子已关闭。",
+            "lead": "这个游戏已关闭。",
             "body": "不再接受新下注，已下的注照常结算。"
           },
           "minimumStake": {
@@ -1362,7 +1315,7 @@
           },
           "network": {
             "lead": "钱包连在另一个网络上。",
-            "body": "骰子运行在 {chain} 上。"
+            "body": "这个游戏运行在 {chain} 上。"
           },
           "wallet": {
             "lead": "钱包还没准备好。",
@@ -1451,11 +1404,14 @@
         "open": "展开完整下注单",
         "close": "收起"
       },
+      "announce": {
+        "signing": "请在钱包里确认。",
+        "placed": "已下注，正在等随机数。",
+        "refundable": "随机数没到，你可以退回下注额。"
+      },
       "receipt": {
         "label": "第 {id} 注的凭证",
         "bet": "第 {id} 注",
-        "rolled": "掷出 {rolls}。",
-        "rolledRounds": "掷出 {rolls}，{count} 局赢 {won} 局。",
         "net": "净结果",
         "lines": {
           "stake": "下注额",
@@ -1484,10 +1440,33 @@
         "change": "修改下注",
         "announce": "{rolled}净结果 {net} {symbol}。"
       },
-      "announce": {
-        "signing": "请在钱包里确认。",
-        "placed": "已下注，正在等随机数。",
-        "refundable": "随机数没到，你可以退回下注额。"
+      "sound": {
+        "on": "声音开",
+        "off": "声音关"
+      },
+      "round": "第 {k} 局，共 {n} 局"
+    },
+    "dice": {
+      "head": {
+        "crumb": "全部游戏",
+        "title": "骰子",
+        "lede": "Chainlink VRF 从 1 到 100 里掷出一个数，球就停在这个数上。落在你这一边就赢。"
+      },
+      "table": {
+        "title": "牌桌",
+        "chance": "中奖概率",
+        "pays": "赔付",
+        "line": "分界线",
+        "valueText": "掷出 {from} 到 {to} 赢。中奖概率 {chance}%，赔付是下注额的 {pays} 倍。",
+        "side": "方向",
+        "under": "押小",
+        "over": "押大",
+        "range": "{from} 到 {to}",
+        "rule": "赔付 = 100 ÷ 赢的数字个数，扣 {rate} 庄家优势。球停在 Chainlink VRF 掷出的数上。",
+        "status": {
+          "ready": "拖动分界线，再选一边。",
+          "waiting": "正在等随机数。数到之前，球一直在滚。"
+        }
       },
       "receipts": {
         "title": "最近的骰子凭证",
@@ -1530,6 +1509,92 @@
         "contract": "查看合约",
         "hours": "{count, plural, other {# 小时}}",
         "minutes": "{count, plural, other {# 分钟}}"
+      },
+      "slip": {
+        "game": "骰子，{from}–{to} 赢"
+      },
+      "receipt": {
+        "rolled": "掷出 {rolls}。",
+        "rolledRounds": "掷出 {rolls}，{count} 局赢 {won} 局。"
+      }
+    },
+    "roulette": {
+      "head": {
+        "crumb": "全部游戏",
+        "title": "轮盘",
+        "lede": "Chainlink VRF 从 0 到 36 里选出一个数，球就落进这个数的格子。你的筹码压着的任何一个数开出，你就赢。"
+      },
+      "table": {
+        "title": "牌桌",
+        "covered": "号码数",
+        "chance": "中奖概率",
+        "pays": "赔付",
+        "history": "最近结果",
+        "noHistory": "还没有开过",
+        "clear": "清除筹码",
+        "board": "下注区",
+        "call": "买定离手",
+        "column": "整列",
+        "columnShort": "列",
+        "rule": "一注覆盖你筹码压着的所有号码。开出其中任何一个，赔付 = 37 ÷ 覆盖的号码数，扣 {rate} 庄家优势。",
+        "status": {
+          "ready": "在下注区放上筹码，再下注。",
+          "all": "筹码已覆盖全部号码。拿掉一个才能下注。",
+          "waiting": "正在等随机数。数到之前，球一直在转。"
+        },
+        "zeroLabel": "零",
+        "numberLabel": "{n}，{colour}",
+        "spotLabel": "{name}，{count} 个号码"
+      },
+      "colour": {
+        "red": "红",
+        "black": "黑",
+        "zero": "绿"
+      },
+      "spot": {
+        "number": "{n} 号",
+        "low": "1–18",
+        "high": "19–36",
+        "even": "双",
+        "odd": "单",
+        "red": "红",
+        "black": "黑",
+        "dozen": "{from}–{to}",
+        "column": "第 {c} 列"
+      },
+      "short": {
+        "number": "{n}",
+        "low": "1–18",
+        "high": "19–36",
+        "even": "双",
+        "odd": "单",
+        "red": "红",
+        "black": "黑",
+        "dozen": "{from}–{to}",
+        "column": "第 {c} 列"
+      },
+      "slip": {
+        "game": "轮盘，{bet}",
+        "none": "轮盘",
+        "more": "另 {count} 处",
+        "numbers": "{count} 个号码",
+        "covers": "覆盖 {numbers}"
+      },
+      "selection": {
+        "empty": {
+          "lead": "先在下注区放一个筹码。",
+          "body": "点牌桌上的号码或下注格。每个筹码都把它的号码加进同一注。"
+        },
+        "all": {
+          "lead": "筹码已覆盖全部号码。",
+          "body": "37 个号码全押，赢了也拿不回比下注额更多的钱。拿掉一个筹码。"
+        }
+      },
+      "receipt": {
+        "one": "{n} {colour}",
+        "zero": "0",
+        "rolled": "开出 {rolls}。",
+        "rolledRounds": "开出 {rolls}，{count} 局赢 {won} 局。"
       }
     }
   },

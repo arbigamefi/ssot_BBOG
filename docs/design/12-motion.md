@@ -98,6 +98,25 @@ The dice table's ball is the reference:
   from 10×), the winning print glows (`animate-print-glow`) and the lamp warms
   (`animate-lamp-warm`, `animate-lamp-warm-big` from 10×). Each runs once.
 
+The roulette wheel follows the same rules (`roulette-room/wheel-motion.ts`, a controller with no
+DOM, tested on its own):
+
+- **Between spins:** the wheel turns slowly (9°/s) only while the felt is on screen, and stands
+  still under reduced motion. Nothing on the table hints at a number.
+- **Waiting for randomness:** the ball circles the track at 516°/s against the wheel, which
+  turns the other way at 36°/s.
+- **The number arrives:** the ball slows at a steady rate relative to the wheel, from the speed it
+  has, to rest in that number's pocket, over at least 2.2s (1.5s for each later round, after a
+  0.7s pause). It only moves one way: it never passes the pocket and comes back. It may clip a
+  deflector on the way, leaves the track for the last 20° only, drops into its own pocket,
+  bounces three times (10, 5, 2 units) and rocks ±1.6° inside it; it never hops between pockets.
+- **Deadline:** the ball is in the pocket 4.83s after the number arrives, and each later round
+  4.38s after the one before it, whether or not the tab gets frames. The room's own fallback reveal waits 5.4s, plus
+  4.4s for each later round.
+- **The result:** the pocket lights and the others dim, the result ball comes in and a net win's
+  chips slide onto the winning spot as on the dice table.
+- **Reduced motion:** the ball is placed in the pocket directly; the wheel does not turn.
+
 ## 6. Do Not Do
 
 - No `transition-all`.

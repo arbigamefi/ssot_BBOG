@@ -10,6 +10,14 @@ export type TableSound = {
   land: () => void;
   /** Chip k lands on the bet. */
   clink: (k: number) => void;
+  /** Roulette: the ball clips a deflector on the bowl. */
+  deflect: () => void;
+  /** Roulette: the ball leaves the track over a deflector. */
+  clack: () => void;
+  /** Roulette: the ball meets the frets of its pocket, softer each bounce. */
+  fret: (k: number) => void;
+  /** Roulette: the ball comes to rest in its pocket. */
+  pocket: () => void;
   close: () => void;
 };
 
@@ -108,6 +116,25 @@ export function createTableSound(): TableSound | null {
       tone(at, 2350 * lift, 0.05, 0.14, "triangle");
       tone(at + 0.004, 3720 * lift, 0.03, 0.1, "triangle");
       burst(at, 5200, 2, 0.04, 0.03, "highpass");
+    },
+    deflect() {
+      const at = ready();
+      burst(at, 2600, 4, 0.07, 0.025);
+      tone(at, 1900, 0.025, 0.04, "triangle");
+    },
+    clack() {
+      burst(ready(), 2400, 2, 0.1, 0.04);
+    },
+    fret(k) {
+      const at = ready();
+      const gain = 0.11 * 0.6 ** k;
+      burst(at, 3100, 3, gain, 0.03);
+      tone(at, 1500, gain * 0.5, 0.05, "triangle");
+    },
+    pocket() {
+      const at = ready();
+      tone(at, 520, 0.14, 0.12, "sine", 300);
+      burst(at, 1400, 1.5, 0.07, 0.05);
     },
     close() {
       void ctx.close();

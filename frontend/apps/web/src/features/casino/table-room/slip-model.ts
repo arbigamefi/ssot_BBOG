@@ -2,35 +2,25 @@ import type { CasinoAccess } from "../../../app-shell/casino-access";
 import { fractionDigits, joined, splitAmount, type SignedAmount } from "../../home/receipts";
 import type { PoolAvailability } from "../room/hooks";
 import type { CasinoOutcome } from "../room/outcome";
-import type { DiceDirection } from "../room/payouts";
 import type { CasinoTerminalRoundResult } from "../room/resolution";
 
-// The dice room's slip, as data: the odds it quotes, the one action its main button takes and the
+// A game room's slip, as data: the amounts it quotes, the one action its main button takes and the
 // receipt it prints. Quotes round down; receipts are exact (docs/design/02-voice-and-copy.md §6).
 
-/** Winning numbers out of 100: low wins on 1..line, high on line+1..100. */
-export function diceWins(direction: DiceDirection, line: number) {
-  return direction === "under" ? line : 100 - line;
-}
-
-export function diceWinRange(direction: DiceDirection, line: number): readonly [number, number] {
-  return direction === "under" ? [1, line] : [line + 1, 100];
-}
-
-export function diceLoseRange(direction: DiceDirection, line: number): readonly [number, number] {
-  return direction === "under" ? [line + 1, 100] : [1, line];
-}
-
-/** One winning round's payout, as DiceModule and GameHub compute it: the gross payout less the house edge. */
-export function dicePayout(perRound: bigint, wins: number, houseEdgeBps: number) {
+/**
+ * One winning round's payout as the game module and GameHub compute it: the stake times the
+ * numbers in play over the winning numbers, floored, less the house edge on it, floored. Dice
+ * plays 100 numbers, roulette 37.
+ */
+export function payoutFor(perRound: bigint, numbers: number, wins: number, houseEdgeBps: number) {
   if (wins <= 0) return 0n;
-  const gross = (perRound * 100n) / BigInt(wins);
+  const gross = (perRound * BigInt(numbers)) / BigInt(wins);
   return gross - (gross * BigInt(houseEdgeBps)) / 10_000n;
 }
 
 /** What one unit pays on a win, cut to two decimals. A multiplier carries no sign. */
-export function diceMultiplier(wins: number, houseEdgeBps: number): SignedAmount {
-  return { ...splitAmount(dicePayout(1_000_000n, wins, houseEdgeBps), 6, 2), sign: "" };
+export function multiplierFor(numbers: number, wins: number, houseEdgeBps: number): SignedAmount {
+  return { ...splitAmount(payoutFor(1_000_000n, numbers, wins, houseEdgeBps), 6, 2), sign: "" };
 }
 
 /**
@@ -77,7 +67,8 @@ export type SlipNotice =
   | { kind: "overMax"; max: bigint }
   | { kind: "noCapacity" }
   | { kind: "balance"; balance: bigint }
-  | { kind: "error"; error: string };
+  | { kind: "error"; error: string }
+  | { kind: "selection"; why: "empty" | "all" };
 
 export type SlipAction =
   | { kind: "telegram" }
@@ -88,7 +79,7 @@ export type SlipAction =
   | { kind: "checkAgain" }
   | { kind: "setStake"; to: bigint; why: "min" | "overMax" | "balance" }
   | { kind: "faucet"; asset: "usdc" | "eth" }
-  | { kind: "blocked"; why: "noCapacity" | "balance" | "unconfirmed" }
+  | { kind: "blocked"; why: "noCapacity" | "balance" | "unconfirmed" | "selection" }
   | { kind: "checkTransaction" }
   | { kind: "place"; approval: boolean };
 
@@ -114,6 +105,8 @@ export type SlipQuoteInput = {
   /** The wallet's balance; unknown until it is read. */
   balance?: bigint | null;
   decimals: number;
+  /** A game that needs a selection first: nothing chosen yet, or everything (roulette's 37). */
+  selection?: "empty" | "all";
 };
 
 /**
@@ -143,6 +136,11 @@ export function deriveSlipQuote(input: SlipQuoteInput): SlipQuote {
         ? { kind: "checkTransaction" }
         : { kind: "blocked", why: "unconfirmed" },
       notice: { kind: "error", error: errorKind }
+    };
+  if (input.selection)
+    return {
+      action: { kind: "blocked", why: "selection" },
+      notice: { kind: "selection", why: input.selection }
     };
   if (input.poolAvailability === "loading") return { action: { kind: "poolLoading" } };
   if (input.poolAvailability !== "ready")
@@ -238,7 +236,7 @@ export type SlipReceipt = {
   vrfFeeCharged?: bigint;
 };
 
-/** A settled, refunded or voided dice bet as its receipt: exact amounts, one number of decimals. */
+/** A settled, refunded or voided bet as its receipt: exact amounts, one number of decimals. */
 export function buildSlipReceipt(
   result: CasinoTerminalRoundResult,
   outcome: CasinoOutcome | null | undefined,
@@ -269,8 +267,7 @@ export function buildSlipReceipt(
     const paid = settlement.payoutNet;
     const unused = settlement.refundAmount;
     const gross =
-      settlement.payoutGross ??
-      (outcome?.kind === "dice" ? outcome.payoutGross : paid + (settlement.feeOnPayout ?? 0n));
+      settlement.payoutGross ?? outcome?.payoutGross ?? paid + (settlement.feeOnPayout ?? 0n);
     const edge = settlement.feeOnPayout ?? gross - paid;
     const owed = settlement.payment?.status === "payable";
     return {
