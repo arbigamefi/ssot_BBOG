@@ -11,7 +11,7 @@ import type { SignedAmount } from "./receipts";
 
 /** Every section sits on one 12-column grid inside the page width. */
 const SECTION_GRID =
-  "mx-auto box-content grid max-w-page grid-cols-1 gap-x-grid px-gutter lg:grid-cols-12";
+  "mx-auto box-content grid max-w-page grid-cols-1 gap-x-columns px-gutter lg:grid-cols-12";
 const HEADING = "text-heading font-extrabold text-balance break-keep";
 const FOCUS_ON_PAPER =
   "focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ink";
@@ -47,7 +47,7 @@ export function HomeHero({
   const t = useTranslations("home.hero");
   return (
     <header className="bg-carbon text-paper">
-      <div className="mx-auto box-content grid max-w-page grid-cols-1 gap-x-grid px-gutter pt-24 pb-section md:pt-32 lg:grid-cols-12 lg:grid-rows-[1fr_auto_auto_1fr]">
+      <div className="mx-auto box-content grid max-w-page grid-cols-1 gap-x-columns px-gutter pt-24 pb-section md:pt-32 lg:grid-cols-12 lg:grid-rows-[1fr_auto_auto_1fr]">
         <div className="lg:col-span-6 lg:col-start-1 lg:row-start-2">
           <h1 className="text-display font-extrabold text-balance break-keep">{t("title")}</h1>
           <p className="mt-6 max-w-[32em] text-lede text-on-carbon-muted">{t("lede")}</p>
@@ -164,7 +164,7 @@ export function VerifyLedger({
           {rows.map((row) => (
             <li
               key={row.key}
-              className="grid grid-cols-1 items-baseline gap-x-grid gap-y-1 border-t border-thermal py-6 lg:grid-cols-12"
+              className="grid grid-cols-1 items-baseline gap-x-columns gap-y-1 border-t border-thermal py-6 lg:grid-cols-12"
             >
               <h3 className="text-lede font-semibold lg:col-span-4">{t(`${row.key}.title`)}</h3>
               <p className="text-faded lg:col-span-5">
@@ -232,7 +232,7 @@ export function GameStubs({
           title={t("title")}
           lede={t("lede", { rate: houseEdgeRate })}
         />
-        <ul className="grid grid-cols-1 gap-grid lg:col-span-12 lg:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-columns lg:col-span-12 lg:grid-cols-2">
           {stubs.map((stub) => (
             <li key={stub.key}>
               <Link
@@ -271,7 +271,7 @@ export function BetSteps({ refundWait }: { refundWait?: string }) {
     <section aria-labelledby="home-steps-title" className="bg-paper pb-section text-carbon">
       <div className={SECTION_GRID}>
         <SectionHead id="home-steps-title" title={t("title")} />
-        <ol className="grid grid-cols-1 gap-x-grid gap-y-8 lg:col-span-12 lg:grid-cols-3">
+        <ol className="grid grid-cols-1 gap-x-columns gap-y-8 lg:col-span-12 lg:grid-cols-3">
           {([0, 1, 2] as const).map((index) => (
             <li key={index} className="border-t border-thermal pt-6">
               <span
@@ -316,7 +316,7 @@ export function LiquiditySection({ figures }: { figures: readonly PoolFigures[] 
           </h2>
           <p className="mt-4 max-w-[34em] text-lede text-on-carbon-muted">{t("lede")}</p>
         </div>
-        <dl className="grid grid-cols-1 gap-x-grid gap-y-8 lg:col-span-12 lg:grid-cols-3">
+        <dl className="grid grid-cols-1 gap-x-columns gap-y-8 lg:col-span-12 lg:grid-cols-3">
           {(["earn", "lose", "leave"] as const).map((key) => (
             <div key={key} className="border-t border-rule-carbon pt-6">
               <dt className="mb-2 text-lede font-semibold">{t(`${key}.title`)}</dt>
@@ -328,7 +328,7 @@ export function LiquiditySection({ figures }: { figures: readonly PoolFigures[] 
           <dl
             key={asset.symbol}
             aria-label={t("figures.label", { symbol: asset.symbol })}
-            className="mt-12 grid grid-cols-1 gap-x-grid gap-y-6 sm:grid-cols-3 lg:col-span-12"
+            className="mt-12 grid grid-cols-1 gap-x-columns gap-y-6 sm:grid-cols-3 lg:col-span-12"
           >
             {(["pool", "free", "turnover"] as const).map((key) => (
               <div key={key}>

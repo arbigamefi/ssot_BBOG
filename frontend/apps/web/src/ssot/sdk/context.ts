@@ -7,6 +7,10 @@ export type SDKContextValue = {
   sdk?: SSOTSDK;
   ready: boolean;
   readOnly: boolean;
+  /** A wallet is connected on another chain than the release's. */
+  wrongNetwork?: boolean;
+  /** Asks the wallet to switch to the release's chain. */
+  switchNetwork?: () => void;
 };
 
 export const SDKContext = React.createContext<SDKContextValue | null>(null);

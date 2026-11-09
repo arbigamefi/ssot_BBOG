@@ -466,16 +466,6 @@
         "maxSummary": "每轮 {perRound} · 整仓 {total}"
       },
       "selection": {
-        "dice": {
-          "rollUnder": "小于目标",
-          "rollOver": "大于目标",
-          "targetRange": "目标区间",
-          "targetAria": "骰子目标点数",
-          "target": "目标",
-          "multiplier": "倍数",
-          "winChance": "胜率",
-          "roll": "结果"
-        },
         "roulette": {
           "bets": "投注",
           "clearAll": "全部清除",
@@ -591,7 +581,6 @@
       },
       "history": {
         "recent": {
-          "rolls": "最近点数",
           "numbers": "最近号码",
           "draws": "最近开奖",
           "buckets": "最近槽位",
@@ -669,8 +658,6 @@
           "settlementTx": "结算交易",
           "resolvedTime": "结算时间",
           "vrfFee": "随机数费用",
-          "diceTarget": "骰子目标",
-          "diceNumber": "开出点数",
           "coinChoice": "选择面",
           "coinDrawn": "开出面",
           "rouletteBet": "轮盘投注",
@@ -820,23 +807,6 @@
               "label": "列 (2:1)",
               "coverage": "12 个号码",
               "multiplier": "3×"
-            }
-          ]
-        },
-        "dice": {
-          "tagline": "掷出 0–99 的数字,选一个目标值并选小/大。",
-          "bets": [
-            {
-              "key": "under",
-              "label": "小于目标值",
-              "coverage": "0 … 目标值-1",
-              "multiplier": "99 / 目标值"
-            },
-            {
-              "key": "over",
-              "label": "大于目标值",
-              "coverage": "目标值+1 … 99",
-              "multiplier": "99 / (99 − 目标值)"
             }
           ]
         },
@@ -1173,6 +1143,393 @@
         "title": "测试网",
         "description": "这里下注用的是 {chain} 上的测试 USDC，没有价值，另需少量测试 ETH 付 gas。审计报告公布后，Base 上才开放真实 USDC 下注。",
         "faucet": "领取测试 USDC"
+      }
+    },
+    "dice": {
+      "strip": {
+        "preview": "预览版。审计报告公布后，Base 上开放下注。",
+        "testnet": "{chain} 测试网。测试 {symbol} 没有价值。"
+      },
+      "head": {
+        "crumb": "全部游戏",
+        "title": "骰子",
+        "lede": "Chainlink VRF 从 1 到 100 里掷出一个数，球就停在这个数上。落在你这一边就赢。"
+      },
+      "table": {
+        "title": "牌桌",
+        "chance": "中奖概率",
+        "pays": "赔付",
+        "line": "分界线",
+        "valueText": "掷出 {from} 到 {to} 赢。中奖概率 {chance}%，赔付是下注额的 {pays} 倍。",
+        "side": "方向",
+        "under": "押小",
+        "over": "押大",
+        "range": "{from} 到 {to}",
+        "rule": "赔付 = 100 ÷ 赢的数字个数，扣 {rate} 庄家优势。球停在 Chainlink VRF 掷出的数上。",
+        "status": {
+          "ready": "拖动分界线，再选一边。",
+          "waiting": "正在等随机数。数到之前，球一直在滚。",
+          "round": "第 {k} 局，共 {n} 局"
+        },
+        "sound": {
+          "on": "声音开",
+          "off": "声音关"
+        }
+      },
+      "slip": {
+        "label": "下注单",
+        "title": "下注单",
+        "game": "骰子，{from}–{to} 赢",
+        "ifWin": "赢了可得",
+        "eachWin": "每赢一局得",
+        "total": "总下注额",
+        "fee": "随机数费用",
+        "feeUpTo": "最多 {fee}",
+        "rounds": "局数",
+        "fewer": "少一局",
+        "more": "多一局",
+        "stake": "下注额",
+        "stakePer": "每局下注额",
+        "half": "减半",
+        "double": "加倍",
+        "max": "最大 {amount}",
+        "maxUnknown": "最大",
+        "balance": "余额 {amount} {symbol}。",
+        "connectHint": "连接钱包后，这里显示你的余额。",
+        "gameRounds": "{game}，{rounds} 局"
+      },
+      "action": {
+        "telegram": "加入 Telegram 频道",
+        "connect": "连接钱包",
+        "switchNetwork": "切换到 {chain}",
+        "signing": {
+          "prepare": {
+            "label": "正在检查这一注",
+            "sub": "检查完会打开钱包"
+          },
+          "one": {
+            "label": "在钱包里确认",
+            "sub": "确认后即下注"
+          },
+          "allow": {
+            "label": "在钱包里授权 {symbol}",
+            "sub": "第 1 步，共 2 步"
+          },
+          "bet": {
+            "label": "在钱包里确认下注",
+            "sub": "第 2 步，共 2 步"
+          }
+        },
+        "poolLoading": "正在读取庄池",
+        "checkAgain": "再检查一次",
+        "raise": "提高到 {amount}",
+        "lower": "降到 {amount}",
+        "setStakeSub": {
+          "min": "最低下注额",
+          "overMax": "当前赔率下的上限",
+          "balance": "全部余额"
+        },
+        "faucetUsdc": "领取测试 {symbol}",
+        "faucetEth": "领取测试 ETH",
+        "blocked": {
+          "noCapacity": "这个赔率下接不了",
+          "balance": "{symbol} 不够",
+          "unconfirmed": "正在等网络确认"
+        },
+        "checkTransaction": "查看这笔交易",
+        "checking": "正在查看交易",
+        "place": "下注",
+        "placeSub": "{amount} {symbol} + 费用",
+        "approve": "授权 {symbol} 并下注",
+        "approveSub": "钱包里要确认两次"
+      },
+      "notice": {
+        "preview": {
+          "lead": "还没开放下注。",
+          "body": "审计报告公布后开放。"
+        },
+        "network": {
+          "lead": "钱包连在另一个网络上。",
+          "body": "骰子运行在 {chain} 上。"
+        },
+        "min": {
+          "lead": "下注额太小。",
+          "body": "每局最低 {amount} {symbol}。"
+        },
+        "overMax": {
+          "lead": "超出庄池能接的金额。",
+          "body": "中奖概率 {chance}% 时，最多能下 {amount} {symbol}。",
+          "bodyPerRound": "中奖概率 {chance}% 时，每局最多能下 {amount} {symbol}。"
+        },
+        "noCapacity": {
+          "lead": "庄池接不了这一注。",
+          "body": "这个赔率下庄池已没有余量。选一个更高的中奖概率，或稍后再看。"
+        },
+        "balance": {
+          "lead": "{symbol} 不够。",
+          "body": "你在 {chain} 上有 {amount} {symbol}。"
+        },
+        "pool": {
+          "unavailable": {
+            "lead": "庄池暂时读不到。",
+            "body": "能检查之后会重新开放下注。"
+          },
+          "paused": {
+            "lead": "庄池暂停了新下注。",
+            "body": "已下的注照常结算。"
+          },
+          "inactive": {
+            "lead": "庄池现在不接新下注。",
+            "body": "已下的注照常结算。"
+          },
+          "full": {
+            "lead": "庄池暂时满了。",
+            "body": "等一注结算后再试。"
+          },
+          "playerLimit": {
+            "lead": "你的未结算下注已到上限。",
+            "body": "等其中一注结算后再下。"
+          },
+          "noLiquidity": {
+            "lead": "庄池是空的。",
+            "body": "流动性提供者存入后开放下注。"
+          },
+          "invalidAccounting": {
+            "lead": "庄池的账对不上。",
+            "body": "核对之前暂停下注。"
+          },
+          "gameUnavailable": {
+            "lead": "骰子的设置暂时读不到。",
+            "body": "稍后再检查一次。"
+          },
+          "invalidCount": {
+            "lead": "局数太多。",
+            "body": "一注最多 {rounds} 局。"
+          }
+        },
+        "error": {
+          "paused": {
+            "lead": "庄池暂停了新下注。",
+            "body": "这一注没有下出去。已下的注照常结算。"
+          },
+          "inactive": {
+            "lead": "庄池现在不接新下注。",
+            "body": "这一注没有下出去。"
+          },
+          "canceled": {
+            "lead": "你在钱包里取消了。",
+            "body": "这一注没有下出去。"
+          },
+          "approvalPending": {
+            "lead": "已授权，但这一注还没下出去。",
+            "body": "网络还没确认授权。稍后再下一次，授权会保留。"
+          },
+          "allowance": {
+            "lead": "{symbol} 授权额度不够。",
+            "body": "再下一次，按这一注需要的金额授权。"
+          },
+          "balance": {
+            "lead": "{symbol} 不够。",
+            "body": "降低下注额或局数，或者先充值。"
+          },
+          "gas": {
+            "lead": "需要一点 ETH。",
+            "body": "随机数费用和网络费都用 {chain} 上的 ETH 支付。"
+          },
+          "quoteChanged": {
+            "lead": "随机数费用变了。",
+            "body": "再下一次，按新的费用签名。"
+          },
+          "capacity": {
+            "lead": "庄池暂时满了。",
+            "body": "等一注结算后再试。"
+          },
+          "playerLimit": {
+            "lead": "你的未结算下注已到上限。",
+            "body": "等其中一注结算后再下。"
+          },
+          "gameClosed": {
+            "lead": "骰子已关闭。",
+            "body": "不再接受新下注，已下的注照常结算。"
+          },
+          "minimumStake": {
+            "lead": "下注额太小。",
+            "body": "每局下注额低于最低值。调高后再下一次。"
+          },
+          "liquidity": {
+            "lead": "庄池付不起这笔赔付。",
+            "body": "降低下注额或局数。"
+          },
+          "network": {
+            "lead": "钱包连在另一个网络上。",
+            "body": "骰子运行在 {chain} 上。"
+          },
+          "wallet": {
+            "lead": "钱包还没准备好。",
+            "body": "连接或解锁钱包后再下一次。"
+          },
+          "connection": {
+            "lead": "暂时读不到网络。",
+            "body": "检查网络连接。如果钱包已经发出交易，先查看那笔交易再下注。"
+          },
+          "unconfirmed": {
+            "lead": "这一注还没确认。",
+            "body": "先查看这笔交易，不要重复下注。"
+          },
+          "reverted": {
+            "lead": "交易在链上失败了。",
+            "body": "这一注没有下出去，但网络费已经花掉。先看看你的记录再试。"
+          },
+          "contextChanged": {
+            "lead": "钱包、网络或下注内容变了。",
+            "body": "这一注没有下出去。检查下注单后再下一次。"
+          },
+          "input": {
+            "lead": "这一注没通过检查。",
+            "body": "检查下注额、局数和费用后再下一次。"
+          },
+          "houseEdgeChanged": {
+            "lead": "庄家优势变了。",
+            "body": "先看看新的赔付，再下注。"
+          },
+          "notSubmitted": {
+            "lead": "这一注没有下出去。",
+            "body": "发出前的检查没通过。稍后再试，授权会保留。"
+          },
+          "unknown": {
+            "lead": "这一注没能下出去。",
+            "body": "先看看钱包里的记录。如果什么都没发出，再下一次。"
+          }
+        }
+      },
+      "print": {
+        "placing": {
+          "title": "正在下注",
+          "note": "等网络确认这笔交易。"
+        },
+        "waiting": {
+          "title": "正在等随机数",
+          "note": "通常几秒钟。已等 {seconds} 秒。"
+        },
+        "slow": {
+          "title": "还在等随机数",
+          "note": "Chainlink 比平时慢。你的下注额由游戏合约保管，不在我们手里。UTC {time} 前还没到的话，你可以申请退回。"
+        },
+        "settling": {
+          "title": "正在结算",
+          "note": "随机数已到，合约正在结算这一注。"
+        },
+        "settleOffered": {
+          "title": "结算晚了",
+          "note": "随机数已到，但这一注还没结算。作为备用办法，你可以自己结算，网络费由你的钱包支付。",
+          "button": "结算这一注"
+        },
+        "refundable": {
+          "title": "随机数一直没到",
+          "note": "等待期已过，你可以退回 {amount} {symbol} 下注额。随机数费用不退。",
+          "button": "退回 {amount} {symbol}"
+        },
+        "unbooked": {
+          "title": "结果暂时记不上账",
+          "note": "随机数已到，但合约没能结算。它会稍后结算，或者把下注额转成你的可领取余额。"
+        },
+        "failed": {
+          "title": "这一注在这里停止了更新",
+          "note": "它仍在链上。打开看看现在的状态。"
+        },
+        "open": "打开这一注",
+        "seconds": "{seconds} 秒"
+      },
+      "printer": {
+        "ready": "就绪",
+        "waiting": "等随机数，{seconds} 秒",
+        "received": "随机数已到",
+        "printing": "正在打印凭证",
+        "printed": "凭证已打印"
+      },
+      "sheet": {
+        "open": "展开完整下注单",
+        "close": "收起"
+      },
+      "receipt": {
+        "label": "第 {id} 注的凭证",
+        "bet": "第 {id} 注",
+        "rolled": "掷出 {rolls}。",
+        "rolledRounds": "掷出 {rolls}，{count} 局赢 {won} 局。",
+        "net": "净结果",
+        "lines": {
+          "stake": "下注额",
+          "won": "赢得",
+          "houseEdge": "庄家优势 {rate}",
+          "paid": "打到钱包",
+          "owed": "待你领取",
+          "unused": "退回未用下注额",
+          "returned": "退回钱包",
+          "claimable": "可领取余额"
+        },
+        "stamp": {
+          "paid": "已付到钱包",
+          "settled": "已结算",
+          "refunded": "已退回",
+          "voided": "已作废"
+        },
+        "owedNote": "赔付为你保留着，可在领取页面领取。",
+        "proof": {
+          "request": "VRF 请求",
+          "hash": "随机哈希",
+          "settled": "结算交易"
+        },
+        "open": "打开这张凭证",
+        "again": "再下一注",
+        "change": "修改下注",
+        "announce": "{rolled}净结果 {net} {symbol}。"
+      },
+      "announce": {
+        "signing": "请在钱包里确认。",
+        "placed": "已下注，正在等随机数。",
+        "refundable": "随机数没到，你可以退回下注额。"
+      },
+      "receipts": {
+        "title": "最近的骰子凭证",
+        "lede": "真实的下注，赢的输的都有。每一张都能打开它的公开凭证。",
+        "ledeTestnet": "{chain} 测试网上真实的下注，赢的输的都有。每一张都能打开它的公开凭证。",
+        "bet": "第 {id} 注",
+        "desc": "{from}–{to} 赢{count, plural, =1 {} other {，共 # 局}}。掷出 {rolls}。{date}",
+        "net": "净结果",
+        "loading": "正在读取最近的凭证…",
+        "error": "最近的凭证暂时读不到。凭证都在链上，请一分钟后再试。",
+        "empty": "还没有结算的骰子下注。第一张会列在这里。"
+      },
+      "rules": {
+        "title": "骰子怎么赔",
+        "lede": "整个游戏就是一份公开合约。下面逐条说明它做什么。",
+        "roll": {
+          "title": "掷数",
+          "body": "每一注，Chainlink VRF 发来一个随机数。合约用它为每一局算出 1 到 100 之间的一个数，谁也挑不了、换不了。"
+        },
+        "line": {
+          "title": "你的分界线",
+          "body": "押小，掷出分界线或更小的数就赢；押大，掷出比分界线大的数就赢。中奖概率从 2% 到 97%；再高的话，赢了也拿不回比下注额更多的钱。"
+        },
+        "payout": {
+          "title": "赔付",
+          "body": "赢一局得到下注额乘以 100、再除以中奖概率，并从这笔赔付里扣除 {rate} 庄家优势。中奖概率 50% 时，就是下注额的 {pays} 倍。"
+        },
+        "limits": {
+          "title": "限额",
+          "body": "每局最低 {min} {symbol}，一注最多 {rounds} 局。最多能下多少，取决于你的赔率和庄池能赔多少。签名之前，下注单会显示出来。"
+        },
+        "fees": {
+          "title": "费用",
+          "body": "每一注付一次随机数费用（ETH），另加网络费，一注里的所有局共用。今天你的钱包最多为它附带 {fee}。Chainlink 按下注上链时的 gas 价格收费，剩下的在同一笔交易里退回。"
+        },
+        "refund": {
+          "title": "如果随机数没来",
+          "body": "如果 {wait}后随机数还没到，你可以退回下注额。随机数费用不退。"
+        },
+        "contract": "查看合约",
+        "hours": "{count, plural, other {# 小时}}",
+        "minutes": "{count, plural, other {# 分钟}}"
       }
     }
   },

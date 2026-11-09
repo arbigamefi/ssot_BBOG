@@ -11,14 +11,16 @@ const state = vi.hoisted(() => ({
   readOnly: false,
   release: { chainId: 84532 },
   publicClient: {},
-  journal: {}
+  journal: {},
+  switchChain: vi.fn()
 }));
 vi.mock("wagmi", () => ({
   // Wagmi keeps this configured chain when the wallet switches to an unsupported network.
   useChainId: () => 84532,
   useAccount: () => ({ address: state.address, chainId: state.chainId }),
   usePublicClient: () => state.publicClient,
-  useWalletClient: () => ({ data: state.wallet })
+  useWalletClient: () => ({ data: state.wallet }),
+  useSwitchChain: () => ({ switchChain: state.switchChain })
 }));
 vi.mock("../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({ release: state.release, readOnly: state.readOnly })
@@ -57,6 +59,32 @@ it("keeps anonymous reads ready but waits for the signing client during wallet r
   state.address = undefined;
   view.rerender(ui());
   expect(screen.getByRole("button")).not.toBeDisabled();
+});
+
+it("names a wallet on another network and switches it to the release's chain", () => {
+  function Consumer() {
+    const { wrongNetwork, switchNetwork } = useSSOTSDK();
+    return (
+      <button onClick={switchNetwork}>{wrongNetwork ? "Switch network" : "Right network"}</button>
+    );
+  }
+  const ui = () => (
+    <SSOTSDKProvider>
+      <Consumer />
+    </SSOTSDKProvider>
+  );
+  const view = render(ui());
+  // No wallet, no wrong network.
+  expect(screen.getByRole("button").textContent).toBe("Right network");
+  state.address = "0x0000000000000000000000000000000000000001";
+  state.chainId = 1;
+  view.rerender(ui());
+  expect(screen.getByRole("button").textContent).toBe("Switch network");
+  screen.getByRole("button").click();
+  expect(state.switchChain).toHaveBeenCalledWith({ chainId: 84532 });
+  state.chainId = 84532;
+  view.rerender(ui());
+  expect(screen.getByRole("button").textContent).toBe("Right network");
 });
 
 it("waits for the signing client to match the connected account and release network", () => {

@@ -1141,7 +1141,6 @@
       },
       "history": {
         "recent": {
-          "rolls": "ROLAGENS RECENTES",
           "numbers": "NÚMEROS RECENTES",
           "draws": "SORTEIOS RECENTES",
           "buckets": "BALDES RECENTES",
@@ -1299,16 +1298,6 @@
         }
       },
       "selection": {
-        "dice": {
-          "rollUnder": "Abaixo",
-          "rollOver": "Acima",
-          "targetRange": "Faixa-alvo",
-          "targetAria": "Alvo dos dados",
-          "target": "Alvo",
-          "multiplier": "Mult",
-          "winChance": "Ganho",
-          "roll": "Rolar"
-        },
         "roulette": {
           "bets": "Apostas",
           "clearAll": "Limpar tudo",
@@ -1446,8 +1435,6 @@
           "settlementTx": "Tx de liquidação",
           "resolvedTime": "Horário resolvido",
           "vrfFee": "Taxa de número aleatório",
-          "diceTarget": "Alvo dos dados",
-          "diceNumber": "Número sorteado",
           "coinChoice": "Lado escolhido",
           "coinDrawn": "Lado sorteado",
           "rouletteBet": "Aposta na roleta",
@@ -1714,23 +1701,6 @@
             }
           ]
         },
-        "dice": {
-          "tagline": "Role um número de 0 a 99. Escolha um alvo e uma direção.",
-          "bets": [
-            {
-              "key": "under",
-              "label": "Abaixo do alvo",
-              "coverage": "0 … alvo-1",
-              "multiplier": "99 / target"
-            },
-            {
-              "key": "over",
-              "label": "Acima do alvo",
-              "coverage": "alvo+1 … 99",
-              "multiplier": "99 / (99 − target)"
-            }
-          ]
-        },
         "coin-toss": {
           "tagline": "50/50 puro. Escolha um lado; um sorteio do Chainlink VRF decide.",
           "bets": [
@@ -1924,6 +1894,393 @@
         "title": "Testnet",
         "description": "As apostas aqui usam USDC de teste na {chain}, que não tem valor, além de um pouco de ETH de teste para o gas. Apostas com USDC real abrem na Base depois que o relatório de auditoria for publicado.",
         "faucet": "Obter USDC de teste"
+      }
+    },
+    "dice": {
+      "strip": {
+        "preview": "Prévia. As apostas abrem na Base depois que o relatório de auditoria for publicado.",
+        "testnet": "Rede de teste {chain}. O {symbol} de teste não tem valor."
+      },
+      "head": {
+        "crumb": "Todos os jogos",
+        "title": "Dados",
+        "lede": "O Chainlink VRF sorteia um número de 1 a 100 e a bola para nele. Do seu lado da linha, você ganha."
+      },
+      "table": {
+        "title": "A mesa",
+        "chance": "Chance de ganhar",
+        "pays": "Paga",
+        "line": "Linha",
+        "valueText": "Ganha de {from} a {to}. Chance de {chance}%, paga {pays} vezes a aposta.",
+        "side": "Lado",
+        "under": "Abaixo",
+        "over": "Acima",
+        "range": "{from} a {to}",
+        "rule": "Paga 100 ÷ os números vencedores, menos {rate} de vantagem da casa. A bola para no número que o Chainlink VRF sorteia.",
+        "status": {
+          "ready": "Arraste a linha e escolha um lado.",
+          "waiting": "Aguardando o número aleatório. A bola rola até ele chegar.",
+          "round": "Rodada {k} de {n}"
+        },
+        "sound": {
+          "on": "Som ligado",
+          "off": "Som desligado"
+        }
+      },
+      "slip": {
+        "label": "Boletim de aposta",
+        "title": "Boletim",
+        "game": "Dados, ganha de {from} a {to}",
+        "ifWin": "Se ganhar",
+        "eachWin": "Cada ganho paga",
+        "total": "Aposta total",
+        "fee": "Taxa de aleatoriedade",
+        "feeUpTo": "até {fee}",
+        "rounds": "Rodadas",
+        "fewer": "Uma rodada a menos",
+        "more": "Uma rodada a mais",
+        "stake": "Aposta",
+        "stakePer": "Aposta por rodada",
+        "half": "Metade",
+        "double": "Dobro",
+        "max": "Máx. {amount}",
+        "maxUnknown": "Máx.",
+        "balance": "Saldo {amount} {symbol}.",
+        "connectHint": "Conecte uma carteira para ver seu saldo aqui.",
+        "gameRounds": "{game}, {rounds} rodadas"
+      },
+      "action": {
+        "telegram": "Entrar no Telegram",
+        "connect": "Conectar carteira",
+        "switchNetwork": "Mudar para {chain}",
+        "signing": {
+          "prepare": {
+            "label": "Verificando a aposta",
+            "sub": "Antes de abrir a carteira"
+          },
+          "one": {
+            "label": "Confirme na carteira",
+            "sub": "Depois a aposta é feita"
+          },
+          "allow": {
+            "label": "Aprove {symbol} na carteira",
+            "sub": "Passo 1 de 2"
+          },
+          "bet": {
+            "label": "Confirme a aposta na carteira",
+            "sub": "Passo 2 de 2"
+          }
+        },
+        "poolLoading": "Lendo o pool da casa",
+        "checkAgain": "Verificar de novo",
+        "raise": "Subir para {amount}",
+        "lower": "Baixar para {amount}",
+        "setStakeSub": {
+          "min": "O mínimo",
+          "overMax": "O máximo com estas chances",
+          "balance": "Todo o seu saldo"
+        },
+        "faucetUsdc": "Obter {symbol} de teste",
+        "faucetEth": "Obter ETH de teste",
+        "blocked": {
+          "noCapacity": "Sem espaço com estas chances",
+          "balance": "{symbol} insuficiente",
+          "unconfirmed": "Aguardando a rede"
+        },
+        "checkTransaction": "Verificar a transação",
+        "checking": "Verificando a transação",
+        "place": "Fazer aposta",
+        "placeSub": "{amount} {symbol} + taxa",
+        "approve": "Aprovar {symbol} e apostar",
+        "approveSub": "Dois passos na carteira"
+      },
+      "notice": {
+        "preview": {
+          "lead": "As apostas ainda não abriram.",
+          "body": "Elas abrem depois que o relatório de auditoria for publicado."
+        },
+        "network": {
+          "lead": "Sua carteira está em outra rede.",
+          "body": "Os Dados rodam na {chain}."
+        },
+        "min": {
+          "lead": "Muito baixo.",
+          "body": "As apostas começam em {amount} {symbol} por rodada."
+        },
+        "overMax": {
+          "lead": "Alto demais para o pool da casa.",
+          "body": "Com {chance}% de chance, o máximo que você pode apostar é {amount} {symbol}.",
+          "bodyPerRound": "Com {chance}% de chance, o máximo que você pode apostar é {amount} {symbol} por rodada."
+        },
+        "noCapacity": {
+          "lead": "O pool da casa não pode aceitar esta aposta.",
+          "body": "Não há espaço para uma aposta com estas chances. Escolha uma chance de ganhar maior ou verifique mais tarde."
+        },
+        "balance": {
+          "lead": "{symbol} insuficiente.",
+          "body": "Você tem {amount} {symbol} na {chain}."
+        },
+        "pool": {
+          "unavailable": {
+            "lead": "Não foi possível ler o pool da casa.",
+            "body": "As apostas reabrem quando ele puder ser verificado."
+          },
+          "paused": {
+            "lead": "O pool da casa pausou novas apostas.",
+            "body": "As apostas já feitas continuam sendo liquidadas."
+          },
+          "inactive": {
+            "lead": "O pool da casa não está aceitando apostas agora.",
+            "body": "As apostas já feitas continuam sendo liquidadas."
+          },
+          "full": {
+            "lead": "O pool da casa está cheio por enquanto.",
+            "body": "Tente de novo depois que uma aposta aberta for liquidada."
+          },
+          "playerLimit": {
+            "lead": "Você já tem o máximo de apostas abertas.",
+            "body": "Faça a próxima depois que uma delas for liquidada."
+          },
+          "noLiquidity": {
+            "lead": "O pool da casa está vazio.",
+            "body": "As apostas abrem quando os provedores de liquidez depositarem."
+          },
+          "invalidAccounting": {
+            "lead": "Os números do pool da casa não batem.",
+            "body": "As apostas ficam fechadas até eles serem verificados."
+          },
+          "gameUnavailable": {
+            "lead": "Não foi possível ler as configurações dos Dados.",
+            "body": "Verifique de novo daqui a pouco."
+          },
+          "invalidCount": {
+            "lead": "Rodadas demais.",
+            "body": "Uma aposta pode ter até {rounds} rodadas."
+          }
+        },
+        "error": {
+          "paused": {
+            "lead": "O pool da casa pausou novas apostas.",
+            "body": "Nada foi apostado. As apostas já feitas continuam sendo liquidadas."
+          },
+          "inactive": {
+            "lead": "O pool da casa não está aceitando apostas agora.",
+            "body": "Nada foi apostado."
+          },
+          "canceled": {
+            "lead": "Você cancelou na carteira.",
+            "body": "Nada foi apostado."
+          },
+          "approvalPending": {
+            "lead": "Aprovado, mas a aposta não foi feita.",
+            "body": "A rede ainda não confirmou a aprovação. Faça a aposta de novo daqui a pouco; a aprovação é mantida."
+          },
+          "allowance": {
+            "lead": "A aprovação de {symbol} é baixa demais.",
+            "body": "Faça a aposta de novo para aprovar o valor necessário."
+          },
+          "balance": {
+            "lead": "{symbol} insuficiente.",
+            "body": "Baixe a aposta ou as rodadas, ou adicione fundos."
+          },
+          "gas": {
+            "lead": "Você precisa de um pouco de ETH.",
+            "body": "A taxa de aleatoriedade e o gás da rede são pagos em ETH na {chain}."
+          },
+          "quoteChanged": {
+            "lead": "A taxa de aleatoriedade mudou.",
+            "body": "Faça a aposta de novo para assinar a nova taxa."
+          },
+          "capacity": {
+            "lead": "O pool da casa está cheio por enquanto.",
+            "body": "Tente de novo depois que uma aposta aberta for liquidada."
+          },
+          "playerLimit": {
+            "lead": "Você já tem o máximo de apostas abertas.",
+            "body": "Faça a próxima depois que uma delas for liquidada."
+          },
+          "gameClosed": {
+            "lead": "Os Dados estão fechados.",
+            "body": "Não aceitam novas apostas. As apostas já feitas continuam sendo liquidadas."
+          },
+          "minimumStake": {
+            "lead": "Muito baixo.",
+            "body": "A aposta por rodada está abaixo do mínimo. Aumente e aposte de novo."
+          },
+          "liquidity": {
+            "lead": "O pool da casa não cobre este pagamento.",
+            "body": "Baixe a aposta ou as rodadas."
+          },
+          "network": {
+            "lead": "Sua carteira está em outra rede.",
+            "body": "Os Dados rodam na {chain}."
+          },
+          "wallet": {
+            "lead": "Sua carteira não está pronta.",
+            "body": "Conecte ou desbloqueie a carteira e aposte de novo."
+          },
+          "connection": {
+            "lead": "Não foi possível ler a rede.",
+            "body": "Verifique sua conexão. Se a carteira enviou uma transação, confira antes de apostar de novo."
+          },
+          "unconfirmed": {
+            "lead": "A aposta ainda não foi confirmada.",
+            "body": "Verifique a transação antes de apostar de novo."
+          },
+          "reverted": {
+            "lead": "A transação falhou on-chain.",
+            "body": "Nada foi apostado, mas o gás foi gasto. Confira sua atividade antes de tentar de novo."
+          },
+          "contextChanged": {
+            "lead": "Sua carteira, rede ou aposta mudou.",
+            "body": "Nada foi apostado. Confira o boletim e aposte de novo."
+          },
+          "input": {
+            "lead": "A aposta não passou na verificação.",
+            "body": "Confira a aposta, as rodadas e a taxa, e aposte de novo."
+          },
+          "houseEdgeChanged": {
+            "lead": "A vantagem da casa mudou.",
+            "body": "Confira o novo pagamento antes de apostar."
+          },
+          "notSubmitted": {
+            "lead": "A aposta não foi feita.",
+            "body": "A verificação antes do envio falhou. Tente de novo daqui a pouco; qualquer aprovação é mantida."
+          },
+          "unknown": {
+            "lead": "Não foi possível fazer a aposta.",
+            "body": "Confira a atividade da sua carteira. Se nada foi enviado, aposte de novo."
+          }
+        }
+      },
+      "print": {
+        "placing": {
+          "title": "Fazendo sua aposta",
+          "note": "Aguardando a rede confirmar."
+        },
+        "waiting": {
+          "title": "Aguardando a aleatoriedade",
+          "note": "Normalmente leva alguns segundos. {seconds} s até agora."
+        },
+        "slow": {
+          "title": "Ainda aguardando a aleatoriedade",
+          "note": "O Chainlink está mais lento que o normal. Sua aposta fica com o contrato do jogo, não com a gente. Se nenhum número chegar até {time} UTC, você pode pedir o reembolso."
+        },
+        "settling": {
+          "title": "Liquidando o resultado",
+          "note": "O número chegou. O contrato está liquidando a aposta."
+        },
+        "settleOffered": {
+          "title": "A liquidação atrasou",
+          "note": "O número chegou, mas a aposta ainda não foi liquidada. Como alternativa, você mesmo pode liquidá-la; sua carteira paga o gás.",
+          "button": "Liquidar a aposta"
+        },
+        "refundable": {
+          "title": "Nenhum número aleatório chegou",
+          "note": "O prazo acabou, então você pode reembolsar sua aposta de {amount} {symbol}. A taxa de aleatoriedade não é reembolsada.",
+          "button": "Reembolsar {amount} {symbol}"
+        },
+        "unbooked": {
+          "title": "O resultado ainda não pode ser registrado",
+          "note": "O número chegou, mas o contrato não conseguiu liquidá-lo. Ele será liquidado depois, ou sua aposta vira um saldo a resgatar."
+        },
+        "failed": {
+          "title": "Esta aposta parou de atualizar aqui",
+          "note": "Ela continua on-chain. Abra para ver onde ela está."
+        },
+        "open": "Abrir esta aposta",
+        "seconds": "{seconds} s"
+      },
+      "printer": {
+        "ready": "Pronta",
+        "waiting": "Aguardando o número aleatório, {seconds} s",
+        "received": "Número recebido",
+        "printing": "Imprimindo o recibo",
+        "printed": "Recibo impresso"
+      },
+      "sheet": {
+        "open": "Mostrar o boletim completo",
+        "close": "Mostrar menos"
+      },
+      "receipt": {
+        "label": "Recibo da aposta {id}",
+        "bet": "Aposta {id}",
+        "rolled": "Saiu {rolls}.",
+        "rolledRounds": "Saiu {rolls}. {won} de {count} ganharam.",
+        "net": "Resultado líquido",
+        "lines": {
+          "stake": "Aposta",
+          "won": "Ganho",
+          "houseEdge": "Vantagem da casa, {rate}",
+          "paid": "Pago na carteira",
+          "owed": "A receber",
+          "unused": "Aposta não usada devolvida",
+          "returned": "Reembolsado na carteira",
+          "claimable": "Saldo a resgatar"
+        },
+        "stamp": {
+          "paid": "Pago na carteira",
+          "settled": "Liquidada",
+          "refunded": "Reembolsada",
+          "voided": "Anulada"
+        },
+        "owedNote": "O pagamento fica guardado para você. Resgate na página de resgates.",
+        "proof": {
+          "request": "Pedido VRF",
+          "hash": "Hash aleatório",
+          "settled": "Liquidada em"
+        },
+        "open": "Abrir este recibo",
+        "again": "Apostar de novo",
+        "change": "Mudar aposta",
+        "announce": "{rolled} Resultado líquido {net} {symbol}."
+      },
+      "announce": {
+        "signing": "Confirme na sua carteira.",
+        "placed": "Aposta feita. Aguardando a aleatoriedade.",
+        "refundable": "Nenhum número aleatório chegou. Você pode reembolsar sua aposta."
+      },
+      "receipts": {
+        "title": "Últimos recibos de dados",
+        "lede": "Apostas reais, ganhos e perdas. Cada uma abre seu recibo público.",
+        "ledeTestnet": "Apostas reais na rede de teste {chain}, ganhos e perdas. Cada uma abre seu recibo público.",
+        "bet": "Aposta {id}",
+        "desc": "Ganha de {from} a {to}{count, plural, =1 {} other {, # rodadas}}. Saiu {rolls}. {date}",
+        "net": "líquido",
+        "loading": "Lendo os últimos recibos…",
+        "error": "Não foi possível ler os últimos recibos. Todo recibo fica on-chain; tente de novo em um minuto.",
+        "empty": "Nenhuma aposta de dados foi liquidada ainda. A primeira aparece aqui."
+      },
+      "rules": {
+        "title": "Como os Dados pagam",
+        "lede": "O jogo inteiro é um contrato público. Veja o que ele faz, linha por linha.",
+        "roll": {
+          "title": "O sorteio",
+          "body": "O Chainlink VRF envia um número aleatório para cada aposta. O contrato o transforma em um número de 1 a 100 para cada rodada, então ninguém pode escolher nem sortear de novo."
+        },
+        "line": {
+          "title": "Sua linha",
+          "body": "Abaixo ganha na sua linha ou em qualquer número abaixo dela. Acima ganha em qualquer número acima dela. Sua chance de ganhar vai de 2% a 97%; acima disso, um ganho não pagaria mais do que a aposta."
+        },
+        "payout": {
+          "title": "O pagamento",
+          "body": "Um ganho paga sua aposta vezes 100, dividido pela sua chance de ganhar, menos uma vantagem da casa de {rate} tirada desse pagamento. Com 50% de chance, isso dá {pays} vezes a aposta."
+        },
+        "limits": {
+          "title": "Limites",
+          "body": "As apostas começam em {min} {symbol} por rodada, e uma aposta pode ter até {rounds} rodadas. O máximo que você pode apostar depende das suas chances e do que o pool da casa pode pagar. O boletim mostra antes de você assinar."
+        },
+        "fees": {
+          "title": "Taxas",
+          "body": "Cada aposta paga uma taxa de aleatoriedade em ETH, mais o gás da rede, e todas as rodadas dividem essa taxa. Hoje sua carteira anexa até {fee} para ela. O Chainlink cobra pelo preço do gás quando a aposta entra, e o resto volta na mesma transação."
+        },
+        "refund": {
+          "title": "Se nenhum número chegar",
+          "body": "Se o número aleatório não chegar depois de {wait}, você pode reembolsar sua aposta. A taxa de aleatoriedade não é reembolsada."
+        },
+        "contract": "Ler o contrato",
+        "hours": "{count, plural, one {uma hora} other {# horas}}",
+        "minutes": "{count, plural, one {# minuto} other {# minutos}}"
       }
     }
   },

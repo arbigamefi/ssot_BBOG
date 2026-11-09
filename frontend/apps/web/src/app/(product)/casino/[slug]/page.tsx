@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { isCasinoModuleSlug } from "../../../../features/casino/modules";
 import { SITE_URL } from "../../../../config/site";
+import { carbonCopyFontVariables } from "../../../../features/home/fonts";
 import { buildPageMetadata } from "../../../../i18n/metadata";
 import { getRequestI18n } from "../../../../i18n/request";
 import { GamePageClient } from "./pageClient";
@@ -84,7 +85,7 @@ export default async function GameRoomPage({ params }: { params: Promise<{ slug:
     }
   };
 
-  return (
+  const room = (
     <>
       <script
         type="application/ld+json"
@@ -93,4 +94,6 @@ export default async function GameRoomPage({ params }: { params: Promise<{ slug:
       <GamePageClient key={slug} slug={slug} />
     </>
   );
+  // The dice room is rebuilt in Carbon copy and loads its faces.
+  return slug === "dice" ? <div className={carbonCopyFontVariables}>{room}</div> : room;
 }

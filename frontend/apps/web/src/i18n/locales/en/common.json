@@ -466,16 +466,6 @@
         "maxSummary": "{perRound} per round · {total} total"
       },
       "selection": {
-        "dice": {
-          "rollUnder": "Roll Under",
-          "rollOver": "Roll Over",
-          "targetRange": "Target Range",
-          "targetAria": "Dice target",
-          "target": "Target",
-          "multiplier": "Mult",
-          "winChance": "Win",
-          "roll": "Roll"
-        },
         "roulette": {
           "bets": "Bets",
           "clearAll": "Clear All",
@@ -591,7 +581,6 @@
       },
       "history": {
         "recent": {
-          "rolls": "RECENT ROLLS",
           "numbers": "RECENT NUMBERS",
           "draws": "RECENT DRAWS",
           "buckets": "RECENT BUCKETS",
@@ -669,8 +658,6 @@
           "settlementTx": "Settlement tx",
           "resolvedTime": "Resolved time",
           "vrfFee": "Random-number fee",
-          "diceTarget": "Dice target",
-          "diceNumber": "Number drawn",
           "coinChoice": "Chosen side",
           "coinDrawn": "Side drawn",
           "rouletteBet": "Roulette bet",
@@ -820,23 +807,6 @@
               "label": "Column (2:1)",
               "coverage": "12 numbers",
               "multiplier": "3×"
-            }
-          ]
-        },
-        "dice": {
-          "tagline": "Roll a number from 0 to 99. Pick a target and a direction.",
-          "bets": [
-            {
-              "key": "under",
-              "label": "Under target",
-              "coverage": "0 … target-1",
-              "multiplier": "99 / target"
-            },
-            {
-              "key": "over",
-              "label": "Over target",
-              "coverage": "target+1 … 99",
-              "multiplier": "99 / (99 − target)"
             }
           ]
         },
@@ -1173,6 +1143,393 @@
         "title": "Testnet",
         "description": "Bets here use test USDC on {chain}, which has no value, plus a little test ETH for gas. Betting with real USDC opens on Base after the audit report is published.",
         "faucet": "Get test USDC"
+      }
+    },
+    "dice": {
+      "strip": {
+        "preview": "Preview. Betting opens on Base after the audit report is published.",
+        "testnet": "{chain} test network. Test {symbol} has no value."
+      },
+      "head": {
+        "crumb": "All games",
+        "title": "Dice",
+        "lede": "Chainlink VRF rolls a number from 1 to 100 and the ball stops on it. On your side of the line, you win."
+      },
+      "table": {
+        "title": "The table",
+        "chance": "Win chance",
+        "pays": "Pays",
+        "line": "Line",
+        "valueText": "Win on {from} to {to}. {chance}% chance, pays {pays} times the stake.",
+        "side": "Side",
+        "under": "Roll under",
+        "over": "Roll over",
+        "range": "{from} to {to}",
+        "rule": "Pays 100 ÷ the winning numbers, less a {rate} house edge. The ball stops on the number Chainlink VRF rolls.",
+        "status": {
+          "ready": "Drag the line, then pick a side.",
+          "waiting": "Waiting for the random number. The ball rolls until it arrives.",
+          "round": "Round {k} of {n}"
+        },
+        "sound": {
+          "on": "Sound on",
+          "off": "Sound off"
+        }
+      },
+      "slip": {
+        "label": "Bet slip",
+        "title": "Bet slip",
+        "game": "Dice, win on {from}–{to}",
+        "ifWin": "If you win",
+        "eachWin": "Each win pays",
+        "total": "Total stake",
+        "fee": "Randomness fee",
+        "feeUpTo": "up to {fee}",
+        "rounds": "Rounds",
+        "fewer": "One round fewer",
+        "more": "One more round",
+        "stake": "Stake",
+        "stakePer": "Stake per round",
+        "half": "Half",
+        "double": "Double",
+        "max": "Max {amount}",
+        "maxUnknown": "Max",
+        "balance": "Balance {amount} {symbol}.",
+        "connectHint": "Connect a wallet to see your balance here.",
+        "gameRounds": "{game}, {rounds} rounds"
+      },
+      "action": {
+        "telegram": "Join on Telegram",
+        "connect": "Connect wallet",
+        "switchNetwork": "Switch to {chain}",
+        "signing": {
+          "prepare": {
+            "label": "Checking the bet",
+            "sub": "Before your wallet opens"
+          },
+          "one": {
+            "label": "Confirm in wallet",
+            "sub": "Then the bet is placed"
+          },
+          "allow": {
+            "label": "Approve {symbol} in wallet",
+            "sub": "Step 1 of 2"
+          },
+          "bet": {
+            "label": "Confirm bet in wallet",
+            "sub": "Step 2 of 2"
+          }
+        },
+        "poolLoading": "Reading the house pool",
+        "checkAgain": "Check again",
+        "raise": "Raise to {amount}",
+        "lower": "Lower to {amount}",
+        "setStakeSub": {
+          "min": "The minimum",
+          "overMax": "The most at these odds",
+          "balance": "All of your balance"
+        },
+        "faucetUsdc": "Get test {symbol}",
+        "faucetEth": "Get test ETH",
+        "blocked": {
+          "noCapacity": "No room at these odds",
+          "balance": "Not enough {symbol}",
+          "unconfirmed": "Waiting for the network"
+        },
+        "checkTransaction": "Check the transaction",
+        "checking": "Checking the transaction",
+        "place": "Place bet",
+        "placeSub": "{amount} {symbol} + fee",
+        "approve": "Approve {symbol} and place bet",
+        "approveSub": "Two steps in your wallet"
+      },
+      "notice": {
+        "preview": {
+          "lead": "Betting isn't open yet.",
+          "body": "It opens after the audit report is published."
+        },
+        "network": {
+          "lead": "Your wallet is on another network.",
+          "body": "Dice runs on {chain}."
+        },
+        "min": {
+          "lead": "Too small.",
+          "body": "Bets start at {amount} {symbol} a round."
+        },
+        "overMax": {
+          "lead": "Too high for the house pool.",
+          "body": "At a {chance}% chance the most you can stake is {amount} {symbol}.",
+          "bodyPerRound": "At a {chance}% chance the most you can stake is {amount} {symbol} a round."
+        },
+        "noCapacity": {
+          "lead": "The house pool can't take this bet.",
+          "body": "It has no room for a bet at these odds. Pick a higher win chance or check again later."
+        },
+        "balance": {
+          "lead": "Not enough {symbol}.",
+          "body": "You have {amount} {symbol} on {chain}."
+        },
+        "pool": {
+          "unavailable": {
+            "lead": "The house pool couldn't be read.",
+            "body": "Betting opens again once it can be checked."
+          },
+          "paused": {
+            "lead": "The house pool has paused new bets.",
+            "body": "Bets already placed still settle."
+          },
+          "inactive": {
+            "lead": "The house pool isn't taking bets right now.",
+            "body": "Bets already placed still settle."
+          },
+          "full": {
+            "lead": "The house pool is full for now.",
+            "body": "Try again after an open bet settles."
+          },
+          "playerLimit": {
+            "lead": "You have the most open bets allowed.",
+            "body": "Place the next one after one of them settles."
+          },
+          "noLiquidity": {
+            "lead": "The house pool is empty.",
+            "body": "Betting opens once liquidity providers deposit."
+          },
+          "invalidAccounting": {
+            "lead": "The house pool's figures don't add up.",
+            "body": "Betting stays closed until they are checked."
+          },
+          "gameUnavailable": {
+            "lead": "Dice's settings couldn't be read.",
+            "body": "Check again in a moment."
+          },
+          "invalidCount": {
+            "lead": "Too many rounds.",
+            "body": "One bet can play up to {rounds} rounds."
+          }
+        },
+        "error": {
+          "paused": {
+            "lead": "The house pool has paused new bets.",
+            "body": "Nothing was placed. Bets already placed still settle."
+          },
+          "inactive": {
+            "lead": "The house pool isn't taking bets right now.",
+            "body": "Nothing was placed."
+          },
+          "canceled": {
+            "lead": "You cancelled in your wallet.",
+            "body": "Nothing was placed."
+          },
+          "approvalPending": {
+            "lead": "Approved, but the bet wasn't placed.",
+            "body": "The network hasn't confirmed the approval yet. Place the bet again in a moment; the approval is kept."
+          },
+          "allowance": {
+            "lead": "The {symbol} approval is too low.",
+            "body": "Place the bet again to approve the amount it needs."
+          },
+          "balance": {
+            "lead": "Not enough {symbol}.",
+            "body": "Lower the stake or the rounds, or add funds."
+          },
+          "gas": {
+            "lead": "You need a little ETH.",
+            "body": "The randomness fee and the network gas are paid in ETH on {chain}."
+          },
+          "quoteChanged": {
+            "lead": "The randomness fee changed.",
+            "body": "Place the bet again to sign the new fee."
+          },
+          "capacity": {
+            "lead": "The house pool is full for now.",
+            "body": "Try again after an open bet settles."
+          },
+          "playerLimit": {
+            "lead": "You have the most open bets allowed.",
+            "body": "Place the next one after one of them settles."
+          },
+          "gameClosed": {
+            "lead": "Dice is closed.",
+            "body": "It takes no new bets. Bets already placed still settle."
+          },
+          "minimumStake": {
+            "lead": "Too small.",
+            "body": "The stake per round is below the minimum. Raise it and place the bet again."
+          },
+          "liquidity": {
+            "lead": "The house pool can't cover this payout.",
+            "body": "Lower the stake or the rounds."
+          },
+          "network": {
+            "lead": "Your wallet is on another network.",
+            "body": "Dice runs on {chain}."
+          },
+          "wallet": {
+            "lead": "Your wallet isn't ready.",
+            "body": "Connect or unlock it, then place the bet again."
+          },
+          "connection": {
+            "lead": "The network couldn't be read.",
+            "body": "Check your connection. If your wallet sent a transaction, check it before betting again."
+          },
+          "unconfirmed": {
+            "lead": "The bet isn't confirmed yet.",
+            "body": "Check the transaction before you place it again."
+          },
+          "reverted": {
+            "lead": "The transaction failed on-chain.",
+            "body": "Nothing was placed, but the gas was spent. Check your activity before trying again."
+          },
+          "contextChanged": {
+            "lead": "Your wallet, network or bet changed.",
+            "body": "Nothing was placed. Check the slip and place the bet again."
+          },
+          "input": {
+            "lead": "The bet didn't pass the check.",
+            "body": "Check the stake, rounds and fee, then place it again."
+          },
+          "houseEdgeChanged": {
+            "lead": "The house edge changed.",
+            "body": "Check the new payout before you place the bet."
+          },
+          "notSubmitted": {
+            "lead": "The bet wasn't placed.",
+            "body": "The check before sending failed. Try again in a moment; any approval is kept."
+          },
+          "unknown": {
+            "lead": "The bet couldn't be placed.",
+            "body": "Check your wallet activity. If nothing was sent, place it again."
+          }
+        }
+      },
+      "print": {
+        "placing": {
+          "title": "Placing your bet",
+          "note": "Waiting for the network to confirm it."
+        },
+        "waiting": {
+          "title": "Waiting for randomness",
+          "note": "Usually a few seconds. {seconds} s so far."
+        },
+        "slow": {
+          "title": "Still waiting for randomness",
+          "note": "Chainlink is slower than usual. Your stake is held by the game contract, not by us. If no number arrives by {time} UTC, you can refund it."
+        },
+        "settling": {
+          "title": "Settling result",
+          "note": "The number is in. The contract is settling the bet."
+        },
+        "settleOffered": {
+          "title": "Settlement is late",
+          "note": "The number is in, but the bet hasn't been settled yet. As a fallback you can settle it yourself; your wallet pays the gas.",
+          "button": "Settle the bet"
+        },
+        "refundable": {
+          "title": "No random number arrived",
+          "note": "The wait is over, so you can refund your {amount} {symbol} stake. The randomness fee is not refunded.",
+          "button": "Refund {amount} {symbol}"
+        },
+        "unbooked": {
+          "title": "The result can't be booked yet",
+          "note": "The number arrived, but the contract couldn't settle it. It settles later, or your stake becomes a claimable balance."
+        },
+        "failed": {
+          "title": "This bet stopped updating here",
+          "note": "It is still on-chain. Open it to see where it stands."
+        },
+        "open": "Open this bet",
+        "seconds": "{seconds} s"
+      },
+      "printer": {
+        "ready": "Ready",
+        "waiting": "Waiting for the random number, {seconds} s",
+        "received": "Number received",
+        "printing": "Printing receipt",
+        "printed": "Receipt printed"
+      },
+      "sheet": {
+        "open": "Show the full slip",
+        "close": "Show less"
+      },
+      "receipt": {
+        "label": "Receipt for bet {id}",
+        "bet": "Bet {id}",
+        "rolled": "Rolled {rolls}.",
+        "rolledRounds": "Rolled {rolls}. {won} of {count} won.",
+        "net": "Net result",
+        "lines": {
+          "stake": "Stake",
+          "won": "Won",
+          "houseEdge": "House edge, {rate}",
+          "paid": "Paid to wallet",
+          "owed": "Owed to you",
+          "unused": "Unused stake returned",
+          "returned": "Refunded to wallet",
+          "claimable": "Claimable balance"
+        },
+        "stamp": {
+          "paid": "Paid to wallet",
+          "settled": "Settled",
+          "refunded": "Refunded",
+          "voided": "Voided"
+        },
+        "owedNote": "The payout is held for you. Claim it from your claims page.",
+        "proof": {
+          "request": "VRF request",
+          "hash": "Random hash",
+          "settled": "Settled in"
+        },
+        "open": "Open this receipt",
+        "again": "Bet again",
+        "change": "Change bet",
+        "announce": "{rolled} Net result {net} {symbol}."
+      },
+      "announce": {
+        "signing": "Confirm in your wallet.",
+        "placed": "Bet placed. Waiting for randomness.",
+        "refundable": "No random number arrived. You can refund your stake."
+      },
+      "receipts": {
+        "title": "Latest dice receipts",
+        "lede": "Real bets, wins and losses alike. Each one opens its public receipt.",
+        "ledeTestnet": "Real bets on the {chain} test network, wins and losses alike. Each one opens its public receipt.",
+        "bet": "Bet {id}",
+        "desc": "Win on {from}–{to}{count, plural, =1 {} other {, # rounds}}. Rolled {rolls}. {date}",
+        "net": "net",
+        "loading": "Reading the latest receipts…",
+        "error": "The latest receipts couldn't be read. Every receipt stays on-chain; try again in a minute.",
+        "empty": "No dice bet has settled yet. The first one is listed here."
+      },
+      "rules": {
+        "title": "How dice pays",
+        "lede": "The whole game is one public contract. Here is what it does, line by line.",
+        "roll": {
+          "title": "The roll",
+          "body": "Chainlink VRF sends one random number for each bet. The contract turns it into a roll from 1 to 100 for every round, so nobody can pick or redraw it."
+        },
+        "line": {
+          "title": "Your line",
+          "body": "Roll under wins on your line or any number under it. Roll over wins on any number above it. Your win chance runs from 2% to 97%; any higher and a win would pay back no more than your stake."
+        },
+        "payout": {
+          "title": "The payout",
+          "body": "A win pays your stake times 100, divided by your win chance, less a {rate} house edge taken from that payout. At a 50% chance that is {pays} times your stake."
+        },
+        "limits": {
+          "title": "Limits",
+          "body": "Bets start at {min} {symbol} a round, and one bet can play up to {rounds} rounds. The most you can stake depends on your odds and on what the house pool can pay out. The slip shows it before you sign."
+        },
+        "fees": {
+          "title": "Fees",
+          "body": "Each bet pays one randomness fee in ETH, plus network gas, and all its rounds share it. Your wallet attaches up to {fee} for it today. Chainlink charges at the gas price when the bet goes through, and the rest comes back in the same transaction."
+        },
+        "refund": {
+          "title": "If no number comes",
+          "body": "If the random number hasn't arrived after {wait}, you can refund your stake. The randomness fee is not refunded."
+        },
+        "contract": "Read the contract",
+        "hours": "{count, plural, one {an hour} other {# hours}}",
+        "minutes": "{count, plural, one {# minute} other {# minutes}}"
       }
     }
   },

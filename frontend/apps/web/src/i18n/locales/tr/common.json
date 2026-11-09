@@ -1141,7 +1141,6 @@
       },
       "history": {
         "recent": {
-          "rolls": "SON ATIŞLAR",
           "numbers": "SON SAYILAR",
           "draws": "SON ÇEKİLİŞLER",
           "buckets": "SON KOVALAR",
@@ -1299,16 +1298,6 @@
         }
       },
       "selection": {
-        "dice": {
-          "rollUnder": "Altında",
-          "rollOver": "Üstünde",
-          "targetRange": "Hedef aralığı",
-          "targetAria": "Zar hedefi",
-          "target": "Hedef",
-          "multiplier": "Çrpn",
-          "winChance": "Kazanç",
-          "roll": "At"
-        },
         "roulette": {
           "bets": "Bahisler",
           "clearAll": "Tümünü temizle",
@@ -1446,8 +1435,6 @@
           "settlementTx": "Ödeme işlemi",
           "resolvedTime": "Çözülme zamanı",
           "vrfFee": "Rastgele sayı ücreti",
-          "diceTarget": "Zar hedefi",
-          "diceNumber": "Çıkan sayı",
           "coinChoice": "Seçilen taraf",
           "coinDrawn": "Çıkan taraf",
           "rouletteBet": "Rulet bahsi",
@@ -1714,23 +1701,6 @@
             }
           ]
         },
-        "dice": {
-          "tagline": "0 ile 99 arası bir sayı atın. Bir hedef ve yön seçin.",
-          "bets": [
-            {
-              "key": "under",
-              "label": "Hedefin altında",
-              "coverage": "0 … hedef-1",
-              "multiplier": "99 / target"
-            },
-            {
-              "key": "over",
-              "label": "Hedefin üstünde",
-              "coverage": "hedef+1 … 99",
-              "multiplier": "99 / (99 − target)"
-            }
-          ]
-        },
         "coin-toss": {
           "tagline": "Saf 50/50. Bir taraf seçin; tek bir Chainlink VRF çekilişi karar verir.",
           "bets": [
@@ -1924,6 +1894,393 @@
         "title": "Testnet",
         "description": "Buradaki bahisler {chain} üzerindeki değeri olmayan test USDC ile yapılır; gas için biraz test ETH de gerekir. Gerçek USDC ile bahis, denetim raporu yayımlandıktan sonra Base'de açılacak.",
         "faucet": "Test USDC al"
+      }
+    },
+    "dice": {
+      "strip": {
+        "preview": "Önizleme. Bahisler, denetim raporu yayımlandıktan sonra Base üzerinde açılır.",
+        "testnet": "{chain} test ağı. Test {symbol} tokenlarının değeri yoktur."
+      },
+      "head": {
+        "crumb": "Tüm oyunlar",
+        "title": "Zar",
+        "lede": "Chainlink VRF 1 ile 100 arasında bir sayı atar ve top o sayıda durur. Sayı çizginin sizin tarafınıza düşerse kazanırsınız."
+      },
+      "table": {
+        "title": "Masa",
+        "chance": "Kazanma şansı",
+        "pays": "Öder",
+        "line": "Çizgi",
+        "valueText": "{from} ile {to} arası kazanır. Şans %{chance}, bahsin {pays} katını öder.",
+        "side": "Taraf",
+        "under": "Alt",
+        "over": "Üst",
+        "range": "{from} ile {to} arası",
+        "rule": "100 ÷ kazanan sayı adedi kadar öder, {rate} kasa payı düşülür. Top, Chainlink VRF'nin attığı sayıda durur.",
+        "status": {
+          "ready": "Çizgiyi sürükleyin, sonra bir taraf seçin.",
+          "waiting": "Rastgele sayı bekleniyor. Sayı gelene kadar top yuvarlanır.",
+          "round": "Tur {k} / {n}"
+        },
+        "sound": {
+          "on": "Ses açık",
+          "off": "Ses kapalı"
+        }
+      },
+      "slip": {
+        "label": "Bahis kuponu",
+        "title": "Kupon",
+        "game": "Zar, {from}–{to} kazanır",
+        "ifWin": "Kazanırsanız",
+        "eachWin": "Her kazanç öder",
+        "total": "Toplam bahis",
+        "fee": "Rastgelelik ücreti",
+        "feeUpTo": "en fazla {fee}",
+        "rounds": "Tur",
+        "fewer": "Bir tur az",
+        "more": "Bir tur fazla",
+        "stake": "Bahis",
+        "stakePer": "Tur başına bahis",
+        "half": "Yarı",
+        "double": "İki katı",
+        "max": "Maks. {amount}",
+        "maxUnknown": "Maks.",
+        "balance": "Bakiye {amount} {symbol}.",
+        "connectHint": "Bakiyenizi burada görmek için bir cüzdan bağlayın.",
+        "gameRounds": "{game}, {rounds} tur"
+      },
+      "action": {
+        "telegram": "Telegram'a katıl",
+        "connect": "Cüzdan bağla",
+        "switchNetwork": "{chain} ağına geç",
+        "signing": {
+          "prepare": {
+            "label": "Bahis kontrol ediliyor",
+            "sub": "Cüzdan açılmadan önce"
+          },
+          "one": {
+            "label": "Cüzdanda onaylayın",
+            "sub": "Ardından bahis yapılır"
+          },
+          "allow": {
+            "label": "Cüzdanda {symbol} izni verin",
+            "sub": "Adım 1 / 2"
+          },
+          "bet": {
+            "label": "Cüzdanda bahsi onaylayın",
+            "sub": "Adım 2 / 2"
+          }
+        },
+        "poolLoading": "Casino havuzu okunuyor",
+        "checkAgain": "Tekrar kontrol et",
+        "raise": "{amount} yap",
+        "lower": "{amount} değerine düşür",
+        "setStakeSub": {
+          "min": "En düşük tutar",
+          "overMax": "Bu şansta en yüksek tutar",
+          "balance": "Bakiyenizin tamamı"
+        },
+        "faucetUsdc": "Test {symbol} al",
+        "faucetEth": "Test ETH al",
+        "blocked": {
+          "noCapacity": "Bu şansta yer yok",
+          "balance": "Yetersiz {symbol}",
+          "unconfirmed": "Ağ bekleniyor"
+        },
+        "checkTransaction": "İşlemi kontrol et",
+        "checking": "İşlem kontrol ediliyor",
+        "place": "Bahis yap",
+        "placeSub": "{amount} {symbol} + ücret",
+        "approve": "{symbol} izni ver ve bahis yap",
+        "approveSub": "Cüzdanda iki adım"
+      },
+      "notice": {
+        "preview": {
+          "lead": "Bahisler henüz açılmadı.",
+          "body": "Denetim raporu yayımlandıktan sonra açılır."
+        },
+        "network": {
+          "lead": "Cüzdanınız başka bir ağda.",
+          "body": "Zar {chain} üzerinde çalışır."
+        },
+        "min": {
+          "lead": "Çok düşük.",
+          "body": "Bahisler tur başına {amount} {symbol} ile başlar."
+        },
+        "overMax": {
+          "lead": "Casino havuzu için çok yüksek.",
+          "body": "%{chance} şansla en fazla {amount} {symbol} yatırabilirsiniz.",
+          "bodyPerRound": "%{chance} şansla tur başına en fazla {amount} {symbol} yatırabilirsiniz."
+        },
+        "noCapacity": {
+          "lead": "Casino havuzu bu bahsi alamıyor.",
+          "body": "Bu şansta bir bahis için yer yok. Daha yüksek bir kazanma şansı seçin ya da daha sonra tekrar bakın."
+        },
+        "balance": {
+          "lead": "Yetersiz {symbol}.",
+          "body": "{chain} üzerinde {amount} {symbol} bakiyeniz var."
+        },
+        "pool": {
+          "unavailable": {
+            "lead": "Casino havuzu okunamadı.",
+            "body": "Kontrol edilebildiğinde bahisler yeniden açılır."
+          },
+          "paused": {
+            "lead": "Casino havuzu yeni bahisleri durdurdu.",
+            "body": "Yapılmış bahisler sonuçlanmaya devam eder."
+          },
+          "inactive": {
+            "lead": "Casino havuzu şu anda bahis almıyor.",
+            "body": "Yapılmış bahisler sonuçlanmaya devam eder."
+          },
+          "full": {
+            "lead": "Casino havuzu şimdilik dolu.",
+            "body": "Açık bir bahis sonuçlandıktan sonra tekrar deneyin."
+          },
+          "playerLimit": {
+            "lead": "İzin verilen en fazla açık bahse ulaştınız.",
+            "body": "Birisi sonuçlandıktan sonra yenisini yapın."
+          },
+          "noLiquidity": {
+            "lead": "Casino havuzu boş.",
+            "body": "Likidite sağlayıcıları yatırdığında bahisler açılır."
+          },
+          "invalidAccounting": {
+            "lead": "Casino havuzunun rakamları tutmuyor.",
+            "body": "Kontrol edilene kadar bahisler kapalı kalır."
+          },
+          "gameUnavailable": {
+            "lead": "Zar ayarları okunamadı.",
+            "body": "Biraz sonra tekrar kontrol edin."
+          },
+          "invalidCount": {
+            "lead": "Çok fazla tur.",
+            "body": "Bir bahis en fazla {rounds} tur oynayabilir."
+          }
+        },
+        "error": {
+          "paused": {
+            "lead": "Casino havuzu yeni bahisleri durdurdu.",
+            "body": "Bahis yapılmadı. Yapılmış bahisler sonuçlanmaya devam eder."
+          },
+          "inactive": {
+            "lead": "Casino havuzu şu anda bahis almıyor.",
+            "body": "Bahis yapılmadı."
+          },
+          "canceled": {
+            "lead": "Cüzdanda iptal ettiniz.",
+            "body": "Bahis yapılmadı."
+          },
+          "approvalPending": {
+            "lead": "İzin verildi ama bahis yapılmadı.",
+            "body": "Ağ izni henüz onaylamadı. Biraz sonra bahsi tekrar yapın; izin korunur."
+          },
+          "allowance": {
+            "lead": "{symbol} izni çok düşük.",
+            "body": "Gereken tutara izin vermek için bahsi tekrar yapın."
+          },
+          "balance": {
+            "lead": "Yetersiz {symbol}.",
+            "body": "Bahsi ya da tur sayısını düşürün veya bakiye ekleyin."
+          },
+          "gas": {
+            "lead": "Biraz ETH gerekiyor.",
+            "body": "Rastgelelik ücreti ve ağ ücreti {chain} üzerinde ETH ile ödenir."
+          },
+          "quoteChanged": {
+            "lead": "Rastgelelik ücreti değişti.",
+            "body": "Yeni ücreti imzalamak için bahsi tekrar yapın."
+          },
+          "capacity": {
+            "lead": "Casino havuzu şimdilik dolu.",
+            "body": "Açık bir bahis sonuçlandıktan sonra tekrar deneyin."
+          },
+          "playerLimit": {
+            "lead": "İzin verilen en fazla açık bahse ulaştınız.",
+            "body": "Birisi sonuçlandıktan sonra yenisini yapın."
+          },
+          "gameClosed": {
+            "lead": "Zar kapalı.",
+            "body": "Yeni bahis almıyor. Yapılmış bahisler sonuçlanmaya devam eder."
+          },
+          "minimumStake": {
+            "lead": "Çok düşük.",
+            "body": "Tur başına bahis en düşük tutarın altında. Artırıp bahsi tekrar yapın."
+          },
+          "liquidity": {
+            "lead": "Casino havuzu bu ödemeyi karşılayamaz.",
+            "body": "Bahsi ya da tur sayısını düşürün."
+          },
+          "network": {
+            "lead": "Cüzdanınız başka bir ağda.",
+            "body": "Zar {chain} üzerinde çalışır."
+          },
+          "wallet": {
+            "lead": "Cüzdanınız hazır değil.",
+            "body": "Bağlayın veya kilidini açın, sonra bahsi tekrar yapın."
+          },
+          "connection": {
+            "lead": "Ağ okunamadı.",
+            "body": "Bağlantınızı kontrol edin. Cüzdanınız bir işlem gönderdiyse, tekrar bahis yapmadan önce onu kontrol edin."
+          },
+          "unconfirmed": {
+            "lead": "Bahis henüz onaylanmadı.",
+            "body": "Tekrar yapmadan önce işlemi kontrol edin."
+          },
+          "reverted": {
+            "lead": "İşlem zincirde başarısız oldu.",
+            "body": "Bahis yapılmadı ama ağ ücreti harcandı. Tekrar denemeden önce geçmişinize bakın."
+          },
+          "contextChanged": {
+            "lead": "Cüzdanınız, ağınız veya bahsiniz değişti.",
+            "body": "Bahis yapılmadı. Kuponu kontrol edip bahsi tekrar yapın."
+          },
+          "input": {
+            "lead": "Bahis kontrolden geçmedi.",
+            "body": "Bahsi, tur sayısını ve ücreti kontrol edip tekrar yapın."
+          },
+          "houseEdgeChanged": {
+            "lead": "Casino avantajı değişti.",
+            "body": "Bahis yapmadan önce yeni ödemeyi kontrol edin."
+          },
+          "notSubmitted": {
+            "lead": "Bahis yapılmadı.",
+            "body": "Gönderimden önceki kontrol başarısız oldu. Biraz sonra tekrar deneyin; verilen izin korunur."
+          },
+          "unknown": {
+            "lead": "Bahis yapılamadı.",
+            "body": "Cüzdan geçmişinizi kontrol edin. Hiçbir şey gönderilmediyse bahsi tekrar yapın."
+          }
+        }
+      },
+      "print": {
+        "placing": {
+          "title": "Bahsiniz yapılıyor",
+          "note": "Ağın onaylaması bekleniyor."
+        },
+        "waiting": {
+          "title": "Rastgele sayı bekleniyor",
+          "note": "Genellikle birkaç saniye sürer. Şu ana kadar {seconds} sn."
+        },
+        "slow": {
+          "title": "Rastgele sayı hâlâ bekleniyor",
+          "note": "Chainlink her zamankinden yavaş. Bahsiniz bizde değil, oyun sözleşmesinde duruyor. {time} UTC'ye kadar sayı gelmezse iade alabilirsiniz."
+        },
+        "settling": {
+          "title": "Sonuç işleniyor",
+          "note": "Sayı geldi. Sözleşme bahsi sonuçlandırıyor."
+        },
+        "settleOffered": {
+          "title": "Sonuçlandırma gecikti",
+          "note": "Sayı geldi ama bahis henüz sonuçlanmadı. Yedek yol olarak bahsi kendiniz sonuçlandırabilirsiniz; ağ ücretini cüzdanınız öder.",
+          "button": "Bahsi sonuçlandır"
+        },
+        "refundable": {
+          "title": "Rastgele sayı gelmedi",
+          "note": "Bekleme süresi doldu, {amount} {symbol} bahsinizi iade alabilirsiniz. Rastgelelik ücreti iade edilmez.",
+          "button": "{amount} {symbol} iade al"
+        },
+        "unbooked": {
+          "title": "Sonuç henüz kaydedilemiyor",
+          "note": "Sayı geldi ama sözleşme bahsi sonuçlandıramadı. Daha sonra sonuçlanır ya da bahsiniz talep edilebilir bakiyeye dönüşür."
+        },
+        "failed": {
+          "title": "Bu bahis burada güncellenmeyi bıraktı",
+          "note": "Bahis hâlâ zincirde. Durumunu görmek için açın."
+        },
+        "open": "Bu bahsi aç",
+        "seconds": "{seconds} sn"
+      },
+      "printer": {
+        "ready": "Hazır",
+        "waiting": "Rastgele sayı bekleniyor, {seconds} sn",
+        "received": "Sayı geldi",
+        "printing": "Makbuz yazdırılıyor",
+        "printed": "Makbuz yazdırıldı"
+      },
+      "sheet": {
+        "open": "Kuponun tamamını göster",
+        "close": "Daha az göster"
+      },
+      "receipt": {
+        "label": "{id} numaralı bahsin fişi",
+        "bet": "Bahis {id}",
+        "rolled": "Gelen: {rolls}.",
+        "rolledRounds": "Gelen: {rolls}. {count} turun {won} tanesi kazandı.",
+        "net": "Net sonuç",
+        "lines": {
+          "stake": "Bahis",
+          "won": "Kazanç",
+          "houseEdge": "Casino avantajı, {rate}",
+          "paid": "Cüzdana ödenen",
+          "owed": "Size borçlu",
+          "unused": "İade edilen kullanılmamış bahis",
+          "returned": "Cüzdana iade edilen",
+          "claimable": "Talep edilebilir bakiye"
+        },
+        "stamp": {
+          "paid": "Cüzdana ödendi",
+          "settled": "Sonuçlandı",
+          "refunded": "İade edildi",
+          "voided": "Geçersiz"
+        },
+        "owedNote": "Ödeme sizin için tutuluyor. Talepler sayfasından alın.",
+        "proof": {
+          "request": "VRF isteği",
+          "hash": "Rastgele hash",
+          "settled": "Sonuçlandığı işlem"
+        },
+        "open": "Bu fişi aç",
+        "again": "Tekrar bahis yap",
+        "change": "Bahsi değiştir",
+        "announce": "{rolled} Net sonuç {net} {symbol}."
+      },
+      "announce": {
+        "signing": "Cüzdanınızda onaylayın.",
+        "placed": "Bahis yapıldı. Rastgele sayı bekleniyor.",
+        "refundable": "Rastgele sayı gelmedi. Bahsinizi iade alabilirsiniz."
+      },
+      "receipts": {
+        "title": "Son zar fişleri",
+        "lede": "Kazanan ve kaybeden, gerçek bahisler. Her biri kendi açık fişini açar.",
+        "ledeTestnet": "{chain} test ağında kazanan ve kaybeden, gerçek bahisler. Her biri kendi açık fişini açar.",
+        "bet": "Bahis {id}",
+        "desc": "{from}–{to} kazanır{count, plural, =1 {} other {, # tur}}. Gelen: {rolls}. {date}",
+        "net": "net",
+        "loading": "Son fişler okunuyor…",
+        "error": "Son fişler okunamadı. Her fiş zincirde kalır; bir dakika sonra tekrar deneyin.",
+        "empty": "Henüz sonuçlanan zar bahsi yok. İlki burada listelenir."
+      },
+      "rules": {
+        "title": "Zar nasıl öder",
+        "lede": "Oyunun tamamı tek bir açık sözleşmedir. Ne yaptığını satır satır burada görebilirsiniz.",
+        "roll": {
+          "title": "Atış",
+          "body": "Chainlink VRF her bahis için bir rastgele sayı gönderir. Sözleşme bunu her tur için 1 ile 100 arasında bir sayıya çevirir; kimse sayıyı seçemez ya da yeniden atamaz."
+        },
+        "line": {
+          "title": "Çizginiz",
+          "body": "Alt, çizginizde veya altındaki her sayıda kazanır. Üst, çizginin üstündeki her sayıda kazanır. Kazanma şansınız %2 ile %97 arasındadır; daha yükseğinde kazanç bahsinizden fazlasını geri ödemezdi."
+        },
+        "payout": {
+          "title": "Ödeme",
+          "body": "Kazanç, bahsinizin 100 katının kazanma şansınıza bölümünü öder; bu ödemeden {rate} casino avantajı düşülür. %50 şansta bu, bahsinizin {pays} katıdır."
+        },
+        "limits": {
+          "title": "Limitler",
+          "body": "Bahisler tur başına {min} {symbol} ile başlar ve bir bahis en fazla {rounds} tur oynayabilir. Yatırabileceğiniz en yüksek tutar şansınıza ve casino havuzunun ödeyebileceğine bağlıdır. Kupon bunu imzalamadan önce gösterir."
+        },
+        "fees": {
+          "title": "Ücretler",
+          "body": "Her bahis ETH ile bir rastgelelik ücreti ve ağ ücreti öder; bahsin tüm turları bu ücreti paylaşır. Cüzdanınız bugün bunun için en fazla {fee} ekler. Chainlink, bahis işlendiğindeki gas fiyatıyla ücret alır, kalanı aynı işlemde geri döner."
+        },
+        "refund": {
+          "title": "Sayı gelmezse",
+          "body": "Rastgele sayı {wait} sonra hâlâ gelmediyse bahsinizi iade alabilirsiniz. Rastgelelik ücreti iade edilmez."
+        },
+        "contract": "Sözleşmeyi oku",
+        "hours": "{count, plural, one {bir saat} other {# saat}}",
+        "minutes": "{count, plural, one {# dakika} other {# dakika}}"
       }
     }
   },

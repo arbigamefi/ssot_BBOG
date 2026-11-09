@@ -2,7 +2,7 @@
 
 | Owner | Product + Frontend |
 | Status | Active |
-| Last Updated | 2026-11-03 |
+| Last Updated | 2026-11-09 |
 | Depends on | `01-brand.md`, `03-information-architecture.md`, `casino-placebet-ux.md` |
 | Supersedes | Draft v1 pre-implementation wireframes |
 
@@ -65,23 +65,58 @@ Must show:
 
 ## 4. `/casino/[slug]`
 
-Purpose: the betting room. The dice room is the reference; other games keep its structure and
-change only the table.
+Purpose: the betting room. It has two layers (`01-brand.md` §2): **the table is immersion, the
+paper is trust.** The dice room is the reference; other games keep its structure and draw their
+own table.
 
-Layout: the game's head and table on the left (7 of 12 columns), the slip on the right (5
-columns). On a phone the slip follows the table and its main action rides along the bottom of
-the screen while the slip is in view.
+### Layout
 
-The slip is one sheet of paper through the whole bet, with no overlays:
+- **Desktop.** The game's head above the table on the left; the table takes the rest of the
+  width. On the right a paper column of 360–400px: a thin paper slot level with the top of the
+  felt, one status line above the slot (a 7px light and its text), and the slip and receipt
+  hanging from the slot, top-aligned with the felt. Only the slot of the printer is drawn.
+- **Tablet (up to 1080px).** The table first, then the slot and the slip under it.
+- **Phone (up to 720px).** No slot. The slip is a sheet docked to the bottom of the screen.
+  Closed, it shows one summary line, the stake input and the main button, so the table and the
+  button share the screen; after a result it shows the rolled number, the net result, and Bet
+  again and Change bet. Tapping the summary opens the full slip or receipt. The page leaves room
+  at the bottom for the sheet.
 
-1. **Quote.** Win chance, then multiplier; stake and number of rounds; the most the player can
-   win; the randomness fee as "up to X ETH", the amount the wallet attaches.
-2. **Print.** Once the bet is sent, the same sheet prints the receipt; waiting for randomness is
-   shown as printing.
-3. **Stamp.** On settlement the receipt is stamped "Paid to wallet" or "Settled" and gets a torn
-   edge.
-4. **Tear off.** "Place another bet" moves the receipt into the room's recent receipts and gives
-   the slip a fresh sheet.
+### The table (dice)
+
+- Indigo felt with a fine noise under one overhead lamp, a padded dark rail, and a carved lane.
+- Printed on the felt in paper-white ink: the 1–100 scale, Win chance and Pays in Doto, two
+  betting spots ("Roll under, 1 to N" and "Roll over, N+1 to 100") with a chip on the chosen
+  one, and a small rule along the bottom edge ("Pays 100 ÷ the winning numbers, less a 2% house
+  edge. The ball stops on the number Chainlink VRF rolls."). The winning numbers are a field of
+  printed dots in the lane.
+- A paper puck on a dashed cut sets the line; it is dragged, and a keyboard range carries the
+  same value. Win chance is 2%–97% (under 2–97, over 3–98).
+- The top right holds the sound switch (off by default), the net amount of a win, and one status
+  line. Under a 640px felt that group wraps under the figures.
+- **The ball follows the bet's chain state.** While the random number is awaited it rolls back
+  and forth along the whole scale and the readout above it shows only the number under it. When
+  the number arrives it rolls on from where it is, at the speed it has, straight to the number,
+  and stops with a small settle; the readout becomes a paper tag. It never reverses, never
+  overshoots and never slows down for the line. With several rounds each later round rolls from
+  rest, a pin marks each landing (filled when that round won) and the status reads "Round k of
+  n". The ball is on the number 4s after the number arrives even when the tab gets no frames.
+- A net win is paid on the table (`02-voice-and-copy.md` §11). A loss gets nothing.
+
+### The paper
+
+The slip is one sheet through the whole bet, with no overlays:
+
+1. **Quote.** The game line, the most the player can win, the total stake for several rounds,
+   the randomness fee as "up to X ETH" (the amount the wallet attaches), rounds, stake and the
+   main button.
+2. **Wait.** Once the bet is placed a short waiting slip feeds out of the slot. The status line
+   reads "Waiting for the random number, N s" with a slow blink, then "Number received" while
+   the ball rolls.
+3. **Print.** When the ball stops the receipt prints out of the slot ("Printing receipt", fast
+   blink, then "Receipt printed"), is stamped "Paid to wallet" or "Settled" and has a torn edge.
+4. **Tear off.** "Bet again" or "Change bet" tears the receipt off first; the room's recent
+   receipts list the bet once the bet index has it.
 
 Rules:
 
@@ -89,9 +124,9 @@ Rules:
   button becomes that action ("Lower to 1.06", "Switch to Base Sepolia", "Get test ETH") and the
   reason sits above it.
 - Late randomness, manual settlement and refund follow `casino-placebet-ux.md`; they are states
-  of the slip, not dialogs.
-- Dice: win chance 2%–97% in the UI (under 2–97, over 3–98). The winning side of the scale is
-  printed in ink dots; the losing side stays blank. Rolls are punched into the scale.
+  of the slip, not dialogs. The ball stops rolling when a refund is offered.
+- The receipt states the facts; the table never contradicts it. Every figure comes from the
+  chain read the receipt uses.
 - Raw RPC/viem/contract errors never render as product copy.
 
 ## 5. `/casino/receipt/[chainId]/[betId]`

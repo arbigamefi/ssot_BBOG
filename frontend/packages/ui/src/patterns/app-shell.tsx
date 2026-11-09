@@ -71,7 +71,7 @@ export function AppShell({
             : isGame
               ? "flex max-w-[1600px] flex-col gap-6 px-4 pb-12 md:px-8"
               : "max-w-[1440px] px-4 sm:px-6",
-          readOnlyBanner ? "pt-5" : isMarketing ? "pt-0" : isGame ? "pt-5" : "pt-10"
+          readOnlyBanner ? "pt-5" : isMarketing || fullBleed ? "pt-0" : isGame ? "pt-5" : "pt-10"
         )}
       >
         {children}
