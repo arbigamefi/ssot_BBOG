@@ -1118,12 +1118,6 @@
           "slot": "Kova {slot}",
           "risk": "Risk: {risk}"
         },
-        "slots": {
-          "ready": "Kazanmak için 3 sembol eşle",
-          "spinning": "Çekiliş bekleniyor...",
-          "result": "{symbols}",
-          "classic": "Klasik profil"
-        },
         "baccarat": {
           "ready": "Oyuncu, banko veya beraberliğe bahis yap",
           "dealing": "Çekiliş bekleniyor...",
@@ -1143,7 +1137,6 @@
         "recent": {
           "draws": "SON ÇEKİLİŞLER",
           "buckets": "SON KOVALAR",
-          "slots": "SON DÖNÜŞLER",
           "hands": "SON ELLER",
           "dice": "SON ZARLAR",
           "flips": "SON ATIŞLAR"
@@ -1336,21 +1329,6 @@
             "total": "Tam toplam",
             "specificDouble": "Belirli çift",
             "singleFace": "Tek yüz"
-          }
-        },
-        "slots": {
-          "profiles": {
-            "classic": "Klasik 3 makara"
-          },
-          "symbols": {
-            "0": "Kiraz",
-            "1": "Limon",
-            "2": "Çan",
-            "3": "Elmas",
-            "4": "Taç",
-            "5": "Yıldız",
-            "6": "Bar",
-            "7": "Yedi"
           },
           "yes": "Evet",
           "no": "Hayır"
@@ -1425,10 +1403,6 @@
           "plinkoSlot": "Kova",
           "plinkoPath": "Yol",
           "plinkoMultiplier": "Kova çarpanı",
-          "slotsProfile": "Profil",
-          "slotsSymbols": "Çıkan semboller",
-          "slotsMultiplier": "Makara çarpanı",
-          "slotsJackpot": "Jackpot",
           "baccaratChoice": "Seçilen taraf",
           "baccaratWinner": "Kazanan taraf",
           "baccaratPlayerTotal": "Oyuncu toplamı",
@@ -2346,6 +2320,58 @@
         "zero": "0",
         "rolled": "Gelen: {rolls}.",
         "rolledRounds": "Gelen: {rolls}. {count} turun {won} tanesi kazandı."
+      }
+    },
+    "slots": {
+      "head": {
+        "crumb": "Tüm oyunlar",
+        "title": "Slot",
+        "lede": "Chainlink VRF üç makaranın her biri için bir sembol seçer ve makaralar soldan sağa o sembolde durur. Üç aynı sembol kazandırır; üç yedi en çok kazandırır."
+      },
+      "table": {
+        "title": "Makine",
+        "top": "En büyük ödül",
+        "chance": "Kazanma şansı",
+        "history": "Son sonuçlar",
+        "noHistory": "Henüz çevrilmedi",
+        "paytable": "Her satır ne öder",
+        "any": "A",
+        "odds": "{total} çevirmede {count}",
+        "rule": "Her makara Chainlink VRF'in seçtiği bir sembolde durur; her sembolün şansı eşittir. Ödemeler bahsinizi içerir, {rate} kasa avantajı düşülür: ortalamada bahislerin {back} kadarı geri döner.",
+        "lines": {
+          "jackpot": "Üç yedi",
+          "three": "Diğer üç aynı",
+          "pair": "Herhangi iki aynı"
+        },
+        "status": {
+          "ready": "Bahis fişinde tutarı girin, sonra bahsi yapın.",
+          "waiting": "Rastgele sayı bekleniyor. Gelene kadar makaralar döner.",
+          "rounds": "Gelen: <spin></spin>. {count} turun {paid} tanesi ödedi."
+        }
+      },
+      "symbol": {
+        "cherry": "kiraz",
+        "lemon": "limon",
+        "bell": "çan",
+        "diamond": "elmas",
+        "crown": "taç",
+        "star": "yıldız",
+        "bar": "bar",
+        "seven": "yedi"
+      },
+      "slip": {
+        "game": "Slot, üç makara",
+        "pays": {
+          "jackpot": "Üç yedi öder",
+          "three": "Üç aynı öder",
+          "pair": "İki aynı öder"
+        }
+      },
+      "receipt": {
+        "trio": "{a}, {b}, {c}",
+        "rolled": "Gelen: {rolls}.",
+        "rolledRounds": "Gelen: {rolls}. {count} turun {paid} tanesi ödedi.",
+        "between": "; "
       }
     }
   },

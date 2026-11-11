@@ -265,10 +265,6 @@ function formatFactorBpsMultiplier(factorBps: number, houseEdgeBps: number) {
   return formatNetMultiplier(factorBps / 10_000, houseEdgeBps);
 }
 
-function formatSlotsSymbols(symbols: readonly number[], t: Translate) {
-  return symbols.map((symbol) => t(`casino.room.selection.slots.symbols.${symbol}`)).join(" / ");
-}
-
 function getGameResultRows(context: GameResultContext, t: Translate) {
   if (context.casinoOutcome?.kind === "coin-toss") {
     return [
@@ -368,40 +364,6 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
     ] satisfies GameResultRow[];
   }
 
-  if (context.casinoOutcome?.kind === "slots") {
-    return [
-      {
-        label: t("casino.room.result.facts.slotsProfile"),
-        value: t(`casino.room.selection.slots.profiles.${context.casinoOutcome.profile}`)
-      },
-      {
-        label: t("casino.room.result.facts.slotsSymbols"),
-        value: context.casinoOutcome.rolls
-          .map((roll) => formatSlotsSymbols(roll.symbols, t))
-          .join(" / "),
-        tone:
-          context.casinoOutcome.netResult > 0n
-            ? "win"
-            : context.casinoOutcome.netResult < 0n
-              ? "loss"
-              : "neutral"
-      },
-      {
-        label: t("casino.room.result.facts.slotsMultiplier"),
-        value: context.casinoOutcome.rolls
-          .map((roll) => formatNetMultiplier(roll.multiplier, context.houseEdgeBps))
-          .join(", ")
-      },
-      {
-        label: t("casino.room.result.facts.slotsJackpot"),
-        value: context.casinoOutcome.rolls.some((roll) => roll.jackpot)
-          ? t("casino.room.selection.slots.yes")
-          : t("casino.room.selection.slots.no"),
-        tone: context.casinoOutcome.rolls.some((roll) => roll.jackpot) ? "win" : "neutral"
-      }
-    ] satisfies GameResultRow[];
-  }
-
   if (context.casinoOutcome?.kind === "sic-bo") {
     return [
       {
@@ -426,7 +388,7 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
         label: t("casino.room.result.facts.sicBoTriple"),
         value: context.casinoOutcome.rolls
           .map((roll) =>
-            roll.triple ? t("casino.room.selection.slots.yes") : t("casino.room.selection.slots.no")
+            roll.triple ? t("casino.room.selection.sicBo.yes") : t("casino.room.selection.sicBo.no")
           )
           .join(", ")
       },

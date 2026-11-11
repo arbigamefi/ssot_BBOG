@@ -142,7 +142,6 @@ export function SharedGameRoom({ slug, room }: { slug: string; room: GameRoom })
         sicBoKind={room.sicBoKind}
         sicBoValue={room.sicBoValue}
         plinkoBuckets={room.plinkoBuckets}
-        slotsSymbols={room.slotsSymbols}
         animatingKenoSpots={room.animatingKenoSpots}
         kenoResultDrawn={room.kenoResultDrawn}
         casinoOutcome={room.casinoOutcome}
@@ -159,7 +158,6 @@ export function SharedGameRoom({ slug, room }: { slug: string; room: GameRoom })
         onKenoRevealComplete={room.completeStageReveal}
         onPlinkoRiskChange={room.setPlinkoRisk}
         onPlinkoRevealComplete={room.completeStageReveal}
-        onSlotsRevealComplete={room.completeStageReveal}
         onSicBoRevealComplete={room.completeStageReveal}
         onBaccaratRevealComplete={room.completeStageReveal}
         onBaccaratSideChange={room.setBaccaratSide}

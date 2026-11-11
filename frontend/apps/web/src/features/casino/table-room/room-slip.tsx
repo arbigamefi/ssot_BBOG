@@ -37,8 +37,16 @@ export type SlipGame = {
   covers?: string;
   /** The win chance in the notice for a stake over the limit: "50", "32.4". */
   chance: string;
-  /** One winning round's payout at a house edge. */
+  /** One winning round's payout at a house edge; the top line's when the game has `lines`. */
   payout: (perRound: bigint, houseEdgeBps: number) => bigint;
+  /**
+   * What each winning line pays for one round, top line first: slots' pay table. The slip quotes
+   * every line instead of one "If you win".
+   */
+  lines?: ReadonlyArray<{
+    label: string;
+    payout: (perRound: bigint, houseEdgeBps: number) => bigint;
+  }>;
   /** A game that needs a selection first, while it has none, or all of it. */
   selection?: "empty" | "all";
   /** What the slip says then. */
@@ -215,8 +223,13 @@ function QuoteSlip({
   const changeRounds = (next: number) =>
     room.setBetCount(Math.min(maxRounds, Math.max(1, Math.floor(next))));
 
-  const winLabel = rounds > 1 ? t("slip.eachWin") : t("slip.ifWin");
+  const top = game.lines?.[0];
+  const winLabel = top ? top.label : rounds > 1 ? t("slip.eachWin") : t("slip.ifWin");
   const winText = winPays == null ? "—" : `${amount(winPays)} ${symbol}`;
+  const lineText = (pays: (perRound: bigint, houseEdgeBps: number) => bigint) =>
+    bps == null || perRound === 0n || game.selection
+      ? "—"
+      : `${amount(pays(perRound, bps))} ${symbol}`;
   const bad = ["min", "overMax", "balance"].includes(quote.notice?.kind ?? "");
 
   const place = () => void casinoRound.placeBet();
@@ -236,17 +249,19 @@ function QuoteSlip({
         <GameLine game={game} />
         <hr className={DIVIDER} />
         <ul>
-          {rounds > 1 ? (
-            <>
-              <QuoteLine label={winLabel} value={winText} />
-              <QuoteLine
-                label={t("slip.total")}
-                value={perRound > 0n ? `${amount(total)} ${symbol}` : "—"}
-              />
-            </>
+          {game.lines ? (
+            game.lines.map((line) => (
+              <QuoteLine key={line.label} label={line.label} value={lineText(line.payout)} />
+            ))
           ) : (
             <QuoteLine label={winLabel} value={winText} />
           )}
+          {rounds > 1 ? (
+            <QuoteLine
+              label={t("slip.total")}
+              value={perRound > 0n ? `${amount(total)} ${symbol}` : "—"}
+            />
+          ) : null}
           <QuoteLine label={t("slip.fee")} value={t("slip.feeUpTo", { fee: feeText })} />
         </ul>
         <hr className={DIVIDER} />
@@ -643,7 +658,7 @@ function PrintingSlip({ game, room, sheet }: { game: SlipGame; room: GameRoom; s
         <ul>
           <QuoteLine label={t("receipt.lines.stake")} value={`${amount(stake)} ${symbol}`} />
           <QuoteLine
-            label={rounds > 1 ? t("slip.eachWin") : t("slip.ifWin")}
+            label={game.lines?.[0]?.label ?? (rounds > 1 ? t("slip.eachWin") : t("slip.ifWin"))}
             value={winPays == null ? "—" : `${amount(winPays)} ${symbol}`}
           />
         </ul>

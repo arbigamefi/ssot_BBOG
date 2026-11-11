@@ -6,7 +6,6 @@ import { kenoMultiplier } from "@ssot/ssot/domain";
 import { CoinTossStage } from "./coin-toss/stage";
 import { KenoStage } from "./keno/stage";
 import { PlinkoStage } from "./plinko/stage";
-import { SlotsStage } from "./slots/stage";
 import { BaccaratStage } from "./baccarat/stage";
 import { SicBoStage } from "./sic-bo/stage";
 import {
@@ -53,10 +52,6 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.plinko.revealing": "Dropping through the board...",
       "casino.room.stage.plinko.slot": `Slot ${values?.slot}`,
       "casino.room.stage.plinko.risk": `Risk: ${values?.risk}`,
-      "casino.room.stage.slots.ready": "Match 3 symbols to win",
-      "casino.room.stage.slots.spinning": "Waiting for VRF Oracle...",
-      "casino.room.stage.slots.result": values?.symbols ?? "",
-      "casino.room.stage.slots.classic": "Classic profile",
       "casino.room.stage.baccarat.ready": "Bet player, banker, or tie",
       "casino.room.stage.baccarat.dealing": "Waiting for VRF Oracle...",
       "casino.room.stage.baccarat.result": `${values?.side} wins`,
@@ -69,16 +64,8 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.sicBo.result": "Result",
       "casino.room.result.outcomes.win.label": "Won bet",
       "casino.room.result.outcomes.loss.label": "Lost bet",
-      "casino.room.selection.slots.yes": "Yes",
-      "casino.room.selection.slots.no": "No",
-      "casino.room.selection.slots.symbols.0": "Cherry",
-      "casino.room.selection.slots.symbols.1": "Lemon",
-      "casino.room.selection.slots.symbols.2": "Bell",
-      "casino.room.selection.slots.symbols.3": "Diamond",
-      "casino.room.selection.slots.symbols.4": "Crown",
-      "casino.room.selection.slots.symbols.5": "Star",
-      "casino.room.selection.slots.symbols.6": "Bar",
-      "casino.room.selection.slots.symbols.7": "Seven"
+      "casino.room.selection.sicBo.yes": "Yes",
+      "casino.room.selection.sicBo.no": "No"
     })[key] ?? key
 }));
 
@@ -287,39 +274,6 @@ describe("game room stages", () => {
 
       act(() => {
         vi.advanceTimersByTime(4_000);
-      });
-      expect(onRevealComplete).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("renders Slots stage with revealed symbols", () => {
-    render(<SlotsStage isPending={false} showResult symbols={[0, 7, 7]} />);
-
-    expect(screen.getByText("Cherry / Seven / Seven")).toBeDefined();
-    expect(screen.getByText("Classic profile")).toBeDefined();
-    expect(screen.getAllByLabelText("Seven").length).toBeGreaterThan(0);
-  });
-
-  it("runs Slots reveal before completing the stage", () => {
-    const onRevealComplete = vi.fn();
-    vi.useFakeTimers();
-    try {
-      render(
-        <SlotsStage
-          isPending={false}
-          isRevealing
-          showResult
-          symbols={[0, 7, 7]}
-          onRevealComplete={onRevealComplete}
-        />
-      );
-
-      expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
-
-      act(() => {
-        vi.advanceTimersByTime(2_500);
       });
       expect(onRevealComplete).toHaveBeenCalledTimes(1);
     } finally {

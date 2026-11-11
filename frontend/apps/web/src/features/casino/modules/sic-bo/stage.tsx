@@ -445,8 +445,8 @@ export function SicBoStage({
                   {!displayResult || roll == null
                     ? "—"
                     : roll.triple
-                      ? t("casino.room.selection.slots.yes")
-                      : t("casino.room.selection.slots.no")}
+                      ? t("casino.room.selection.sicBo.yes")
+                      : t("casino.room.selection.sicBo.no")}
                 </p>
               </div>
               <div className="rounded-lg bg-surface-2 px-3 py-2.5 text-center ring-1 ring-inset ring-border-soft">
