@@ -12,12 +12,7 @@ import { useReferralAffiliate } from "../../referral/useReferralAffiliate";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useSSOTRuntime } from "../../../ssot/runtime";
 import { useSSOTSDK } from "../../../ssot/sdk";
-import {
-  useGameWalletBalance,
-  useKenoStrobeSpots,
-  usePlayerOpenHolds,
-  usePoolSnapshot
-} from "./hooks";
+import { useGameWalletBalance, usePlayerOpenHolds, usePoolSnapshot } from "./hooks";
 import { toGameMeta } from "./model";
 import { readCasinoOutcome, type CasinoOutcome } from "./outcome";
 import {
@@ -125,7 +120,6 @@ export function useGameRoom(slug: string) {
   const [sicBoValue, setSicBoValue] = React.useState<number>(0);
 
   const [resultNum, setResultNum] = React.useState<number | null>(null);
-  const [kenoResultDrawn, setKenoResultDrawn] = React.useState<number[]>([]);
   const [plinkoBuckets, setPlinkoBuckets] = React.useState<number[]>([]);
 
   const [gameHistory] = React.useState<GameHistoryEntry[]>([]);
@@ -273,10 +267,6 @@ export function useGameRoom(slug: string) {
     hasCasinoOutcome: Boolean(casinoOutcome),
     isResultVisible: showResult
   });
-  const animatingKenoSpots = useKenoStrobeSpots({
-    isPending: isStagePending,
-    gameSlug: game?.slug
-  });
 
   useGameResolutionEffect({
     terminalBet:
@@ -335,7 +325,6 @@ export function useGameRoom(slug: string) {
         setResultNum(outcome.rolls.at(-1)?.value === "HEADS" ? 1 : 0);
       }
       if (outcome?.kind === "roulette") setResultNum(outcome.rolls.at(-1)?.value ?? null);
-      if (outcome?.kind === "keno") setKenoResultDrawn(outcome.draws.at(-1)?.numbers ?? []);
       if (outcome?.kind === "plinko") {
         setResultNum(outcome.rolls.at(-1)?.bucket ?? null);
         setPlinkoBuckets(outcome.rolls.map((roll) => roll.bucket));
@@ -428,7 +417,6 @@ export function useGameRoom(slug: string) {
     placeBetButtonPhase,
     isBetPanelPending,
     isStagePending,
-    animatingKenoSpots,
     stageReveal,
     completeStageReveal,
     showResult,
@@ -436,8 +424,6 @@ export function useGameRoom(slug: string) {
     resultProof,
     casinoOutcome,
     resultNum,
-    kenoResultDrawn,
-    clearKenoResult: () => setKenoResultDrawn([]),
     plinkoBuckets,
     gameHistory,
     handleResultClose,

@@ -270,6 +270,24 @@
   }
 }
 
+@keyframes blower-air {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@keyframes pick-hit {
+  from {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes pick-drawn {
+  from {
+    background-color: hsl(var(--paper) / 0.3);
+  }
+}
+
 @keyframes lamp-warm {
   30% {
     transform: scale(1.12);
@@ -1283,6 +1301,390 @@
     & svg {
       width: 18px;
       height: 18px;
+    }
+  }
+}
+
+/* Keno's blower (keno-room/keno-blower.tsx): a glass globe with a chrome rim and two collars on a
+   stand, a glass tube over the top to a rack of five, and fifteen ivory balls. Parts are marked
+   with data-b, gradient stops with data-s. A ball that is one of the player's numbers is data-hit.
+   While the air is on the svg is data-mixing. */
+@utility table-blower {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  & [data-s="ivory-hi"] {
+    stop-color: hsl(var(--ivory-hi));
+  }
+  & [data-s="ivory"] {
+    stop-color: hsl(var(--ivory));
+  }
+  & [data-s="ivory-lo"] {
+    stop-color: hsl(var(--ivory-lo));
+  }
+  & [data-s="red-hi"] {
+    stop-color: color-mix(in srgb, hsl(var(--pocket-red)) 72%, hsl(var(--ivory-hi)));
+  }
+  & [data-s="red"] {
+    stop-color: hsl(var(--pocket-red));
+  }
+  & [data-s="red-lo"] {
+    stop-color: color-mix(in srgb, hsl(var(--pocket-red)) 62%, hsl(var(--rail-lo)));
+  }
+  & [data-s="rail-hi"] {
+    stop-color: hsl(var(--rail-hi));
+  }
+  & [data-s="rail"] {
+    stop-color: hsl(var(--rail));
+  }
+  & [data-s="rail-lo"] {
+    stop-color: hsl(var(--rail-lo));
+  }
+  & [data-s="glass-in"] {
+    stop-color: hsl(var(--ink-bright) / 0.22);
+  }
+  & [data-s="glass-mid"] {
+    stop-color: hsl(var(--rail) / 0.55);
+  }
+  & [data-s="glass-out"] {
+    stop-color: hsl(var(--rail-lo) / 0.8);
+  }
+  & [data-s="sheen"] {
+    stop-color: hsl(var(--table-sheen) / 0.16);
+  }
+  & [data-s="sheen-soft"] {
+    stop-color: hsl(var(--table-sheen) / 0.03);
+  }
+  & [data-s="clear"] {
+    stop-color: hsl(var(--table-sheen) / 0);
+  }
+  & [data-s="sheen-edge"] {
+    stop-color: hsl(var(--paper) / 0.14);
+  }
+  & [data-b="stand-hi"] {
+    fill: none;
+    stroke: hsl(var(--rail-hi));
+    stroke-width: 1.5;
+  }
+  & [data-b="chrome"] {
+    fill: none;
+    stroke-width: 7;
+  }
+  & :is([data-b="tube-edge"], [data-b="tube-floor"], [data-b="tube"]) {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  & [data-b="tube-edge"] {
+    stroke: hsl(var(--paper) / 0.34);
+    stroke-width: 41.5;
+  }
+  & [data-b="tube-floor"] {
+    stroke: hsl(var(--groove-lo));
+    stroke-width: 39;
+  }
+  & [data-b="tube"] {
+    stroke: hsl(var(--paper) / 0.07);
+    stroke-width: 39;
+  }
+  & [data-b="slot"] {
+    fill: none;
+    stroke: hsl(var(--paper) / 0.24);
+    stroke-width: 1.5;
+    stroke-dasharray: 2 4;
+  }
+  & [data-b="globe-front"] {
+    stroke: hsl(var(--paper) / 0.34);
+    stroke-width: 1.5;
+    pointer-events: none;
+  }
+  & [data-b="vent"] {
+    fill: hsl(var(--groove-lo));
+    stroke: hsl(var(--paper) / 0.34);
+    stroke-width: 1;
+  }
+  & [data-b="air"] {
+    fill: none;
+    stroke: hsl(var(--paper) / 0.16);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 7;
+    opacity: 0;
+  }
+  &[data-mixing] [data-b="air"] {
+    opacity: 1;
+    @media (prefers-reduced-motion: no-preference) {
+      animation: blower-air 0.5s linear infinite;
+    }
+  }
+  & [data-b="glint"] {
+    fill: none;
+    stroke: hsl(var(--table-sheen) / 0.4);
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+  & [data-ball] [data-face="ivory"] {
+    stroke: hsl(var(--table-shade) / 0.35);
+    stroke-width: 0.8;
+  }
+  & [data-ball] [data-face="red"] {
+    opacity: 0;
+  }
+  & [data-ball] [data-face="ring"] {
+    fill: none;
+  }
+  & [data-ball] text {
+    fill: hsl(var(--ink));
+    font: 800 15px/1 var(--font-text);
+    font-variant-numeric: tabular-nums;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  & [data-ball][data-hit] [data-face="red"] {
+    opacity: 1;
+  }
+  & [data-ball][data-hit] [data-face="ring"] {
+    stroke: hsl(var(--paper));
+    stroke-width: 2;
+  }
+  & [data-ball][data-hit] text {
+    fill: hsl(var(--ivory-hi));
+  }
+}
+
+/* A number on keno's board, printed on the felt. A pick carries a chip (aria-pressed); a drawn
+   number gets a dashed printed ring (data-drawn); drawn and picked, it lights and its chip turns
+   red (data-hit). With five picks the others dim (data-dim). */
+@utility table-pick {
+  --pick-chip: 42px;
+  --pick-ink: var(--ink);
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 48px;
+  padding: 0;
+  border: 1.5px solid hsl(var(--paper) / 0.6);
+  border-radius: 10px;
+  background: transparent;
+  color: hsl(var(--paper) / 0.92);
+  font: 800 22px/1 var(--font-text);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    opacity 0.2s ease;
+  & > span {
+    position: relative;
+    z-index: 1;
+  }
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--pick-chip);
+    height: var(--pick-chip);
+    margin: calc(var(--pick-chip) / -2) 0 0 calc(var(--pick-chip) / -2);
+    border-radius: 50%;
+    background:
+      radial-gradient(
+        circle,
+        hsl(var(--paper)) 0 calc(var(--pick-chip) * 0.357),
+        transparent calc(var(--pick-chip) * 0.37)
+      ),
+      repeating-conic-gradient(hsl(var(--pick-ink)) 0 15deg, hsl(var(--paper)) 15deg 30deg);
+    box-shadow:
+      inset 0 0 0 3px hsl(var(--paper)),
+      0 3px 4px hsl(var(--table-shade) / 0.45);
+    opacity: 0;
+    transform: scale(0.6);
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s ease;
+  }
+  &[aria-pressed="true"] {
+    border-color: hsl(var(--paper) / 0.92);
+  }
+  &[aria-pressed="true"] > span {
+    color: hsl(var(--ink));
+  }
+  &[aria-pressed="true"]::before {
+    opacity: 1;
+    transform: none;
+  }
+  &:hover:not(:disabled) {
+    background-color: hsl(var(--paper) / 0.06);
+  }
+  &:focus-visible {
+    outline: 2px solid hsl(var(--paper));
+    outline-offset: 2px;
+  }
+  &:disabled {
+    cursor: default;
+  }
+  &[data-dim] {
+    opacity: 0.5;
+  }
+  &[data-drawn] {
+    border-color: hsl(var(--paper) / 0.92);
+    background-color: hsl(var(--paper) / 0.1);
+    @media (prefers-reduced-motion: no-preference) {
+      animation: pick-drawn 0.4s ease-out both;
+    }
+  }
+  &[data-drawn]::after {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1.5px dashed hsl(var(--paper) / 0.92);
+    border-radius: 7px;
+  }
+  &[data-hit] {
+    --pick-ink: var(--pocket-red);
+    box-shadow:
+      0 0 0 2px hsl(var(--paper)),
+      0 0 18px 2px hsl(var(--lamp) / 0.45);
+    @media (prefers-reduced-motion: no-preference) {
+      animation: pick-hit 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+    }
+  }
+  &[data-hit]::after {
+    display: none;
+  }
+  @container felt (max-width: 460px) {
+    --pick-chip: 36px;
+    height: 40px;
+    font-size: 19px;
+  }
+}
+
+/* A drawn number as a small ball: in the status line, the slip's head and the receipt. One of the
+   player's numbers is red (data-hit); on paper the ball is printed flat (data-on="paper"). */
+@utility keno-ball {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: radial-gradient(
+    circle at 34% 28%,
+    hsl(var(--ivory-hi)),
+    hsl(var(--ivory)) 55%,
+    hsl(var(--ivory-lo))
+  );
+  color: hsl(var(--ink));
+  font: 800 11px/1 var(--font-text);
+  font-variant-numeric: tabular-nums;
+  &[data-hit] {
+    background: radial-gradient(
+      circle at 34% 28%,
+      color-mix(in srgb, hsl(var(--pocket-red)) 72%, hsl(var(--ivory-hi))),
+      hsl(var(--pocket-red)) 60%,
+      color-mix(in srgb, hsl(var(--pocket-red)) 62%, hsl(var(--rail-lo)))
+    );
+    color: hsl(var(--ivory-hi));
+  }
+  &[data-on="paper"] {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px hsl(var(--thermal));
+    color: hsl(var(--ink));
+  }
+  &[data-on="paper"][data-hit] {
+    background: hsl(var(--ink));
+    box-shadow: none;
+    color: hsl(var(--paper));
+  }
+}
+
+/* A past keno round in the last results: hits of picks, brighter when it paid more than the
+   stake (data-paid), ringed when it is the latest (data-latest). */
+@utility keno-tile {
+  display: inline-grid;
+  place-items: center;
+  min-width: 38px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 13px;
+  box-shadow: inset 0 0 0 1.5px hsl(var(--paper) / 0.6);
+  color: hsl(var(--paper) / 0.6);
+  font: 800 13px/1 var(--font-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  &[data-paid] {
+    box-shadow: inset 0 0 0 1.5px hsl(var(--paper) / 0.92);
+    color: hsl(var(--paper) / 0.92);
+  }
+  &[data-latest] {
+    box-shadow:
+      inset 0 0 0 1.5px hsl(var(--paper) / 0.92),
+      0 0 0 2px hsl(var(--felt)),
+      0 0 0 3.5px hsl(var(--paper));
+    color: hsl(var(--paper) / 0.92);
+  }
+}
+
+/* Keno's pay strip, printed on the felt under the blower and the board: a column for each number
+   of hits, with what it pays and how often. A pay below the stake is printed soft (data-under);
+   the column a result hits lights (data-now), and glows for a net win (data-win). */
+@utility table-paystrip {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+  & :is(th, td) {
+    padding: 5px 6px;
+    border-top: 1.5px solid hsl(var(--paper) / 0.24);
+    text-align: center;
+    color: hsl(var(--paper) / 0.92);
+  }
+  & tr:last-child :is(th, td) {
+    border-bottom: 1.5px solid hsl(var(--paper) / 0.24);
+  }
+  & th {
+    width: 76px;
+    text-align: left;
+    font-weight: 400;
+    font-size: 14px;
+    color: hsl(var(--paper) / 0.6);
+  }
+  & [data-row="hits"] td {
+    font-weight: 800;
+  }
+  & [data-row="pays"] td b {
+    font: 800 22px/1 var(--font-print);
+  }
+  & [data-row="odds"] td {
+    font-size: 12px;
+    color: hsl(var(--paper) / 0.6);
+  }
+  & td[data-under] b {
+    color: hsl(var(--paper) / 0.6);
+    font-weight: 400;
+  }
+  & td[data-now] {
+    background: hsl(var(--paper) / 0.1);
+  }
+  & td[data-now][data-win] b {
+    text-shadow: 0 0 12px hsl(var(--lamp) / 0.6);
+    @media (prefers-reduced-motion: no-preference) {
+      animation: print-glow 1.6s ease-out both;
+    }
+  }
+  @container felt (max-width: 460px) {
+    & :is(th, td) {
+      padding: 5px 2px;
+    }
+    & th {
+      width: 46px;
+      font-size: 11px;
+    }
+    & [data-row="pays"] td b {
+      font-size: 14px;
+    }
+    & [data-row="odds"] td {
+      font-size: 10px;
     }
   }
 }

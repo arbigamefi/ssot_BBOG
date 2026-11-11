@@ -1135,7 +1135,6 @@
       },
       "history": {
         "recent": {
-          "draws": "SORTEIOS RECENTES",
           "buckets": "BALDES RECENTES",
           "hands": "MÃOS RECENTES",
           "dice": "DADOS RECENTES",
@@ -1295,13 +1294,6 @@
           "heads": "Cara",
           "tails": "Coroa"
         },
-        "keno": {
-          "spotsLabel": "/ 5 números",
-          "hits": "{hits} acertos",
-          "autoPick": "Escolha automática",
-          "clear": "Limpar",
-          "empty": "Nenhum número escolhido. Clique na grade para escolher."
-        },
         "plinko": {
           "riskProfile": "Perfil de risco",
           "low": "Baixo",
@@ -1396,9 +1388,6 @@
           "vrfFee": "Taxa de número aleatório",
           "coinChoice": "Lado escolhido",
           "coinDrawn": "Lado sorteado",
-          "kenoPicked": "Números escolhidos",
-          "kenoDrawn": "Números sorteados",
-          "kenoHits": "Acertos",
           "plinkoRisk": "Perfil de risco",
           "plinkoSlot": "Casa",
           "plinkoPath": "Caminho",
@@ -2372,6 +2361,56 @@
         "rolled": "Saiu {rolls}.",
         "rolledRounds": "Saiu {rolls}. {paid} de {count} pagaram.",
         "between": "; "
+      }
+    },
+    "keno": {
+      "head": {
+        "crumb": "Todos os jogos",
+        "title": "Keno",
+        "lede": "Escolha de 1 a 5 números. O Chainlink VRF sorteia 5 das 15 bolas; quanto mais das suas saírem, mais você recebe."
+      },
+      "table": {
+        "title": "A mesa",
+        "picked": "Escolhidos",
+        "chance": "Chance de ganhar",
+        "top": "Paga se acertar tudo",
+        "board": "Seus números, até 5",
+        "spotPicked": "{n}, escolhido",
+        "clear": "Limpar números",
+        "history": "Últimos resultados",
+        "noHistory": "Nenhum sorteio ainda",
+        "paystrip": "Quanto paga cada número de acertos",
+        "rows": {
+          "hits": "Acertos",
+          "pays": "Paga",
+          "odds": "Chance"
+        },
+        "percent": "{value}%",
+        "oneIn": "1 em {n}",
+        "rule": "Saem 5 das 15 bolas. Todo número de acertos paga algo; um pagamento esmaecido devolve menos que a aposta. Os pagamentos incluem a sua aposta e são por rodada, menos {rate} de vantagem da casa.",
+        "status": {
+          "ready": "Escolha de 1 a 5 números e faça a aposta no boletim.",
+          "waiting": "Aguardando o número aleatório. As bolas giram até ele chegar.",
+          "full": "Até 5 números. Tire um para trocar."
+        },
+        "tile": "{hits}/{picked}",
+        "tileLabel": "{hits} de {picked} acertos"
+      },
+      "slip": {
+        "game": "Keno, {numbers}",
+        "none": "Keno, nenhum número ainda",
+        "allHit": "{count, plural, =1 {Seu número sai} other {Saem todos os #}}"
+      },
+      "selection": {
+        "empty": {
+          "lead": "Escolha primeiro um número na mesa.",
+          "body": "Toque de 1 a 5 números no painel. Cada rodada sorteia 5 dos 15."
+        }
+      },
+      "receipt": {
+        "between": ", ",
+        "drew": "Saíram {balls}. {hits} de {picked} acertos.",
+        "drewRounds": "A última rodada tirou {balls}. Acertos por rodada: {list}."
       }
     }
   },

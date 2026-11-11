@@ -12,7 +12,6 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
     ({
       "casino.room.stage.loading": "Loading stage",
-      "casino.room.history.recent.draws": "RECENT DRAWS",
       "casino.room.history.recent.buckets": "RECENT BUCKETS",
       "casino.room.history.recent.hands": "RECENT HANDS",
       "casino.room.history.recent.dice": "RECENT DICE",
@@ -64,9 +63,6 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.pending": "Pending",
       "casino.room.result.facts.coinChoice": "Chosen side",
       "casino.room.result.facts.coinDrawn": "Side drawn",
-      "casino.room.result.facts.kenoPicked": "Numbers picked",
-      "casino.room.result.facts.kenoDrawn": "Numbers drawn",
-      "casino.room.result.facts.kenoHits": "Hits",
       "casino.room.result.facts.plinkoRisk": "Risk profile",
       "casino.room.result.facts.plinkoSlot": "Slot",
       "casino.room.result.facts.plinkoPath": "Path",
@@ -137,22 +133,17 @@ const baseProps = {
   multiplier: 1.98,
   houseEdgeBps: 200,
   winChance: 50,
-  kenoSpots: [],
   plinkoRisk: "medium" as const,
   baccaratSide: "player" as const,
   sicBoKind: "small" as const,
   sicBoValue: 0,
   plinkoBuckets: [],
-  animatingKenoSpots: [],
-  kenoResultDrawn: [],
   resultProof: null,
   chainId: 84532,
   assetSymbol: "USDC",
   assetDecimals: 6,
   onResultClose: vi.fn(),
   onCoinSideChange: vi.fn(),
-  onKenoChange: vi.fn(),
-  onKenoResetResult: vi.fn(),
   onPlinkoRiskChange: vi.fn(),
   onBaccaratSideChange: vi.fn(),
   onSicBoChange: vi.fn()
@@ -194,9 +185,9 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="keno"
+        gameSlug="coin-toss"
         showResult
-        resultNum={17}
+        resultNum={1}
         resultProof={{
           kind: "settled",
           betId: 123456n,
@@ -215,12 +206,12 @@ describe("GameRoomRightPane", () => {
             protocolFeeAccrual: 200_000n
           }
         }}
-        gameHistory={[{ val: 17, win: true }]}
+        gameHistory={[{ val: 1, win: true }]}
         recentBets={[{ id: "84532:123456", betId: "123456", state: "finalized" }]}
       />
     );
 
-    expect(screen.getByText("RECENT DRAWS")).toBeDefined();
+    expect(screen.getByText("RECENT FLIPS")).toBeDefined();
     expect(screen.getByText("SETTLED")).toBeDefined();
     expect((await screen.findAllByText("Won bet")).length).toBeGreaterThan(0);
     expect(screen.getByText("Bet details")).toBeDefined();
@@ -228,7 +219,7 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("Fairness data")).toBeDefined();
     expect(screen.getByText("19.6 USDC")).toBeDefined();
     expect(screen.getByText("+ 9.6 USDC")).toBeDefined();
-    expect(screen.getAllByText("17").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("H").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Play again" })).toBeDefined();
   });
 
@@ -237,7 +228,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="keno"
+        gameSlug="plinko"
         showResult
         resultNum={17}
         resultProof={{
@@ -274,7 +265,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="keno"
+        gameSlug="plinko"
         showResult
         resultProof={{
           kind: "indexing",
@@ -296,7 +287,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="keno"
+        gameSlug="plinko"
         showResult
         resultNum={17}
         resultProof={{
@@ -310,9 +301,9 @@ describe("GameRoomRightPane", () => {
           resolvedAt: 1_778_888_888
         }}
         casinoOutcome={{
-          kind: "keno",
-          pickedNumbers: [17],
-          draws: [{ numbers: [17], hits: 1, won: true }],
+          kind: "coin-toss",
+          chosen: "HEADS",
+          rolls: [{ value: "HEADS", won: true }],
           payoutGross: 20_000_000n,
           payoutNet: 19_600_000n,
           refundAmount: 0n,

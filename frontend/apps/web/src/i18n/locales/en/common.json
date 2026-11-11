@@ -471,13 +471,6 @@
           "heads": "Heads",
           "tails": "Tails"
         },
-        "keno": {
-          "spotsLabel": "/ 5 Spots",
-          "hits": "{hits} Hits",
-          "autoPick": "Auto Pick",
-          "clear": "Clear",
-          "empty": "No spots selected. Click the grid to pick numbers."
-        },
         "plinko": {
           "riskProfile": "Risk Profile",
           "low": "Low",
@@ -542,7 +535,6 @@
       },
       "history": {
         "recent": {
-          "draws": "RECENT DRAWS",
           "buckets": "RECENT BUCKETS",
           "hands": "RECENT HANDS",
           "dice": "RECENT DICE",
@@ -619,9 +611,6 @@
           "vrfFee": "Random-number fee",
           "coinChoice": "Chosen side",
           "coinDrawn": "Side drawn",
-          "kenoPicked": "Numbers picked",
-          "kenoDrawn": "Numbers drawn",
-          "kenoHits": "Hits",
           "plinkoRisk": "Risk profile",
           "plinkoSlot": "Slot",
           "plinkoPath": "Path",
@@ -1621,6 +1610,56 @@
         "rolled": "Came up {rolls}.",
         "rolledRounds": "Came up {rolls}. {paid} of {count} paid.",
         "between": "; "
+      }
+    },
+    "keno": {
+      "head": {
+        "crumb": "All games",
+        "title": "Keno",
+        "lede": "Pick 1 to 5 numbers. Chainlink VRF draws 5 of the 15 balls; the more of yours it draws, the more you get back."
+      },
+      "table": {
+        "title": "The table",
+        "picked": "Picked",
+        "chance": "Win chance",
+        "top": "All hit pays",
+        "board": "Your numbers, up to 5",
+        "spotPicked": "{n}, picked",
+        "clear": "Clear picks",
+        "history": "Last results",
+        "noHistory": "No draws yet",
+        "paystrip": "What each number of hits pays",
+        "rows": {
+          "hits": "Hits",
+          "pays": "Pays",
+          "odds": "Odds"
+        },
+        "percent": "{value}%",
+        "oneIn": "1 in {n}",
+        "rule": "5 of the 15 balls are drawn. Every number of hits pays something; a faint pay returns less than the stake. Pays include your stake and are per round, less a {rate} house edge.",
+        "status": {
+          "ready": "Pick 1 to 5 numbers, then place your bet on the slip.",
+          "waiting": "Waiting for the random number. The balls tumble until it arrives.",
+          "full": "Up to 5 numbers. Take one off to change."
+        },
+        "tile": "{hits}/{picked}",
+        "tileLabel": "{hits} of {picked} hit"
+      },
+      "slip": {
+        "game": "Keno, {numbers}",
+        "none": "Keno, no numbers yet",
+        "allHit": "{count, plural, =1 {Your number drawn} other {All # drawn}}"
+      },
+      "selection": {
+        "empty": {
+          "lead": "Pick a number on the table first.",
+          "body": "Tap 1 to 5 numbers on the board. Each round draws 5 of the 15."
+        }
+      },
+      "receipt": {
+        "between": ", ",
+        "drew": "Drew {balls}. {hits} of {picked} hit.",
+        "drewRounds": "The last round drew {balls}. Hits by round: {list}."
       }
     }
   },

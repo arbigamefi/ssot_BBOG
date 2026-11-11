@@ -1,10 +1,8 @@
 import * as React from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { kenoMultiplier } from "@ssot/ssot/domain";
 
 import { CoinTossStage } from "./coin-toss/stage";
-import { KenoStage } from "./keno/stage";
 import { PlinkoStage } from "./plinko/stage";
 import { BaccaratStage } from "./baccarat/stage";
 import { SicBoStage } from "./sic-bo/stage";
@@ -24,11 +22,6 @@ vi.mock("next-intl", () => ({
     ({
       "casino.room.selection.coin.heads": "HEADS",
       "casino.room.selection.coin.tails": "TAILS",
-      "casino.room.selection.keno.spotsLabel": "/ 5 Spots",
-      "casino.room.selection.keno.autoPick": "Auto Pick",
-      "casino.room.selection.keno.clear": "Clear",
-      "casino.room.selection.keno.empty": "No spots selected. Click the grid to pick numbers.",
-      "casino.room.selection.keno.hits": `${values?.hits} Hits`,
       "casino.room.selection.baccarat.player": "Player",
       "casino.room.selection.baccarat.banker": "Banker",
       "casino.room.selection.baccarat.tie": "Tie",
@@ -119,81 +112,6 @@ describe("game room stages", () => {
 
       act(() => {
         vi.advanceTimersByTime(1_300);
-      });
-      expect(onRevealComplete).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("renders Keno stage and toggles spots", () => {
-    const onChange = vi.fn();
-    const onResetResult = vi.fn();
-    render(
-      <KenoStage
-        isPending={false}
-        showResult={false}
-        spots={[1, 2]}
-        animatingSpots={[]}
-        resultDrawn={[]}
-        onChange={onChange}
-        onResetResult={onResetResult}
-      />
-    );
-
-    fireEvent.click(screen.getByText("3"));
-    expect(onChange).toHaveBeenCalledWith([1, 2, 3]);
-    expect(onResetResult).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByText("Clear"));
-    expect(onChange).toHaveBeenCalledWith([]);
-    expect(onResetResult).toHaveBeenCalledTimes(2);
-
-    fireEvent.click(screen.getByText("Auto Pick"));
-    expect(onChange).toHaveBeenLastCalledWith(expect.arrayContaining([]));
-    expect(onChange.mock.calls.at(-1)?.[0]).toHaveLength(5);
-    expect(screen.getByText("2 Hits")).toBeDefined();
-  });
-
-  it("renders Keno payout chips after house edge", () => {
-    const houseEdgeBps = 200;
-    render(
-      <KenoStage
-        isPending={false}
-        showResult={false}
-        spots={[1, 2]}
-        houseEdgeBps={houseEdgeBps}
-        animatingSpots={[]}
-        resultDrawn={[]}
-        onChange={vi.fn()}
-        onResetResult={vi.fn()}
-      />
-    );
-
-    const allHitMultiplier = applyHouseEdgeToMultiplier(kenoMultiplier(2, 2), houseEdgeBps);
-    expect(screen.getByText(`${allHitMultiplier.toFixed(2)}x`)).toBeDefined();
-  });
-
-  it("reveals Keno draw numbers before completing the stage", () => {
-    const onRevealComplete = vi.fn();
-    vi.useFakeTimers();
-    try {
-      render(
-        <KenoStage
-          isPending={false}
-          isRevealing
-          showResult
-          spots={[1, 2, 3, 4, 5]}
-          animatingSpots={[]}
-          resultDrawn={[1, 6, 12, 14, 15]}
-          onChange={vi.fn()}
-          onResetResult={vi.fn()}
-          onRevealComplete={onRevealComplete}
-        />
-      );
-
-      act(() => {
-        vi.advanceTimersByTime(2_200);
       });
       expect(onRevealComplete).toHaveBeenCalledTimes(1);
     } finally {

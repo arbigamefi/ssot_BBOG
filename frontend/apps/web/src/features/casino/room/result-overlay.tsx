@@ -208,8 +208,6 @@ type GameResultContext = {
   houseEdgeBps: number;
   resultNum: number | null;
   coinSide: CoinSide;
-  kenoSpots: readonly number[];
-  kenoResultDrawn: readonly number[];
   casinoOutcome?: CasinoOutcome | null;
 };
 
@@ -276,24 +274,6 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
         label: t("casino.room.result.facts.coinDrawn"),
         value: context.casinoOutcome.rolls.map((roll) => formatCoinSide(roll.value, t)).join(", "),
         tone: context.casinoOutcome.rolls.some((roll) => roll.won) ? "win" : "loss"
-      }
-    ] satisfies GameResultRow[];
-  }
-
-  if (context.casinoOutcome?.kind === "keno") {
-    return [
-      {
-        label: t("casino.room.result.facts.kenoPicked"),
-        value: formatList(context.casinoOutcome.pickedNumbers)
-      },
-      {
-        label: t("casino.room.result.facts.kenoDrawn"),
-        value: context.casinoOutcome.draws.map((draw) => draw.numbers.join(", ")).join(" / "),
-        tone: context.casinoOutcome.draws.some((draw) => draw.won) ? "win" : "loss"
-      },
-      {
-        label: t("casino.room.result.facts.kenoHits"),
-        value: context.casinoOutcome.draws.map((draw) => draw.hits).join(", ")
       }
     ] satisfies GameResultRow[];
   }
@@ -418,30 +398,6 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
     return rows;
   }
 
-  if (context.gameSlug === "keno") {
-    const hits = context.kenoResultDrawn.filter((n) => context.kenoSpots.includes(n)).length;
-    const rows: GameResultRow[] = [
-      {
-        label: t("casino.room.result.facts.kenoPicked"),
-        value: formatList(context.kenoSpots)
-      }
-    ];
-    if (context.kenoResultDrawn.length > 0) {
-      rows.push(
-        {
-          label: t("casino.room.result.facts.kenoDrawn"),
-          value: formatList(context.kenoResultDrawn),
-          tone: "accent" as const
-        },
-        {
-          label: t("casino.room.result.facts.kenoHits"),
-          value: hits.toString()
-        }
-      );
-    }
-    return rows;
-  }
-
   return [];
 }
 
@@ -533,8 +489,6 @@ export function GameRoomResultOverlay({
   houseEdgeBps,
   resultNum,
   coinSide,
-  kenoSpots,
-  kenoResultDrawn,
   casinoOutcome,
   onClose,
   onPlayAgain
@@ -547,8 +501,6 @@ export function GameRoomResultOverlay({
   houseEdgeBps: number;
   resultNum: number | null;
   coinSide: CoinSide;
-  kenoSpots: readonly number[];
-  kenoResultDrawn: readonly number[];
   casinoOutcome?: CasinoOutcome | null;
   onClose?: () => void;
   /** Restart the round (resets the stepper and places the next bet). */
@@ -590,8 +542,6 @@ export function GameRoomResultOverlay({
             houseEdgeBps,
             resultNum,
             coinSide,
-            kenoSpots,
-            kenoResultDrawn,
             casinoOutcome
           },
           t

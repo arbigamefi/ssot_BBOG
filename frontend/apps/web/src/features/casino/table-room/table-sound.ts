@@ -22,6 +22,12 @@ export type TableSound = {
   whirr: (speed: number) => void;
   /** Slots: reel `i` catches on its stop, a little lower from left to right. */
   reelStop: (i: number) => void;
+  /** Keno: the air under the balls, 1 while it blows; 0 is silence. */
+  air: (level: number) => void;
+  /** Keno: a ball knocks the glass or another ball, by how hard. */
+  knock: (strength: number) => void;
+  /** Keno: a drawn ball drops into the rack, a little brighter when it is one of yours. */
+  drop: (hit: boolean) => void;
   close: () => void;
 };
 
@@ -38,6 +44,7 @@ export function createTableSound(): TableSound | null {
   for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
   let rumble: { filter: BiquadFilterNode; gain: GainNode } | null = null;
   let drums: { filter: BiquadFilterNode; gain: GainNode } | null = null;
+  let blower: { filter: BiquadFilterNode; gain: GainNode } | null = null;
 
   /** A looped noise through a band-pass, silent until it is turned up. */
   const loop = (q: number) => {
@@ -160,6 +167,24 @@ export function createTableSound(): TableSound | null {
       const at = ready();
       tone(at, 190 - i * 14, 0.2, 0.12, "sine", 95);
       burst(at, 2400, 2, 0.08, 0.035);
+    },
+    air(level) {
+      const now = ready();
+      if (!blower) {
+        if (level === 0) return;
+        blower = loop(0.5);
+        blower.filter.frequency.value = 700;
+      }
+      blower.gain.gain.setTargetAtTime(Math.min(1, level) * 0.06, now, 0.12);
+    },
+    knock(strength) {
+      burst(ready(), 2600 + Math.random() * 1600, 3, Math.min(0.06, strength * 0.00008), 0.025);
+    },
+    drop(hit) {
+      const at = ready();
+      tone(at, 260, 0.16, 0.12, "sine", 150);
+      burst(at, 1500, 1.5, 0.06, 0.04);
+      if (hit) tone(at + 0.05, 1320, 0.05, 0.3, "triangle");
     },
     close() {
       void ctx.close();

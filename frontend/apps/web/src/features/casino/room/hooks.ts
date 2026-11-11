@@ -18,15 +18,6 @@ export function formatTokenBalance(raw: bigint, decimals: number, symbol: string
   return formatAssetAmount(raw, { decimals, symbol }, { fractionDigits: 2 });
 }
 
-export function pickKenoStrobeSpots(count = 5) {
-  const spots: number[] = [];
-  while (spots.length < count) {
-    const num = Math.floor(Math.random() * 15) + 1;
-    if (!spots.includes(num)) spots.push(num);
-  }
-  return spots;
-}
-
 export function useGameWalletBalance({
   sdk,
   asset,
@@ -270,32 +261,4 @@ export function usePlayerOpenHolds({
     atLimit: holds != null && holds.open >= holds.max,
     refresh
   };
-}
-
-export function useKenoStrobeSpots({
-  isPending,
-  gameSlug
-}: {
-  isPending: boolean;
-  gameSlug: string | undefined;
-}) {
-  const [spots, setSpots] = React.useState<number[]>([]);
-
-  React.useEffect(() => {
-    let interval: NodeJS.Timeout | undefined;
-
-    if (isPending && gameSlug === "keno") {
-      interval = setInterval(() => {
-        setSpots(pickKenoStrobeSpots());
-      }, 80);
-    } else {
-      setSpots([]);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isPending, gameSlug]);
-
-  return spots;
 }

@@ -136,14 +136,11 @@ export function SharedGameRoom({ slug, room }: { slug: string; room: GameRoom })
         showResult={Boolean(room.stageReveal || room.showResult)}
         resultNum={room.resultNum}
         houseEdgeBps={stageHouseEdgeBps}
-        kenoSpots={room.kenoSpots}
         plinkoRisk={room.plinkoRisk}
         baccaratSide={room.baccaratSide}
         sicBoKind={room.sicBoKind}
         sicBoValue={room.sicBoValue}
         plinkoBuckets={room.plinkoBuckets}
-        animatingKenoSpots={room.animatingKenoSpots}
-        kenoResultDrawn={room.kenoResultDrawn}
         casinoOutcome={room.casinoOutcome}
         resultProof={room.resultProof}
         chainId={chainId}
@@ -153,9 +150,6 @@ export function SharedGameRoom({ slug, room }: { slug: string; room: GameRoom })
         onResultPlayAgain={room.handleResultPlayAgain}
         onCoinRevealComplete={room.completeStageReveal}
         onCoinSideChange={room.setCoinSide}
-        onKenoChange={room.setKenoSpots}
-        onKenoResetResult={room.clearKenoResult}
-        onKenoRevealComplete={room.completeStageReveal}
         onPlinkoRiskChange={room.setPlinkoRisk}
         onPlinkoRevealComplete={room.completeStageReveal}
         onSicBoRevealComplete={room.completeStageReveal}

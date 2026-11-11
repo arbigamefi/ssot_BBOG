@@ -471,13 +471,6 @@
           "heads": "正面",
           "tails": "反面"
         },
-        "keno": {
-          "spotsLabel": "/ 5 个号码",
-          "hits": "{hits} 命中",
-          "autoPick": "自动选择",
-          "clear": "清除",
-          "empty": "还没有选择号码。点击网格选择数字。"
-        },
         "plinko": {
           "riskProfile": "风险档位",
           "low": "低",
@@ -542,7 +535,6 @@
       },
       "history": {
         "recent": {
-          "draws": "最近开奖",
           "buckets": "最近槽位",
           "hands": "最近牌局",
           "dice": "最近骰子",
@@ -619,9 +611,6 @@
           "vrfFee": "随机数费用",
           "coinChoice": "选择面",
           "coinDrawn": "开出面",
-          "kenoPicked": "已选号码",
-          "kenoDrawn": "开奖号码",
-          "kenoHits": "命中数",
           "plinkoRisk": "风险档位",
           "plinkoSlot": "落点槽位",
           "plinkoPath": "路径",
@@ -1621,6 +1610,56 @@
         "rolled": "开出 {rolls}。",
         "rolledRounds": "开出 {rolls}，{count} 局里 {paid} 局有赔付。",
         "between": "；"
+      }
+    },
+    "keno": {
+      "head": {
+        "crumb": "全部游戏",
+        "title": "基诺",
+        "lede": "选 1 到 5 个号码。Chainlink VRF 从 15 个球里摇出 5 个，摇中你的越多，拿回越多。"
+      },
+      "table": {
+        "title": "牌桌",
+        "picked": "已选",
+        "chance": "中奖概率",
+        "top": "全中赔付",
+        "board": "你的号码，最多 5 个",
+        "spotPicked": "{n}，已选",
+        "clear": "清除选号",
+        "history": "最近结果",
+        "noHistory": "还没有开过",
+        "paystrip": "命中几个赔多少",
+        "rows": {
+          "hits": "命中",
+          "pays": "赔付",
+          "odds": "概率"
+        },
+        "percent": "{value}%",
+        "oneIn": "{n} 次 1 次",
+        "rule": "15 个球摇出 5 个。命中几个都有赔付；浅色的数字拿回的比下注额少。赔付含下注额，按局计算，扣 {rate} 庄家优势。",
+        "status": {
+          "ready": "选 1 到 5 个号码，再在下注单上下注。",
+          "waiting": "正在等随机数。数到之前，球一直在翻滚。",
+          "full": "最多选 5 个。先去掉一个再换。"
+        },
+        "tile": "{hits}/{picked}",
+        "tileLabel": "{picked} 个中 {hits} 个"
+      },
+      "slip": {
+        "game": "基诺，{numbers}",
+        "none": "基诺，还没选号",
+        "allHit": "{count, plural, =1 {摇中你的号码} other {# 个全中}}"
+      },
+      "selection": {
+        "empty": {
+          "lead": "先在牌桌上至少选一个号码。",
+          "body": "在号码板上点 1 到 5 个号码。每局从 15 个里摇出 5 个。"
+        }
+      },
+      "receipt": {
+        "between": "、",
+        "drew": "摇出 {balls}，{picked} 个中 {hits} 个。",
+        "drewRounds": "最后一局摇出 {balls}。每局命中：{list}。"
       }
     }
   },

@@ -1135,7 +1135,6 @@
       },
       "history": {
         "recent": {
-          "draws": "SON ÇEKİLİŞLER",
           "buckets": "SON KOVALAR",
           "hands": "SON ELLER",
           "dice": "SON ZARLAR",
@@ -1295,13 +1294,6 @@
           "heads": "Yazı",
           "tails": "Tura"
         },
-        "keno": {
-          "spotsLabel": "/ 5 sayı",
-          "hits": "{hits} isabet",
-          "autoPick": "Otomatik seç",
-          "clear": "Temizle",
-          "empty": "Sayı seçilmedi. Seçmek için ızgaraya tıklayın."
-        },
         "plinko": {
           "riskProfile": "Risk profili",
           "low": "Düşük",
@@ -1396,9 +1388,6 @@
           "vrfFee": "Rastgele sayı ücreti",
           "coinChoice": "Seçilen taraf",
           "coinDrawn": "Çıkan taraf",
-          "kenoPicked": "Seçilen sayılar",
-          "kenoDrawn": "Çekilen sayılar",
-          "kenoHits": "İsabetler",
           "plinkoRisk": "Risk profili",
           "plinkoSlot": "Kova",
           "plinkoPath": "Yol",
@@ -2372,6 +2361,56 @@
         "rolled": "Gelen: {rolls}.",
         "rolledRounds": "Gelen: {rolls}. {count} turun {paid} tanesi ödedi.",
         "between": "; "
+      }
+    },
+    "keno": {
+      "head": {
+        "crumb": "Tüm oyunlar",
+        "title": "Keno",
+        "lede": "1 ile 5 arasında sayı seçin. Chainlink VRF 15 toptan 5'ini çeker; sizinkilerden ne kadar çok çıkarsa o kadar çok geri alırsınız."
+      },
+      "table": {
+        "title": "Masa",
+        "picked": "Seçilen",
+        "chance": "Kazanma şansı",
+        "top": "Hepsi tutarsa",
+        "board": "Sayılarınız, en fazla 5",
+        "spotPicked": "{n}, seçildi",
+        "clear": "Seçimi temizle",
+        "history": "Son sonuçlar",
+        "noHistory": "Henüz çekiliş yok",
+        "paystrip": "Kaç isabet ne öder",
+        "rows": {
+          "hits": "İsabet",
+          "pays": "Öder",
+          "odds": "Şans"
+        },
+        "percent": "{value}%",
+        "oneIn": "{n} çekilişte 1",
+        "rule": "15 toptan 5'i çekilir. Her isabet sayısı bir şey öder; soluk yazılan ödeme bahisten azını geri verir. Ödemeler bahsinizi içerir ve tur başınadır, {rate} kasa avantajı düşülür.",
+        "status": {
+          "ready": "1 ile 5 arasında sayı seçin, sonra bahis fişinden bahsinizi yapın.",
+          "waiting": "Rastgele sayı bekleniyor. Sayı gelene kadar toplar döner.",
+          "full": "En fazla 5 sayı. Değiştirmek için birini kaldırın."
+        },
+        "tile": "{hits}/{picked}",
+        "tileLabel": "{picked} sayıdan {hits} isabet"
+      },
+      "slip": {
+        "game": "Keno, {numbers}",
+        "none": "Keno, henüz sayı yok",
+        "allHit": "{count, plural, =1 {Sayınız çıkarsa} other {# sayının hepsi çıkarsa}}"
+      },
+      "selection": {
+        "empty": {
+          "lead": "Önce masada bir sayı seçin.",
+          "body": "Tahtada 1 ile 5 arasında sayıya dokunun. Her tur 15 sayıdan 5'ini çeker."
+        }
+      },
+      "receipt": {
+        "between": ", ",
+        "drew": "Çekilen: {balls}. {picked} sayıdan {hits} isabet.",
+        "drewRounds": "Son turda çekilen: {balls}. Turlara göre isabet: {list}."
       }
     }
   },
