@@ -284,7 +284,7 @@
     "pages": {
       "casino": {
         "title": "Casino",
-        "description": "Cüzdan tabanlı casino oyunları, her dönüş zincir üstünde doğrulanabilir. Kayıt yok, saklama yok."
+        "description": "Base üzerinde casino oyunları, her oyunun kazanma şansı ve en yüksek ödemesiyle. Her sonucu Chainlink VRF seçer ve sonuçlanan her bahsin herkese açık bir fişi vardır."
       },
       "casinoRoom": {
         "title": "{game}",
@@ -975,112 +975,54 @@
     }
   },
   "casino": {
-    "directory": {
-      "loading": "Oyunlar yükleniyor...",
-      "empty": {
-        "noRelease": "Bağlı olduğunuz ağda casino aktif değil.",
-        "noGames": "Şu anda kullanılabilir oyun yok.",
-        "noResults": "Oyun bulunamadı",
-        "noResultsDetail": "\"{query}\" ile eşleşen yok. Aramayı temizlemeyi deneyin.",
-        "clearSearch": "Aramayı temizle"
+    "lobby": {
+      "title": "Bir oyun seçin.",
+      "lede": "Base üzerinde casino oyunları. Her sonucu Chainlink VRF seçer, kazanç doğrudan cüzdanınıza ödenir ve sonuçlanan her bahsin herkesin kontrol edebileceği bir fişi vardır.",
+      "preview": {
+        "note": "Bahisler, denetim raporu yayımlandıktan sonra Base üzerinde açılır. O zamana kadar her oyunun kurallarını ve şanslarını okuyabilirsiniz."
       },
-      "hero": {
-        "eyebrow": "Oyun lobisi",
-        "title": "Bir oyun seçin.",
-        "description": "Doğrulanabilir oyun odaları. Cüzdanı bağlayın, hemen girin. Her dönüş zincir üstüne işlenir."
+      "testnet": {
+        "note": "{chain} üzerindeki bahisler değeri olmayan test USDC ile yapılır; gas için biraz test ETH de gerekir. Gerçek USDC ile bahis, denetim raporu yayımlandıktan sonra Base üzerinde açılır.",
+        "faucet": "Test USDC al"
       },
-      "stats": {
-        "rooms": "Mevcut oyunlar",
-        "asset": "Şununla oynar",
-        "volume": "Toplam hacim",
-        "bets": "Toplam bahis",
-        "players": "Oyuncular"
-      },
-      "filters": {
-        "all": "Tüm oyunlar",
-        "table": "Masa",
-        "dice": "Zar",
-        "binary": "Yazı tura",
-        "lottery": "Loto",
-        "arcade": "Arcade"
-      },
-      "search": {
-        "placeholder": "Oyun ara...",
-        "aria": "Oyun ara"
-      },
-      "tags": {
-        "binary": "İkili",
-        "table": "Masa",
-        "lottery": "Loto",
-        "arcade": "Arcade",
-        "dice": "Zar",
-        "module": "Oyun"
-      },
-      "rooms": {
-        "dice": {
-          "title": "Hassas Zar",
-          "promise": "Saniyeler içinde 1-99 ayarı.",
-          "badge": "Hızlı turlar"
-        },
-        "roulette": {
-          "title": "Avrupa Ruleti",
-          "promise": "Klasik 37 cepli fiziksel mekanik.",
-          "badge": "Maks. ödeme 36x"
-        },
-        "coinToss": {
-          "title": "Yazı Tura",
-          "promise": "Çok hızlı 50/50 sonuç.",
-          "badge": "50/50 oyun"
-        },
-        "keno": {
-          "title": "Keno Draft",
-          "promise": "Devasa çarpanlar için çoklu sayı seçin.",
-          "badge": "500,5x'e kadar"
-        },
-        "plinko": {
-          "title": "Plinko",
-          "promise": "Sekiz sıradan düşün ve uç kovaları hedefleyin.",
-          "badge": "24,6x'e kadar"
-        },
-        "slots": {
-          "title": "Slot",
-          "promise": "Çiftleri, üçlüleri veya üç-yedi jackpotunu yakalayın.",
-          "badge": "64x'e kadar"
-        },
-        "baccarat": {
-          "title": "Bakara",
-          "promise": "Beraberlik kazancıyla oyuncu-banko elleri.",
-          "badge": "10,4x'e kadar"
-        },
-        "sicBo": {
-          "title": "Sic Bo",
-          "promise": "Üç zar, klasik masa bahisleri ve üçlü kazanç.",
-          "badge": "216x'e kadar"
+      "noRelease": "Bu ağda oyunlar henüz kullanılamıyor.",
+      "games": {
+        "title": "Her oyun ne öder",
+        "lede": "Her masada kazanma şansı ve tek bir bahsin döndürebileceği en yüksek tutar, {rate} casino avantajı düşülmüş olarak yazılıdır. Anlık üst sınır casino havuzunun serbest sermayesine de bağlıdır ve imzalamadan önce gösterilir.",
+        "chance": "Kazanma şansı",
+        "pays": "Öder",
+        "upTo": "En çok",
+        "range": "{from}–{to}",
+        "rangeSpoken": "{from} ile {to} arası",
+        "label": "{name}. {line} Kazanma şansı {chance}. {pays}",
+        "paysFixed": "Bahsin {multiplier} katını öder.",
+        "paysUpTo": "Bahsin en çok {multiplier} katını öder.",
+        "note": "Bir işlem en fazla {rounds} tur oynayabilir. İmzaladığınız teklif bahsi, çarpanı, kazanma şansınızı ve ücretleri gösterir.",
+        "empty": "Şu anda bahis kabul eden oyun yok.",
+        "items": {
+          "coinToss": "Yazı ya da tura seçin.",
+          "dice": "Bir çizgi belirleyin, altına ya da üstüne oynayın.",
+          "roulette": "Tek sıfırlı Avrupa çarkı.",
+          "baccarat": "Oyuncuya, bankaya ya da beraberliğe oynayın.",
+          "sicBo": "Cam bir fanus altında üç zar.",
+          "slots": "Üç makara; en çok üç yedi öder.",
+          "plinko": "Sekiz sıra çivi ve üç risk seviyesi.",
+          "keno": "On beş sayıdan en fazla beşini seçin."
         }
       },
-      "card": {
-        "releaseAnchored": "Canlı",
-        "playNow": "Hemen oyna",
-        "testnet": "Testnet",
-        "preview": "Önizleme"
-      },
-      "reserve": {
-        "title": "Kasa bankroll'u, zincir üstünde",
-        "subtitle": "Banka {bank}",
-        "status": "Canlı",
-        "cta": "Zincir üstünde kontrol et",
-        "testnet": "Testnet",
-        "preview": "Önizleme"
-      },
-      "bets": "Bahisler",
-      "clearAll": "Tümünü temizle"
+      "stats": {
+        "label": "Şimdiye kadarki bahisler",
+        "bets": "Yapılan bahis",
+        "players": "Oyuncu",
+        "turnover": "Toplam bahis"
+      }
     },
     "room": {
       "names": {
-        "dice": "Hassas Zar",
+        "dice": "Zar",
         "roulette": "Avrupa Ruleti",
         "coinToss": "Yazı Tura",
-        "keno": "Keno Draft",
+        "keno": "Keno",
         "plinko": "Plinko",
         "slots": "Slot",
         "baccarat": "Bakara",

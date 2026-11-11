@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import type { CasinoAccess } from "../../app-shell/casino-access";
 import { OFFICIAL_CHANNELS, TESTNET_USDC_FAUCET } from "../../config/site";
+import { GameStubList, type GameStub } from "../casino/game-stubs";
 import { PrintedFigure } from "./printed-figure";
 import type { SignedAmount } from "./receipts";
 
@@ -67,41 +68,12 @@ function HeroAction({ access, chainName }: { access: CasinoAccess; chainName: st
   const t = useTranslations("home.hero");
   if (access === "preview") {
     return (
-      <div id={FOLLOW_ID} className="max-w-[520px]">
-        <p className="mb-3 font-semibold">{t("preview.note")}</p>
-        {/* One link: the paper strip carries the ink button as the page's main action. */}
-        <a
-          href={OFFICIAL_CHANNELS.telegram}
-          target="_blank"
-          rel="noreferrer noopener"
-          className={`group flex flex-wrap gap-1 rounded-sheet bg-paper p-1 ${FOCUS_ON_CARBON}`}
-        >
-          <span className="flex min-h-12 flex-[1000_1_auto] items-center px-4 text-carbon">
-            {t("preview.channel")}
-            <b className="ml-[0.3em] font-semibold">@arbigamefi</b>
-          </span>
-          <span className="grid min-h-12 flex-[1_0_auto] place-items-center rounded-print bg-ink px-5 font-semibold whitespace-nowrap text-paper group-hover:bg-ink-bright">
-            {t("preview.join")}
-          </span>
-        </a>
-        <p className="mt-3 text-note text-on-carbon-muted">
-          {t.rich("preview.fine", {
-            x: (chunks) => (
-              <a
-                href={OFFICIAL_CHANNELS.x}
-                target="_blank"
-                rel="noreferrer noopener"
-                className={`${LINK} text-paper ${FOCUS_ON_CARBON}`}
-              >
-                {chunks}
-              </a>
-            )
-          })}
-        </p>
+      <>
+        <TelegramFollow note={t("preview.note")} />
         <a href="#home-games" className={`mt-8 inline-block ${LINK} ${FOCUS_ON_CARBON}`}>
           {t("browse")}
         </a>
-      </div>
+      </>
     );
   }
   return (
@@ -124,6 +96,48 @@ function HeroAction({ access, chainName }: { access: CasinoAccess; chainName: st
           </a>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/**
+ * While betting is closed a page on carbon offers one action: the official Telegram channel, with
+ * X as the fine print. It carries FOLLOW_ID, so the phone dock hides while it is in view.
+ */
+export function TelegramFollow({ note }: { note: string }) {
+  const t = useTranslations("home.hero.preview");
+  return (
+    <div id={FOLLOW_ID} className="max-w-[520px]">
+      <p className="mb-3 font-semibold">{note}</p>
+      {/* One link: the paper strip carries the ink button as the page's main action. */}
+      <a
+        href={OFFICIAL_CHANNELS.telegram}
+        target="_blank"
+        rel="noreferrer noopener"
+        className={`group flex flex-wrap gap-1 rounded-sheet bg-paper p-1 ${FOCUS_ON_CARBON}`}
+      >
+        <span className="flex min-h-12 flex-[1000_1_auto] items-center px-4 text-carbon">
+          {t("channel")}
+          <b className="ml-[0.3em] font-semibold">@arbigamefi</b>
+        </span>
+        <span className="grid min-h-12 flex-[1_0_auto] place-items-center rounded-print bg-ink px-5 font-semibold whitespace-nowrap text-paper group-hover:bg-ink-bright">
+          {t("join")}
+        </span>
+      </a>
+      <p className="mt-3 text-note text-on-carbon-muted">
+        {t.rich("fine", {
+          x: (chunks) => (
+            <a
+              href={OFFICIAL_CHANNELS.x}
+              target="_blank"
+              rel="noreferrer noopener"
+              className={`${LINK} text-paper ${FOCUS_ON_CARBON}`}
+            >
+              {chunks}
+            </a>
+          )
+        })}
+      </p>
     </div>
   );
 }
@@ -203,19 +217,12 @@ export function VerifyLedger({
   );
 }
 
-export type TicketStub = {
-  key: string;
-  href: string;
-  multiplier: SignedAmount;
-  fixed: boolean;
-};
-
 export function GameStubs({
   stubs,
   houseEdgeRate,
   maxRounds
 }: {
-  stubs: readonly TicketStub[];
+  stubs: readonly GameStub[];
   houseEdgeRate: string;
   maxRounds?: number;
 }) {
@@ -232,29 +239,13 @@ export function GameStubs({
           title={t("title")}
           lede={t("lede", { rate: houseEdgeRate })}
         />
-        <ul className="grid grid-cols-1 gap-columns lg:col-span-12 lg:grid-cols-2">
-          {stubs.map((stub) => (
-            <li key={stub.key}>
-              <Link
-                href={stub.href}
-                className="group grid min-h-26 grid-cols-[minmax(0,1fr)_128px] rounded-sheet border border-(--stub-edge) text-ink [--stub-edge:hsl(var(--thermal))] hover:[--stub-edge:hsl(var(--ink))] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink md:min-h-28 md:grid-cols-[minmax(0,1fr)_152px]"
-              >
-                <span className="flex flex-col justify-center gap-1 px-5 py-4 md:px-6 md:py-5">
-                  <span className="text-lede font-semibold decoration-1 underline-offset-4 group-hover:underline">
-                    {t(`items.${stub.key}.name`)}
-                  </span>
-                  <span className="text-note text-faded">{t(`items.${stub.key}.desc`)}</span>
-                </span>
-                <span className="print-perforation flex flex-col items-center justify-center gap-1">
-                  <small className="text-note leading-tight text-faded">
-                    {stub.fixed ? t("pays") : t("upTo")}
-                  </small>
-                  <PrintedFigure value={stub.multiplier} suffix="×" className="text-price" />
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <GameStubList
+          stubs={stubs}
+          title={(stub) => t(`items.${stub.key}.name`)}
+          detail={(stub) => t(`items.${stub.key}.desc`)}
+          pays={t("pays")}
+          upTo={t("upTo")}
+        />
         {maxRounds ? (
           <p className="mt-6 text-note text-faded lg:col-span-8">
             {t("note", { rounds: maxRounds })}

@@ -1,20 +1,17 @@
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
 
+import { carbonCopyFontVariables } from "../../../features/home/fonts";
 import { generatePageMetadata } from "../../../i18n/metadata";
-import { LoadingGames } from "./LoadingGames";
-
-const GamesListClient = dynamic(
-  () => import("./pageClient").then((m) => ({ default: m.GamesListClient })),
-  {
-    loading: () => <LoadingGames />
-  }
-);
+import { CasinoLobbyClient } from "./pageClient";
 
 export function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata("casino", undefined, { path: "/casino" });
 }
 
-export default function GamesPage() {
-  return <GamesListClient />;
+export default function CasinoLobbyPage() {
+  return (
+    <div className={carbonCopyFontVariables}>
+      <CasinoLobbyClient />
+    </div>
+  );
 }

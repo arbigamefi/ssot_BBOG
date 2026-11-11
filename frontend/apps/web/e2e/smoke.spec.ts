@@ -59,34 +59,26 @@ test.describe("current route smoke", () => {
     }
   });
 
-  test("casino directory requires a release before exposing rooms", async ({ page }) => {
+  test("casino lobby requires a release before setting out the game tables", async ({ page }) => {
     await gotoReady(page, "/casino");
+    const main = page.getByRole("main");
+    await expect(main.getByRole("heading", { level: 1, name: "Pick a game." })).toBeVisible();
+    const tables = main.locator("li[data-slug]");
 
     if (embeddedChainIds.length === 0) {
-      await expect(
-        page.getByRole("heading", { name: "Read-only mode", exact: true })
-      ).toBeVisible();
-      const main = page.getByRole("main");
-      await expect(main.getByRole("heading", { name: "Games", exact: true })).toBeVisible();
-      await expect(main.getByText(/^No embedded release for chainId=\d+$/)).toBeVisible();
-      await expect(page.getByTestId("room-entry-card")).toHaveCount(0);
-      await expect(main.locator("input")).toHaveCount(0);
+      await expect(main.getByText("Games aren't available on this network yet.")).toBeVisible();
+      await expect(tables).toHaveCount(0);
       return;
     }
 
-    await expect(page.locator("h1").first()).toBeVisible();
-    await expect(page.getByTestId("room-entry-card")).toHaveCount(8);
-
-    await page.locator('input[type="text"]').first().fill("roulette");
+    await expect(tables).toHaveCount(8);
     await expect(
-      page.locator('[data-testid="room-entry-card"][data-slug="roulette"]')
+      main.getByRole("link", { name: /^Dice\. .* Win chance 2% to 97%\./ })
     ).toBeVisible();
 
     await Promise.all([
       page.waitForURL(/\/casino\/roulette$/),
-      page
-        .locator('[data-testid="room-entry-card"][data-slug="roulette"]')
-        .click({ noWaitAfter: true })
+      main.locator('li[data-slug="roulette"] a').click({ noWaitAfter: true })
     ]);
     await expect(page).toHaveURL(/\/casino\/roulette$/);
     await expect(page.getByRole("heading", { name: /Roulette/i })).toBeVisible();

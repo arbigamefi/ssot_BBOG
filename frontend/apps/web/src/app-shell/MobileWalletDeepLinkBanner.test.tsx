@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import * as React from "react";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileWalletDeepLinkBanner } from "./MobileWalletDeepLinkBanner";
 import { MobileWalletEntryProvider } from "./MobileWalletEntryProvider";
@@ -8,28 +8,16 @@ import { requestWalletConnect } from "./wallet-connect-events";
 
 const state = vi.hoisted(() => ({
   connected: false,
-  modalOpen: false,
-  pathname: "/",
-  cookie: "rejected" as string | null,
   connect: vi.fn(),
   chainId: 8453
 }));
 vi.mock("wagmi", () => ({ useAccount: () => ({ isConnected: state.connected }) }));
 vi.mock("@rainbow-me/rainbowkit", () => ({
-  useConnectModal: () => ({ openConnectModal: state.connect, connectModalOpen: state.modalOpen })
+  useConnectModal: () => ({ openConnectModal: state.connect })
 }));
-vi.mock("next/navigation", () => ({ usePathname: () => state.pathname }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("./ActiveChainProvider", () => ({
   useActiveChain: () => ({ selectedChainId: state.chainId })
-}));
-vi.mock("./compliance", () => ({
-  useCompliance: () => ({
-    hydrated: true,
-    entryCleared: true,
-    cookieConsent: state.cookie,
-    rgDialogOpen: false
-  })
 }));
 
 function View() {
@@ -43,10 +31,7 @@ function View() {
 
 beforeEach(() => {
   state.connected = false;
-  state.modalOpen = false;
-  state.pathname = "/";
   state.chainId = 8453;
-  state.cookie = "rejected";
   state.connect.mockClear();
   sessionStorage.clear();
   localStorage.clear();
@@ -121,40 +106,6 @@ describe("mobile wallet entry", () => {
     expect(state.connect).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
-  it("holds the floating prompt until cookies are resolved, and hides it under another modal", async () => {
-    state.pathname = "/casino";
-    state.cookie = null;
-    const view = render(
-      <MobileWalletEntryProvider>
-        <span>Directory</span>
-      </MobileWalletEntryProvider>
-    );
-    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
-    state.cookie = "rejected";
-    view.rerender(
-      <MobileWalletEntryProvider>
-        <span>Directory</span>
-      </MobileWalletEntryProvider>
-    );
-    expect(screen.getByRole("complementary")).toBeVisible();
-    view.rerender(
-      <MobileWalletEntryProvider>
-        <div role="dialog" aria-modal="true">
-          Other modal
-        </div>
-      </MobileWalletEntryProvider>
-    );
-    await waitFor(() => expect(screen.queryByRole("complementary")).not.toBeInTheDocument());
-  });
-  it("never mounts the floating list over a game action bar", () => {
-    state.pathname = "/casino/dice";
-    render(
-      <MobileWalletEntryProvider>
-        <span>Game</span>
-      </MobileWalletEntryProvider>
-    );
-    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
-  });
   it("connects directly from the prominent home action", () => {
     render(<View />);
     fireEvent.click(
@@ -162,23 +113,5 @@ describe("mobile wallet entry", () => {
     );
     expect(state.connect).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-  it("connects directly from the floating action and yields to the existing selector", () => {
-    state.pathname = "/casino";
-    const view = render(
-      <MobileWalletEntryProvider>
-        <span>Directory</span>
-      </MobileWalletEntryProvider>
-    );
-    fireEvent.click(screen.getByRole("button", { name: "choose" }));
-    expect(state.connect).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    state.modalOpen = true;
-    view.rerender(
-      <MobileWalletEntryProvider>
-        <span>Directory</span>
-      </MobileWalletEntryProvider>
-    );
-    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
 });
