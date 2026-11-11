@@ -2841,14 +2841,11 @@
     "responsible": {
       "title": "Responsible gambling",
       "close": "Close",
-      "intro": "Set a session reminder and record personal limits. These settings are saved in this browser only, and daily limits are not yet checked when you bet or deposit. Clear a field to remove a limit.",
-      "dailyDeposit": "Daily deposit limit",
-      "dailyLoss": "Daily loss limit",
+      "intro": "Set a reminder that tells you how long you have been playing. It is saved in this browser only. Clear the field to turn it off.",
       "sessionReminder": "Session reminder",
       "minutes": "min",
-      "noLimit": "No limit",
       "off": "Off",
-      "saveLimits": "Save limits",
+      "saveReminder": "Save reminder",
       "selfExclude": {
         "title": "Self-exclude",
         "description": "Block bets in this browser for a fixed period. It cannot be undone here before it expires, and it does not apply to other browsers or devices.",
@@ -2937,7 +2934,7 @@
       },
       {
         "q": "How do I stay in control of my play?",
-        "a": "Open Responsible Gambling from the footer to set a session reminder, record daily deposit and loss limits, or self-exclude for a fixed period. These settings are saved in this browser only. Daily limits are not yet checked when you bet or deposit, and self-exclusion does not apply to other browsers, devices or apps. You must be of legal age in your jurisdiction to play."
+        "a": "Open Responsible Gambling from the footer to set a session reminder or to self-exclude for a fixed period. Both are saved in this browser only: self-exclusion does not apply to other browsers, devices or apps. You must be of legal age in your jurisdiction to play."
       }
     ]
   },
