@@ -11,7 +11,7 @@ import {
   type RecentBetSummary
 } from "./history-widget";
 import type { CasinoOutcome } from "./outcome";
-import type { BaccaratSide, CoinSide, SicBoKind } from "./params";
+import type { BaccaratSide, SicBoKind } from "./params";
 import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
 
 export type { GameHistoryEntry, RecentBetSummary } from "./history-widget";
@@ -31,14 +31,6 @@ function StageLoading() {
   );
 }
 
-const CoinTossStage = dynamic(
-  () => import("../modules/coin-toss/stage").then((mod) => mod.CoinTossStage),
-  {
-    loading: StageLoading,
-    ssr: false
-  }
-);
-
 const BaccaratStage = dynamic(
   () => import("../modules/baccarat/stage").then((mod) => mod.BaccaratStage),
   {
@@ -54,14 +46,12 @@ const SicBoStage = dynamic(() => import("../modules/sic-bo/stage").then((mod) =>
 
 export function GameRoomRightPane({
   gameSlug,
-  coinSide,
   gameHistory,
   recentBets,
   isPending,
   controlsLocked = false,
   isRevealing,
   showResult,
-  resultNum,
   houseEdgeBps,
   baccaratSide,
   sicBoKind,
@@ -73,22 +63,18 @@ export function GameRoomRightPane({
   assetDecimals,
   onResultClose,
   onResultPlayAgain,
-  onCoinRevealComplete,
-  onCoinSideChange,
   onSicBoRevealComplete,
   onBaccaratRevealComplete,
   onBaccaratSideChange,
   onSicBoChange
 }: {
   gameSlug: string;
-  coinSide: CoinSide;
   gameHistory: readonly GameHistoryEntry[];
   recentBets: readonly RecentBetSummary[];
   isPending: boolean;
   controlsLocked?: boolean;
   isRevealing?: boolean;
   showResult: boolean;
-  resultNum: number | null;
   houseEdgeBps: number;
   baccaratSide: BaccaratSide;
   sicBoKind: SicBoKind;
@@ -100,8 +86,6 @@ export function GameRoomRightPane({
   assetDecimals?: number;
   onResultClose?: () => void;
   onResultPlayAgain?: () => void;
-  onCoinRevealComplete?: () => void;
-  onCoinSideChange: (side: CoinSide) => void;
   onSicBoRevealComplete?: () => void;
   onBaccaratRevealComplete?: () => void;
   onBaccaratSideChange: (side: BaccaratSide) => void;
@@ -125,19 +109,6 @@ export function GameRoomRightPane({
         gameHistory={gameHistory}
         recentBets={recentBets}
       />
-
-      {gameSlug === "coin-toss" && (
-        <CoinTossStage
-          isPending={isPending}
-          controlsLocked={controlsLocked}
-          isRevealing={Boolean(isRevealing)}
-          showResult={showResult}
-          resultNum={resultNum}
-          coinSide={coinSide}
-          onSideChange={onCoinSideChange}
-          onRevealComplete={onCoinRevealComplete}
-        />
-      )}
 
       {gameSlug === "baccarat" && (
         <BaccaratStage
@@ -176,8 +147,6 @@ export function GameRoomRightPane({
           assetDecimals={assetDecimals}
           gameSlug={gameSlug}
           houseEdgeBps={houseEdgeBps}
-          resultNum={resultNum}
-          coinSide={coinSide}
           casinoOutcome={casinoOutcome}
           onClose={onResultClose}
           onPlayAgain={onResultPlayAgain}

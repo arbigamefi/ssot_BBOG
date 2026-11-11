@@ -4,7 +4,6 @@ import * as React from "react";
 
 /** How long each game's stage animates a result before the reveal counts as done without its callback. */
 const REVEAL_DURATION_MS: Record<string, number> = {
-  "coin-toss": 1_600,
   baccarat: 4_200,
   "sic-bo": 2_100
 };
@@ -17,7 +16,9 @@ const REVEAL_DURATION_MS: Record<string, number> = {
  * after the last (slots-room/reel-motion.ts); keno's fifth ball is in the rack 4.5 s after the
  * number, and each later round's 0.65 s + 2.7 s after the last (keno-room/blower-motion.ts); the
  * first plinko ball is in its cup 3.58 s after the number and each later one 0.54 s after the last
- * (plinko-room/drop-motion.ts). All hold frames or not; the fallback leaves each some room.
+ * (plinko-room/drop-motion.ts); the coin lies flat on its first flip 2.4 s after the number and on
+ * each later one 1.45 s after the last (coin-room/flip-motion.ts). All hold frames or not; the
+ * fallback leaves each some room.
  */
 function revealDurationMs(gameSlug: string, rounds: number) {
   const later = Math.max(1, rounds) - 1;
@@ -26,6 +27,7 @@ function revealDurationMs(gameSlug: string, rounds: number) {
   if (gameSlug === "slots") return 5_500 + later * 3_400;
   if (gameSlug === "keno") return 5_000 + later * 3_800;
   if (gameSlug === "plinko") return 4_200 + later * 600;
+  if (gameSlug === "coin-toss") return 2_900 + later * 1_500;
   return REVEAL_DURATION_MS[gameSlug] ?? 0;
 }
 

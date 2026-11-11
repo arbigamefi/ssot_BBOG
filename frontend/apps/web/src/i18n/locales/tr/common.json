@@ -1105,11 +1105,6 @@
       },
       "stage": {
         "loading": "Masa yükleniyor",
-        "coin": {
-          "awaitingSelection": "Taraf seçimi bekleniyor",
-          "selected": "{side} seçildi",
-          "waitingVrf": "Çekiliş bekleniyor..."
-        },
         "baccarat": {
           "ready": "Oyuncu, banko veya beraberliğe bahis yap",
           "dealing": "Çekiliş bekleniyor...",
@@ -1280,11 +1275,6 @@
         }
       },
       "selection": {
-        "coin": {
-          "selectFace": "Taraf seç",
-          "heads": "Yazı",
-          "tails": "Tura"
-        },
         "baccarat": {
           "betOn": "Bahis",
           "player": "Oyuncu",
@@ -1368,8 +1358,6 @@
           "settlementTx": "Ödeme işlemi",
           "resolvedTime": "Çözülme zamanı",
           "vrfFee": "Rastgele sayı ücreti",
-          "coinChoice": "Seçilen taraf",
-          "coinDrawn": "Çıkan taraf",
           "baccaratChoice": "Seçilen taraf",
           "baccaratWinner": "Kazanan taraf",
           "baccaratPlayerTotal": "Oyuncu toplamı",
@@ -2434,6 +2422,44 @@
         "right": "sağ",
         "fell": "Sekmeler: {path}; {m}× haznesine düştü.",
         "fellMany": "Son top: {path}; {m}× haznesine düştü. Toplara göre hazneler: {list}."
+      }
+    },
+    "coin": {
+      "head": {
+        "crumb": "Tüm oyunlar",
+        "title": "Yazı Tura",
+        "lede": "Yazı ya da tura seçin. Parayı Chainlink VRF atar; seçtiğiniz yüze düşerse bahsinizin 1,96 katını alırsınız."
+      },
+      "table": {
+        "title": "Masa",
+        "chance": "Kazanma şansı",
+        "pays": "Tutarsa ödeme",
+        "call": "Seçiminiz",
+        "face": {
+          "heads": "Tura",
+          "tails": "Yazı"
+        },
+        "spot": "{m}× öder",
+        "spotLabel": "{face}, bahsin {m} katını öder",
+        "history": "Son sonuçlar",
+        "noHistory": "Henüz atış yok",
+        "tile": "{face}",
+        "tileMatch": "{face}, tuttu",
+        "rule": "Para adildir: Chainlink VRF her yüzü zamanın yarısında seçer. Tutan atış bahsin iki katını, {rate} kasa avantajı düşülerek öder.",
+        "status": {
+          "ready": "Fişinizi yazı ya da turaya koyun, sonra bahis fişinden bahsinizi yapın.",
+          "waiting": "Rastgele sayı bekleniyor. Sayı gelene kadar para döner.",
+          "falling": "Rastgele sayı geldi. Para seçtiği yüze düşüyor."
+        },
+        "flip": "Atış {k} / {n}"
+      },
+      "slip": {
+        "game": "Yazı Tura, {face, select, heads {tura} other {yazı}}",
+        "match": "Tutarsa ödeme"
+      },
+      "receipt": {
+        "landed": "{face} geldi. Seçiminiz: {call}.",
+        "landedMany": "Son atış: {face}. {n} atışın {hits} tanesi tuttu."
       }
     }
   },

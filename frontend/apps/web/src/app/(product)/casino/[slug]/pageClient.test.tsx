@@ -87,6 +87,7 @@ vi.mock("next-intl", () => ({
       "casino.room.names.keno": "Keno Draft",
       "casino.room.names.plinko": "Plinko",
       "casino.room.names.slots": "Slots",
+      "casino.room.names.baccarat": "Baccarat",
       "casino.room.audit.loading": "Loading audit stream",
       "casino.room.roundStatus.title": "Round status",
       "casino.room.roundStatus.phases.loadingQuote.label": "Estimating VRF fee",
@@ -161,9 +162,6 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
       "casino.room.betPanel.placeBet.placeBet": "PLACE BET",
-      "casino.room.selection.coin.selectFace": "Select Face",
-      "casino.room.selection.coin.heads": "Heads",
-      "casino.room.selection.coin.tails": "Tails",
       "casino.room.selection.sicBo.yes": "Yes",
       "casino.room.selection.sicBo.no": "No",
       "casino.room.stage.loading": "Loading stage",
@@ -200,6 +198,7 @@ vi.mock("next-intl", () => ({
       "casino.room.closed.browse": "Browse open games",
       "casino.dice.head.title": "Dice",
       "casino.roulette.head.title": "Roulette",
+      "casino.coin.head.title": "Coin toss",
       "casino.table.strip.preview":
         "Preview. Betting opens on Base after the audit report is published.",
       "casino.table.action.telegram": "Join on Telegram",
@@ -335,6 +334,13 @@ const MOCK_RELEASE = {
       label: "Coin Toss",
       module: "0x3333333333333333333333333333333333333333",
       paramsEncoding: "abi.encode(bool isHeads)"
+    },
+    {
+      gameId: "0x4444444444444444444444444444444444444444444444444444444444444444",
+      slug: "baccarat",
+      label: "Baccarat",
+      module: "0x4444444444444444444444444444444444444444",
+      paramsEncoding: "abi.encode(uint8 side)"
     }
   ]
 };
@@ -466,10 +472,10 @@ describe("GamePageClient", () => {
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
 
-    renderRoom("coin-toss");
+    renderRoom("baccarat");
 
     // The shared shell loads as its own chunk.
-    expect(await screen.findByText("Coin Toss")).toBeDefined();
+    expect(await screen.findByText("Baccarat")).toBeDefined();
     // Betting is not enabled for the website in tests, so the room is labelled a preview.
     expect(screen.getByText("Preview SSOT Module")).toBeDefined();
     expect(screen.queryByText("Live SSOT Module")).toBeNull();
@@ -481,14 +487,14 @@ describe("GamePageClient", () => {
     vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
-    const { unmount } = renderRoom("coin-toss");
+    const { unmount } = renderRoom("baccarat");
     expect(await screen.findByText("Testnet SSOT Module")).toBeDefined();
     expect(screen.queryByText("Live SSOT Module")).toBeNull();
     expect(screen.queryByText("Preview SSOT Module")).toBeNull();
     unmount();
 
     state.chainId = 8453;
-    renderRoom("coin-toss");
+    renderRoom("baccarat");
     expect(await screen.findByText("Live SSOT Module")).toBeDefined();
     expect(screen.queryByText("Testnet SSOT Module")).toBeNull();
     state.chainId = 84532;
@@ -525,14 +531,15 @@ describe("GamePageClient", () => {
     expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
   });
 
-  it("renders coin toss as a canonical room shell", async () => {
+  it("renders coin toss as the Carbon copy room, with no shared shell", async () => {
     state.release = MOCK_RELEASE;
 
     renderRoom("coin-toss");
 
-    expect(await screen.findByText("Coin Toss")).toBeDefined();
-    expect(screen.getByLabelText("Wallet Balance")).toBeDefined();
-    expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
+    expect(await screen.findByRole("heading", { level: 1, name: "Coin toss" })).toBeDefined();
+    expect(screen.getByRole("article", { name: "Bet slip" })).toBeDefined();
+    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
+    expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
   });
 
   it("shows placeholder when slug is not present in release", () => {

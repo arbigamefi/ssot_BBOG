@@ -1938,6 +1938,291 @@
   }
 }
 
+/* The coin toss stage: a ring printed on the felt and the coin over it, seen from above
+   (coin-room/coin-table.tsx). The coin is a thick token: two faces and a reeded edge of stacked
+   discs, turning about the table's horizontal axis. Height reads as size and a smaller, softer,
+   offset shadow, set by the room on data-c="coin" and data-c="shadow". Holds the coin's size;
+   set here, not on the felt, since a container query cannot restyle its own container. */
+@utility table-coin {
+  --coin: 184px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 300px;
+  perspective: 1100px;
+  & [data-c="ring"] {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(var(--coin) + 46px);
+    aspect-ratio: 1;
+    border: 1.5px dashed hsl(var(--paper) / 0.6);
+    border-radius: 50%;
+    box-shadow:
+      inset 0 0 0 9px hsl(var(--paper) / 0.04),
+      0 0 0 9px hsl(var(--paper) / 0.03);
+    transform: translate(-50%, -50%);
+  }
+  & [data-c="ring"]::after {
+    content: "";
+    position: absolute;
+    inset: 14px;
+    border: 1px solid hsl(var(--paper) / 0.24);
+    border-radius: 50%;
+  }
+  & [data-c="shadow"],
+  & [data-c="coin"] {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--coin);
+    height: var(--coin);
+    margin: calc(var(--coin) / -2) 0 0 calc(var(--coin) / -2);
+    border-radius: 50%;
+    will-change: transform;
+  }
+  & [data-c="shadow"] {
+    background: radial-gradient(
+      closest-side,
+      hsl(var(--table-shade) / 0.55),
+      hsl(var(--table-shade) / 0.35) 70%,
+      transparent
+    );
+    opacity: 0.95;
+  }
+  & [data-c="coin"] {
+    transform-style: preserve-3d;
+  }
+  & [data-c="coin"] > * {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    backface-visibility: hidden;
+  }
+  & [data-c="edge"] {
+    background: repeating-conic-gradient(hsl(var(--ivory-lo)) 0 2deg, hsl(var(--ivory)) 2deg 4deg);
+    backface-visibility: visible;
+  }
+  @container felt (max-width: 620px) {
+    height: 260px;
+  }
+  @container felt (max-width: 460px) {
+    --coin: 140px;
+    height: 210px;
+  }
+}
+
+/* A face of the coin (coin-room/coin-face.tsx), on the stage, the spots and the last results:
+   heads ivory with a navy sun, tails lacquer red with an ivory moon. Gradient stops are data-s,
+   parts data-b. */
+@utility coin-face {
+  display: block;
+  width: 100%;
+  height: 100%;
+  & [data-s="ivory-hi"] {
+    stop-color: hsl(var(--ivory-hi));
+  }
+  & [data-s="ivory"] {
+    stop-color: hsl(var(--ivory));
+  }
+  & [data-s="ivory-lo"] {
+    stop-color: hsl(var(--ivory-lo));
+  }
+  & [data-s="red-hi"] {
+    stop-color: color-mix(in srgb, hsl(var(--pocket-red)) 72%, hsl(var(--ivory-hi)));
+  }
+  & [data-s="red"] {
+    stop-color: hsl(var(--pocket-red));
+  }
+  & [data-s="red-lo"] {
+    stop-color: color-mix(in srgb, hsl(var(--pocket-red)) 62%, hsl(var(--rail-lo)));
+  }
+  & [data-s="gloss"] {
+    stop-color: hsl(var(--table-sheen) / 0.35);
+  }
+  & [data-s="clear"] {
+    stop-color: hsl(var(--table-sheen) / 0);
+  }
+  & [data-b="rim"],
+  & [data-b="dots"] {
+    fill: none;
+    stroke: hsl(var(--ink));
+  }
+  & [data-b="rim"] {
+    stroke-width: 2.2;
+  }
+  & [data-b="dots"] {
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-dasharray: 0 5.2;
+  }
+  & [data-b="mark"] {
+    fill: hsl(var(--ink));
+  }
+  &[data-side="tails"] [data-b="rim"],
+  &[data-side="tails"] [data-b="dots"] {
+    stroke: hsl(var(--ivory-hi));
+  }
+  &[data-side="tails"] [data-b="mark"] {
+    fill: hsl(var(--ivory-hi));
+  }
+}
+
+/* A side of the coin as a printed mark, in the current colour: on the paper and the status line. */
+@utility coin-mark {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  margin-right: 0.35em;
+  vertical-align: -0.2em;
+}
+
+/* Your call: Heads or Tails, a spot printed on the felt with a small coin and what a match pays.
+   Your chip sits on the chosen spot (aria-pressed); the side that came up lights its spot
+   (data-up), and a match that won turns your chip red (data-won). A net win's chips are paid
+   beside your chip, on data-pay; on a phone your chip sits on the spot's corner. */
+@utility table-call {
+  --own: 44px;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 78px;
+  padding: 10px 18px 10px 12px;
+  border: 1.5px solid hsl(var(--paper) / 0.6);
+  border-radius: 16px;
+  background: transparent;
+  color: hsl(var(--paper) / 0.92);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+  &:hover:not(:disabled) {
+    background: hsl(var(--paper) / 0.06);
+  }
+  &:focus-visible {
+    outline: 2px solid hsl(var(--paper));
+    outline-offset: 2px;
+  }
+  &:disabled {
+    cursor: default;
+  }
+  &[aria-pressed="true"] {
+    border-color: hsl(var(--paper) / 0.92);
+    background: hsl(var(--paper) / 0.05);
+  }
+  &:disabled[aria-pressed="false"] {
+    opacity: 0.45;
+  }
+  &[data-up] {
+    border-color: hsl(var(--paper));
+    box-shadow:
+      0 0 0 1.5px hsl(var(--paper)),
+      0 0 22px 2px hsl(var(--lamp) / 0.3);
+  }
+  &[data-won] {
+    @media (prefers-reduced-motion: no-preference) {
+      animation: print-glow 1.6s ease-out both;
+    }
+  }
+  & [data-mini] {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    box-shadow: 0 3px 6px hsl(var(--table-shade) / 0.45);
+  }
+  & [data-name] {
+    display: block;
+    font: 800 22px/1.1 var(--font-text);
+  }
+  & [data-sub] {
+    display: block;
+    margin-top: 4px;
+    color: hsl(var(--paper) / 0.6);
+    font: 400 var(--text-note) / 1.3 var(--font-text);
+  }
+  & [data-chip] {
+    position: relative;
+    width: var(--own);
+    height: var(--own);
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, hsl(var(--paper)) 0 34%, transparent 35%),
+      repeating-conic-gradient(hsl(var(--ink)) 0 15deg, hsl(var(--paper)) 15deg 30deg);
+    box-shadow:
+      inset 0 0 0 3px hsl(var(--paper)),
+      0 3px 4px hsl(var(--table-shade) / 0.45);
+    opacity: 0;
+    transform: scale(0.6);
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s ease;
+  }
+  &[aria-pressed="true"] [data-chip] {
+    opacity: 1;
+    transform: none;
+  }
+  &[data-won] [data-chip] {
+    background:
+      radial-gradient(circle, hsl(var(--paper)) 0 34%, transparent 35%),
+      repeating-conic-gradient(hsl(var(--pocket-red)) 0 15deg, hsl(var(--paper)) 15deg 30deg);
+  }
+  & [data-pay] {
+    position: absolute;
+    top: calc(50% - var(--chip-size) / 2 + 4px);
+    right: calc(100% + 6px);
+    width: var(--chip-size);
+    height: var(--chip-size);
+  }
+  @container felt (max-width: 460px) {
+    --own: 34px;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    min-height: 64px;
+    padding: 8px 10px;
+    border-radius: 14px;
+    & [data-mini] {
+      width: 40px;
+      height: 40px;
+    }
+    & [data-name] {
+      font-size: 18px;
+    }
+    & [data-sub] {
+      font-size: 11px;
+    }
+    & [data-chip] {
+      position: absolute;
+      top: -10px;
+      right: -6px;
+    }
+    & [data-pay] {
+      right: calc(100% - var(--chip-size) * 0.4);
+    }
+  }
+}
+
+/* A last result: a small coin ringed in the felt, a stronger ring when it matched your call. */
+@utility table-minicoin {
+  display: inline-block;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1.5px hsl(var(--felt)),
+    0 0 0 2.5px hsl(var(--paper) / 0.24);
+  &[data-paid] {
+    box-shadow:
+      0 0 0 1.5px hsl(var(--felt)),
+      0 0 0 3px hsl(var(--paper));
+  }
+}
+
 /* The net amount of a win, lit on the felt; brighter for 10x or more. */
 @utility table-pay-glow {
   text-shadow: 0 0 14px hsl(var(--lamp) / 0.45);

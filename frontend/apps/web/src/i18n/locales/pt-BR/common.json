@@ -1105,11 +1105,6 @@
       },
       "stage": {
         "loading": "Carregando mesa",
-        "coin": {
-          "awaitingSelection": "Aguardando escolha do lado",
-          "selected": "{side} selecionado",
-          "waitingVrf": "Aguardando sorteio..."
-        },
         "baccarat": {
           "ready": "Aposte no jogador, banca ou empate",
           "dealing": "Aguardando sorteio...",
@@ -1280,11 +1275,6 @@
         }
       },
       "selection": {
-        "coin": {
-          "selectFace": "Escolha o lado",
-          "heads": "Cara",
-          "tails": "Coroa"
-        },
         "baccarat": {
           "betOn": "Apostar em",
           "player": "Jogador",
@@ -1368,8 +1358,6 @@
           "settlementTx": "Tx de liquidação",
           "resolvedTime": "Horário resolvido",
           "vrfFee": "Taxa de número aleatório",
-          "coinChoice": "Lado escolhido",
-          "coinDrawn": "Lado sorteado",
           "baccaratChoice": "Lado escolhido",
           "baccaratWinner": "Lado vencedor",
           "baccaratPlayerTotal": "Total do jogador",
@@ -2434,6 +2422,44 @@
         "right": "direita",
         "fell": "Quicou {path} e caiu no copo de {m}×.",
         "fellMany": "A última bola quicou {path} e caiu no copo de {m}×. Copos por bola: {list}."
+      }
+    },
+    "coin": {
+      "head": {
+        "crumb": "Todos os jogos",
+        "title": "Cara ou Coroa",
+        "lede": "Escolha cara ou coroa. A Chainlink VRF joga a moeda; se cair no lado que você escolheu, você recebe 1,96 vez a sua aposta."
+      },
+      "table": {
+        "title": "A mesa",
+        "chance": "Chance de ganhar",
+        "pays": "Acertar paga",
+        "call": "Sua escolha",
+        "face": {
+          "heads": "Cara",
+          "tails": "Coroa"
+        },
+        "spot": "Paga {m}×",
+        "spotLabel": "{face}, paga {m} vezes a aposta",
+        "history": "Últimos resultados",
+        "noHistory": "Nenhuma jogada ainda",
+        "tile": "{face}",
+        "tileMatch": "{face}, você acertou",
+        "rule": "A moeda é justa: a Chainlink VRF escolhe cada lado metade das vezes. Acertar paga o dobro da aposta, menos uma vantagem da casa de {rate}.",
+        "status": {
+          "ready": "Coloque sua ficha em cara ou coroa e faça a aposta no boletim.",
+          "waiting": "Aguardando o número aleatório. A moeda gira até ele chegar.",
+          "falling": "O número aleatório chegou. A moeda cai no lado que ele escolheu."
+        },
+        "flip": "Jogada {k} de {n}"
+      },
+      "slip": {
+        "game": "Cara ou coroa, {face, select, heads {cara} other {coroa}}",
+        "match": "Acertar paga"
+      },
+      "receipt": {
+        "landed": "Deu {face}. Você escolheu {call}.",
+        "landedMany": "A última jogada deu {face}. Você acertou {hits} de {n} jogadas."
       }
     }
   },

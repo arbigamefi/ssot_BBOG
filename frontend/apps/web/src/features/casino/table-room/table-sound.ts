@@ -33,6 +33,10 @@ export type TableSound = {
   drop: (hit: boolean) => void;
   /** Plinko: the ball hits a pin, a little higher each row. */
   pin: (row: number) => void;
+  /** Coin toss: the thumb flicks the coin up, a bright ring. */
+  flick: () => void;
+  /** Coin toss: the coin meets the felt and rattles flat, a little brighter on your call. */
+  coin: (match: boolean) => void;
   close: () => void;
 };
 
@@ -195,6 +199,17 @@ export function createTableSound(): TableSound | null {
       tone(at, 260, 0.16, 0.12, "sine", 150);
       burst(at, 1500, 1.5, 0.06, 0.04);
       if (hit) tone(at + 0.05, 1320, 0.05, 0.3, "triangle");
+    },
+    flick() {
+      const at = ready();
+      tone(at, 2650, 0.05, 0.5, "triangle");
+      tone(at, 3980, 0.025, 0.35);
+    },
+    coin(match) {
+      const at = ready();
+      burst(at, 1800, 1.2, 0.09, 0.05);
+      for (let i = 1; i < 6; i++) burst(at + 0.05 * i * (1 - i * 0.07), 2600, 3, 0.04 / i, 0.025);
+      if (match) tone(at + 0.12, 1320, 0.05, 0.3, "triangle");
     },
     close() {
       void ctx.close();

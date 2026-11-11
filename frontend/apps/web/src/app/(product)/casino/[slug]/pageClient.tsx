@@ -28,6 +28,9 @@ const KenoRoom = dynamic(() =>
 const PlinkoRoom = dynamic(() =>
   import("../../../../features/casino/plinko-room/plinko-room").then((mod) => mod.PlinkoRoom)
 );
+const CoinRoom = dynamic(() =>
+  import("../../../../features/casino/coin-room/coin-room").then((mod) => mod.CoinRoom)
+);
 const SharedGameRoom = dynamic(() =>
   import("./shared-game-room").then((mod) => mod.SharedGameRoom)
 );
@@ -54,7 +57,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       </PageTransition>
     );
 
-  // Dice, roulette, slots, keno and plinko are rebuilt in Carbon copy; the other games keep the
+  // Dice, roulette, slots, keno, plinko and coin toss are rebuilt in Carbon copy; the other games keep the
   // shared shell until they move.
   const CarbonRoom =
     game.slug === "dice"
@@ -67,7 +70,9 @@ export function GamePageClient({ slug }: { slug: string }) {
             ? KenoRoom
             : game.slug === "plinko"
               ? PlinkoRoom
-              : null;
+              : game.slug === "coin-toss"
+                ? CoinRoom
+                : null;
   if (CarbonRoom)
     return (
       <PageTransition pageKey={`game-${slug}`}>

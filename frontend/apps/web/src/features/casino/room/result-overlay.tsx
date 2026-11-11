@@ -20,7 +20,7 @@ import { buildShareUrl } from "../../share/share-link";
 import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
 import { applyHouseEdgeToMultiplier } from "./payouts";
-import type { BaccaratSide, CoinSide, SicBoKind } from "./params";
+import type { BaccaratSide, SicBoKind } from "./params";
 import type { CasinoRoundResult, CasinoTerminalRoundResult } from "./resolution";
 
 function shortHash(value: string | undefined) {
@@ -39,7 +39,6 @@ function formatResolvedAt(value: number | undefined) {
 }
 
 function gameNameKeyFromSlug(slug: string) {
-  if (slug === "coin-toss") return "coinToss";
   if (slug === "sic-bo") return "sicBo";
   return slug;
 }
@@ -204,10 +203,7 @@ function getOutcome(result: CasinoTerminalRoundResult, t: Translate) {
 }
 
 type GameResultContext = {
-  gameSlug: string;
   houseEdgeBps: number;
-  resultNum: number | null;
-  coinSide: CoinSide;
   casinoOutcome?: CasinoOutcome | null;
 };
 
@@ -221,12 +217,6 @@ type GameResultRow = {
 
 function formatList(values: readonly (number | string)[]) {
   return values.length > 0 ? values.join(", ") : "—";
-}
-
-function formatCoinSide(side: CoinSide, t: Translate) {
-  return side === "HEADS"
-    ? t("casino.room.selection.coin.heads")
-    : t("casino.room.selection.coin.tails");
 }
 
 function formatBaccaratSide(side: BaccaratSide, t: Translate) {
@@ -257,20 +247,6 @@ function formatFactorBpsMultiplier(factorBps: number, houseEdgeBps: number) {
 }
 
 function getGameResultRows(context: GameResultContext, t: Translate) {
-  if (context.casinoOutcome?.kind === "coin-toss") {
-    return [
-      {
-        label: t("casino.room.result.facts.coinChoice"),
-        value: formatCoinSide(context.casinoOutcome.chosen, t)
-      },
-      {
-        label: t("casino.room.result.facts.coinDrawn"),
-        value: context.casinoOutcome.rolls.map((roll) => formatCoinSide(roll.value, t)).join(", "),
-        tone: context.casinoOutcome.rolls.some((roll) => roll.won) ? "win" : "loss"
-      }
-    ] satisfies GameResultRow[];
-  }
-
   if (context.casinoOutcome?.kind === "baccarat") {
     return [
       {
@@ -343,23 +319,6 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
           .join(", ")
       }
     ] satisfies GameResultRow[];
-  }
-
-  if (context.gameSlug === "coin-toss") {
-    const rows: GameResultRow[] = [
-      {
-        label: t("casino.room.result.facts.coinChoice"),
-        value: formatCoinSide(context.coinSide, t)
-      }
-    ];
-    if (context.resultNum != null) {
-      rows.push({
-        label: t("casino.room.result.facts.coinDrawn"),
-        value: formatCoinSide(context.resultNum === 1 ? "HEADS" : "TAILS", t),
-        tone: "accent" as const
-      });
-    }
-    return rows;
   }
 
   return [];
@@ -451,8 +410,6 @@ export function GameRoomResultOverlay({
   assetDecimals = 6,
   gameSlug,
   houseEdgeBps,
-  resultNum,
-  coinSide,
   casinoOutcome,
   onClose,
   onPlayAgain
@@ -463,8 +420,6 @@ export function GameRoomResultOverlay({
   assetDecimals?: number;
   gameSlug: string;
   houseEdgeBps: number;
-  resultNum: number | null;
-  coinSide: CoinSide;
   casinoOutcome?: CasinoOutcome | null;
   onClose?: () => void;
   /** Restart the round (resets the stepper and places the next bet). */
@@ -502,10 +457,7 @@ export function GameRoomResultOverlay({
       ? []
       : getGameResultRows(
           {
-            gameSlug,
             houseEdgeBps,
-            resultNum,
-            coinSide,
             casinoOutcome
           },
           t

@@ -67,8 +67,8 @@ Must show:
 
 Purpose: the betting room. It has two layers (`01-brand.md` §2): **the table is immersion, the
 paper is trust.** The dice room is the reference; other games keep its structure and draw their
-own table. Dice, roulette, slots, keno and plinko are rebuilt; the other games still use the
-shared room shell until their tables are drawn.
+own table. Dice, roulette, slots, keno, plinko and coin toss are rebuilt; the other games still
+use the shared room shell until their tables are drawn.
 
 ### Layout
 
@@ -206,6 +206,30 @@ shared room shell until their tables are drawn.
 - Every cup a ball landed in lights. Only a net win glows and is paid in chips, onto the label of
   the best cup the balls reached, under the ball and never over it. A pay below the stake gets
   nothing, like a loss.
+
+### The table (coin toss)
+
+- The same felt, rail and lamp, seen from above. The hero is the coin over a ring printed on the
+  felt: a thick token with a reeded edge, heads ivory with a navy sun, tails lacquer red with an
+  ivory moon, with no words on either face. The coin is 184px (140px on a phone); on a wide felt
+  it takes the left column (1.25 to 1) and spans two rows, and at 620px it moves under the
+  figures.
+- Beside it: Win chance (50.0%) and "A match pays" (1.96× at a 2% edge) in Doto, the net amount of
+  a win and the status line (hidden on a phone), and the sound switch beside the last 12 results
+  as small coins, the ones that matched your call ringed.
+- **The call is two spots printed on the felt** under the coin: Heads and Tails, each with a small
+  coin and "Pays 1.96×". Your chip sits on the chosen spot (on a phone, on its top-right corner);
+  the spots lock while a bet is out.
+- **The coin follows the bet's chain state** (`12-motion.md` §5): placing the bet tosses it, and
+  it spins over the felt until the number arrives. Then it comes down still turning, ends exactly
+  on the side the number chose, touches the ring, rattles and lies flat. For several flips it is
+  tossed again from there, and the status reads "Flip k of n". On a phone the felt scrolls to the
+  top after the bet, so the coin and the spots sit above the docked slip.
+- The side that came up lights its spot. Results read "Landed Tails. You called Tails." (or "Last
+  flip landed Tails. 2 of 3 flips matched your call.") after a printed mark of the side, in the
+  status line, the slip's head and the receipt. The slip's quote gives what a match pays for the
+  stake.
+- Only a net win turns your chip red and is paid in chips, stacked beside your chip.
 
 ### The paper
 
