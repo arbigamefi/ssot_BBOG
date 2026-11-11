@@ -119,8 +119,6 @@ export function useGameRoom(slug: string) {
   const [sicBoKind, setSicBoKind] = React.useState<SicBoKind>("small");
   const [sicBoValue, setSicBoValue] = React.useState<number>(0);
 
-  const [resultNum, setResultNum] = React.useState<number | null>(null);
-
   const [gameHistory] = React.useState<GameHistoryEntry[]>([]);
   const [betCount, setBetCount] = React.useState<number>(1);
   const [stopGain, setStopGain] = React.useState<number>(0);
@@ -317,13 +315,6 @@ export function useGameRoom(slug: string) {
       }
       setCasinoOutcome(outcome);
 
-      if (outcome?.kind === "dice") setResultNum(outcome.rolls.at(-1)?.value ?? null);
-      if (outcome?.kind === "coin-toss") {
-        setResultNum(outcome.rolls.at(-1)?.value === "HEADS" ? 1 : 0);
-      }
-      if (outcome?.kind === "roulette") setResultNum(outcome.rolls.at(-1)?.value ?? null);
-      if (outcome?.kind === "sic-bo") setResultNum(outcome.rolls.at(-1)?.total ?? null);
-
       if (bet.state === "randomReady" && revealedBetIdRef.current !== bet.betId) {
         revealedBetIdRef.current = bet.betId;
         setIsPending(false);
@@ -416,7 +407,6 @@ export function useGameRoom(slug: string) {
     terminalBet,
     resultProof,
     casinoOutcome,
-    resultNum,
     gameHistory,
     handleResultClose,
     handleResultPlayAgain

@@ -127,14 +127,12 @@ export function SharedGameRoom({ slug, room }: { slug: string; room: GameRoom })
     ) : (
       <GameRoomRightPane
         gameSlug={game.slug}
-        coinSide={room.coinSide}
         gameHistory={room.gameHistory}
         recentBets={room.recentBets}
         isPending={room.isStagePending}
         controlsLocked={room.isBetPanelPending}
         isRevealing={room.stageReveal?.phase === "revealing"}
         showResult={Boolean(room.stageReveal || room.showResult)}
-        resultNum={room.resultNum}
         houseEdgeBps={stageHouseEdgeBps}
         baccaratSide={room.baccaratSide}
         sicBoKind={room.sicBoKind}
@@ -146,8 +144,6 @@ export function SharedGameRoom({ slug, room }: { slug: string; room: GameRoom })
         assetDecimals={assetDecimals}
         onResultClose={room.handleResultClose}
         onResultPlayAgain={room.handleResultPlayAgain}
-        onCoinRevealComplete={room.completeStageReveal}
-        onCoinSideChange={room.setCoinSide}
         onSicBoRevealComplete={room.completeStageReveal}
         onBaccaratRevealComplete={room.completeStageReveal}
         onBaccaratSideChange={room.setBaccaratSide}

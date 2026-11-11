@@ -466,11 +466,6 @@
         "maxSummary": "每轮 {perRound} · 整仓 {total}"
       },
       "selection": {
-        "coin": {
-          "selectFace": "选择正反面",
-          "heads": "正面",
-          "tails": "反面"
-        },
         "baccarat": {
           "betOn": "下注边",
           "player": "闲",
@@ -496,11 +491,6 @@
       },
       "stage": {
         "loading": "正在加载舞台",
-        "coin": {
-          "awaitingSelection": "等待选择正反面",
-          "selected": "已选择{side}",
-          "waitingVrf": "等待开奖..."
-        },
         "baccarat": {
           "ready": "选择闲、庄或和",
           "dealing": "等待开奖...",
@@ -591,8 +581,6 @@
           "settlementTx": "结算交易",
           "resolvedTime": "结算时间",
           "vrfFee": "随机数费用",
-          "coinChoice": "选择面",
-          "coinDrawn": "开出面",
           "baccaratChoice": "下注边",
           "baccaratWinner": "胜出边",
           "baccaratPlayerTotal": "闲点数",
@@ -1683,6 +1671,44 @@
         "right": "右",
         "fell": "弹跳路线 {path}，落进 {m}× 的杯。",
         "fellMany": "最后一球路线 {path}，落进 {m}× 的杯。每球落杯：{list}。"
+      }
+    },
+    "coin": {
+      "head": {
+        "crumb": "全部游戏",
+        "title": "抛硬币",
+        "lede": "猜正面还是反面。Chainlink VRF 抛硬币，落地是你猜的那一面，就拿回下注额的 1.96 倍。"
+      },
+      "table": {
+        "title": "牌桌",
+        "chance": "中奖概率",
+        "pays": "猜中赔付",
+        "call": "你猜哪一面",
+        "face": {
+          "heads": "正面",
+          "tails": "反面"
+        },
+        "spot": "赔 {m}×",
+        "spotLabel": "{face}，赔下注额的 {m} 倍",
+        "history": "最近结果",
+        "noHistory": "还没有抛过",
+        "tile": "{face}",
+        "tileMatch": "{face}，猜中",
+        "rule": "硬币是公平的：Chainlink VRF 给每一面一半的概率。猜中赔两倍下注额，扣 {rate} 庄家优势。",
+        "status": {
+          "ready": "把筹码放在正面或反面上，再在下注单上下注。",
+          "waiting": "正在等随机数。数到之前，硬币一直在转。",
+          "falling": "随机数到了，硬币落到它定下的那一面。"
+        },
+        "flip": "第 {k} 次，共 {n} 次"
+      },
+      "slip": {
+        "game": "抛硬币，{face, select, heads {正面} other {反面}}",
+        "match": "猜中得"
+      },
+      "receipt": {
+        "landed": "落地是{face}，你猜的是{call}。",
+        "landedMany": "最后一次是{face}。{n} 次里猜中 {hits} 次。"
       }
     }
   },

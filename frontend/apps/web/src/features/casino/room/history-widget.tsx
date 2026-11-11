@@ -38,11 +38,6 @@ function getBetStateClass(state: string) {
   return "border-brand/25 bg-brand-soft text-brand";
 }
 
-function HistoryValue({ gameSlug, value }: { gameSlug: string; value: number }) {
-  if (gameSlug === "coin-toss") return value === 1 ? "H" : "T";
-  return value;
-}
-
 export function GameRoomHistoryWidget({
   gameSlug,
   gameHistory,
@@ -72,7 +67,7 @@ export function GameRoomHistoryWidget({
                     : "border-danger/25 bg-danger-soft text-danger"
                 )}
               >
-                <HistoryValue gameSlug={gameSlug} value={res.val} />
+                {res.val}
               </div>
             ))}
           </div>

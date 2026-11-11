@@ -90,6 +90,19 @@ describe("useStageReveal", () => {
     expect(result.current.stageReveal?.phase).toBe("revealed");
   });
 
+  it("gives the coin time for every flip's deadline", () => {
+    const { result } = renderHook(() => useStageReveal());
+    act(() => result.current.startStageReveal(9n, "coin-toss", 3));
+    act(() => {
+      vi.advanceTimersByTime(5_899);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealing");
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealed");
+  });
+
   it("lets the animation's callback finish the reveal early", () => {
     const { result } = renderHook(() => useStageReveal());
     act(() => result.current.startStageReveal(8n, "baccarat"));

@@ -166,6 +166,23 @@ on its own):
   as on the dice table.
 - **Reduced motion:** no rocking and no fall; every ball is placed in its cup at once.
 
+The coin follows them too (`coin-room/flip-motion.ts`, a controller with no DOM, tested on its
+own):
+
+- **Waiting for randomness:** placing the bet tosses the coin (0.38s up), and it spins over the
+  felt at 820°/s about the table's horizontal axis, bobbing slightly. Height reads as size (up to
+  1.42×) and a smaller, softer shadow offset down and right.
+- **The number arrives:** the coin comes down over 1.05s, easing its turn so it ends exactly on
+  the side the number chose after at least 430° more. It touches the felt 78% of the way down, two
+  small bounces follow, then a 0.45s rattle and it lies flat. Each later flip is tossed again
+  (0.28s), turns at least 320° and comes down over 0.72s.
+- **Deadline:** the coin lies flat on its first flip 2.4s after the number arrives and on each
+  later one 1.45s after the last, whether or not the tab gets frames. The room's own fallback
+  reveal waits 2.9s, plus 1.5s for each later flip.
+- **The result:** the side that came up lights its spot; a net win turns your chip red and its
+  chips slide in beside it as on the dice table.
+- **Reduced motion:** the coin is never tossed; it is shown flat on the last side.
+
 ## 6. Do Not Do
 
 - No `transition-all`.

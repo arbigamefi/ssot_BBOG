@@ -2,7 +2,6 @@ import * as React from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CoinTossStage } from "./coin-toss/stage";
 import { BaccaratStage } from "./baccarat/stage";
 import { SicBoStage } from "./sic-bo/stage";
 import { applyHouseEdgeToMultiplier, baccaratMultiplier, sicBoMultiplier } from "../room/payouts";
@@ -14,8 +13,6 @@ vi.mock("@ssot/ui", () => ({
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, number | string>) =>
     ({
-      "casino.room.selection.coin.heads": "HEADS",
-      "casino.room.selection.coin.tails": "TAILS",
       "casino.room.selection.baccarat.player": "Player",
       "casino.room.selection.baccarat.banker": "Banker",
       "casino.room.selection.baccarat.tie": "Tie",
@@ -26,9 +23,6 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.sicBo.kinds.total": "Exact total",
       "casino.room.selection.sicBo.kinds.specificDouble": "Specific double",
       "casino.room.selection.sicBo.kinds.singleFace": "Single face",
-      "casino.room.stage.coin.awaitingSelection": "Awaiting Toss Selection",
-      "casino.room.stage.coin.selected": `${values?.side} SELECTED`,
-      "casino.room.stage.coin.waitingVrf": "Waiting for VRF Oracle...",
       "casino.room.stage.baccarat.ready": "Bet player, banker, or tie",
       "casino.room.stage.baccarat.dealing": "Waiting for VRF Oracle...",
       "casino.room.stage.baccarat.result": `${values?.side} wins`,
@@ -48,60 +42,6 @@ vi.mock("next-intl", () => ({
 
 describe("game room stages", () => {
   afterEach(() => cleanup());
-
-  it("renders Coin Toss stage selected side and pending state", () => {
-    const onSideChange = vi.fn();
-    const { rerender } = render(
-      <CoinTossStage
-        isPending={false}
-        showResult={false}
-        resultNum={null}
-        coinSide="HEADS"
-        onSideChange={onSideChange}
-      />
-    );
-    expect(screen.getByText("HEADS SELECTED")).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: /HEADS SELECTED/i }));
-    expect(onSideChange).toHaveBeenCalledWith("TAILS");
-
-    rerender(
-      <CoinTossStage
-        isPending
-        showResult={false}
-        resultNum={null}
-        coinSide="TAILS"
-        onSideChange={onSideChange}
-      />
-    );
-    expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
-  });
-
-  it("runs Coin Toss reveal before completing the stage", () => {
-    const onRevealComplete = vi.fn();
-    vi.useFakeTimers();
-    try {
-      render(
-        <CoinTossStage
-          isPending={false}
-          isRevealing
-          showResult
-          resultNum={1}
-          coinSide="HEADS"
-          onSideChange={vi.fn()}
-          onRevealComplete={onRevealComplete}
-        />
-      );
-
-      expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
-
-      act(() => {
-        vi.advanceTimersByTime(1_300);
-      });
-      expect(onRevealComplete).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
 
   it("renders Baccarat stage with opened cards and totals", () => {
     const onSideChange = vi.fn();

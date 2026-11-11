@@ -60,8 +60,6 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.resolvedTime": "Resolved time",
       "casino.room.result.facts.vrfFee": "RNG fees (VRF)",
       "casino.room.result.facts.pending": "Pending",
-      "casino.room.result.facts.coinChoice": "Chosen side",
-      "casino.room.result.facts.coinDrawn": "Side drawn",
       "casino.room.result.facts.baccaratChoice": "Chosen side",
       "casino.room.result.facts.baccaratWinner": "Winning side",
       "casino.room.result.facts.baccaratPlayerTotal": "Player total",
@@ -112,12 +110,10 @@ vi.mock("next-intl", () => ({
 }));
 
 const baseProps = {
-  coinSide: "HEADS" as const,
   gameHistory: [],
   recentBets: [],
   isPending: false,
   showResult: false,
-  resultNum: null,
   multiplier: 1.98,
   houseEdgeBps: 200,
   winChance: 50,
@@ -129,7 +125,6 @@ const baseProps = {
   assetSymbol: "USDC",
   assetDecimals: 6,
   onResultClose: vi.fn(),
-  onCoinSideChange: vi.fn(),
   onBaccaratSideChange: vi.fn(),
   onSicBoChange: vi.fn()
 };
@@ -160,9 +155,9 @@ describe("GameRoomRightPane", () => {
   });
 
   it("renders the empty live tracker", () => {
-    render(<GameRoomRightPane {...baseProps} gameSlug="coin-toss" />);
+    render(<GameRoomRightPane {...baseProps} gameSlug="baccarat" />);
 
-    expect(screen.getByText("RECENT FLIPS")).toBeDefined();
+    expect(screen.getByText("RECENT HANDS")).toBeDefined();
     expect(screen.getByText("Waiting for first play...")).toBeDefined();
   });
 
@@ -170,9 +165,8 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="coin-toss"
+        gameSlug="baccarat"
         showResult
-        resultNum={1}
         resultProof={{
           kind: "settled",
           betId: 123456n,
@@ -191,12 +185,33 @@ describe("GameRoomRightPane", () => {
             protocolFeeAccrual: 200_000n
           }
         }}
+        casinoOutcome={{
+          kind: "baccarat",
+          side: "player",
+          rolls: [
+            {
+              playerCards: [5, 4],
+              bankerCards: [8, 0],
+              playerTotal: 9,
+              bankerTotal: 8,
+              outcome: "player",
+              factorBps: 20000,
+              won: true
+            }
+          ],
+          payoutGross: 20_000_000n,
+          payoutNet: 19_600_000n,
+          refundAmount: 0n,
+          feeOnPayout: 400_000n,
+          playerOwed: 19_600_000n,
+          netResult: 9_600_000n
+        }}
         gameHistory={[{ val: 1, win: true }]}
         recentBets={[{ id: "84532:123456", betId: "123456", state: "finalized" }]}
       />
     );
 
-    expect(screen.getByText("RECENT FLIPS")).toBeDefined();
+    expect(screen.getByText("RECENT HANDS")).toBeDefined();
     expect(screen.getByText("SETTLED")).toBeDefined();
     expect((await screen.findAllByText("Won bet")).length).toBeGreaterThan(0);
     expect(screen.getByText("Bet details")).toBeDefined();
@@ -204,7 +219,6 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("Fairness data")).toBeDefined();
     expect(screen.getByText("19.6 USDC")).toBeDefined();
     expect(screen.getByText("+ 9.6 USDC")).toBeDefined();
-    expect(screen.getAllByText("H").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Play again" })).toBeDefined();
   });
 
@@ -213,9 +227,8 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="coin-toss"
+        gameSlug="baccarat"
         showResult
-        resultNum={1}
         resultProof={{
           kind: "settled",
           betId: 123456n,
@@ -250,7 +263,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="coin-toss"
+        gameSlug="baccarat"
         showResult
         resultProof={{
           kind: "indexing",
@@ -272,9 +285,8 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="coin-toss"
+        gameSlug="baccarat"
         showResult
-        resultNum={1}
         resultProof={{
           kind: "indexing",
           betId: 13n,
@@ -286,9 +298,19 @@ describe("GameRoomRightPane", () => {
           resolvedAt: 1_778_888_888
         }}
         casinoOutcome={{
-          kind: "coin-toss",
-          chosen: "HEADS",
-          rolls: [{ value: "HEADS", won: true }],
+          kind: "baccarat",
+          side: "player",
+          rolls: [
+            {
+              playerCards: [5, 4],
+              bankerCards: [8, 0],
+              playerTotal: 9,
+              bankerTotal: 8,
+              outcome: "player",
+              factorBps: 22414,
+              won: true
+            }
+          ],
           payoutGross: 20_000_000n,
           payoutNet: 19_600_000n,
           refundAmount: 0n,
@@ -425,9 +447,8 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="coin-toss"
+        gameSlug="baccarat"
         showResult
-        resultNum={17}
         resultProof={{
           kind: "settled",
           betId: 42n,
@@ -456,7 +477,7 @@ describe("casino result payment evidence", () => {
       render(
         <GameRoomRightPane
           {...baseProps}
-          gameSlug="coin-toss"
+          gameSlug="baccarat"
           showResult
           resultProof={{
             kind: "settled",

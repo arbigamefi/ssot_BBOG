@@ -466,11 +466,6 @@
         "maxSummary": "{perRound} per round · {total} total"
       },
       "selection": {
-        "coin": {
-          "selectFace": "Select Face",
-          "heads": "Heads",
-          "tails": "Tails"
-        },
         "baccarat": {
           "betOn": "Bet on",
           "player": "Player",
@@ -496,11 +491,6 @@
       },
       "stage": {
         "loading": "Loading stage",
-        "coin": {
-          "awaitingSelection": "Awaiting toss selection",
-          "selected": "{side} selected",
-          "waitingVrf": "Waiting for draw..."
-        },
         "baccarat": {
           "ready": "Bet player, banker, or tie",
           "dealing": "Waiting for draw...",
@@ -591,8 +581,6 @@
           "settlementTx": "Settlement tx",
           "resolvedTime": "Resolved time",
           "vrfFee": "Random-number fee",
-          "coinChoice": "Chosen side",
-          "coinDrawn": "Side drawn",
           "baccaratChoice": "Chosen side",
           "baccaratWinner": "Winning side",
           "baccaratPlayerTotal": "Player total",
@@ -1683,6 +1671,44 @@
         "right": "right",
         "fell": "Bounced {path} into the {m}× cup.",
         "fellMany": "The last ball bounced {path} into the {m}× cup. Cups by ball: {list}."
+      }
+    },
+    "coin": {
+      "head": {
+        "crumb": "All games",
+        "title": "Coin toss",
+        "lede": "Call heads or tails. Chainlink VRF flips the coin; if it lands on your call, you get 1.96 times your stake."
+      },
+      "table": {
+        "title": "The table",
+        "chance": "Win chance",
+        "pays": "A match pays",
+        "call": "Your call",
+        "face": {
+          "heads": "Heads",
+          "tails": "Tails"
+        },
+        "spot": "Pays {m}×",
+        "spotLabel": "{face}, pays {m} times the stake",
+        "history": "Last results",
+        "noHistory": "No flips yet",
+        "tile": "{face}",
+        "tileMatch": "{face}, matched your call",
+        "rule": "The coin is fair: Chainlink VRF picks each side half the time. A match pays twice the stake, less a {rate} house edge.",
+        "status": {
+          "ready": "Put your chip on heads or tails, then place the bet on the slip.",
+          "waiting": "Waiting for the random number. The coin spins until it arrives.",
+          "falling": "The random number is in. The coin comes down on the side it chose."
+        },
+        "flip": "Flip {k} of {n}"
+      },
+      "slip": {
+        "game": "Coin toss, {face, select, heads {heads} other {tails}}",
+        "match": "A match pays"
+      },
+      "receipt": {
+        "landed": "Landed {face}. You called {call}.",
+        "landedMany": "Last flip landed {face}. {hits} of {n} flips matched your call."
       }
     }
   },
