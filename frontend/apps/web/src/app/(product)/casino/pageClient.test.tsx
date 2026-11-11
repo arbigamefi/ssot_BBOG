@@ -82,22 +82,24 @@ afterEach(() => {
 });
 
 describe("casino lobby", () => {
-  it("prints one stub per game with its win chance and top multiplier after the house edge", () => {
+  it("sets one felt table per game, simplest first, with its win chance and top pay after the house edge", () => {
     renderLobby();
 
     expect(screen.getByRole("heading", { level: 1, name: "Pick a game." })).toBeVisible();
-    expect(stubs()).toEqual(["dice", "coin-toss", "keno"]);
-    const dice = screen.getByRole("link", { name: /^Dice/ });
-    expect(dice).toHaveAttribute("href", "/casino/dice");
-    expect(dice).toHaveTextContent(
-      "Set a line from 1 to 100 and pick a side. Win chance 2% to 97%."
+    expect(stubs()).toEqual(["coin-toss", "dice", "keno"]);
+    const coin = screen.getByRole("link", { name: /^Coin Toss\./ });
+    expect(coin).toHaveAttribute("href", "/casino/coin-toss");
+    expect(coin).toHaveAccessibleName(
+      "Coin Toss. Call heads or tails. Win chance 50%. Pays 1.96 times the stake."
     );
-    expect(dice).toHaveTextContent("up to49×");
-    const coin = screen.getByRole("link", { name: /^Coin Toss/ });
-    expect(coin).toHaveTextContent("Win chance 50%.");
-    expect(coin).toHaveTextContent("pays1.96×");
-    expect(screen.getByRole("link", { name: /^Keno/ })).toHaveTextContent(
-      "Win chance 33.3% to 91.6%."
+    expect(coin).toHaveTextContent("Win chance50%Pays1.96×");
+    const dice = screen.getByRole("link", { name: /^Dice\./ });
+    expect(dice).toHaveAccessibleName(
+      "Dice. Set a line and roll under or over it. Win chance 2% to 97%. Pays up to 49.00 times the stake."
+    );
+    expect(dice).toHaveTextContent("Win chance2%–97%Up to49.00×");
+    expect(screen.getByRole("link", { name: /^Keno\./ })).toHaveTextContent(
+      "Win chance9.5%–33.3%Up to490.49×"
     );
     expect(screen.getByText(/with the 2% house edge already counted/)).toBeVisible();
     expect(screen.getByText(/up to 25 rounds/)).toBeVisible();
@@ -185,7 +187,9 @@ describe("casino lobby", () => {
     renderLobby("zh-Hans");
 
     expect(screen.getByRole("heading", { level: 1, name: "选一个游戏。" })).toBeVisible();
-    expect(screen.getByRole("link", { name: /^骰子/ })).toHaveTextContent("中奖概率 2% 至 97%。");
-    expect(screen.getByRole("link", { name: /^Keno 选号/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: /^骰子。/ })).toHaveAccessibleName(
+      "骰子。设一条线，押掷出低于或高于它。中奖概率 2% 至 97%。最高赔下注额的 49.00 倍。"
+    );
+    expect(screen.getByRole("link", { name: /^抛硬币。/ })).toHaveTextContent("中奖概率50%赔1.96×");
   });
 });

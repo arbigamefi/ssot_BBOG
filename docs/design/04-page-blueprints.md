@@ -2,7 +2,7 @@
 
 | Owner | Product + Frontend |
 | Status | Active |
-| Last Updated | 2026-11-09 |
+| Last Updated | 2026-11-12 |
 | Depends on | `01-brand.md`, `03-information-architecture.md`, `casino-placebet-ux.md` |
 | Supersedes | Draft v1 pre-implementation wireframes |
 
@@ -58,8 +58,14 @@ Purpose: game discovery.
 
 Must show:
 
-- one ticket stub per game the current release ships, each with what the game is, its win chance
-  range and the most one bet can return after the release's house edge, rounded down;
+- one small felt table per game the current release ships, simplest first (coin toss, dice,
+  roulette, baccarat, sic bo, slots, plinko, keno): the room's rail, felt and lamp with the game's
+  piece drawn at rest, and printed on the felt its name, one line on how to play, its win chance
+  range as its room counts it and the most one bet can return after the release's house edge,
+  rounded down ("Pays" for coin toss, "Up to" for the rest). Four to a row on wide screens, two
+  from 1100 px down, with the two figures stacked from 560 px down. Each table is one link whose
+  name reads the name, the line, the win chance and the pay. No paper on the page: paper is for
+  the slip and the receipt in the rooms;
 - nothing for a game GameHub has disabled: it takes no new bets, and its room shows the closed
   state;
 - the site state above the games: in preview the official Telegram channel is the only action,

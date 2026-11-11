@@ -2,7 +2,7 @@
 
 | Owner | Frontend Lead + Product |
 | Status | Active |
-| Last Updated | 2026-11-09 |
+| Last Updated | 2026-11-12 |
 | Depends on | `../strategy/fullstack-product-architecture.md`, `10-design-tokens.md` |
 | Supersedes | The 2026-05-18 dark-dashboard direction |
 
@@ -141,8 +141,10 @@ deleted with the last page.
 
 Moved so far: the home page (`app/(marketing)`, `features/home`), the casino lobby
 (`app/(product)/casino/pageClient.tsx`) and the dice room (`features/casino/dice-room`), whose
-table is the reference for the other games' tables. The home page and the lobby print the same
-game stubs (`features/casino/game-stubs.tsx`), and every stub is the one `TicketStub`
+table is the reference for the other games' tables. The lobby has no paper: each game is its
+room's table in miniature (`features/casino/lobby-tables.tsx`, pieces in
+`features/casino/table-vignettes.tsx`, the `table-tile` utilities). The home page prints the game
+stubs (`features/casino/game-stubs.tsx`), and every stub is the one `TicketStub`
 (`features/casino/ticket-stub.tsx`). The other game rooms keep the shared room shell; every room
 reads the same controller (`features/casino/room/use-game-room.ts`), so a room moves by rendering
 its own table and slip. The site header and footer still use the old tokens and move with the

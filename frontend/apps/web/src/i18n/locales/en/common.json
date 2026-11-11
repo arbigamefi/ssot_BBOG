@@ -1046,21 +1046,26 @@
       "noRelease": "Games aren't available on this network yet.",
       "games": {
         "title": "What each game pays",
-        "lede": "The right side of each stub is the most one bet can return, with the {rate} house edge already counted. The live maximum also depends on the house pool's free capital and is shown before you sign.",
-        "pays": "pays",
-        "upTo": "up to",
-        "range": "{from} to {to}",
+        "lede": "Each table prints its win chance and the most one bet can return, with the {rate} house edge already counted. The live maximum also depends on the house pool's free capital and is shown before you sign.",
+        "chance": "Win chance",
+        "pays": "Pays",
+        "upTo": "Up to",
+        "range": "{from}–{to}",
+        "rangeSpoken": "{from} to {to}",
+        "label": "{name}. {line} Win chance {chance}. {pays}",
+        "paysFixed": "Pays {multiplier} times the stake.",
+        "paysUpTo": "Pays up to {multiplier} times the stake.",
         "note": "One transaction can play up to {rounds} rounds. The quote you sign shows the stake, the multiplier, your win chance and the fees.",
         "empty": "No game is taking bets right now.",
         "items": {
-          "coinToss": "Call heads or tails. Win chance {chance}.",
-          "dice": "Set a line from 1 to 100 and pick a side. Win chance {chance}.",
-          "roulette": "A single-zero wheel. Cover 1 to 36 numbers; win chance {chance}.",
-          "baccarat": "Back the player, the banker or a tie. Win chance {chance}.",
-          "sicBo": "Bet on the roll of three dice. Win chance {chance}.",
-          "slots": "Three reels; pairs, triples and triple sevens pay. Win chance {chance}.",
-          "plinko": "Pick a risk level and drop a ball through eight rows. Win chance {chance}.",
-          "keno": "Pick 1 to 5 of 15 numbers against a draw of five. Win chance {chance}."
+          "coinToss": "Call heads or tails.",
+          "dice": "Set a line and roll under or over it.",
+          "roulette": "European wheel with a single zero.",
+          "baccarat": "Back the Player, the Banker or a tie.",
+          "sicBo": "Three dice under a glass dome.",
+          "slots": "Three reels; three sevens pays most.",
+          "plinko": "Eight rows of pins and three risk levels.",
+          "keno": "Pick up to five of fifteen numbers."
         }
       },
       "stats": {

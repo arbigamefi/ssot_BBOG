@@ -988,21 +988,26 @@
       "noRelease": "Os jogos ainda não estão disponíveis nesta rede.",
       "games": {
         "title": "O que cada jogo paga",
-        "lede": "O lado direito de cada canhoto é o máximo que uma aposta pode render, já com a vantagem da casa de {rate} descontada. O máximo ao vivo também depende do capital livre do pool da casa e aparece antes de você assinar.",
-        "pays": "paga",
-        "upTo": "até",
-        "range": "{from} a {to}",
+        "lede": "Cada mesa mostra a chance de ganhar e o máximo que uma aposta pode render, já com a vantagem da casa de {rate} descontada. O máximo ao vivo também depende do capital livre do pool da casa e aparece antes de você assinar.",
+        "chance": "Chance de ganhar",
+        "pays": "Paga",
+        "upTo": "Até",
+        "range": "{from}–{to}",
+        "rangeSpoken": "{from} a {to}",
+        "label": "{name}. {line} Chance de ganhar: {chance}. {pays}",
+        "paysFixed": "Paga {multiplier} vezes a aposta.",
+        "paysUpTo": "Paga até {multiplier} vezes a aposta.",
         "note": "Uma transação pode jogar até {rounds} rodadas. A cotação que você assina mostra a aposta, o multiplicador, a chance de ganhar e as taxas.",
         "empty": "Nenhum jogo está aceitando apostas agora.",
         "items": {
-          "coinToss": "Escolha cara ou coroa. Chance de ganhar: {chance}.",
-          "dice": "Defina uma linha de 1 a 100 e escolha um lado. Chance de ganhar: {chance}.",
-          "roulette": "Uma roda com um único zero. Cubra de 1 a 36 números; chance de ganhar: {chance}.",
-          "baccarat": "Aposte no jogador, na banca ou no empate. Chance de ganhar: {chance}.",
-          "sicBo": "Aposte no lançamento de três dados. Chance de ganhar: {chance}.",
-          "slots": "Três rolos; pares, trincas e três setes pagam. Chance de ganhar: {chance}.",
-          "plinko": "Escolha um nível de risco e solte a bola por oito fileiras. Chance de ganhar: {chance}.",
-          "keno": "Escolha de 1 a 5 dos 15 números contra um sorteio de cinco. Chance de ganhar: {chance}."
+          "coinToss": "Escolha cara ou coroa.",
+          "dice": "Defina uma linha e aposte abaixo ou acima dela.",
+          "roulette": "Roda europeia com um único zero.",
+          "baccarat": "Aposte no jogador, na banca ou no empate.",
+          "sicBo": "Três dados sob uma cúpula de vidro.",
+          "slots": "Três rolos; três setes pagam mais.",
+          "plinko": "Oito fileiras de pinos e três níveis de risco.",
+          "keno": "Escolha até cinco de quinze números."
         }
       },
       "stats": {

@@ -101,6 +101,9 @@
   --color-chip: hsl(var(--ink));
   --color-chip-inlay: hsl(var(--paper));
   --color-lamp: hsl(var(--lamp) / 0.17);
+  --color-pocket-red: hsl(var(--pocket-red));
+  --color-pocket-black: hsl(var(--pocket-black));
+  --color-pocket-green: hsl(var(--pocket-green));
 
   /* Schibsted Grotesk at 400, 600 and 800 sets every word; Doto 800 prints
      figures only. The next/font variables are set on the wrapper of a page
@@ -684,4 +687,76 @@
 @utility table-sheet {
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -14px 34px hsl(var(--table-shade) / 0.5);
+}
+
+/* ── The lobby's tables ─────────────────────────────────────────────────
+ * Each game in the lobby is its room's table in miniature: the same rail and
+ * felt under its own lamp, the game's piece drawn at rest above the figures
+ * printed on the felt. A tile lifts toward the pointer and its lamp brightens. */
+@utility table-tile {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 12px solid transparent;
+  border-radius: 32px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, hsl(var(--felt)) 0%, hsl(var(--felt-edge)) 100%) padding-box,
+    radial-gradient(140% 120% at 50% 0%, hsl(var(--table-sheen) / 0.08), transparent 40%) border-box,
+    linear-gradient(hsl(var(--rail-hi)), hsl(var(--rail)) 26%, hsl(var(--rail-lo))) border-box;
+  box-shadow:
+    inset 0 0 0 1px hsl(var(--table-shade) / 0.55),
+    inset 0 18px 30px -18px hsl(var(--table-shade) / 0.75),
+    0 0 0 1px hsl(var(--table-sheen) / 0.07),
+    0 26px 50px -26px hsl(var(--table-shade) / 0.75);
+  color: hsl(var(--paper) / 0.92);
+  transition:
+    translate 0.25s ease,
+    box-shadow 0.25s ease;
+  &::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: -30% 6% 30%;
+    background: radial-gradient(closest-side, hsl(var(--lamp) / 0.17), transparent);
+    opacity: 0.85;
+    transition: opacity 0.25s ease;
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    &:hover {
+      translate: 0 -3px;
+      box-shadow:
+        inset 0 0 0 1px hsl(var(--table-shade) / 0.55),
+        inset 0 18px 30px -18px hsl(var(--table-shade) / 0.75),
+        0 0 0 1px hsl(var(--table-sheen) / 0.12),
+        0 34px 60px -26px hsl(var(--table-shade) / 0.85);
+    }
+    &:hover::before {
+      opacity: 1;
+    }
+  }
+  @media (max-width: 560px) {
+    border-width: 8px;
+    border-radius: 24px;
+  }
+}
+
+/* A piece on a lobby table that moves when the pointer is over its tile: the roulette wheel turns
+   48deg, the sic bo dome lifts 6px. Still under reduced motion. */
+@utility table-tile-turn {
+  transform-box: fill-box;
+  transform-origin: center;
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    transition: rotate 1.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+    :where(.table-tile:hover) & {
+      rotate: 48deg;
+    }
+  }
+}
+@utility table-tile-lift {
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    transition: translate 0.5s cubic-bezier(0.3, 0.7, 0.3, 1);
+    :where(.table-tile:hover) & {
+      translate: 0 -6px;
+    }
+  }
 }

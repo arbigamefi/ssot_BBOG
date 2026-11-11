@@ -8,7 +8,7 @@ describe("winChanceRange", () => {
     const printed = Object.fromEntries(
       CASINO_MODULE_SLUGS.map((slug) => [
         slug,
-        winChanceRange(slug).map((chance) => formatWinChance(chance, "en"))
+        winChanceRange(slug, 200).map((chance) => formatWinChance(chance, "en"))
       ])
     );
     expect(printed).toEqual({
@@ -19,8 +19,15 @@ describe("winChanceRange", () => {
       "sic-bo": ["0.46%", "48.6%"],
       slots: ["34.4%", "34.4%"],
       plinko: ["28.9%", "28.9%"],
-      keno: ["33.3%", "91.6%"]
+      keno: ["9.5%", "33.3%"]
     });
+  });
+
+  it("counts a keno win as a payout above the stake after the house edge", () => {
+    // One pick that hits pays 1.5× gross: above the stake at a 2% edge (1001 of 3003 draws hit
+    // it), not at a 40% one.
+    expect(winChanceRange("keno", 200)[1]).toBeCloseTo((1001 / 3003) * 100, 6);
+    expect(winChanceRange("keno", 4000)[1]).toBeLessThan(winChanceRange("keno", 200)[1]);
   });
 
   it("formats in the reader's locale", () => {

@@ -1,7 +1,7 @@
 import type { BaccaratSide, PlinkoRisk, SicBoKind } from "@ssot/ssot/encoding";
+import { kenoGainFactor } from "@ssot/ssot/keno-gains";
 
 import type { CasinoModuleSlug } from "./modules";
-import { kenoWinChance } from "./room/model";
 import {
   SIC_BO_TOTAL_COUNTS,
   baccaratWinChance,
@@ -23,15 +23,43 @@ const SIC_BO_BETS: ReadonlyArray<readonly [SicBoKind, number]> = [
   ...Object.keys(SIC_BO_TOTAL_COUNTS).map((total) => ["total", Number(total)] as const)
 ];
 
+/** Fifteen numbers, five drawn: C(n, k). */
+function choose(n: number, k: number) {
+  if (k < 0 || k > n) return 0;
+  let ways = 1;
+  for (let i = 1; i <= k; i++) ways = (ways * (n - k + i)) / i;
+  return Math.round(ways);
+}
+
+/**
+ * The chance, in percent, that a keno ticket of `picked` numbers pays back more than its stake
+ * once GameHub takes the house edge off the gross payout, as the keno room counts it.
+ */
+function kenoNetWinChance(picked: number, houseEdgeBps: number) {
+  const unit = 1_000_000n;
+  let winning = 0;
+  for (let hits = 0; hits <= picked; hits++) {
+    const gross = (unit * BigInt(kenoGainFactor(picked, hits))) / 10_000n;
+    if (gross - (gross * BigInt(houseEdgeBps)) / 10_000n > unit) {
+      winning += choose(picked, hits) * choose(15 - picked, 5 - hits);
+    }
+  }
+  return (winning / choose(15, 5)) * 100;
+}
+
 function span(chances: readonly number[]): readonly [number, number] {
   return [Math.min(...chances), Math.max(...chances)];
 }
 
 /**
  * The lowest and highest win chance, in percent, of the bets a game's room offers. Each figure is
- * the one the room itself shows next to the bet.
+ * the one the room itself shows next to the bet; keno's depends on the house edge, since a few of
+ * its payouts are only just above the stake.
  */
-export function winChanceRange(slug: CasinoModuleSlug): readonly [number, number] {
+export function winChanceRange(
+  slug: CasinoModuleSlug,
+  houseEdgeBps: number
+): readonly [number, number] {
   switch (slug) {
     case "dice":
       // Under a line t wins on 1..t, so the line is the chance.
@@ -42,7 +70,7 @@ export function winChanceRange(slug: CasinoModuleSlug): readonly [number, number
       // One number up to 36: the module rejects a bet on all 37.
       return [100 / 37, 3600 / 37];
     case "keno":
-      return span([1, 2, 3, 4, 5].map(kenoWinChance));
+      return span([1, 2, 3, 4, 5].map((picked) => kenoNetWinChance(picked, houseEdgeBps)));
     case "plinko":
       return span(PLINKO_RISKS.map(plinkoPositiveChance));
     case "slots":

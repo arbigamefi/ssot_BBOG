@@ -7,7 +7,8 @@ import { getCasinoAccess } from "../../../app-shell/casino-access";
 import { getAppChain } from "../../../app-shell/chain-registry";
 import { TESTNET_USDC_FAUCET } from "../../../config/site";
 import { getDefaultCasinoPoolAssetContext } from "../../../features/assets/pool-asset";
-import { GameStubList, useGameStubs, type GameStub } from "../../../features/casino/game-stubs";
+import { useGameStubs } from "../../../features/casino/game-stubs";
+import { LobbyTables, type LobbyTable } from "../../../features/casino/lobby-tables";
 import { useCasinoStats } from "../../../features/casino/useCasinoStats";
 import { formatWinChance, winChanceRange } from "../../../features/casino/win-chances";
 import { TelegramDock, TelegramFollow } from "../../../features/home/home-sections";
@@ -22,8 +23,9 @@ const FOCUS_ON_CARBON =
 const OUTLINE_ON_CARBON = `inline-grid min-h-12 place-items-center rounded-sheet border border-current px-5 font-semibold whitespace-nowrap text-paper hover:bg-paper hover:text-ink ${FOCUS_ON_CARBON}`;
 
 /**
- * The casino lobby in Carbon copy: the site state on carbon, then one ticket stub per game the
- * release ships and GameHub has not disabled, each with its win chance and what one bet can return.
+ * The casino lobby in Carbon copy, all on carbon: the site state, then one small felt table per
+ * game the release ships and GameHub has not disabled, each with its win chance and what one bet
+ * can return. No paper: paper is for the slip and the receipt in the rooms.
  */
 export function CasinoLobbyClient() {
   const t = useTranslations("casino.lobby");
@@ -40,16 +42,30 @@ export function CasinoLobbyClient() {
   const stubs = useGameStubs(release?.gamesMeta, houseEdgeBps);
   const maxRounds = release?.gamesMeta.reduce((max, game) => Math.max(max, game.maxBetCount), 0);
 
-  const chance = (stub: GameStub) => {
-    const [low, high] = winChanceRange(stub.slug);
+  const tables = stubs.map((stub): LobbyTable => {
+    const [low, high] = winChanceRange(stub.slug, houseEdgeBps);
     const from = formatWinChance(low, locale);
     const to = formatWinChance(high, locale);
-    return from === to ? from : t("games.range", { from, to });
-  };
+    const name = names(stub.key);
+    const line = t(`games.items.${stub.key}`);
+    const multiplier = `${stub.multiplier.whole}.${stub.multiplier.fraction.padEnd(2, "0")}`;
+    return {
+      ...stub,
+      name,
+      line,
+      chance: from === to ? from : t("games.range", { from, to }),
+      label: t("games.label", {
+        name,
+        line,
+        chance: from === to ? from : t("games.rangeSpoken", { from, to }),
+        pays: t(stub.fixed ? "games.paysFixed" : "games.paysUpTo", { multiplier })
+      })
+    };
+  });
 
   return (
-    <div className="bg-paper font-text text-body text-carbon">
-      <header className="bg-carbon text-paper">
+    <div className="bg-carbon font-text text-body text-paper">
+      <header>
         <div className={`${SECTION_GRID} pt-16 pb-section md:pt-24`}>
           <div className="lg:col-span-7">
             <h1 className="text-display font-extrabold text-balance break-keep">{t("title")}</h1>
@@ -81,7 +97,7 @@ export function CasinoLobbyClient() {
         </div>
       </header>
       {release ? (
-        <section aria-labelledby="casino-games-title" className="bg-paper py-section text-carbon">
+        <section aria-labelledby="casino-games-title" className="pb-section">
           <div className={SECTION_GRID}>
             <div className="mb-head lg:col-span-7">
               <h2
@@ -90,25 +106,24 @@ export function CasinoLobbyClient() {
               >
                 {t("games.title")}
               </h2>
-              <p className="mt-4 max-w-[34em] text-lede text-faded">
+              <p className="mt-4 max-w-[34em] text-lede text-on-carbon-muted">
                 {t("games.lede", { rate: houseEdgeRate })}
               </p>
             </div>
-            {stubs.length ? (
-              <GameStubList
-                stubs={stubs}
-                title={(stub) => names(stub.key)}
-                detail={(stub) => t(`games.items.${stub.key}`, { chance: chance(stub) })}
+            {tables.length ? (
+              <LobbyTables
+                tables={tables}
+                chanceLabel={t("games.chance")}
                 pays={t("games.pays")}
                 upTo={t("games.upTo")}
               />
             ) : (
-              <p role="status" className="text-faded lg:col-span-8">
+              <p role="status" className="text-on-carbon-muted lg:col-span-8">
                 {t("games.empty")}
               </p>
             )}
             {maxRounds ? (
-              <p className="mt-6 text-note text-faded lg:col-span-8">
+              <p className="mt-7 text-note text-on-carbon-muted lg:col-span-8">
                 {t("games.note", { rounds: maxRounds })}
               </p>
             ) : null}
@@ -149,11 +164,11 @@ function LobbyStats({
   return (
     <dl
       aria-label={t("label")}
-      className="mt-12 grid grid-cols-1 gap-x-columns gap-y-6 border-t border-thermal pt-6 sm:grid-cols-3 lg:col-span-12"
+      className="mt-12 grid grid-cols-1 gap-x-columns gap-y-6 border-t border-on-carbon-muted/30 pt-6 sm:grid-cols-3 lg:col-span-12"
     >
       {rows.map((row) => (
         <div key={row.key}>
-          <dt className="text-note text-faded">{t(row.key)}</dt>
+          <dt className="text-note text-on-carbon-muted">{t(row.key)}</dt>
           <dd className="mt-2 text-price">
             <PrintedFigure value={row.value} />
             {"symbol" in row ? (

@@ -988,21 +988,26 @@
       "noRelease": "Bu ağda oyunlar henüz kullanılamıyor.",
       "games": {
         "title": "Her oyun ne öder",
-        "lede": "Her koçanın sağ tarafı, {rate} casino avantajı düşülmüş olarak tek bir bahsin döndürebileceği en yüksek tutardır. Anlık üst sınır casino havuzunun serbest sermayesine de bağlıdır ve imzalamadan önce gösterilir.",
-        "pays": "öder",
-        "upTo": "en çok",
-        "range": "{from} ile {to} arası",
+        "lede": "Her masada kazanma şansı ve tek bir bahsin döndürebileceği en yüksek tutar, {rate} casino avantajı düşülmüş olarak yazılıdır. Anlık üst sınır casino havuzunun serbest sermayesine de bağlıdır ve imzalamadan önce gösterilir.",
+        "chance": "Kazanma şansı",
+        "pays": "Öder",
+        "upTo": "En çok",
+        "range": "{from}–{to}",
+        "rangeSpoken": "{from} ile {to} arası",
+        "label": "{name}. {line} Kazanma şansı {chance}. {pays}",
+        "paysFixed": "Bahsin {multiplier} katını öder.",
+        "paysUpTo": "Bahsin en çok {multiplier} katını öder.",
         "note": "Bir işlem en fazla {rounds} tur oynayabilir. İmzaladığınız teklif bahsi, çarpanı, kazanma şansınızı ve ücretleri gösterir.",
         "empty": "Şu anda bahis kabul eden oyun yok.",
         "items": {
-          "coinToss": "Yazı ya da tura seçin. Kazanma şansı {chance}.",
-          "dice": "1 ile 100 arasında bir çizgi belirleyin ve bir taraf seçin. Kazanma şansı {chance}.",
-          "roulette": "Tek sıfırlı bir çark. 1 ile 36 arası sayıyı kapsayın; kazanma şansı {chance}.",
-          "baccarat": "Oyuncuya, bankaya ya da beraberliğe oynayın. Kazanma şansı {chance}.",
-          "sicBo": "Üç zarın atışına bahis yapın. Kazanma şansı {chance}.",
-          "slots": "Üç makara; ikililer, üçlüler ve üç yedi öder. Kazanma şansı {chance}.",
-          "plinko": "Bir risk seviyesi seçin ve topu sekiz sıradan bırakın. Kazanma şansı {chance}.",
-          "keno": "15 sayıdan 1 ile 5 arasını seçin; beş sayı çekilir. Kazanma şansı {chance}."
+          "coinToss": "Yazı ya da tura seçin.",
+          "dice": "Bir çizgi belirleyin, altına ya da üstüne oynayın.",
+          "roulette": "Tek sıfırlı Avrupa çarkı.",
+          "baccarat": "Oyuncuya, bankaya ya da beraberliğe oynayın.",
+          "sicBo": "Cam bir fanus altında üç zar.",
+          "slots": "Üç makara; en çok üç yedi öder.",
+          "plinko": "Sekiz sıra çivi ve üç risk seviyesi.",
+          "keno": "On beş sayıdan en fazla beşini seçin."
         }
       },
       "stats": {

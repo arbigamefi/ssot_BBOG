@@ -59,20 +59,22 @@ test.describe("current route smoke", () => {
     }
   });
 
-  test("casino lobby requires a release before printing game stubs", async ({ page }) => {
+  test("casino lobby requires a release before setting out the game tables", async ({ page }) => {
     await gotoReady(page, "/casino");
     const main = page.getByRole("main");
     await expect(main.getByRole("heading", { level: 1, name: "Pick a game." })).toBeVisible();
-    const stubs = main.locator("li[data-slug]");
+    const tables = main.locator("li[data-slug]");
 
     if (embeddedChainIds.length === 0) {
       await expect(main.getByText("Games aren't available on this network yet.")).toBeVisible();
-      await expect(stubs).toHaveCount(0);
+      await expect(tables).toHaveCount(0);
       return;
     }
 
-    await expect(stubs).toHaveCount(8);
-    await expect(main.getByText(/Win chance 2% to 97%\./)).toBeVisible();
+    await expect(tables).toHaveCount(8);
+    await expect(
+      main.getByRole("link", { name: /^Dice\. .* Win chance 2% to 97%\./ })
+    ).toBeVisible();
 
     await Promise.all([
       page.waitForURL(/\/casino\/roulette$/),
