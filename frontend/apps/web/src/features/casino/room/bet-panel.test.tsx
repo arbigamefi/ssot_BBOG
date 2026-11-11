@@ -65,7 +65,7 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.phases.ready.detail":
         "One click will approve if needed, place the bet, and watch settlement.",
       "casino.room.roundStatus.phases.ready.status": "Ready",
-      "casino.room.roundStatus.metrics.vrfEstimate": "VRF estimate",
+      "casino.room.roundStatus.metrics.vrfEstimate": "Randomness fee, up to",
       "casino.room.roundStatus.metrics.betId": "Bet ID",
       "casino.room.roundStatus.metrics.vrfRequest": "VRF request",
       "casino.room.roundStatus.actions.settleResult": "Settle result",
@@ -219,8 +219,9 @@ describe("GameRoomBetPanel", () => {
     });
 
     expect(screen.getByText("Round status")).toBeDefined();
-    expect(screen.getByText("VRF estimate")).toBeDefined();
-    expect(screen.getByText("0.0000741 ETH")).toBeDefined();
+    expect(screen.getByText("Randomness fee, up to")).toBeDefined();
+    // The quote plus the 50% buffer the wallet attaches.
+    expect(screen.getByText("0.00011115 ETH")).toBeDefined();
     expect(screen.getByText("Bet ID")).toBeDefined();
     expect(screen.getByText("28")).toBeDefined();
     expect(screen.getByText("VRF request")).toBeDefined();

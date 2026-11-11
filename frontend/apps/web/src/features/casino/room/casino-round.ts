@@ -59,9 +59,25 @@ export type CasinoRoundSnapshot = {
   refundTx?: TxResult;
 };
 
-export function formatNativeFee(value: bigint | undefined, symbol = "ETH") {
+/**
+ * What a bet attaches for randomness: the quote plus the SDK's 50% buffer
+ * (`placeBet` in `@ssot/ssot` sdk/create.ts). VRFHub refunds the unused part
+ * in the same transaction, so this is the most the wallet can be charged.
+ */
+export function casinoVrfFeeBudget(quote: bigint | undefined) {
+  return quote == null ? undefined : quote + quote / 2n;
+}
+
+/** Shows 8 decimals; an amount the player may pay ("up") rounds up so it never understates. */
+export function formatNativeFee(
+  value: bigint | undefined,
+  symbol = "ETH",
+  rounding: "down" | "up" = "down"
+) {
   if (value == null) return "—";
-  const raw = formatUnits(value, 18);
+  const step = 10n ** 10n;
+  const shown = rounding === "up" && value % step !== 0n ? value + step - (value % step) : value;
+  const raw = formatUnits(shown, 18);
   const [intPart = "0", fracPart = ""] = raw.split(".");
   const fraction = fracPart.slice(0, 8).replace(/0+$/, "");
   return `${intPart}${fraction ? `.${fraction}` : ""} ${symbol}`;

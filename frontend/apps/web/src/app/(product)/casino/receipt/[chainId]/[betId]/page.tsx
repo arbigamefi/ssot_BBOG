@@ -269,7 +269,29 @@ export default async function CasinoReceiptPage({
           />
         </div>
 
-        {/* Where the house edge went (v1.6 hubs only), from the settlement's event. */}
+        {/* The payout math, exact: won − house edge (+ unused stake) = paid. */}
+        {receiptModel.breakdown ? (
+          <div className="min-w-0 border-b border-border-soft py-1">
+            <Fact label={labels.breakdown.won} value={receiptModel.breakdown.grossValue} />
+            <Fact
+              label={labels.breakdown.houseEdge}
+              value={
+                receiptModel.breakdown.houseEdgeRateLabel
+                  ? interpolate(labels.breakdown.houseEdgeValue, {
+                      amount: receiptModel.breakdown.houseEdgeValue,
+                      rate: receiptModel.breakdown.houseEdgeRateLabel
+                    })
+                  : receiptModel.breakdown.houseEdgeValue
+              }
+            />
+            {receiptModel.breakdown.refundValue ? (
+              <Fact label={labels.breakdown.refund} value={receiptModel.breakdown.refundValue} />
+            ) : null}
+            <Fact label={labels.breakdown.paid} value={receiptModel.payoutValue} />
+          </div>
+        ) : null}
+
+        {/* Where the turnover allocation went (v1.6 hubs only), from the settlement's event. */}
         {receiptModel.houseEdge ? (
           <details className="group min-h-0 border-b border-border-soft">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle transition-colors hover:text-fg">

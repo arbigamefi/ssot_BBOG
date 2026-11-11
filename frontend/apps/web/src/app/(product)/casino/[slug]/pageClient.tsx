@@ -12,12 +12,16 @@ import { useRecentBets } from "../../../../features/betting/useRecentBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../../ssot/runtime";
-import { isCasinoRiskInEnabledForChain } from "../../../../app-shell/casino-access";
+import {
+  getCasinoAccess,
+  isCasinoRiskInEnabledForChain
+} from "../../../../app-shell/casino-access";
 import { requestWalletConnect } from "../../../../app-shell/wallet-connect-events";
 import { useCasinoPoolAssetSelection } from "../../../../features/assets/useCasinoPoolAssetSelection";
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
 import {
   calculateGameWinChance,
+  clampDiceTarget,
   type BaccaratSide,
   type PlinkoRisk,
   type SicBoKind
@@ -77,7 +81,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const refetchRecentBets = recentBetsQuery.refetch;
   const recentBets = recentBetsQuery.data ?? [];
 
-  const [betAmount, setBetAmount] = React.useState("10");
+  const [betAmount, setBetAmount] = React.useState("1");
   const [isPending, setIsPending] = React.useState(false);
   const [showResult, setShowResult] = React.useState(false);
   const [terminalBet, setTerminalBet] = React.useState<DomainBet | null>(null);
@@ -521,8 +525,11 @@ export function GamePageClient({ slug }: { slug: string }) {
         onDiceRevealComplete={completeStageReveal}
         onCoinRevealComplete={completeStageReveal}
         onRouletteRevealComplete={completeStageReveal}
-        onDiceDirectionChange={setDiceDirection}
-        onDiceTargetChange={setDiceTarget}
+        onDiceDirectionChange={(direction) => {
+          setDiceDirection(direction);
+          setDiceTarget((target) => clampDiceTarget(direction, target));
+        }}
+        onDiceTargetChange={(target) => setDiceTarget(clampDiceTarget(diceDirection, target))}
         onCoinSideChange={setCoinSide}
         onRouletteChange={setRouletteSpots}
         onKenoChange={setKenoSpots}
@@ -561,6 +568,7 @@ export function GamePageClient({ slug }: { slug: string }) {
         maxPayout={maxPayoutLabel}
         maxPayoutIsHint={maxPayoutState !== "value"}
         isInteractive={true}
+        access={getCasinoAccess(chainId)}
         leftPaneContent={LeftPane}
         rightPaneContent={RightPane}
         auditLedgerContent={AuditLedger}

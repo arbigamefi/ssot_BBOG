@@ -19,6 +19,11 @@ For every supported chain, including Base mainnet and Base Sepolia, the applicat
 
 Both actions default to closed unless their own flag is explicitly `true`. A testnet acceptance
 build must explicitly enable the action it needs; selecting a test chain does not bypass the flags.
+Each image embeds one chain's release, so the flags already act per chain: open the Base Sepolia
+image and keep the Base image closed to run a public testnet before launch. A closed build shows
+the pre-launch copy and the Telegram channel. An open build on a test chain is labelled Testnet,
+says bets use test USDC with no value, and links Circle's faucet. Only an open build on a main
+chain shows the launch copy.
 Feature flags are build configuration, not on-chain authorization. Confirm the built application
 rejects disabled actions and reports the actual Bank pause and active-capital state. Closing frontend deposits
 must leave users able to inspect owned NFTs, node values, withdrawal deadlines, free-capital limits and player debts.

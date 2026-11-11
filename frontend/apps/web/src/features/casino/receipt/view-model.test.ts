@@ -326,6 +326,62 @@ describe("casino receipt view model", () => {
   });
 });
 
+describe("receipt payout breakdown", () => {
+  // Base Sepolia bet 5: 0.80 on 6-100 (95%), rolled 67.
+  const row: BetRow = {
+    gameHub: "0x00000000000000000000000000000000000000a6",
+    asset: ASSET,
+    betId: "5",
+    chainId: 84532,
+    gameId: GAME,
+    id: "84532:5",
+    lastEventName: "BetFinalized",
+    lastTxHash: TX,
+    payout: "825263",
+    payoutGross: "842105",
+    refundAmount: "0",
+    stake: "800000",
+    state: "finalized",
+    updatedAt: 1_717_171_717_000,
+    updatedBlock: 456
+  };
+  const build = (overrides: Partial<BetRow> = {}) =>
+    buildCasinoReceiptFromBetRow({
+      assetDecimals: 6,
+      assetSymbol: "USDC",
+      chainId: 84532,
+      gameLabel: "Dice",
+      row: { ...row, ...overrides }
+    });
+
+  it("states amounts exactly and shows won minus house edge as paid", () => {
+    expect(build()).toMatchObject({
+      stakeValue: "0.8 USDC",
+      payoutValue: "0.825263 USDC",
+      netValue: "0.025263 USDC",
+      breakdown: {
+        grossValue: "0.842105 USDC",
+        houseEdgeValue: "0.016842 USDC",
+        houseEdgeRateLabel: "2.00%"
+      }
+    });
+  });
+
+  it("lists returned unused stake and omits the rate when nothing was won", () => {
+    const model = build({ payout: "0", payoutGross: "0", refundAmount: "200000" });
+    expect(model.breakdown).toEqual({
+      grossValue: "0 USDC",
+      houseEdgeValue: "0 USDC",
+      refundValue: "0.2 USDC"
+    });
+  });
+
+  it("leaves the breakdown out without a gross payout or for a refund", () => {
+    expect(build({ payoutGross: undefined }).breakdown).toBeUndefined();
+    expect(build({ state: "refunded", refundAmount: "800000" }).breakdown).toBeUndefined();
+  });
+});
+
 describe("receipt payment truthfulness", () => {
   const base = { assetDecimals: 6, assetSymbol: "USDC", gameLabel: "Dice", chainId: 84532 };
   const row: BetRow = {
