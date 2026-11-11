@@ -18,6 +18,10 @@ export type TableSound = {
   fret: (k: number) => void;
   /** Roulette: the ball comes to rest in its pocket. */
   pocket: () => void;
+  /** Slots: the drums' whirr, by how fast the fastest turns (1 is full speed); 0 is silence. */
+  whirr: (speed: number) => void;
+  /** Slots: reel `i` catches on its stop, a little lower from left to right. */
+  reelStop: (i: number) => void;
   close: () => void;
 };
 
@@ -33,6 +37,22 @@ export function createTableSound(): TableSound | null {
   const data = noise.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
   let rumble: { filter: BiquadFilterNode; gain: GainNode } | null = null;
+  let drums: { filter: BiquadFilterNode; gain: GainNode } | null = null;
+
+  /** A looped noise through a band-pass, silent until it is turned up. */
+  const loop = (q: number) => {
+    const source = ctx.createBufferSource();
+    source.buffer = noise;
+    source.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.Q.value = q;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    source.connect(filter).connect(gain).connect(ctx.destination);
+    source.start();
+    return { filter, gain };
+  };
 
   const ready = () => {
     if (ctx.state === "suspended") void ctx.resume();
@@ -86,17 +106,7 @@ export function createTableSound(): TableSound | null {
       const now = ready();
       if (!rumble) {
         if (speed === 0) return;
-        const source = ctx.createBufferSource();
-        source.buffer = noise;
-        source.loop = true;
-        const filter = ctx.createBiquadFilter();
-        filter.type = "bandpass";
-        filter.Q.value = 0.9;
-        const gain = ctx.createGain();
-        gain.gain.value = 0;
-        source.connect(filter).connect(gain).connect(ctx.destination);
-        source.start();
-        rumble = { filter, gain };
+        rumble = loop(0.9);
       }
       const s = Math.min(1.2, speed);
       rumble.gain.gain.setTargetAtTime(s * 0.07, now, 0.05);
@@ -135,6 +145,21 @@ export function createTableSound(): TableSound | null {
       const at = ready();
       tone(at, 520, 0.14, 0.12, "sine", 300);
       burst(at, 1400, 1.5, 0.07, 0.05);
+    },
+    whirr(speed) {
+      const now = ready();
+      if (!drums) {
+        if (speed === 0) return;
+        drums = loop(1.4);
+      }
+      const s = Math.min(1, speed);
+      drums.gain.gain.setTargetAtTime(s * 0.05, now, 0.05);
+      drums.filter.frequency.setTargetAtTime(380 + s * 900, now, 0.05);
+    },
+    reelStop(i) {
+      const at = ready();
+      tone(at, 190 - i * 14, 0.2, 0.12, "sine", 95);
+      burst(at, 2400, 2, 0.08, 0.035);
     },
     close() {
       void ctx.close();

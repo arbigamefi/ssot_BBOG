@@ -127,7 +127,6 @@ export function useGameRoom(slug: string) {
   const [resultNum, setResultNum] = React.useState<number | null>(null);
   const [kenoResultDrawn, setKenoResultDrawn] = React.useState<number[]>([]);
   const [plinkoBuckets, setPlinkoBuckets] = React.useState<number[]>([]);
-  const [slotsSymbols, setSlotsSymbols] = React.useState<number[]>([]);
 
   const [gameHistory] = React.useState<GameHistoryEntry[]>([]);
   const [betCount, setBetCount] = React.useState<number>(1);
@@ -180,7 +179,6 @@ export function useGameRoom(slug: string) {
     setResultProof(null);
     setCasinoOutcome(null);
     setPlinkoBuckets([]);
-    setSlotsSymbols([]);
   }, [clearStageReveal]);
   const handleRoundReset = React.useCallback(() => {
     clearStageReveal();
@@ -191,7 +189,6 @@ export function useGameRoom(slug: string) {
     setResultProof(null);
     setCasinoOutcome(null);
     setPlinkoBuckets([]);
-    setSlotsSymbols([]);
   }, [clearStageReveal]);
   const handleResultClose = React.useCallback(() => {
     clearStageReveal();
@@ -343,11 +340,6 @@ export function useGameRoom(slug: string) {
         setResultNum(outcome.rolls.at(-1)?.bucket ?? null);
         setPlinkoBuckets(outcome.rolls.map((roll) => roll.bucket));
       }
-      if (outcome?.kind === "slots") {
-        const lastRoll = outcome.rolls.at(-1);
-        setResultNum(lastRoll?.multiplier ?? null);
-        setSlotsSymbols(lastRoll ? [...lastRoll.symbols] : []);
-      }
       if (outcome?.kind === "sic-bo") setResultNum(outcome.rolls.at(-1)?.total ?? null);
 
       if (bet.state === "randomReady" && revealedBetIdRef.current !== bet.betId) {
@@ -447,7 +439,6 @@ export function useGameRoom(slug: string) {
     kenoResultDrawn,
     clearKenoResult: () => setKenoResultDrawn([]),
     plinkoBuckets,
-    slotsSymbols,
     gameHistory,
     handleResultClose,
     handleResultPlayAgain

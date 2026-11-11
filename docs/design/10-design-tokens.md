@@ -85,21 +85,26 @@ page surface or on paper.
 | `lamp`               | `--lamp` at 17%                       | `#FFEECE`                       | The lamp's pool of light; the warm glow of a win |
 | `chip`, `chip-inlay` | ink, paper                            |                                 | A chip's segments and inlay                      |
 | (shadows only)       | `--table-shade`, `--table-sheen`      | black, white                    | Shadows on the table; light on the rail and lip  |
-| `pocket-red`         | `--pocket-red`                        | `#A8333A`                       | Roulette's red pockets and numbers               |
-| `pocket-black`       | `--pocket-black`                      | `#0D0F2E`                       | Roulette's black pockets and numbers             |
+| `pocket-red`         | `--pocket-red`                        | `#A8333A`                       | Roulette's red pockets; the slots' red ink       |
+| `pocket-black`       | `--pocket-black`                      | `#0D0F2E`                       | Roulette's black pockets; the slots' navy ink    |
 | `pocket-green`       | `--pocket-green`                      | `#1E6A4F`                       | Roulette's zero                                  |
 
 Print on the felt (checked by `tokens/carbon-copy.test.ts`): `print` 7:1 or more on felt and
 felt-edge, `print-soft` 4.5:1 or more; `print-faint` is under 3:1 and never sets text. Paper on
 each pocket colour is 4.5:1 or more. The pocket colours are the game's own (red, black, zero),
-not win or lose colours, and appear only on the roulette table and in its number balls.
+not win or lose colours, and appear only on the roulette and slots tables and in their results.
 
 The materials are `@utility` rules in `globals.css`: `table-felt` (felt, rail, its sizes),
 `table-lamp`, `table-groove`, `table-zone`, `table-ball`, `table-ball-mark`, `table-readout`,
 `table-puck`, `table-ticks`, `table-chip`, `table-pay-glow`, `table-led`, `table-sheet` (the
 phone's docked slip), and for roulette `table-wheel` (the SVG wheel, styled through `data-w`,
 `data-s` and `data-c` attributes), `table-spot` (a betting spot on the layout) and
-`pocket-ball` (a result as a coloured number ball, flat with `data-on="paper"`). Product UI uses these and the tokens, never hex.
+`pocket-ball` (a result as a coloured number ball, flat with `data-on="paper"`), and for slots
+`table-machine` (the recessed window and its sizes), `table-reel` (an ivory drum; its strip is
+moved by `--m` and lit with `data-lit`), `table-payline` (the two pointers), `slot-glyph` (a
+symbol in the two inks), `slot-trio` (a result as a three-symbol strip, red-edged with
+`data-paid`, flat with `data-on="paper"`) and `slot-tile` (a pay-table tile). Product UI uses
+these and the tokens, never hex.
 
 ## 4. Typography
 

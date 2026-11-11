@@ -51,6 +51,19 @@ describe("useStageReveal", () => {
     expect(result.current.stageReveal?.phase).toBe("revealed");
   });
 
+  it("gives the slot reels time for every round's deadline", () => {
+    const { result } = renderHook(() => useStageReveal());
+    act(() => result.current.startStageReveal(4n, "slots", 3));
+    act(() => {
+      vi.advanceTimersByTime(12_299);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealing");
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealed");
+  });
+
   it("lets the animation's callback finish the reveal early", () => {
     const { result } = renderHook(() => useStageReveal());
     act(() => result.current.startStageReveal(8n, "plinko"));

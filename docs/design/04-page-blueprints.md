@@ -67,8 +67,8 @@ Must show:
 
 Purpose: the betting room. It has two layers (`01-brand.md` §2): **the table is immersion, the
 paper is trust.** The dice room is the reference; other games keep its structure and draw their
-own table. Dice and roulette are rebuilt; the other games still use the shared room shell until
-their tables are drawn.
+own table. Dice, roulette and slots are rebuilt; the other games still use the shared room shell
+until their tables are drawn.
 
 ### Layout
 
@@ -126,6 +126,29 @@ their tables are drawn.
 - Results are coloured number balls (red, black, green) in the status line, the last 12 results,
   the slip's head and the receipt; screen readers hear "17, black".
 - A net win is paid in chips onto the winning spot. A loss gets nothing.
+
+### The table (slots)
+
+- The same felt, rail and lamp. A machine is set into the felt like the dice lane: a recessed
+  window holding three ivory drums with curved shading top and bottom, and two paper pointers at
+  the pay line. The eight symbols (cherry, lemon, bell, diamond, crown, star, BAR, 7) are drawn
+  in the table's two inks, navy and lacquer red, like an old reel strip.
+- Under the machine the pay table is printed on the felt: three lines, each with its tiles, its
+  name, how often it comes up ("1 in 512", "7 in 512", "168 in 512") and what it pays, the stake
+  included and the release's house edge taken (64×, 16× and 2× gross). On a phone the odds sit
+  under the name. A rule along the bottom gives the house edge and the average return.
+- Top prize and Win chance (34.4%, 176 in 512) sit in Doto beside the sound switch, the net
+  amount of a win and the status line. A pair is a net win.
+- **The reels follow the bet's chain state** (`12-motion.md` §5): they spin at full speed until
+  the number arrives, then stop left to right on their symbols, each with a small bounce.
+- The line a result hits lights up and so do the reels that make it. With several rounds the
+  status reads "Round k of n" and each later round spins faster. On a phone the felt scrolls to
+  the top after the bet, so the reels and the pay table sit above the docked slip.
+- Results are three-symbol strips in the status line, the last 12 results, the slip's head and
+  the receipt, with a red edge when that spin paid; screen readers hear "seven, seven, seven".
+  The slip's quote lists what each line pays for the stake.
+- A net win is paid in chips onto the line that was hit; three alike or better warms the lamp
+  further. A loss gets nothing.
 
 ### The paper
 

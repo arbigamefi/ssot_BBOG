@@ -42,7 +42,9 @@ concurrency:
 
 jobs:
   lint-test-build:
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.58 cannot install Chromium on ubuntu-26.04, which ubuntu-latest became in
+    # November 2026. Move to ubuntu-latest again with a Playwright that supports it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
 
     services:
@@ -121,7 +123,9 @@ jobs:
         run: pnpm storybook:build
 
   bank-sdk-integration:
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.58 cannot install Chromium on ubuntu-26.04, which ubuntu-latest became in
+    # November 2026. Move to ubuntu-latest again with a Playwright that supports it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4

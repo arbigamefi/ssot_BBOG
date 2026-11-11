@@ -14,7 +14,6 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.loading": "Loading stage",
       "casino.room.history.recent.draws": "RECENT DRAWS",
       "casino.room.history.recent.buckets": "RECENT BUCKETS",
-      "casino.room.history.recent.slots": "RECENT SLOTS",
       "casino.room.history.recent.hands": "RECENT HANDS",
       "casino.room.history.recent.dice": "RECENT DICE",
       "casino.room.history.recent.flips": "RECENT FLIPS",
@@ -72,10 +71,6 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.plinkoSlot": "Slot",
       "casino.room.result.facts.plinkoPath": "Path",
       "casino.room.result.facts.plinkoMultiplier": "Slot multiplier",
-      "casino.room.result.facts.slotsProfile": "Profile",
-      "casino.room.result.facts.slotsSymbols": "Symbols drawn",
-      "casino.room.result.facts.slotsMultiplier": "Reel multiplier",
-      "casino.room.result.facts.slotsJackpot": "Jackpot",
       "casino.room.result.facts.baccaratChoice": "Chosen side",
       "casino.room.result.facts.baccaratWinner": "Winning side",
       "casino.room.result.facts.baccaratPlayerTotal": "Player total",
@@ -90,17 +85,8 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.plinko.low": "Low",
       "casino.room.selection.plinko.medium": "Medium",
       "casino.room.selection.plinko.high": "High",
-      "casino.room.selection.slots.profiles.classic": "Classic 3 reels",
-      "casino.room.selection.slots.symbols.0": "Cherry",
-      "casino.room.selection.slots.symbols.1": "Lemon",
-      "casino.room.selection.slots.symbols.2": "Bell",
-      "casino.room.selection.slots.symbols.3": "Diamond",
-      "casino.room.selection.slots.symbols.4": "Crown",
-      "casino.room.selection.slots.symbols.5": "Star",
-      "casino.room.selection.slots.symbols.6": "Bar",
-      "casino.room.selection.slots.symbols.7": "Seven",
-      "casino.room.selection.slots.yes": "Yes",
-      "casino.room.selection.slots.no": "No",
+      "casino.room.selection.sicBo.yes": "Yes",
+      "casino.room.selection.sicBo.no": "No",
       "casino.room.selection.baccarat.player": "Player",
       "casino.room.selection.baccarat.banker": "Banker",
       "casino.room.selection.baccarat.tie": "Tie",
@@ -115,10 +101,6 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.plinko.waitingVrf": "Waiting for draw...",
       "casino.room.stage.plinko.slot": "Slot {slot}",
       "casino.room.stage.plinko.risk": "Risk: {risk}",
-      "casino.room.stage.slots.ready": "Match 3 symbols to win",
-      "casino.room.stage.slots.spinning": "Waiting for draw...",
-      "casino.room.stage.slots.result": "Cherry / Seven / Seven",
-      "casino.room.stage.slots.classic": "Classic profile",
       "casino.room.stage.baccarat.ready": "Bet player, banker, or tie",
       "casino.room.stage.baccarat.dealing": "Waiting for draw...",
       "casino.room.stage.baccarat.result": "Player wins",
@@ -161,7 +143,6 @@ const baseProps = {
   sicBoKind: "small" as const,
   sicBoValue: 0,
   plinkoBuckets: [],
-  slotsSymbols: [],
   animatingKenoSpots: [],
   kenoResultDrawn: [],
   resultProof: null,
@@ -345,53 +326,6 @@ describe("GameRoomRightPane", () => {
     expect(screen.queryByText("Bet details")).toBeNull();
     expect(screen.queryByText("Expected payout")).toBeNull();
     expect(screen.queryByText("Settlement pending")).toBeNull();
-  });
-
-  it("shows slots symbols, multiplier, and jackpot detail in the result overlay", async () => {
-    render(
-      <GameRoomRightPane
-        {...baseProps}
-        gameSlug="slots"
-        showResult
-        slotsSymbols={[7, 7, 7]}
-        resultProof={{
-          kind: "settled",
-          betId: 77n,
-          requestId: 88n,
-          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
-          stake: 10_000_000n,
-          vrfFeeCharged: 100_000_000_000_000n,
-          resolvedAt: 1_778_888_888,
-          settlement: {
-            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            payoutGross: 640_000_000n,
-            payoutNet: 627_200_000n,
-            refundAmount: 0n,
-            feeOnPayout: 12_800_000n,
-            protocolFeeAccrual: 6_400_000n
-          }
-        }}
-        casinoOutcome={{
-          kind: "slots",
-          profile: "classic",
-          rolls: [{ symbols: [7, 7, 7], multiplier: 64, won: true, jackpot: true }],
-          payoutGross: 640_000_000n,
-          payoutNet: 627_200_000n,
-          refundAmount: 0n,
-          feeOnPayout: 12_800_000n,
-          playerOwed: 627_200_000n,
-          netResult: 617_200_000n
-        }}
-      />
-    );
-
-    expect(await screen.findByText("Symbols drawn")).toBeDefined();
-    expect(screen.getByText("Seven / Seven / Seven")).toBeDefined();
-    expect(screen.getAllByText("62.72x").length).toBeGreaterThan(0);
-    expect(screen.queryByText("64.00x")).toBeNull();
-    expect(screen.getByText("Jackpot")).toBeDefined();
-    expect(screen.getByText("Yes")).toBeDefined();
   });
 
   it("shows plinko slot multiplier after house edge in the result overlay", async () => {

@@ -20,7 +20,6 @@ type Translate = ReturnType<typeof useTranslations>;
 function getRecentLabel(gameSlug: string, t: Translate) {
   if (gameSlug === "keno") return t("casino.room.history.recent.draws");
   if (gameSlug === "plinko") return t("casino.room.history.recent.buckets");
-  if (gameSlug === "slots") return t("casino.room.history.recent.slots");
   if (gameSlug === "baccarat") return t("casino.room.history.recent.hands");
   if (gameSlug === "sic-bo") return t("casino.room.history.recent.dice");
   return t("casino.room.history.recent.flips");

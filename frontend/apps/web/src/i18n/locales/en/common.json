@@ -505,21 +505,6 @@
             "total": "Exact total",
             "specificDouble": "Specific double",
             "singleFace": "Single face"
-          }
-        },
-        "slots": {
-          "profiles": {
-            "classic": "Classic 3 reels"
-          },
-          "symbols": {
-            "0": "Cherry",
-            "1": "Lemon",
-            "2": "Bell",
-            "3": "Diamond",
-            "4": "Crown",
-            "5": "Star",
-            "6": "Bar",
-            "7": "Seven"
           },
           "yes": "Yes",
           "no": "No"
@@ -540,12 +525,6 @@
           "slot": "Slot {slot}",
           "risk": "Risk: {risk}"
         },
-        "slots": {
-          "ready": "Match 3 symbols to win",
-          "spinning": "Waiting for draw...",
-          "result": "{symbols}",
-          "classic": "Classic profile"
-        },
         "baccarat": {
           "ready": "Bet player, banker, or tie",
           "dealing": "Waiting for draw...",
@@ -565,7 +544,6 @@
         "recent": {
           "draws": "RECENT DRAWS",
           "buckets": "RECENT BUCKETS",
-          "slots": "RECENT SLOTS",
           "hands": "RECENT HANDS",
           "dice": "RECENT DICE",
           "flips": "RECENT FLIPS"
@@ -648,10 +626,6 @@
           "plinkoSlot": "Slot",
           "plinkoPath": "Path",
           "plinkoMultiplier": "Slot multiplier",
-          "slotsProfile": "Profile",
-          "slotsSymbols": "Symbols drawn",
-          "slotsMultiplier": "Reel multiplier",
-          "slotsJackpot": "Jackpot",
           "baccaratChoice": "Chosen side",
           "baccaratWinner": "Winning side",
           "baccaratPlayerTotal": "Player total",
@@ -1595,6 +1569,58 @@
         "zero": "0",
         "rolled": "Came up {rolls}.",
         "rolledRounds": "Came up {rolls}. {won} of {count} won."
+      }
+    },
+    "slots": {
+      "head": {
+        "crumb": "All games",
+        "title": "Slots",
+        "lede": "Chainlink VRF picks a symbol for each of the three reels and they stop on it, left to right. Three alike pays; three sevens pays most."
+      },
+      "table": {
+        "title": "The machine",
+        "top": "Top prize",
+        "chance": "Win chance",
+        "history": "Last results",
+        "noHistory": "No spins yet",
+        "paytable": "What each line pays",
+        "any": "A",
+        "odds": "{count} in {total}",
+        "rule": "Each reel stops on a symbol Chainlink VRF picks, every symbol equally likely. Pays include your stake, less a {rate} house edge: on average {back} of stakes come back.",
+        "lines": {
+          "jackpot": "Three sevens",
+          "three": "Any other three alike",
+          "pair": "Any two alike"
+        },
+        "status": {
+          "ready": "Set your stake on the slip, then place the bet.",
+          "waiting": "Waiting for the random number. The reels spin until it arrives.",
+          "rounds": "Came up <spin></spin>. {paid} of {count} paid."
+        }
+      },
+      "symbol": {
+        "cherry": "cherry",
+        "lemon": "lemon",
+        "bell": "bell",
+        "diamond": "diamond",
+        "crown": "crown",
+        "star": "star",
+        "bar": "bar",
+        "seven": "seven"
+      },
+      "slip": {
+        "game": "Slots, three reels",
+        "pays": {
+          "jackpot": "Three sevens pays",
+          "three": "Three alike pays",
+          "pair": "Two alike pays"
+        }
+      },
+      "receipt": {
+        "trio": "{a}, {b}, {c}",
+        "rolled": "Came up {rolls}.",
+        "rolledRounds": "Came up {rolls}. {paid} of {count} paid.",
+        "between": "; "
       }
     }
   },

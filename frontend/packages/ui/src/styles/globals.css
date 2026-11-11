@@ -255,6 +255,21 @@
   }
 }
 
+@keyframes reel-glow {
+  0% {
+    box-shadow:
+      0 0 0 1px hsl(var(--table-shade) / 0.5),
+      0 0 0 3px hsl(var(--paper)),
+      0 0 0 0 hsl(var(--lamp) / 0);
+  }
+  30% {
+    box-shadow:
+      0 0 0 1px hsl(var(--table-shade) / 0.5),
+      0 0 0 3px hsl(var(--paper)),
+      0 0 40px 10px hsl(var(--lamp) / 0.8);
+  }
+}
+
 @keyframes lamp-warm {
   30% {
     transform: scale(1.12);
@@ -1016,6 +1031,259 @@
     --ring-gap: 2px;
     --ring-line: 1.5px;
     padding: 2px;
+  }
+}
+
+/* The slot machine, set into the felt like the dice lane: a recessed window holding three ivory
+   drums. Holds the machine's sizes: a symbol cell, and how many cells show in the window. */
+@utility table-machine {
+  --cell: 104px;
+  --rows: 2.3;
+  position: relative;
+  padding: 14px;
+  border-radius: 26px;
+  background: linear-gradient(hsl(var(--groove-lo)), hsl(var(--groove-hi)));
+  box-shadow:
+    inset 0 10px 18px hsl(var(--table-shade) / 0.7),
+    inset 0 -2px 0 hsl(var(--table-sheen) / 0.06),
+    0 0 0 4px hsl(var(--table-shade) / 0.18),
+    0 0 0 5px hsl(var(--paper) / 0.12),
+    0 2px 0 5px hsl(var(--table-sheen) / 0.04);
+  @container felt (max-width: 460px) {
+    --cell: 72px;
+    --rows: 2.1;
+    padding: 10px;
+    border-radius: 20px;
+  }
+}
+
+/* One drum: ivory, dark towards its top and bottom where it curves away, a highlight just above
+   the line. Its strip moves by --m, the strip cell centred on the line. A drum that makes the win
+   is data-lit. */
+@utility table-reel {
+  position: relative;
+  overflow: hidden;
+  height: calc(var(--cell) * var(--rows));
+  border-radius: 12px;
+  background: hsl(var(--ivory));
+  box-shadow: 0 0 0 1px hsl(var(--table-shade) / 0.5);
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        hsl(var(--rail-lo) / 0.78),
+        hsl(var(--rail-lo) / 0.18) 24%,
+        transparent 38%,
+        transparent 62%,
+        hsl(var(--rail-lo) / 0.18) 76%,
+        hsl(var(--rail-lo) / 0.8)
+      ),
+      linear-gradient(
+        90deg,
+        hsl(var(--table-shade) / 0.16),
+        transparent 18%,
+        transparent 82%,
+        hsl(var(--table-shade) / 0.16)
+      ),
+      linear-gradient(transparent 36%, hsl(var(--table-sheen) / 0.28) 41%, transparent 47%);
+  }
+  & [data-strip] {
+    position: absolute;
+    inset: 0 0 auto;
+    will-change: transform;
+    transform: translateY(calc(var(--cell) * (var(--rows) / 2 - var(--m, 4) - 0.5)));
+  }
+  & [data-cell] {
+    display: grid;
+    place-items: center;
+    height: var(--cell);
+  }
+  & [data-cell] svg {
+    width: calc(var(--cell) * 0.7);
+    height: calc(var(--cell) * 0.7);
+  }
+  &[data-lit] {
+    box-shadow:
+      0 0 0 1px hsl(var(--table-shade) / 0.5),
+      0 0 0 3px hsl(var(--paper)),
+      0 0 22px 4px hsl(var(--lamp) / 0.45);
+    @media (prefers-reduced-motion: no-preference) {
+      animation: reel-glow 1.4s ease-out both;
+    }
+  }
+}
+
+/* The pay line across the window: a paper pointer at each edge and a faint printed rule. */
+@utility table-payline {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: -14px;
+  right: -14px;
+  height: 0;
+  pointer-events: none;
+  &::before {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: -1px;
+    height: 2px;
+    background: repeating-linear-gradient(
+      90deg,
+      hsl(var(--paper) / 0.55) 0 8px,
+      transparent 8px 14px
+    );
+    mix-blend-mode: difference;
+    opacity: 0.5;
+  }
+  & i {
+    position: absolute;
+    top: -9px;
+    width: 0;
+    height: 0;
+    border: 9px solid transparent;
+  }
+  & i:first-child {
+    left: -2px;
+    border-left: 12px solid hsl(var(--paper));
+    border-right: 0;
+  }
+  & i:last-child {
+    right: -2px;
+    border-right: 12px solid hsl(var(--paper));
+    border-left: 0;
+  }
+  @container felt (max-width: 460px) {
+    left: -10px;
+    right: -10px;
+    &::before {
+      left: 10px;
+      right: 10px;
+    }
+  }
+}
+
+/* A reel symbol, screen-printed in the table's two inks: rail navy and lacquer red, the colours of
+   the roulette pockets. Its parts are named by data-i. */
+@utility slot-glyph {
+  overflow: visible;
+  & [data-i="k"] {
+    fill: hsl(var(--pocket-black));
+  }
+  & [data-i="r"] {
+    fill: hsl(var(--pocket-red));
+  }
+  & [data-i="ks"] {
+    fill: none;
+    stroke: hsl(var(--pocket-black));
+    stroke-width: 6;
+    stroke-linecap: round;
+  }
+  & [data-i="hi"] {
+    fill: none;
+    stroke: hsl(var(--ivory-hi));
+    stroke-width: 4;
+    stroke-linecap: round;
+    opacity: 0.85;
+  }
+  & [data-i="facet"] {
+    fill: none;
+    stroke: hsl(var(--ivory-hi));
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    opacity: 0.8;
+  }
+  & [data-i="seven"] {
+    fill: hsl(var(--pocket-red));
+    stroke: hsl(var(--pocket-black));
+    stroke-width: 4;
+    stroke-linejoin: round;
+    paint-order: stroke;
+  }
+  & [data-i="rim"] {
+    fill: none;
+    stroke: hsl(var(--ivory-hi));
+    stroke-width: 2;
+    opacity: 0.45;
+  }
+  & [data-i="bar"] {
+    fill: hsl(var(--ivory-hi));
+    font: 800 23px/1 var(--font-text);
+    letter-spacing: 0.06em;
+    text-anchor: middle;
+  }
+}
+
+/* A spin's three symbols on a small ivory tab: the status line, the last results, the slip and
+   the receipt. A paid spin has a red edge on the felt and an ink edge on paper (data-on="paper");
+   the newest result on the felt is ringed (data-latest). */
+@utility slot-trio {
+  display: inline-flex;
+  gap: 1px;
+  padding: 2px;
+  border-radius: 5px;
+  vertical-align: middle;
+  background: hsl(var(--ivory));
+  box-shadow: 0 1px 2px hsl(var(--table-shade) / 0.4);
+  &[data-paid] {
+    box-shadow:
+      0 0 0 1.5px hsl(var(--paper)),
+      0 0 0 3px hsl(var(--pocket-red));
+  }
+  &[data-latest] {
+    box-shadow:
+      0 0 0 2px hsl(var(--felt)),
+      0 0 0 3.5px hsl(var(--paper));
+  }
+  &[data-latest][data-paid] {
+    box-shadow:
+      0 0 0 1.5px hsl(var(--paper)),
+      0 0 0 3px hsl(var(--pocket-red)),
+      0 0 0 5px hsl(var(--felt)),
+      0 0 0 6.5px hsl(var(--paper));
+  }
+  &[data-on="paper"] {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px hsl(var(--thermal));
+  }
+  &[data-on="paper"][data-paid] {
+    box-shadow: inset 0 0 0 1.5px hsl(var(--ink));
+  }
+}
+
+/* A tile in the pay table printed on the felt: a symbol, a letter for any symbol, or a blank for
+   the reel that does not count (data-blank). */
+@utility slot-tile {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  background: hsl(var(--ivory));
+  color: hsl(var(--pocket-black));
+  font: 800 16px/1 var(--font-print);
+  &[data-blank] {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px hsl(var(--paper) / 0.24);
+  }
+  & svg {
+    width: 24px;
+    height: 24px;
+  }
+  @container felt (max-width: 460px) {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    font-size: 12px;
+    & svg {
+      width: 18px;
+      height: 18px;
+    }
   }
 }
 

@@ -505,21 +505,6 @@
             "total": "指定总点",
             "specificDouble": "指定对子",
             "singleFace": "单骰点数"
-          }
-        },
-        "slots": {
-          "profiles": {
-            "classic": "经典 3 轴"
-          },
-          "symbols": {
-            "0": "樱桃",
-            "1": "柠檬",
-            "2": "铃铛",
-            "3": "钻石",
-            "4": "皇冠",
-            "5": "星星",
-            "6": "Bar",
-            "7": "Seven"
           },
           "yes": "是",
           "no": "否"
@@ -540,12 +525,6 @@
           "slot": "落入 {slot} 槽",
           "risk": "风险: {risk}"
         },
-        "slots": {
-          "ready": "匹配 3 个符号赢取赔付",
-          "spinning": "等待开奖...",
-          "result": "{symbols}",
-          "classic": "经典档位"
-        },
         "baccarat": {
           "ready": "选择闲、庄或和",
           "dealing": "等待开奖...",
@@ -565,7 +544,6 @@
         "recent": {
           "draws": "最近开奖",
           "buckets": "最近槽位",
-          "slots": "最近转轴",
           "hands": "最近牌局",
           "dice": "最近骰子",
           "flips": "最近抛掷"
@@ -648,10 +626,6 @@
           "plinkoSlot": "落点槽位",
           "plinkoPath": "路径",
           "plinkoMultiplier": "槽位倍率",
-          "slotsProfile": "档位",
-          "slotsSymbols": "开出符号",
-          "slotsMultiplier": "转轴倍率",
-          "slotsJackpot": "Jackpot",
           "baccaratChoice": "下注边",
           "baccaratWinner": "胜出边",
           "baccaratPlayerTotal": "闲点数",
@@ -1595,6 +1569,58 @@
         "zero": "0",
         "rolled": "开出 {rolls}。",
         "rolledRounds": "开出 {rolls}，{count} 局赢 {won} 局。"
+      }
+    },
+    "slots": {
+      "head": {
+        "crumb": "全部游戏",
+        "title": "老虎机",
+        "lede": "Chainlink VRF 给三个转轴各挑一个符号，转轴从左到右依次停下。三个相同就赔，三个 7 赔得最多。"
+      },
+      "table": {
+        "title": "机器",
+        "top": "最高赔付",
+        "chance": "中奖概率",
+        "history": "最近结果",
+        "noHistory": "还没有转过",
+        "paytable": "每一行赔多少",
+        "any": "A",
+        "odds": "{total} 次里 {count} 次",
+        "rule": "每个转轴停在 Chainlink VRF 挑的符号上，每个符号机会相同。赔付含本金，扣 {rate} 庄家优势：平均返还下注额的 {back}。",
+        "lines": {
+          "jackpot": "三个 7",
+          "three": "其他三个相同",
+          "pair": "任意两个相同"
+        },
+        "status": {
+          "ready": "在下注单上填好金额，再下注。",
+          "waiting": "正在等随机数。数到之前，转轴一直在转。",
+          "rounds": "开出 <spin></spin>，{count} 局里 {paid} 局有赔付。"
+        }
+      },
+      "symbol": {
+        "cherry": "樱桃",
+        "lemon": "柠檬",
+        "bell": "铃铛",
+        "diamond": "钻石",
+        "crown": "皇冠",
+        "star": "星星",
+        "bar": "BAR",
+        "seven": "7"
+      },
+      "slip": {
+        "game": "老虎机，三个转轴",
+        "pays": {
+          "jackpot": "三个 7 得",
+          "three": "三个相同得",
+          "pair": "两个相同得"
+        }
+      },
+      "receipt": {
+        "trio": "{a}、{b}、{c}",
+        "rolled": "开出 {rolls}。",
+        "rolledRounds": "开出 {rolls}，{count} 局里 {paid} 局有赔付。",
+        "between": "；"
       }
     }
   },

@@ -52,11 +52,6 @@ const PlinkoStage = dynamic(
   }
 );
 
-const SlotsStage = dynamic(() => import("../modules/slots/stage").then((mod) => mod.SlotsStage), {
-  loading: StageLoading,
-  ssr: false
-});
-
 const BaccaratStage = dynamic(
   () => import("../modules/baccarat/stage").then((mod) => mod.BaccaratStage),
   {
@@ -87,7 +82,6 @@ export function GameRoomRightPane({
   sicBoKind,
   sicBoValue,
   plinkoBuckets,
-  slotsSymbols,
   animatingKenoSpots,
   kenoResultDrawn,
   casinoOutcome,
@@ -104,7 +98,6 @@ export function GameRoomRightPane({
   onKenoRevealComplete,
   onPlinkoRiskChange,
   onPlinkoRevealComplete,
-  onSlotsRevealComplete,
   onSicBoRevealComplete,
   onBaccaratRevealComplete,
   onBaccaratSideChange,
@@ -126,7 +119,6 @@ export function GameRoomRightPane({
   sicBoKind: SicBoKind;
   sicBoValue: number;
   plinkoBuckets: readonly number[];
-  slotsSymbols: readonly number[];
   animatingKenoSpots: readonly number[];
   kenoResultDrawn: readonly number[];
   casinoOutcome?: CasinoOutcome | null;
@@ -143,7 +135,6 @@ export function GameRoomRightPane({
   onKenoRevealComplete?: () => void;
   onPlinkoRiskChange: (risk: PlinkoRisk) => void;
   onPlinkoRevealComplete?: () => void;
-  onSlotsRevealComplete?: () => void;
   onSicBoRevealComplete?: () => void;
   onBaccaratRevealComplete?: () => void;
   onBaccaratSideChange: (side: BaccaratSide) => void;
@@ -215,17 +206,6 @@ export function GameRoomRightPane({
           onRiskChange={onPlinkoRiskChange}
           randomHash={resultProof?.randomHash}
           onRevealComplete={onPlinkoRevealComplete}
-        />
-      )}
-
-      {gameSlug === "slots" && (
-        <SlotsStage
-          isPending={isPending}
-          controlsLocked={controlsLocked}
-          isRevealing={Boolean(isRevealing)}
-          showResult={showResult}
-          symbols={slotsSymbols}
-          onRevealComplete={onSlotsRevealComplete}
         />
       )}
 

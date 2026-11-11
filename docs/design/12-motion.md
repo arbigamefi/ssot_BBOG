@@ -117,6 +117,22 @@ DOM, tested on its own):
   chips slide onto the winning spot as on the dice table.
 - **Reduced motion:** the ball is placed in the pocket directly; the wheel does not turn.
 
+The slot reels follow them too (`slots-room/reel-motion.ts`, a controller with no DOM, tested on
+its own):
+
+- **Waiting for randomness:** the three reels wind up and spin at 15 symbols a second, with a
+  vertical blur that softens as they slow. Between bets they stand still.
+- **The number arrives:** each reel slows at a steady rate, from the speed it has, onto its
+  symbol, never turning back. The reels stop left to right, at least 0.15s apart, each with a
+  damped bounce of less than 0.15 of a symbol, so no other symbol reaches the pay line. Each later
+  round spins at 26 symbols a second and stops faster, after a 0.26s pause.
+- **Deadline:** the reels are on their symbols 4.99s after the number arrives, and each later
+  round 3.11s after the one before it, whether or not the tab gets frames. The room's own
+  fallback reveal waits 5.5s, plus 3.4s for each later round.
+- **The result:** the line that was hit and its reels light up, and a net win's chips slide onto
+  that line as on the dice table.
+- **Reduced motion:** the reels show the symbols directly, with no spin or blur.
+
 ## 6. Do Not Do
 
 - No `transition-all`.

@@ -56,3 +56,11 @@ where:
 `reserved = amountPerRoll * betCount * 64`
 
 This covers the worst case where every roll hits `7,7,7`.
+
+## Frontend
+
+The room is a Carbon copy table (`frontend/apps/web/src/features/casino/slots-room/`;
+`docs/design/04-page-blueprints.md` §4, `12-motion.md` §5). It encodes the Classic profile only.
+The pay table prints each line's gross multiple less the release's house edge (`slots-model.ts`):
+with a 2% edge, 62.72×, 15.68× and 1.96×. Win chance is `176 / 512 = 34.4%`, and a pair is a net
+win. The reels stop on the symbols the settled outcome reports, one round after another.
