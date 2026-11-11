@@ -67,8 +67,8 @@ Must show:
 
 Purpose: the betting room. It has two layers (`01-brand.md` §2): **the table is immersion, the
 paper is trust.** The dice room is the reference; other games keep its structure and draw their
-own table. Dice, roulette and slots are rebuilt; the other games still use the shared room shell
-until their tables are drawn.
+own table. Dice, roulette, slots and keno are rebuilt; the other games still use the shared room
+shell until their tables are drawn.
 
 ### Layout
 
@@ -149,6 +149,33 @@ until their tables are drawn.
   The slip's quote lists what each line pays for the stake.
 - A net win is paid in chips onto the line that was hit; three alike or better warms the lamp
   further. A loss gets nothing.
+
+### The table (keno)
+
+- The same felt, rail and lamp. The hero is a glass blower: a round globe with a chrome rim, two
+  collars and a stand, holding fifteen ivory balls; a glass tube rises from its top and runs over
+  to a rack of five slots beside it. On a wide felt it takes about 60% of the width and spans two
+  rows; at 620px it moves under the figures (at most 420px wide), on a phone it is at most 284px.
+- Beside it: Picked, Win chance (at least one hit that pays more than the stake: 24.2% for three
+  picks with a 2% edge) and All hit pays in Doto, then the net amount of a win and the status
+  line (hidden on a phone). Under them the board: fifteen numbers in three rows of five, each a
+  48px spot (40px on a phone) that takes a chip when picked. A sixth pick is refused with a hint.
+  Clear picks, the sound switch and the last 10 results ("2/3") share one row.
+- Under both the pay strip is printed on the felt: a column for each number of hits from 0 to the
+  numbers picked, with what it pays per round (stake included, house edge taken, rounded down)
+  and how often it comes up ("26.4%", or "1 in 3003"). A pay below the stake is printed soft, so
+  a partial refund never reads as a win.
+- **The balls follow the bet's chain state** (`12-motion.md` §5): they tumble on the air jet until
+  the number arrives, then the round's five go up the tube one by one into the rack. Each marks
+  the board as it lands: a dashed ring on a drawn number, a red chip on one of the player's.
+- The hit column of the pay strip lights; with several rounds the status reads "Round k of n" and
+  each round's marks clear before the next is drawn. On a phone the felt scrolls to the top after
+  the bet, so the blower, the board and the pay strip sit above the docked slip.
+- Results are the drawn numbers as small ivory balls, the player's in red, in the status line, the
+  slip's head and the receipt; screen readers hear "Drew 1, 4, 7, 9, 12. 2 of 3 hit." The slip's
+  quote gives what all hit pays for the stake.
+- Only a net win is paid in chips, onto the column that was hit. A pay below the stake gets
+  nothing, like a loss.
 
 ### The paper
 

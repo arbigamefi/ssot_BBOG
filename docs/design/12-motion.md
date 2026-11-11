@@ -133,6 +133,22 @@ its own):
   that line as on the dice table.
 - **Reduced motion:** the reels show the symbols directly, with no spin or blur.
 
+The keno blower follows them too (`keno-room/blower-motion.ts`, a controller with no DOM, tested
+on its own):
+
+- **Waiting for randomness:** the air comes on and the fifteen balls tumble in the globe on 2D
+  physics: gravity, a jet from the bottom, collisions between balls and with the glass. Between
+  bets they settle into a pile.
+- **The number arrives:** the round's five balls leave the pile one by one, rise to the mouth and
+  run along the tube into the rack, each with a short drop in its slot. Each landing marks the
+  board. Later rounds draw faster, after a 0.65s pause in which the marks clear.
+- **Deadline:** the fifth ball is in the rack 4.5s after the number arrives, and each later round's
+  2.7s after it starts, whether or not the tab gets frames. The room's own fallback reveal waits
+  5s, plus 3.8s for each later round.
+- **The result:** the hit column of the pay strip lights, and a net win's chips slide onto it as on
+  the dice table.
+- **Reduced motion:** the balls do not move; each round's five are placed in the rack at once.
+
 ## 6. Do Not Do
 
 - No `transition-all`.

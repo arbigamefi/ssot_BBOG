@@ -6,7 +6,6 @@ import * as React from "react";
 const REVEAL_DURATION_MS: Record<string, number> = {
   "coin-toss": 1_600,
   plinko: 6_000,
-  keno: 4_000,
   baccarat: 4_200,
   "sic-bo": 2_100
 };
@@ -16,14 +15,16 @@ const REVEAL_DURATION_MS: Record<string, number> = {
  * after the last (dice-room/ball-motion.ts); the roulette ball is in its first pocket 4.83 s after
  * the number and in each later one 4.38 s after the last (roulette-room/wheel-motion.ts); the slot
  * reels are on their symbols 4.99 s after the number at the latest, and each later round 3.11 s
- * after the last (slots-room/reel-motion.ts). All hold frames or not; the fallback leaves each
- * some room.
+ * after the last (slots-room/reel-motion.ts); keno's fifth ball is in the rack 4.5 s after the
+ * number, and each later round's 0.65 s + 2.7 s after the last (keno-room/blower-motion.ts). All
+ * hold frames or not; the fallback leaves each some room.
  */
 function revealDurationMs(gameSlug: string, rounds: number) {
   const later = Math.max(1, rounds) - 1;
   if (gameSlug === "dice") return 4_500 + later * 2_500;
   if (gameSlug === "roulette") return 5_400 + later * 4_400;
   if (gameSlug === "slots") return 5_500 + later * 3_400;
+  if (gameSlug === "keno") return 5_000 + later * 3_800;
   return REVEAL_DURATION_MS[gameSlug] ?? 0;
 }
 

@@ -36,6 +36,7 @@ The module implements a **partial Fisher–Yates shuffle** to select 5 unique in
 ## Payout model (gross)
 
 Let:
+
 - `played` = number of selected numbers
 - `matchCount` = `popcount(numbers & drawn)`
 
@@ -64,3 +65,13 @@ This avoids expensive factorial/combination math during settlement.
 - and `maxFactor = gainFactor(played, played)` (all selected numbers match)
 
 Note: for `played=5`, the all-hit max factor is 500.5x gross before fee-on-payout.
+
+## Frontend
+
+The room is a Carbon copy table (`frontend/apps/web/src/features/casino/keno-room/`;
+`docs/design/04-page-blueprints.md` §4, `12-motion.md` §5). Its pays come from the gain table in
+`@ssot/ssot/keno-gains`: one round pays `floor(stake * gainFactor / 10000)` gross, less the
+release's house edge (`keno-model.ts`). The pay strip and the slip round quotes down to two
+decimals; the receipt shows the exact settled amounts. Win chance counts only the numbers of hits
+that pay more than the stake (24.2% for three picks with a 2% edge), and only a net win is
+celebrated. The blower draws the numbers the settled outcome reports, one round after another.

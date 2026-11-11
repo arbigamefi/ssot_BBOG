@@ -39,11 +39,6 @@ const CoinTossStage = dynamic(
   }
 );
 
-const KenoStage = dynamic(() => import("../modules/keno/stage").then((mod) => mod.KenoStage), {
-  loading: StageLoading,
-  ssr: false
-});
-
 const PlinkoStage = dynamic(
   () => import("../modules/plinko/stage").then((mod) => mod.PlinkoStage),
   {
@@ -76,14 +71,11 @@ export function GameRoomRightPane({
   showResult,
   resultNum,
   houseEdgeBps,
-  kenoSpots,
   plinkoRisk,
   baccaratSide,
   sicBoKind,
   sicBoValue,
   plinkoBuckets,
-  animatingKenoSpots,
-  kenoResultDrawn,
   casinoOutcome,
   resultProof,
   chainId,
@@ -93,9 +85,6 @@ export function GameRoomRightPane({
   onResultPlayAgain,
   onCoinRevealComplete,
   onCoinSideChange,
-  onKenoChange,
-  onKenoResetResult,
-  onKenoRevealComplete,
   onPlinkoRiskChange,
   onPlinkoRevealComplete,
   onSicBoRevealComplete,
@@ -113,14 +102,11 @@ export function GameRoomRightPane({
   showResult: boolean;
   resultNum: number | null;
   houseEdgeBps: number;
-  kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
   baccaratSide: BaccaratSide;
   sicBoKind: SicBoKind;
   sicBoValue: number;
   plinkoBuckets: readonly number[];
-  animatingKenoSpots: readonly number[];
-  kenoResultDrawn: readonly number[];
   casinoOutcome?: CasinoOutcome | null;
   resultProof: CasinoRoundResult | null;
   chainId?: number;
@@ -130,9 +116,6 @@ export function GameRoomRightPane({
   onResultPlayAgain?: () => void;
   onCoinRevealComplete?: () => void;
   onCoinSideChange: (side: CoinSide) => void;
-  onKenoChange: (spots: number[]) => void;
-  onKenoResetResult: () => void;
-  onKenoRevealComplete?: () => void;
   onPlinkoRiskChange: (risk: PlinkoRisk) => void;
   onPlinkoRevealComplete?: () => void;
   onSicBoRevealComplete?: () => void;
@@ -145,13 +128,11 @@ export function GameRoomRightPane({
       ? "lg:min-h-[38rem]"
       : gameSlug === "baccarat"
         ? "lg:min-h-[34rem]"
-        : gameSlug === "keno"
-          ? "lg:min-h-[38rem]"
-          : gameSlug === "coin-toss"
-            ? "lg:min-h-[34rem]"
-            : gameSlug === "plinko"
-              ? "lg:min-h-[38rem]"
-              : "lg:min-h-[34rem]";
+        : gameSlug === "coin-toss"
+          ? "lg:min-h-[34rem]"
+          : gameSlug === "plinko"
+            ? "lg:min-h-[38rem]"
+            : "lg:min-h-[34rem]";
   return (
     <div
       className={cn(
@@ -175,22 +156,6 @@ export function GameRoomRightPane({
           coinSide={coinSide}
           onSideChange={onCoinSideChange}
           onRevealComplete={onCoinRevealComplete}
-        />
-      )}
-
-      {gameSlug === "keno" && (
-        <KenoStage
-          isPending={isPending}
-          controlsLocked={controlsLocked}
-          isRevealing={Boolean(isRevealing)}
-          showResult={showResult}
-          spots={kenoSpots}
-          houseEdgeBps={houseEdgeBps}
-          animatingSpots={animatingKenoSpots}
-          resultDrawn={kenoResultDrawn}
-          onChange={onKenoChange}
-          onResetResult={onKenoResetResult}
-          onRevealComplete={onKenoRevealComplete}
         />
       )}
 
@@ -248,8 +213,6 @@ export function GameRoomRightPane({
           houseEdgeBps={houseEdgeBps}
           resultNum={resultNum}
           coinSide={coinSide}
-          kenoSpots={kenoSpots}
-          kenoResultDrawn={kenoResultDrawn}
           casinoOutcome={casinoOutcome}
           onClose={onResultClose}
           onPlayAgain={onResultPlayAgain}
