@@ -452,7 +452,7 @@ export function KenoTable({
                     <span
                       data-paid={item.paid || undefined}
                       data-latest={index === 0 || undefined}
-                      className="keno-tile"
+                      className="table-tile"
                     >
                       <span className="sr-only">
                         {t("table.tileLabel", { hits: item.hits, picked: item.picked })}

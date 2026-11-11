@@ -229,13 +229,6 @@ function formatCoinSide(side: CoinSide, t: Translate) {
     : t("casino.room.selection.coin.tails");
 }
 
-function formatPlinkoRisk(risk: string, t: Translate) {
-  if (risk === "low" || risk === "medium" || risk === "high") {
-    return t(`casino.room.selection.plinko.${risk}`);
-  }
-  return risk;
-}
-
 function formatBaccaratSide(side: BaccaratSide, t: Translate) {
   return t(`casino.room.selection.baccarat.${side}`);
 }
@@ -274,35 +267,6 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
         label: t("casino.room.result.facts.coinDrawn"),
         value: context.casinoOutcome.rolls.map((roll) => formatCoinSide(roll.value, t)).join(", "),
         tone: context.casinoOutcome.rolls.some((roll) => roll.won) ? "win" : "loss"
-      }
-    ] satisfies GameResultRow[];
-  }
-
-  if (context.casinoOutcome?.kind === "plinko") {
-    return [
-      {
-        label: t("casino.room.result.facts.plinkoRisk"),
-        value: formatPlinkoRisk(context.casinoOutcome.risk, t)
-      },
-      {
-        label: t("casino.room.result.facts.plinkoSlot"),
-        value: context.casinoOutcome.rolls.map((roll) => roll.bucket).join(", "),
-        tone:
-          context.casinoOutcome.netResult > 0n
-            ? "win"
-            : context.casinoOutcome.netResult < 0n
-              ? "loss"
-              : "neutral"
-      },
-      {
-        label: t("casino.room.result.facts.plinkoPath"),
-        value: context.casinoOutcome.rolls.map((roll) => roll.path.join("")).join(" / ")
-      },
-      {
-        label: t("casino.room.result.facts.plinkoMultiplier"),
-        value: context.casinoOutcome.rolls
-          .map((roll) => formatFactorBpsMultiplier(roll.factorBps, context.houseEdgeBps))
-          .join(", ")
       }
     ] satisfies GameResultRow[];
   }

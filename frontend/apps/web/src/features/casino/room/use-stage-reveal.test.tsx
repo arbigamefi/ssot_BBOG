@@ -77,9 +77,22 @@ describe("useStageReveal", () => {
     expect(result.current.stageReveal?.phase).toBe("revealed");
   });
 
+  it("gives the plinko balls time for every ball's deadline", () => {
+    const { result } = renderHook(() => useStageReveal());
+    act(() => result.current.startStageReveal(7n, "plinko", 5));
+    act(() => {
+      vi.advanceTimersByTime(6_599);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealing");
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealed");
+  });
+
   it("lets the animation's callback finish the reveal early", () => {
     const { result } = renderHook(() => useStageReveal());
-    act(() => result.current.startStageReveal(8n, "plinko"));
+    act(() => result.current.startStageReveal(8n, "baccarat"));
     act(() => result.current.completeStageReveal());
     expect(result.current.stageReveal).toEqual({ betId: 8n, phase: "revealed" });
   });

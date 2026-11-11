@@ -12,7 +12,6 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
     ({
       "casino.room.stage.loading": "Loading stage",
-      "casino.room.history.recent.buckets": "RECENT BUCKETS",
       "casino.room.history.recent.hands": "RECENT HANDS",
       "casino.room.history.recent.dice": "RECENT DICE",
       "casino.room.history.recent.flips": "RECENT FLIPS",
@@ -63,10 +62,6 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.pending": "Pending",
       "casino.room.result.facts.coinChoice": "Chosen side",
       "casino.room.result.facts.coinDrawn": "Side drawn",
-      "casino.room.result.facts.plinkoRisk": "Risk profile",
-      "casino.room.result.facts.plinkoSlot": "Slot",
-      "casino.room.result.facts.plinkoPath": "Path",
-      "casino.room.result.facts.plinkoMultiplier": "Slot multiplier",
       "casino.room.result.facts.baccaratChoice": "Chosen side",
       "casino.room.result.facts.baccaratWinner": "Winning side",
       "casino.room.result.facts.baccaratPlayerTotal": "Player total",
@@ -78,9 +73,6 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.sicBoTotal": "Total",
       "casino.room.result.facts.sicBoTriple": "Triple",
       "casino.room.result.facts.sicBoMultiplier": "Roll multiplier",
-      "casino.room.selection.plinko.low": "Low",
-      "casino.room.selection.plinko.medium": "Medium",
-      "casino.room.selection.plinko.high": "High",
       "casino.room.selection.sicBo.yes": "Yes",
       "casino.room.selection.sicBo.no": "No",
       "casino.room.selection.baccarat.player": "Player",
@@ -93,10 +85,6 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.sicBo.kinds.total": "Exact total",
       "casino.room.selection.sicBo.kinds.specificDouble": "Specific double",
       "casino.room.selection.sicBo.kinds.singleFace": "Single face",
-      "casino.room.stage.plinko.dropZone": "Set risk and drop",
-      "casino.room.stage.plinko.waitingVrf": "Waiting for draw...",
-      "casino.room.stage.plinko.slot": "Slot {slot}",
-      "casino.room.stage.plinko.risk": "Risk: {risk}",
       "casino.room.stage.baccarat.ready": "Bet player, banker, or tie",
       "casino.room.stage.baccarat.dealing": "Waiting for draw...",
       "casino.room.stage.baccarat.result": "Player wins",
@@ -133,18 +121,15 @@ const baseProps = {
   multiplier: 1.98,
   houseEdgeBps: 200,
   winChance: 50,
-  plinkoRisk: "medium" as const,
   baccaratSide: "player" as const,
   sicBoKind: "small" as const,
   sicBoValue: 0,
-  plinkoBuckets: [],
   resultProof: null,
   chainId: 84532,
   assetSymbol: "USDC",
   assetDecimals: 6,
   onResultClose: vi.fn(),
   onCoinSideChange: vi.fn(),
-  onPlinkoRiskChange: vi.fn(),
   onBaccaratSideChange: vi.fn(),
   onSicBoChange: vi.fn()
 };
@@ -228,9 +213,9 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="plinko"
+        gameSlug="coin-toss"
         showResult
-        resultNum={17}
+        resultNum={1}
         resultProof={{
           kind: "settled",
           betId: 123456n,
@@ -265,7 +250,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="plinko"
+        gameSlug="coin-toss"
         showResult
         resultProof={{
           kind: "indexing",
@@ -287,9 +272,9 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="plinko"
+        gameSlug="coin-toss"
         showResult
-        resultNum={17}
+        resultNum={1}
         resultProof={{
           kind: "indexing",
           betId: 13n,
@@ -317,57 +302,6 @@ describe("GameRoomRightPane", () => {
     expect(screen.queryByText("Bet details")).toBeNull();
     expect(screen.queryByText("Expected payout")).toBeNull();
     expect(screen.queryByText("Settlement pending")).toBeNull();
-  });
-
-  it("shows plinko slot multiplier after house edge in the result overlay", async () => {
-    render(
-      <GameRoomRightPane
-        {...baseProps}
-        gameSlug="plinko"
-        showResult
-        plinkoRisk="medium"
-        resultProof={{
-          kind: "settled",
-          betId: 76n,
-          requestId: 87n,
-          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
-          stake: 10_000_000n,
-          vrfFeeCharged: 100_000_000_000_000n,
-          resolvedAt: 1_778_888_888,
-          settlement: {
-            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            payoutGross: 6_892_000n,
-            payoutNet: 6_754_160n,
-            refundAmount: 0n,
-            feeOnPayout: 137_840n,
-            protocolFeeAccrual: 68_920n
-          }
-        }}
-        casinoOutcome={{
-          kind: "plinko",
-          risk: "medium",
-          rolls: [
-            {
-              bucket: 5,
-              path: ["L", "R", "R", "L", "R", "L", "R", "R"],
-              factorBps: 6_892,
-              won: false
-            }
-          ],
-          payoutGross: 6_892_000n,
-          payoutNet: 6_754_160n,
-          refundAmount: 0n,
-          feeOnPayout: 137_840n,
-          playerOwed: 6_754_160n,
-          netResult: -3_245_840n
-        }}
-      />
-    );
-
-    expect(await screen.findByText("Slot multiplier")).toBeDefined();
-    expect(screen.getAllByText("0.67x").length).toBeGreaterThan(0);
-    expect(screen.queryByText("0.69x")).toBeNull();
   });
 
   it("shows baccarat opened cards, totals, and winning side in the result overlay", async () => {

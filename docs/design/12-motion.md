@@ -149,6 +149,23 @@ on its own):
   the dice table.
 - **Reduced motion:** the balls do not move; each round's five are placed in the rack at once.
 
+The plinko drop follows them too (`plinko-room/drop-motion.ts`, a controller with no DOM, tested
+on its own):
+
+- **Waiting for randomness:** the cups empty and the ball rocks in its cradle along the cradle's
+  curve, easing in and out.
+- **The number arrives:** the ball rolls to the middle, the gate swings open and it falls onto the
+  first pin, then hops pin to pin along the number's bits, one fair left or right a row: each pin
+  it hits lights for 140ms and the ball leaves a dotted trace (earlier balls' traces fade). It
+  bounces to rest in its cup. Later balls leave the cradle 0.54s apart and fall faster; one ball
+  rests in a cup and a tag counts the rest.
+- **Deadline:** the first ball is in its cup 3.58s after the number arrives and each later one
+  0.54s after the last, whether or not the tab gets frames. The room's own fallback reveal waits
+  4.2s, plus 0.6s for each later ball.
+- **The result:** the cups lit, a net win's cups glow and its chips slide onto the best cup's label
+  as on the dice table.
+- **Reduced motion:** no rocking and no fall; every ball is placed in its cup at once.
+
 ## 6. Do Not Do
 
 - No `transition-all`.

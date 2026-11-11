@@ -1110,14 +1110,6 @@
           "selected": "{side} seçildi",
           "waitingVrf": "Çekiliş bekleniyor..."
         },
-        "plinko": {
-          "board": "Plinko tahtası",
-          "dropZone": "Riski ayarla ve bırak",
-          "waitingVrf": "Çekiliş bekleniyor...",
-          "revealing": "Tahtadan düşüyor...",
-          "slot": "Kova {slot}",
-          "risk": "Risk: {risk}"
-        },
         "baccarat": {
           "ready": "Oyuncu, banko veya beraberliğe bahis yap",
           "dealing": "Çekiliş bekleniyor...",
@@ -1135,7 +1127,6 @@
       },
       "history": {
         "recent": {
-          "buckets": "SON KOVALAR",
           "hands": "SON ELLER",
           "dice": "SON ZARLAR",
           "flips": "SON ATIŞLAR"
@@ -1294,15 +1285,6 @@
           "heads": "Yazı",
           "tails": "Tura"
         },
-        "plinko": {
-          "riskProfile": "Risk profili",
-          "low": "Düşük",
-          "medium": "Orta",
-          "high": "Yüksek",
-          "lowDetail": "Daha düz tahta",
-          "mediumDetail": "Dengeli risk",
-          "highDetail": "Uç kovalar"
-        },
         "baccarat": {
           "betOn": "Bahis",
           "player": "Oyuncu",
@@ -1388,10 +1370,6 @@
           "vrfFee": "Rastgele sayı ücreti",
           "coinChoice": "Seçilen taraf",
           "coinDrawn": "Çıkan taraf",
-          "plinkoRisk": "Risk profili",
-          "plinkoSlot": "Kova",
-          "plinkoPath": "Yol",
-          "plinkoMultiplier": "Kova çarpanı",
           "baccaratChoice": "Seçilen taraf",
           "baccaratWinner": "Kazanan taraf",
           "baccaratPlayerTotal": "Oyuncu toplamı",
@@ -1696,7 +1674,7 @@
           ]
         },
         "plinko": {
-          "tagline": "Topu 9 sıralı çivi alanından bırakın. Dış kovalar daha çok öder; risk profili eğriyi belirler.",
+          "tagline": "Topu 8 sıralı çivi alanından bırakın. Dış kovalar daha çok öder; risk profili eğriyi belirler.",
           "bets": [
             {
               "key": "low",
@@ -2411,6 +2389,51 @@
         "between": ", ",
         "drew": "Çekilen: {balls}. {picked} sayıdan {hits} isabet.",
         "drewRounds": "Son turda çekilen: {balls}. Turlara göre isabet: {list}."
+      }
+    },
+    "plinko": {
+      "head": {
+        "crumb": "Tüm oyunlar",
+        "title": "Plinko",
+        "lede": "Her sekmeye Chainlink VRF karar verir: sekiz adil sol ya da sağ. Top, düştüğü haznenin yazdığını öder; kenara yaklaştıkça daha çok."
+      },
+      "table": {
+        "title": "Masa",
+        "chance": "Kazanma şansı",
+        "outer": "Dış hazneler",
+        "middle": "Orta hazne",
+        "risk": "Risk",
+        "riskName": {
+          "low": "Düşük",
+          "medium": "Orta",
+          "high": "Yüksek"
+        },
+        "riskLabel": "{name} risk",
+        "cups": "Her haznenin ne ödediği ve topun oraya ne sıklıkla düştüğü",
+        "percent": "{value}%",
+        "history": "Son sonuçlar",
+        "noHistory": "Henüz atış yok",
+        "rule": "Her sekme Chainlink VRF'den gelen adil bir sol ya da sağdır. Risk haznelerin ne ödediğini değiştirir, topun nereye gittiğini asla: her seviyede dıştaki altı hazne kazanır. Ödemeler bahsinizi içerir ve top başınadır, {rate} kasa avantajı düşülür.",
+        "status": {
+          "ready": "Bir risk seçin, sonra bahis fişinden bahsinizi yapın.",
+          "waiting": "Rastgele sayı bekleniyor. Sayı gelene kadar top beşiğinde sallanır.",
+          "falling": "Rastgele sayı geldi. Top, sayının seçtiği yoldan düşüyor."
+        },
+        "ball": "Top {k} / {n}",
+        "tile": "{m}×",
+        "tileLabel": "{m}× hazne"
+      },
+      "slip": {
+        "game": "Plinko, {risk, select, low {düşük} medium {orta} other {yüksek}} risk",
+        "outer": "Dış hazneler öder"
+      },
+      "receipt": {
+        "between": ", ",
+        "step": ", ",
+        "left": "sol",
+        "right": "sağ",
+        "fell": "Sekmeler: {path}; {m}× haznesine düştü.",
+        "fellMany": "Son top: {path}; {m}× haznesine düştü. Toplara göre hazneler: {list}."
       }
     }
   },

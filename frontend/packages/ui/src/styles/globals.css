@@ -270,6 +270,15 @@
   }
 }
 
+@keyframes cup-glow {
+  0% {
+    fill: hsl(var(--lamp) / 0);
+  }
+  30% {
+    fill: hsl(var(--lamp) / 0.5);
+  }
+}
+
 @keyframes blower-air {
   to {
     stroke-dashoffset: -20;
@@ -1598,9 +1607,9 @@
   }
 }
 
-/* A past keno round in the last results: hits of picks, brighter when it paid more than the
-   stake (data-paid), ringed when it is the latest (data-latest). */
-@utility keno-tile {
+/* A past result in a table's last results (a keno round's hits, a plinko ball's cup), brighter
+   when it paid more than the stake (data-paid), ringed when it is the latest (data-latest). */
+@utility table-tile {
   display: inline-grid;
   place-items: center;
   min-width: 38px;
@@ -1686,6 +1695,246 @@
     & [data-row="odds"] td {
       font-size: 10px;
     }
+  }
+}
+
+/* The plinko board's well: set into the felt like the slots window. */
+@utility table-well {
+  position: relative;
+  padding: 12px 12px 6px;
+  border-radius: 24px;
+  background: linear-gradient(hsl(var(--groove-lo)), hsl(var(--groove-hi)));
+  box-shadow:
+    inset 0 10px 18px hsl(var(--table-shade) / 0.7),
+    inset 0 -2px 0 hsl(var(--table-sheen) / 0.06),
+    0 0 0 4px hsl(var(--table-shade) / 0.18),
+    0 0 0 5px hsl(var(--paper) / 0.12),
+    0 2px 0 5px hsl(var(--table-sheen) / 0.04);
+  @container felt (max-width: 460px) {
+    padding: 8px 8px 4px;
+    border-radius: 18px;
+  }
+}
+
+/* The plinko pin board (SVG), styled through data-b parts and data-s gradient stops. A pin a
+   ball hits lights for a moment (data-hit); the gate swings open (data-open on the board); the
+   cups a result landed in light (data-now) and a net win's cup glows (data-win). Each ball leaves
+   a dotted trace; earlier ones fade (data-old). */
+@utility table-pegs {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  & [data-s="ivory-hi"] {
+    stop-color: hsl(var(--ivory-hi));
+  }
+  & [data-s="ivory"] {
+    stop-color: hsl(var(--ivory));
+  }
+  & [data-s="ivory-lo"] {
+    stop-color: hsl(var(--ivory-lo));
+  }
+  & [data-s="red-hi"] {
+    stop-color: color-mix(in srgb, hsl(var(--pocket-red)) 72%, hsl(var(--ivory-hi)));
+  }
+  & [data-s="red"] {
+    stop-color: hsl(var(--pocket-red));
+  }
+  & [data-s="red-lo"] {
+    stop-color: color-mix(in srgb, hsl(var(--pocket-red)) 62%, hsl(var(--rail-lo)));
+  }
+  & [data-s="rail-hi"] {
+    stop-color: hsl(var(--rail-hi));
+  }
+  & [data-s="rail-lo"] {
+    stop-color: hsl(var(--rail-lo));
+  }
+  & [data-b="pin"] {
+    stroke: hsl(var(--table-shade) / 0.45);
+    stroke-width: 0.6;
+    transition: fill 0.4s ease;
+  }
+  & [data-b="pin"][data-hit] {
+    fill: hsl(var(--paper));
+    transition: none;
+    filter: drop-shadow(0 0 3px hsl(var(--lamp) / 0.95));
+  }
+  & [data-b="trough"] {
+    fill: none;
+    stroke-width: 6;
+    stroke-linecap: round;
+  }
+  & [data-b="gate"] {
+    transform-box: fill-box;
+    transform-origin: 0 50%;
+    transition: transform 0.18s ease-in;
+  }
+  &[data-open] [data-b="gate"] {
+    transform: rotate(80deg);
+  }
+  & [data-b="cup"] {
+    fill: hsl(var(--table-shade) / 0.22);
+    transition: fill 0.3s ease;
+  }
+  & [data-b="cup"][data-now] {
+    fill: hsl(var(--paper) / 0.1);
+  }
+  & [data-b="cup"][data-win] {
+    fill: hsl(var(--lamp) / 0.24);
+    @media (prefers-reduced-motion: no-preference) {
+      animation: cup-glow 1.4s ease-out both;
+    }
+  }
+  & [data-b="trace"] {
+    fill: none;
+    stroke: hsl(var(--paper));
+    stroke-width: 1.6;
+    stroke-dasharray: 2.5 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.75;
+  }
+  & [data-b="trace"][data-old] {
+    opacity: 0.2;
+  }
+  & [data-b="tally"] {
+    fill: hsl(var(--paper));
+    font: 800 11px/1 var(--font-text);
+    text-anchor: middle;
+    font-variant-numeric: tabular-nums;
+  }
+  & [data-b="ball"] circle:first-child {
+    stroke: hsl(var(--table-shade) / 0.45);
+    stroke-width: 0.8;
+  }
+  & [data-b="ball"][data-gone] {
+    display: none;
+  }
+  & [data-b="shine"] {
+    fill: hsl(var(--table-sheen) / 0.55);
+  }
+}
+
+/* The plinko cups' pays, printed on the felt under the well, a column under each cup: what it
+   pays and how often a ball lands there. A pay below the stake is printed soft (data-under); the
+   cups a result landed in light (data-now), and a net win's glow (data-win). */
+@utility table-cups {
+  width: calc(100% - 24px);
+  margin: 10px 12px 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+  & td {
+    padding: 4px 0;
+    text-align: center;
+    color: hsl(var(--paper) / 0.92);
+  }
+  & td + td {
+    border-left: 1px dashed hsl(var(--paper) / 0.24);
+  }
+  & [data-row="pays"] td {
+    padding-top: 6px;
+  }
+  & [data-row="pays"] b {
+    font: 800 14px/1 var(--font-print);
+    white-space: nowrap;
+  }
+  & [data-row="odds"] td {
+    font-size: 11px;
+    color: hsl(var(--paper) / 0.6);
+  }
+  & td[data-under] b {
+    color: hsl(var(--paper) / 0.6);
+  }
+  & td[data-now] {
+    background: hsl(var(--paper) / 0.1);
+  }
+  & td[data-now][data-win] b {
+    text-shadow: 0 0 12px hsl(var(--lamp) / 0.6);
+    @media (prefers-reduced-motion: no-preference) {
+      animation: print-glow 1.6s ease-out both;
+    }
+  }
+  @container felt (max-width: 460px) {
+    width: calc(100% - 16px);
+    margin: 8px 8px 0;
+    & [data-row="pays"] :is(b, b span) {
+      font: 800 11.5px/1 var(--font-text);
+    }
+    & [data-row="pays"] [data-x] {
+      display: none;
+    }
+    & [data-row="odds"] td {
+      font-size: 9px;
+      letter-spacing: -0.04em;
+    }
+  }
+}
+
+/* A table's choice of three, printed on the felt; the chosen one is a paper tab (aria-pressed).
+   Locked while a bet is out, the others fade. */
+@utility table-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  & button {
+    height: 38px;
+    padding: 0 4px;
+    border: 1.5px solid hsl(var(--paper) / 0.6);
+    border-radius: 10px;
+    background: transparent;
+    color: hsl(var(--paper) / 0.92);
+    font: 800 14px/1 var(--font-text);
+    cursor: pointer;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      border-color 0.2s ease,
+      opacity 0.2s ease;
+  }
+  & button:hover:not(:disabled) {
+    background: hsl(var(--paper) / 0.06);
+  }
+  & button[aria-pressed="true"] {
+    background: hsl(var(--paper));
+    border-color: hsl(var(--paper));
+    color: hsl(var(--ink));
+    box-shadow: 0 3px 6px hsl(var(--table-shade) / 0.4);
+  }
+  & button:focus-visible {
+    outline: 2px solid hsl(var(--paper));
+    outline-offset: 2px;
+  }
+  & button:disabled {
+    cursor: default;
+  }
+  & button:disabled[aria-pressed="false"] {
+    opacity: 0.45;
+  }
+  @container felt (max-width: 460px) {
+    & button {
+      height: 34px;
+    }
+  }
+}
+
+/* A plinko ball's path as printed ticks, \ for a left and / for a right, in the current colour. */
+@utility plinko-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 3px;
+  vertical-align: middle;
+  & i {
+    display: block;
+    width: 2px;
+    height: 12px;
+    border-radius: 1px;
+    background: currentColor;
+    transform: rotate(-28deg);
+  }
+  & i[data-right] {
+    transform: rotate(28deg);
   }
 }
 

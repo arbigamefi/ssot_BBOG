@@ -471,15 +471,6 @@
           "heads": "正面",
           "tails": "反面"
         },
-        "plinko": {
-          "riskProfile": "风险档位",
-          "low": "低",
-          "medium": "中",
-          "high": "高",
-          "lowDetail": "波动更平滑",
-          "mediumDetail": "风险均衡",
-          "highDetail": "冲击边缘槽"
-        },
         "baccarat": {
           "betOn": "下注边",
           "player": "闲",
@@ -510,14 +501,6 @@
           "selected": "已选择{side}",
           "waitingVrf": "等待开奖..."
         },
-        "plinko": {
-          "board": "Plinko 弹珠盘",
-          "dropZone": "设置风险后落球",
-          "waitingVrf": "等待开奖...",
-          "revealing": "弹珠正在穿过钉板...",
-          "slot": "落入 {slot} 槽",
-          "risk": "风险: {risk}"
-        },
         "baccarat": {
           "ready": "选择闲、庄或和",
           "dealing": "等待开奖...",
@@ -535,7 +518,6 @@
       },
       "history": {
         "recent": {
-          "buckets": "最近槽位",
           "hands": "最近牌局",
           "dice": "最近骰子",
           "flips": "最近抛掷"
@@ -611,10 +593,6 @@
           "vrfFee": "随机数费用",
           "coinChoice": "选择面",
           "coinDrawn": "开出面",
-          "plinkoRisk": "风险档位",
-          "plinkoSlot": "落点槽位",
-          "plinkoPath": "路径",
-          "plinkoMultiplier": "槽位倍率",
           "baccaratChoice": "下注边",
           "baccaratWinner": "胜出边",
           "baccaratPlayerTotal": "闲点数",
@@ -805,7 +783,7 @@
           ]
         },
         "plinko": {
-          "tagline": "球穿过 9 行钉阵落入桶位。外侧桶赔率更高;风险档决定分布曲线。",
+          "tagline": "球穿过 8 行钉阵落入桶位。外侧桶赔率更高;风险档决定分布曲线。",
           "bets": [
             {
               "key": "low",
@@ -1660,6 +1638,51 @@
         "between": "、",
         "drew": "摇出 {balls}，{picked} 个中 {hits} 个。",
         "drewRounds": "最后一局摇出 {balls}。每局命中：{list}。"
+      }
+    },
+    "plinko": {
+      "head": {
+        "crumb": "全部游戏",
+        "title": "弹珠台",
+        "lede": "Chainlink VRF 决定每一次弹跳：8 次公平的左或右。球落进哪个杯，就按那个杯赔；越靠两边，赔得越多。"
+      },
+      "table": {
+        "title": "牌桌",
+        "chance": "中奖概率",
+        "outer": "最外两杯",
+        "middle": "正中杯",
+        "risk": "风险",
+        "riskName": {
+          "low": "低",
+          "medium": "中",
+          "high": "高"
+        },
+        "riskLabel": "{name}风险",
+        "cups": "每个杯赔多少，球落进去的概率",
+        "percent": "{value}%",
+        "history": "最近结果",
+        "noHistory": "还没有开过",
+        "rule": "每一次弹跳都是 Chainlink VRF 给的公平左右。风险只改变每个杯赔多少，不改变球往哪走：每一档都是外侧六个杯赢。赔付含下注额，按球计算，扣 {rate} 庄家优势。",
+        "status": {
+          "ready": "选好风险，再在下注单上下注。",
+          "waiting": "正在等随机数。数到之前，球在托架里来回晃。",
+          "falling": "随机数到了，球按它定下的路线落下。"
+        },
+        "ball": "第 {k} 球，共 {n} 球",
+        "tile": "{m}×",
+        "tileLabel": "{m}× 的杯"
+      },
+      "slip": {
+        "game": "弹珠台，{risk, select, low {低} medium {中} other {高}}风险",
+        "outer": "最外两杯赔付"
+      },
+      "receipt": {
+        "between": "、",
+        "step": "、",
+        "left": "左",
+        "right": "右",
+        "fell": "弹跳路线 {path}，落进 {m}× 的杯。",
+        "fellMany": "最后一球路线 {path}，落进 {m}× 的杯。每球落杯：{list}。"
       }
     }
   },

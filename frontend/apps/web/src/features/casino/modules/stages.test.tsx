@@ -3,15 +3,9 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CoinTossStage } from "./coin-toss/stage";
-import { PlinkoStage } from "./plinko/stage";
 import { BaccaratStage } from "./baccarat/stage";
 import { SicBoStage } from "./sic-bo/stage";
-import {
-  applyHouseEdgeToMultiplier,
-  baccaratMultiplier,
-  PLINKO_FACTOR_TABLE,
-  sicBoMultiplier
-} from "../room/payouts";
+import { applyHouseEdgeToMultiplier, baccaratMultiplier, sicBoMultiplier } from "../room/payouts";
 
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
@@ -32,19 +26,9 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.sicBo.kinds.total": "Exact total",
       "casino.room.selection.sicBo.kinds.specificDouble": "Specific double",
       "casino.room.selection.sicBo.kinds.singleFace": "Single face",
-      "casino.room.selection.plinko.low": "Low",
-      "casino.room.selection.plinko.medium": "Medium",
-      "casino.room.selection.plinko.high": "High",
-      "casino.room.selection.plinko.riskProfile": "Risk Profile",
       "casino.room.stage.coin.awaitingSelection": "Awaiting Toss Selection",
       "casino.room.stage.coin.selected": `${values?.side} SELECTED`,
       "casino.room.stage.coin.waitingVrf": "Waiting for VRF Oracle...",
-      "casino.room.stage.plinko.dropZone": "Set risk and drop",
-      "casino.room.stage.plinko.waitingVrf": "Waiting for VRF Oracle...",
-      "casino.room.stage.plinko.board": "Plinko board",
-      "casino.room.stage.plinko.revealing": "Dropping through the board...",
-      "casino.room.stage.plinko.slot": `Slot ${values?.slot}`,
-      "casino.room.stage.plinko.risk": `Risk: ${values?.risk}`,
       "casino.room.stage.baccarat.ready": "Bet player, banker, or tie",
       "casino.room.stage.baccarat.dealing": "Waiting for VRF Oracle...",
       "casino.room.stage.baccarat.result": `${values?.side} wins`,
@@ -112,86 +96,6 @@ describe("game room stages", () => {
 
       act(() => {
         vi.advanceTimersByTime(1_300);
-      });
-      expect(onRevealComplete).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("renders Plinko stage risk and highlighted result slot", () => {
-    const onRiskChange = vi.fn();
-    const { rerender } = render(
-      <PlinkoStage
-        isPending={false}
-        showResult={false}
-        risk="high"
-        buckets={[]}
-        onRiskChange={onRiskChange}
-      />
-    );
-
-    expect(screen.getByRole("group", { name: /Risk Profile/i })).toBeDefined();
-    expect(screen.queryByText("Risk: High")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Low" }));
-    expect(onRiskChange).toHaveBeenCalledWith("low");
-
-    rerender(
-      <PlinkoStage
-        isPending={false}
-        showResult
-        risk="high"
-        buckets={[8]}
-        onRiskChange={onRiskChange}
-      />
-    );
-
-    expect(screen.getAllByText("Slot 8").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("8").length).toBeGreaterThan(0);
-  });
-
-  it("renders Plinko bucket multipliers after house edge", () => {
-    const houseEdgeBps = 200;
-    render(
-      <PlinkoStage
-        isPending={false}
-        showResult={false}
-        risk="high"
-        houseEdgeBps={houseEdgeBps}
-        buckets={[]}
-        onRiskChange={vi.fn()}
-      />
-    );
-
-    const edgeMultiplier = applyHouseEdgeToMultiplier(
-      (PLINKO_FACTOR_TABLE.high[0] ?? 0) / 10_000,
-      houseEdgeBps
-    );
-    expect(screen.getAllByLabelText(`${edgeMultiplier.toFixed(2)}x`).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(`${edgeMultiplier.toFixed(2)}x`).length).toBeGreaterThan(0);
-  });
-
-  it("renders Plinko reveal state while the ball travels the board", () => {
-    const onRevealComplete = vi.fn();
-    vi.useFakeTimers();
-    try {
-      render(
-        <PlinkoStage
-          isPending={false}
-          isRevealing
-          showResult={false}
-          risk="medium"
-          buckets={[6]}
-          onRiskChange={vi.fn()}
-          onRevealComplete={onRevealComplete}
-        />
-      );
-
-      expect(screen.getAllByText("Dropping through the board...").length).toBeGreaterThan(0);
-      expect(screen.getByLabelText("Plinko board")).toBeDefined();
-
-      act(() => {
-        vi.advanceTimersByTime(4_000);
       });
       expect(onRevealComplete).toHaveBeenCalledTimes(1);
     } finally {
