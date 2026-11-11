@@ -231,6 +231,37 @@ use the shared room shell until their tables are drawn.
   stake.
 - Only a net win turns your chip red and is paid in chips, stacked beside your chip.
 
+### The table (baccarat)
+
+- The same felt, rail and lamp, seen from above with the dealer's side at the top: a dark shoe at
+  the top right showing the next card's back, Win chance and "A win pays" in Doto for your side
+  beside it, then the Player and Banker hands, each a frame printed on the felt with its name, its
+  total in Doto and dashed card spots. The third spot lies sideways, outside the first two; on a
+  felt of 620px or less it goes under them.
+- The cards are ivory with navy and lacquer-red ink and a navy lattice back with a paper border;
+  pictures show only their letter in a printed frame. They are 72 × 100px, 56 × 78px on a narrow
+  felt and 46 × 64px on a phone.
+- **Your bet is three spots printed on the felt** under the hands: Player, Tie and Banker, each
+  with "Pays 2.19×", "Pays 10.26×" or "Pays 2.13×" (at a 2% edge). Your chip sits on the chosen
+  spot's top-right corner; the spots lock while a bet is out.
+- **The cards follow the bet's chain state** (`12-motion.md` §5): placing the bet deals four blank
+  cards face down, P, B, P, B; they stay down until the number arrives. Then they turn over in
+  dealing order and each side's total counts up; the status says "Banker has a natural 9." or
+  "Player draws a third card.", and a third card slides out of the shoe and turns only when the
+  rule says so. For several hands the cards are swept and the next hand is dealt, faster, and the
+  status reads "Hand k of n". On a phone the felt scrolls to the top after the bet.
+- The winning hand's frame and its spot light; the other hand dims, and a tie lights both. A tie
+  loses Player and Banker bets, and the rule printed on the felt says so, with the card values and
+  that suits are for show (the contract draws ranks only; suits are random in the browser, the
+  same on the felt and the receipt).
+- Beside the sound switch, a bead road of the last results: six beads a column, twelve columns,
+  Player a blue bead, Banker red, a tie paper, the newest ringed.
+- Results read "Banker wins, 9 to 6. You backed Banker." (or "Last hand: Banker wins, 9 to 6. 2 of
+  3 hands won."). The receipt prints the last hand under it, card by card, red for hearts and
+  diamonds.
+- Only a net win turns your chip red and is paid in chips, stacked half over your chip and
+  leaning left.
+
 ### The paper
 
 The slip is one sheet through the whole bet, with no overlays:

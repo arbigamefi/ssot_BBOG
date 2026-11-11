@@ -11,7 +11,7 @@ import {
   type RecentBetSummary
 } from "./history-widget";
 import type { CasinoOutcome } from "./outcome";
-import type { BaccaratSide, SicBoKind } from "./params";
+import type { SicBoKind } from "./params";
 import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
 
 export type { GameHistoryEntry, RecentBetSummary } from "./history-widget";
@@ -31,14 +31,6 @@ function StageLoading() {
   );
 }
 
-const BaccaratStage = dynamic(
-  () => import("../modules/baccarat/stage").then((mod) => mod.BaccaratStage),
-  {
-    loading: StageLoading,
-    ssr: false
-  }
-);
-
 const SicBoStage = dynamic(() => import("../modules/sic-bo/stage").then((mod) => mod.SicBoStage), {
   loading: StageLoading,
   ssr: false
@@ -53,7 +45,6 @@ export function GameRoomRightPane({
   isRevealing,
   showResult,
   houseEdgeBps,
-  baccaratSide,
   sicBoKind,
   sicBoValue,
   casinoOutcome,
@@ -64,8 +55,6 @@ export function GameRoomRightPane({
   onResultClose,
   onResultPlayAgain,
   onSicBoRevealComplete,
-  onBaccaratRevealComplete,
-  onBaccaratSideChange,
   onSicBoChange
 }: {
   gameSlug: string;
@@ -76,7 +65,6 @@ export function GameRoomRightPane({
   isRevealing?: boolean;
   showResult: boolean;
   houseEdgeBps: number;
-  baccaratSide: BaccaratSide;
   sicBoKind: SicBoKind;
   sicBoValue: number;
   casinoOutcome?: CasinoOutcome | null;
@@ -87,16 +75,9 @@ export function GameRoomRightPane({
   onResultClose?: () => void;
   onResultPlayAgain?: () => void;
   onSicBoRevealComplete?: () => void;
-  onBaccaratRevealComplete?: () => void;
-  onBaccaratSideChange: (side: BaccaratSide) => void;
   onSicBoChange: (kind: SicBoKind, value: number) => void;
 }) {
-  const stageHeightClass =
-    gameSlug === "sic-bo"
-      ? "lg:min-h-[38rem]"
-      : gameSlug === "baccarat"
-        ? "lg:min-h-[34rem]"
-        : "lg:min-h-[34rem]";
+  const stageHeightClass = gameSlug === "sic-bo" ? "lg:min-h-[38rem]" : "lg:min-h-[34rem]";
   return (
     <div
       className={cn(
@@ -109,20 +90,6 @@ export function GameRoomRightPane({
         gameHistory={gameHistory}
         recentBets={recentBets}
       />
-
-      {gameSlug === "baccarat" && (
-        <BaccaratStage
-          isPending={isPending}
-          controlsLocked={controlsLocked}
-          isRevealing={Boolean(isRevealing)}
-          showResult={showResult}
-          selectedSide={baccaratSide}
-          houseEdgeBps={houseEdgeBps}
-          onSideChange={onBaccaratSideChange}
-          outcome={casinoOutcome?.kind === "baccarat" ? casinoOutcome : null}
-          onRevealComplete={onBaccaratRevealComplete}
-        />
-      )}
 
       {gameSlug === "sic-bo" && (
         <SicBoStage

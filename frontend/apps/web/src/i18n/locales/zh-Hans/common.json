@@ -466,12 +466,6 @@
         "maxSummary": "每轮 {perRound} · 整仓 {total}"
       },
       "selection": {
-        "baccarat": {
-          "betOn": "下注边",
-          "player": "闲",
-          "banker": "庄",
-          "tie": "和"
-        },
         "sicBo": {
           "betType": "投注类型",
           "face": "点数",
@@ -491,12 +485,6 @@
       },
       "stage": {
         "loading": "正在加载舞台",
-        "baccarat": {
-          "ready": "选择闲、庄或和",
-          "dealing": "等待开奖...",
-          "result": "{side} 胜出",
-          "selected": "已选择: {side}"
-        },
         "sicBo": {
           "ready": "选择一个骰宝投注项",
           "rolling": "等待开奖...",
@@ -508,7 +496,6 @@
       },
       "history": {
         "recent": {
-          "hands": "最近牌局",
           "dice": "最近骰子",
           "flips": "最近抛掷"
         },
@@ -581,12 +568,6 @@
           "settlementTx": "结算交易",
           "resolvedTime": "结算时间",
           "vrfFee": "随机数费用",
-          "baccaratChoice": "下注边",
-          "baccaratWinner": "胜出边",
-          "baccaratPlayerTotal": "闲点数",
-          "baccaratBankerTotal": "庄点数",
-          "baccaratPlayerCards": "闲开牌",
-          "baccaratBankerCards": "庄开牌",
           "sicBoBet": "骰宝投注",
           "sicBoDice": "开出骰子",
           "sicBoTotal": "总点数",
@@ -1709,6 +1690,55 @@
       "receipt": {
         "landed": "落地是{face}，你猜的是{call}。",
         "landedMany": "最后一次是{face}。{n} 次里猜中 {hits} 次。"
+      }
+    },
+    "baccarat": {
+      "head": {
+        "crumb": "全部游戏",
+        "title": "百家乐",
+        "lede": "押闲、押庄或押和。每张牌都由 Chainlink VRF 抽出，点数更接近 9 的一方赢。"
+      },
+      "table": {
+        "title": "牌桌",
+        "chance": "中奖概率",
+        "pays": "赢了赔付",
+        "bets": "你押哪一门",
+        "side": {
+          "player": "闲",
+          "banker": "庄",
+          "tie": "和"
+        },
+        "hand": {
+          "player": "闲家",
+          "banker": "庄家"
+        },
+        "bead": {
+          "player": "闲",
+          "banker": "庄",
+          "tie": "和"
+        },
+        "spot": "赔 {m}×",
+        "spotLabel": "押{side}，赔下注额的 {m} 倍，赢面 {chance}%",
+        "history": "最近结果",
+        "rule": "每张牌都是 Chainlink VRF 的一次独立抽取，花色只作展示。A 算 1 点，10 和人头牌算 0 点，总点数只看个位。和局时押闲或押庄的下注不退还。赔付已扣 {rate} 庄家优势。",
+        "status": {
+          "ready": "把筹码放在闲、庄或和上，再在下注单上下注。",
+          "waiting": "牌已扣着发好，随机数到了就翻开。",
+          "turning": "随机数到了，开牌。",
+          "natural": "{side}例牌 {total} 点。",
+          "naturals": "两家都是例牌：闲 {player} 点，庄 {banker} 点。",
+          "draws": "{side}补第三张牌。",
+          "hand": "第 {k} 局，共 {n} 局"
+        },
+        "result": "{winner, select, tie {和局，{player} 比 {banker}。} player {闲赢，{player} 比 {banker}。} other {庄赢，{banker} 比 {player}。}}"
+      },
+      "slip": {
+        "game": "百家乐，押{side, select, player {闲} banker {庄} other {和}}"
+      },
+      "receipt": {
+        "came": "{result}你押的是{side}。",
+        "cameMany": "最后一局：{result}{n} 局里赢 {hits} 局。",
+        "last": "最后一局"
       }
     }
   },

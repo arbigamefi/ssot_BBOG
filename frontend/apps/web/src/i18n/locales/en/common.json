@@ -466,12 +466,6 @@
         "maxSummary": "{perRound} per round · {total} total"
       },
       "selection": {
-        "baccarat": {
-          "betOn": "Bet on",
-          "player": "Player",
-          "banker": "Banker",
-          "tie": "Tie"
-        },
         "sicBo": {
           "betType": "Bet type",
           "face": "Face",
@@ -491,12 +485,6 @@
       },
       "stage": {
         "loading": "Loading stage",
-        "baccarat": {
-          "ready": "Bet player, banker, or tie",
-          "dealing": "Waiting for draw...",
-          "result": "{side} wins",
-          "selected": "Selected: {side}"
-        },
         "sicBo": {
           "ready": "Choose a Sic Bo table bet",
           "rolling": "Waiting for draw...",
@@ -508,7 +496,6 @@
       },
       "history": {
         "recent": {
-          "hands": "RECENT HANDS",
           "dice": "RECENT DICE",
           "flips": "RECENT FLIPS"
         },
@@ -581,12 +568,6 @@
           "settlementTx": "Settlement tx",
           "resolvedTime": "Resolved time",
           "vrfFee": "Random-number fee",
-          "baccaratChoice": "Chosen side",
-          "baccaratWinner": "Winning side",
-          "baccaratPlayerTotal": "Player total",
-          "baccaratBankerTotal": "Banker total",
-          "baccaratPlayerCards": "Player cards",
-          "baccaratBankerCards": "Banker cards",
           "sicBoBet": "Sic Bo bet",
           "sicBoDice": "Dice opened",
           "sicBoTotal": "Total",
@@ -1709,6 +1690,55 @@
       "receipt": {
         "landed": "Landed {face}. You called {call}.",
         "landedMany": "Last flip landed {face}. {hits} of {n} flips matched your call."
+      }
+    },
+    "baccarat": {
+      "head": {
+        "crumb": "All games",
+        "title": "Baccarat",
+        "lede": "Back the Player, the Banker or a tie. Chainlink VRF draws every card; the hand closer to nine wins."
+      },
+      "table": {
+        "title": "The table",
+        "chance": "Win chance",
+        "pays": "A win pays",
+        "bets": "Your bet",
+        "side": {
+          "player": "Player",
+          "banker": "Banker",
+          "tie": "Tie"
+        },
+        "hand": {
+          "player": "Player",
+          "banker": "Banker"
+        },
+        "bead": {
+          "player": "P",
+          "banker": "B",
+          "tie": "T"
+        },
+        "spot": "Pays {m}×",
+        "spotLabel": "{side}, pays {m} times the stake, wins {chance}% of hands",
+        "history": "Last results",
+        "rule": "Every card is a fresh draw from Chainlink VRF; suits are for show. Ace counts 1, tens and pictures 0, and only the last digit of a total counts. A tie loses Player and Banker bets. Pays include a {rate} house edge.",
+        "status": {
+          "ready": "Put your chip on Player, Banker or Tie, then place the bet on the slip.",
+          "waiting": "The cards are dealt face down. They turn over when the random number arrives.",
+          "turning": "The random number is in. The cards turn over.",
+          "natural": "{side} has a natural {total}.",
+          "naturals": "Both have a natural: Player {player}, Banker {banker}.",
+          "draws": "{side} draws a third card.",
+          "hand": "Hand {k} of {n}"
+        },
+        "result": "{winner, select, tie {Tie, {player} to {banker}.} player {Player wins, {player} to {banker}.} other {Banker wins, {banker} to {player}.}}"
+      },
+      "slip": {
+        "game": "Baccarat, {side, select, player {Player} banker {Banker} other {Tie}}"
+      },
+      "receipt": {
+        "came": "{result} You backed {side}.",
+        "cameMany": "Last hand: {result} {hits} of {n} hands won.",
+        "last": "Last hand"
       }
     }
   },

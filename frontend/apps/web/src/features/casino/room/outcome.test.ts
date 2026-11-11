@@ -157,6 +157,38 @@ describe("casino outcome derivation", () => {
     expect(["player", "banker", "tie"]).toContain(roll?.outcome);
   });
 
+  it("keeps each baccarat card's rank, and its points follow from it", () => {
+    const points = (rank: number) => (rank <= 8 ? rank + 1 : 0);
+    const total = (ranks: number[]) => ranks.reduce((sum, rank) => sum + points(rank), 0) % 10;
+    const ranks = new Set<number>();
+    for (let seed = 1n; seed <= 40n; seed++) {
+      const outcome = deriveCasinoOutcome({
+        bet: { ...baseBet, betCount: 5, stake: 5_000_000n },
+        gameSlug: "baccarat",
+        params: encodeBaccaratParams("banker"),
+        randomWords: [seed * 7_919n]
+      });
+      if (outcome?.kind !== "baccarat") throw new Error("not baccarat");
+      for (const roll of outcome.rolls) {
+        for (const rank of [...roll.playerRanks, ...roll.bankerRanks]) {
+          expect(rank).toBeGreaterThanOrEqual(0);
+          expect(rank).toBeLessThanOrEqual(12);
+          ranks.add(rank);
+        }
+        expect(roll.playerCards).toEqual(roll.playerRanks.map(points));
+        expect(roll.bankerCards).toEqual(roll.bankerRanks.map(points));
+        expect(roll.playerTotal).toBe(total(roll.playerRanks));
+        expect(roll.bankerTotal).toBe(total(roll.bankerRanks));
+        // A natural on the first two cards stops the deal.
+        const natural =
+          total(roll.playerRanks.slice(0, 2)) >= 8 || total(roll.bankerRanks.slice(0, 2)) >= 8;
+        if (natural) expect(roll.playerRanks.length + roll.bankerRanks.length).toBe(4);
+      }
+    }
+    // Tens and pictures are told apart, though all count 0.
+    expect([9, 10, 11, 12].every((rank) => ranks.has(rank))).toBe(true);
+  });
+
   it("derives sic bo dice, total, and roll factor", () => {
     const outcome = deriveCasinoOutcome({
       bet: baseBet,

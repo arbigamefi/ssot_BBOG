@@ -21,8 +21,11 @@ export type ReceiptGame = {
   line: string;
   /** The numbers it covers, when the line does not say. */
   covers?: string;
-  /** What came up, as words for the summary line and screen readers, and as print. */
-  rolled: { text: string; print?: React.ReactNode } | null;
+  /**
+   * What came up, as words for the summary line and screen readers, and as print. `detail` prints
+   * under it on the full receipt only: baccarat's last hand, card by card.
+   */
+  rolled: { text: string; print?: React.ReactNode; detail?: React.ReactNode } | null;
 };
 
 /** Rolls as a list in the reader's language: "66, 45, 30, 48 and 20". */
@@ -108,6 +111,7 @@ export function RoomReceipt({
         {rolled ? (
           <p className="mt-1 pr-24 font-semibold break-keep">{game.rolled?.print ?? rolled}</p>
         ) : null}
+        {game.rolled?.detail ? <div className="pr-24">{game.rolled.detail}</div> : null}
         <p className="pr-24 text-note text-faded">{chainName}</p>
         <div
           aria-hidden="true"

@@ -20,7 +20,7 @@ import { buildShareUrl } from "../../share/share-link";
 import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
 import { applyHouseEdgeToMultiplier } from "./payouts";
-import type { BaccaratSide, SicBoKind } from "./params";
+import type { SicBoKind } from "./params";
 import type { CasinoRoundResult, CasinoTerminalRoundResult } from "./resolution";
 
 function shortHash(value: string | undefined) {
@@ -215,14 +215,6 @@ type GameResultRow = {
   tone?: DetailTone;
 };
 
-function formatList(values: readonly (number | string)[]) {
-  return values.length > 0 ? values.join(", ") : "—";
-}
-
-function formatBaccaratSide(side: BaccaratSide, t: Translate) {
-  return t(`casino.room.selection.baccarat.${side}`);
-}
-
 function formatSicBoBet(kind: SicBoKind, value: number, t: Translate) {
   const label = t(`casino.room.selection.sicBo.kinds.${kind}`);
   if (
@@ -247,43 +239,6 @@ function formatFactorBpsMultiplier(factorBps: number, houseEdgeBps: number) {
 }
 
 function getGameResultRows(context: GameResultContext, t: Translate) {
-  if (context.casinoOutcome?.kind === "baccarat") {
-    return [
-      {
-        label: t("casino.room.result.facts.baccaratChoice"),
-        value: formatBaccaratSide(context.casinoOutcome.side, t)
-      },
-      {
-        label: t("casino.room.result.facts.baccaratWinner"),
-        value: context.casinoOutcome.rolls
-          .map((roll) => formatBaccaratSide(roll.outcome, t))
-          .join(", "),
-        tone:
-          context.casinoOutcome.netResult > 0n
-            ? "win"
-            : context.casinoOutcome.netResult < 0n
-              ? "loss"
-              : "neutral"
-      },
-      {
-        label: t("casino.room.result.facts.baccaratPlayerTotal"),
-        value: context.casinoOutcome.rolls.map((roll) => roll.playerTotal).join(", ")
-      },
-      {
-        label: t("casino.room.result.facts.baccaratBankerTotal"),
-        value: context.casinoOutcome.rolls.map((roll) => roll.bankerTotal).join(", ")
-      },
-      {
-        label: t("casino.room.result.facts.baccaratPlayerCards"),
-        value: context.casinoOutcome.rolls.map((roll) => formatList(roll.playerCards)).join(" / ")
-      },
-      {
-        label: t("casino.room.result.facts.baccaratBankerCards"),
-        value: context.casinoOutcome.rolls.map((roll) => formatList(roll.bankerCards)).join(" / ")
-      }
-    ] satisfies GameResultRow[];
-  }
-
   if (context.casinoOutcome?.kind === "sic-bo") {
     return [
       {

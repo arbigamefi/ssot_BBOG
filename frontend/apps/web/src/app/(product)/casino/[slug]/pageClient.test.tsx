@@ -88,6 +88,7 @@ vi.mock("next-intl", () => ({
       "casino.room.names.plinko": "Plinko",
       "casino.room.names.slots": "Slots",
       "casino.room.names.baccarat": "Baccarat",
+      "casino.room.names.sicBo": "Sic Bo",
       "casino.room.audit.loading": "Loading audit stream",
       "casino.room.roundStatus.title": "Round status",
       "casino.room.roundStatus.phases.loadingQuote.label": "Estimating VRF fee",
@@ -199,6 +200,7 @@ vi.mock("next-intl", () => ({
       "casino.dice.head.title": "Dice",
       "casino.roulette.head.title": "Roulette",
       "casino.coin.head.title": "Coin toss",
+      "casino.baccarat.head.title": "Baccarat",
       "casino.table.strip.preview":
         "Preview. Betting opens on Base after the audit report is published.",
       "casino.table.action.telegram": "Join on Telegram",
@@ -341,6 +343,13 @@ const MOCK_RELEASE = {
       label: "Baccarat",
       module: "0x4444444444444444444444444444444444444444",
       paramsEncoding: "abi.encode(uint8 side)"
+    },
+    {
+      gameId: "0x5555555555555555555555555555555555555555555555555555555555555555",
+      slug: "sic-bo",
+      label: "Sic Bo",
+      module: "0x5555555555555555555555555555555555555555",
+      paramsEncoding: "abi.encode(uint8 kind, uint8 value)"
     }
   ]
 };
@@ -472,10 +481,10 @@ describe("GamePageClient", () => {
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
 
-    renderRoom("baccarat");
+    renderRoom("sic-bo");
 
     // The shared shell loads as its own chunk.
-    expect(await screen.findByText("Baccarat")).toBeDefined();
+    expect(await screen.findByText("Sic Bo")).toBeDefined();
     // Betting is not enabled for the website in tests, so the room is labelled a preview.
     expect(screen.getByText("Preview SSOT Module")).toBeDefined();
     expect(screen.queryByText("Live SSOT Module")).toBeNull();
@@ -487,14 +496,14 @@ describe("GamePageClient", () => {
     vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
-    const { unmount } = renderRoom("baccarat");
+    const { unmount } = renderRoom("sic-bo");
     expect(await screen.findByText("Testnet SSOT Module")).toBeDefined();
     expect(screen.queryByText("Live SSOT Module")).toBeNull();
     expect(screen.queryByText("Preview SSOT Module")).toBeNull();
     unmount();
 
     state.chainId = 8453;
-    renderRoom("baccarat");
+    renderRoom("sic-bo");
     expect(await screen.findByText("Live SSOT Module")).toBeDefined();
     expect(screen.queryByText("Testnet SSOT Module")).toBeNull();
     state.chainId = 84532;
@@ -537,6 +546,17 @@ describe("GamePageClient", () => {
     renderRoom("coin-toss");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Coin toss" })).toBeDefined();
+    expect(screen.getByRole("article", { name: "Bet slip" })).toBeDefined();
+    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
+    expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
+  });
+
+  it("renders baccarat as the Carbon copy room, with no shared shell", async () => {
+    state.release = MOCK_RELEASE;
+
+    renderRoom("baccarat");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Baccarat" })).toBeDefined();
     expect(screen.getByRole("article", { name: "Bet slip" })).toBeDefined();
     expect(screen.queryByText("Preview SSOT Module")).toBeNull();
     expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
