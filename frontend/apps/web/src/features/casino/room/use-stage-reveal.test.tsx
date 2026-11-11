@@ -16,7 +16,7 @@ describe("useStageReveal", () => {
     act(() => result.current.startStageReveal(7n, "sic-bo"));
     expect(result.current.stageReveal).toEqual({ betId: 7n, phase: "revealing" });
     act(() => {
-      vi.advanceTimersByTime(2_099);
+      vi.advanceTimersByTime(2_899);
     });
     expect(result.current.stageReveal?.phase).toBe("revealing");
     act(() => {
@@ -108,6 +108,19 @@ describe("useStageReveal", () => {
     act(() => result.current.startStageReveal(10n, "baccarat", 3));
     act(() => {
       vi.advanceTimersByTime(13_299);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealing");
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.stageReveal?.phase).toBe("revealed");
+  });
+
+  it("gives sic bo time for every roll's deadline", () => {
+    const { result } = renderHook(() => useStageReveal());
+    act(() => result.current.startStageReveal(11n, "sic-bo", 3));
+    act(() => {
+      vi.advanceTimersByTime(8_099);
     });
     expect(result.current.stageReveal?.phase).toBe("revealing");
     act(() => {

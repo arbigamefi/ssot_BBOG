@@ -5,7 +5,7 @@ import * as React from "react";
 import { fractionDigits, splitAmount } from "../../home/receipts";
 import { PrintedFigure } from "../../home/printed-figure";
 import type { BaccaratSide } from "../room/params";
-import type { PlaceBetButtonPhase } from "../room/place-bet-button";
+import type { PlaceBetButtonPhase } from "../room/place-bet-phase";
 import { PaidChips, reducedMotion, SoundButton, useTableSound } from "../table-room/table-controls";
 import { awaitsNumber, celebrate, type Celebration } from "../table-room/table-model";
 import { useBaccaratCopy } from "./baccarat-copy";

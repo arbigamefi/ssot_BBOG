@@ -66,9 +66,9 @@ Must show:
 ## 4. `/casino/[slug]`
 
 Purpose: the betting room. It has two layers (`01-brand.md` §2): **the table is immersion, the
-paper is trust.** The dice room is the reference; other games keep its structure and draw their
-own table. Dice, roulette, slots, keno, plinko and coin toss are rebuilt; the other games still
-use the shared room shell until their tables are drawn.
+paper is trust.** The dice room is the reference; every other game keeps its structure and
+draws its own table: roulette, slots, keno, plinko, coin toss, baccarat and sic bo. A slug with no
+table shows "Game not found".
 
 ### Layout
 
@@ -261,6 +261,32 @@ use the shared room shell until their tables are drawn.
   diamonds.
 - Only a net win turns your chip red and is paid in chips, stacked half over your chip and
   leaning left.
+
+### The table (sic bo)
+
+- The same felt, rail and lamp. At the top left a dark dish under a glass dome with a highlight, a
+  rim and a knob, 212px across (148px on a phone); three ivory dice of 40px (30px) lie in it, navy
+  pips with the one and the four in lacquer red. Beside it your bet's name, Win chance and "A win
+  pays" in Doto; for a single face it reads "1.96× a die".
+- **The layout is printed on the felt below**, as at a real table, in four rows: Small (4 to 10),
+  Any triple and Big (11 to 17); the six doubles and six triples as small dice; the totals 4 to 17
+  (two rows of seven on a felt of 620px or less); the single faces 1 to 6. Each area prints its
+  pays at a 2% edge: Small and Big 2.01×, any triple 35.28×, a triple 211.68×, a double 13.23×, a
+  total 70.56× to 7.84×, a single face 1.96× a die. Your chip sits on the chosen area's top-right
+  corner; the layout locks while a bet is out. One area is one bet, as the contract takes it.
+- **The dice follow the bet's chain state** (`12-motion.md` §5): placing the bet brings the dome
+  down and shakes it, the dice tumbling and bouncing off the glass, until the number arrives. Then
+  the dice settle on their faces in a loose triangle and the dome lifts up and to the right. For
+  several rolls the dome comes down again, shakes and lifts on the next roll, and the status reads
+  "Roll k of n". On a phone the felt scrolls to the top after the bet.
+- Every area the dice make true lights, whatever you bet on; your chip turns red only on a net
+  win. The rule printed under the layout says the dice are fair VRF dice, that Small and Big lose
+  on any triple, and what a single face pays for one, two and three dice.
+- Beside the sound switch, the last results as three small dice each, a paid roll ringed: eight on
+  a wide felt, two on a phone, this visit only.
+- Results read "Total 14. You bet Big." after three small dice (or "Last roll, total 6. 1 of 3
+  rolls paid."). The slip's line for a single face lists what one, two and three dice pay.
+- Only a net win is paid in chips, stacked on your chip at its own size.
 
 ### The paper
 

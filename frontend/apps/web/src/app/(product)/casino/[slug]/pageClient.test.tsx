@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 
@@ -74,11 +74,6 @@ vi.mock("next-intl", () => ({
   useLocale: () => "en",
   useTranslations: (namespace?: string) => (relativeKey: string) =>
     ({
-      "casino.room.shell.liveModule": "Live SSOT Module",
-      "casino.room.shell.previewModule": "Preview SSOT Module",
-      "casino.room.shell.testnetModule": "Testnet SSOT Module",
-      "casino.room.shell.maxBet": "Max bet",
-      "casino.room.shell.maxPayout": "Max payout",
       "casino.room.empty.moduleNotFound": "Module not found",
       "casino.room.empty.gameNotFound": "Game not found.",
       "casino.room.names.dice": "Precision Dice",
@@ -89,109 +84,6 @@ vi.mock("next-intl", () => ({
       "casino.room.names.slots": "Slots",
       "casino.room.names.baccarat": "Baccarat",
       "casino.room.names.sicBo": "Sic Bo",
-      "casino.room.audit.loading": "Loading audit stream",
-      "casino.room.roundStatus.title": "Round status",
-      "casino.room.roundStatus.phases.loadingQuote.label": "Estimating VRF fee",
-      "casino.room.roundStatus.phases.loadingQuote.detail":
-        "Reading the current randomness fee before you place a round.",
-      "casino.room.roundStatus.phases.loadingQuote.status": "Estimating",
-      "casino.room.roundStatus.phases.waitingVrf.label": "Waiting for draw",
-      "casino.room.roundStatus.phases.waitingVrf.detail":
-        "Your bet is on-chain. Waiting for verifiable randomness to open the result.",
-      "casino.room.roundStatus.phases.waitingVrf.status": "Waiting for draw",
-      "casino.room.roundStatus.phases.timeoutSoft.label": "Draw is taking longer than usual",
-      "casino.room.roundStatus.phases.timeoutSoft.detail":
-        "The round is still safe. Keep this page open while Chainlink fulfills the request.",
-      "casino.room.roundStatus.phases.timeoutSoft.status": "Waiting",
-      "casino.room.roundStatus.phases.placing.label": "Placing bet",
-      "casino.room.roundStatus.phases.placing.detail":
-        "Approve if needed, then sign PlaceBet. The round starts once the transaction is mined.",
-      "casino.room.roundStatus.phases.placing.status": "Placing",
-      "casino.room.roundStatus.phases.settling.label": "Settling result",
-      "casino.room.roundStatus.phases.settling.detail":
-        "Randomness is ready. Keeper settlement should complete automatically.",
-      "casino.room.roundStatus.phases.settling.status": "Settling",
-      "casino.room.roundStatus.phases.manualSettleOffered.label": "Keeper delay",
-      "casino.room.roundStatus.phases.manualSettleOffered.detail":
-        "Settlement is delayed. You can manually settle this result as a fallback.",
-      "casino.room.roundStatus.phases.manualSettleOffered.status": "Manual settle offered",
-      "casino.room.roundStatus.phases.settled.label": "Round settled",
-      "casino.room.roundStatus.phases.settled.detail":
-        "Settlement is confirmed on-chain. Preparing the final result proof.",
-      "casino.room.roundStatus.phases.settled.status": "Settled",
-      "casino.room.roundStatus.phases.refundable.label": "Refund path available",
-      "casino.room.roundStatus.phases.refundable.detail":
-        "VRF did not complete before the protocol timeout. You can refund the stake.",
-      "casino.room.roundStatus.phases.refundable.status": "Refundable",
-      "casino.room.roundStatus.phases.failed.label": "Round monitor failed",
-      "casino.room.roundStatus.phases.failed.detail":
-        "Unable to read the latest round state from the RPC provider.",
-      "casino.room.roundStatus.phases.failed.status": "Failed",
-      "casino.room.roundStatus.phases.ready.label": "Ready",
-      "casino.room.roundStatus.phases.ready.detail":
-        "One click will approve if needed, place the bet, and watch settlement.",
-      "casino.room.roundStatus.phases.ready.status": "Ready",
-      "casino.room.roundStatus.metrics.vrfEstimate": "VRF estimate",
-      "casino.room.roundStatus.metrics.betId": "Bet ID",
-      "casino.room.roundStatus.metrics.vrfRequest": "VRF request",
-      "casino.room.roundStatus.actions.settleResult": "Settle result",
-      "casino.room.roundStatus.actions.refundStake": "Refund stake",
-      "casino.room.betPanel.walletBalance": "Wallet Balance",
-      "casino.room.betPanel.syncing": "Syncing...",
-      "casino.room.betPanel.amount.label": "Bet Amount",
-      "casino.room.betPanel.amount.aria": "Bet amount",
-      "casino.room.betPanel.amount.min": "Min",
-      "casino.room.betPanel.amount.max": "Max",
-      "casino.room.betPanel.rolls.label": "Rolls",
-      "casino.room.betPanel.rolls.total": "Total: 10 USDC",
-      "casino.room.betPanel.rolls.aria": "Roll count",
-      "casino.room.betPanel.advanced.label": "Advanced",
-      "casino.room.betPanel.advanced.stopGain": "Stop Gain (USDC)",
-      "casino.room.betPanel.advanced.stopLoss": "Stop Loss (USDC)",
-      "casino.room.betPanel.advanced.offPlaceholder": "0 = off",
-      "casino.room.betPanel.advanced.gainStop": "Gain stop at +0 USDC",
-      "casino.room.betPanel.advanced.lossStop": "Loss stop at 0 USDC",
-      "casino.room.betPanel.summary.multiplier": "Multiplier",
-      "casino.room.betPanel.summary.winChance": "Win Chance",
-      "casino.room.betPanel.summary.expectedPayout": "Expected Payout",
-      "casino.room.betPanel.placeBet.connectWallet": "CONNECT WALLET",
-      "casino.room.betPanel.placeBet.failedRetry": "TRANSACTION FAILED - RETRY",
-      "casino.room.betPanel.placeBet.roundInProgress": "ROUND IN PROGRESS",
-      "casino.room.betPanel.placeBet.betMined": "BET MINED...",
-      "casino.room.betPanel.placeBet.signing": "SIGNING / PLACING...",
-      "casino.room.betPanel.placeBet.revealing": "REVEALING...",
-      "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
-      "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
-      "casino.room.betPanel.placeBet.placeBet": "PLACE BET",
-      "casino.room.selection.sicBo.yes": "Yes",
-      "casino.room.selection.sicBo.no": "No",
-      "casino.room.stage.loading": "Loading stage",
-      "casino.room.history.recent.rolls": "RECENT ROLLS",
-      "casino.room.history.recent.draws": "RECENT DRAWS",
-      "casino.room.history.recent.flips": "RECENT FLIPS",
-      "casino.room.history.states.settled": "SETTLED",
-      "casino.room.history.states.refunded": "REFUNDED",
-      "casino.room.history.states.vrfReady": "VRF READY",
-      "casino.room.history.states.placed": "PLACED",
-      "casino.room.history.empty": "Waiting for first play...",
-      "casino.room.result.title": "Chain result",
-      "casino.room.result.outcomes.refunded.label": "Stake refunded",
-      "casino.room.result.outcomes.refunded.detail":
-        "The refund path returned the stake after the VRF timeout window.",
-      "casino.room.result.outcomes.win.label": "Win confirmed",
-      "casino.room.result.outcomes.win.detail": "Payout proof is confirmed from BetFinalized.",
-      "casino.room.result.outcomes.returned.label": "Stake returned",
-      "casino.room.result.outcomes.returned.detail": "The settled payout equals the stake.",
-      "casino.room.result.outcomes.loss.label": "Loss confirmed",
-      "casino.room.result.outcomes.loss.detail":
-        "BetFinalized is confirmed with zero or below-stake payout.",
-      "casino.room.result.facts.betId": "Bet ID",
-      "casino.room.result.facts.netPayout": "Net payout",
-      "casino.room.result.facts.refund": "Refund",
-      "casino.room.result.facts.requestId": "Request ID",
-      "casino.room.result.facts.netResult": "Net result",
-      "casino.room.result.facts.randomHash": "Random hash",
-      "casino.room.result.facts.settlementTx": "Settlement tx",
       "casino.room.closed.title": "This game is closed.",
       "casino.room.closed.body":
         "Bets placed before it closed still settle, and their receipts stay available.",
@@ -201,8 +93,10 @@ vi.mock("next-intl", () => ({
       "casino.roulette.head.title": "Roulette",
       "casino.coin.head.title": "Coin toss",
       "casino.baccarat.head.title": "Baccarat",
+      "casino.sicBo.head.title": "Sic bo",
       "casino.table.strip.preview":
         "Preview. Betting opens on Base after the audit report is published.",
+      "casino.table.strip.testnet": "Test network. Test tokens have no value.",
       "casino.table.action.telegram": "Join on Telegram",
       "casino.table.slip.label": "Bet slip"
     })[namespace ? `${namespace}.${relativeKey}` : relativeKey] ?? relativeKey
@@ -226,11 +120,6 @@ vi.mock("../../../../components/PageTransition", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
-  AssetSelector: ({ title }: any) => <div>{title}</div>,
-  AuditTabs: ({ children }: any) => <div>{children}</div>,
-  AuditTableHeader: ({ children }: any) => <div>{children}</div>,
-  AuditTableRow: ({ children }: any) => <div>{children}</div>,
-  AuditTableCell: ({ children }: any) => <div>{children}</div>,
   Button: ({ children, asChild }: any) =>
     asChild ? children : <button type="button">{children}</button>,
   Card: ({ children }: any) => <section>{children}</section>,
@@ -239,52 +128,6 @@ vi.mock("@ssot/ui", () => ({
   CardDescription: ({ children }: any) => <p>{children}</p>,
   CardContent: ({ children }: any) => <div>{children}</div>,
   CopyButton: ({ value }: any) => <button type="button">{value}</button>,
-  DataTable: ({ columns, data, onRowClick, loading, emptyMessage }: any) => {
-    if (loading) return <div>Loading…</div>;
-    if (!data.length) return <div>{emptyMessage}</div>;
-    return (
-      <div data-testid="data-table">
-        {data.map((row: any, index: number) => (
-          <div
-            key={row.id ?? row.player ?? index}
-            data-testid={`row-${index}`}
-            role="button"
-            tabIndex={0}
-            onClick={() => onRowClick?.(row, index)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") onRowClick?.(row, index);
-            }}
-          >
-            {columns.map((column: any) => (
-              <div key={column.key}>{column.render(row, index)}</div>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  },
-  ErrorCallout: ({ title, message }: any) => (
-    <div data-testid="error-callout">
-      <strong>{title}</strong>
-      <span>{message}</span>
-    </div>
-  ),
-  RoomStrip: ({ title }: any) => <div>{title}</div>,
-  StatusBadge: ({ label, status }: any) => <span>{label ?? status}</span>,
-  TabBar: ({ tabs, activeKey, onTabChange }: any) => (
-    <div data-testid="tab-bar">
-      {tabs.map((tab: any) => (
-        <button
-          key={tab.key}
-          type="button"
-          data-active={tab.key === activeKey}
-          onClick={() => onTabChange(tab.key)}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  ),
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
@@ -365,7 +208,7 @@ const MOCK_BETS = [
   }
 ];
 
-// The app provides a query client; the shared room's audit ledger loads lazily and needs it once it arrives.
+// The app provides a query client.
 function renderRoom(slug: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -477,40 +320,25 @@ describe("GamePageClient", () => {
     });
   });
 
-  it("renders the shared room shell for a game that has not moved to Carbon copy", async () => {
-    state.release = MOCK_RELEASE;
-    state.bets = MOCK_BETS;
-
-    renderRoom("sic-bo");
-
-    // The shared shell loads as its own chunk.
-    expect(await screen.findByText("Sic Bo")).toBeDefined();
-    // Betting is not enabled for the website in tests, so the room is labelled a preview.
-    expect(screen.getByText("Preview SSOT Module")).toBeDefined();
-    expect(screen.queryByText("Live SSOT Module")).toBeNull();
-    expect(screen.getByLabelText("Wallet Balance")).toBeDefined();
-    expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("labels the room testnet on an open test chain and live on an open main chain", async () => {
+  it("labels the room testnet on an open test chain and drops the strip on an open main chain", async () => {
     vi.stubEnv("NEXT_PUBLIC_CASINO_RISK_IN_ENABLED", "true");
     state.release = MOCK_RELEASE;
-    state.bets = MOCK_BETS;
     const { unmount } = renderRoom("sic-bo");
-    expect(await screen.findByText("Testnet SSOT Module")).toBeDefined();
-    expect(screen.queryByText("Live SSOT Module")).toBeNull();
-    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
+    expect(await screen.findByText("Test network. Test tokens have no value.")).toBeDefined();
+    expect(
+      screen.queryByText("Preview. Betting opens on Base after the audit report is published.")
+    ).toBeNull();
     unmount();
 
     state.chainId = 8453;
     renderRoom("sic-bo");
-    expect(await screen.findByText("Live SSOT Module")).toBeDefined();
-    expect(screen.queryByText("Testnet SSOT Module")).toBeNull();
+    expect(await screen.findByRole("heading", { level: 1, name: "Sic bo" })).toBeDefined();
+    expect(screen.queryByText("Test network. Test tokens have no value.")).toBeNull();
     state.chainId = 84532;
     vi.unstubAllEnvs();
   });
 
-  it("renders dice as the Carbon copy room, with no shared shell", async () => {
+  it("renders dice as the Carbon copy room", async () => {
     state.release = MOCK_RELEASE;
     state.bets = MOCK_BETS;
 
@@ -525,41 +353,42 @@ describe("GamePageClient", () => {
     expect(screen.getByRole("link", { name: "Join on Telegram" }).getAttribute("href")).toBe(
       "https://t.me/arbigamefi"
     );
-    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
-    expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
   });
 
-  it("renders roulette as the Carbon copy room, with no shared shell", async () => {
+  it("renders roulette as the Carbon copy room", async () => {
     state.release = MOCK_RELEASE;
 
     renderRoom("roulette");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Roulette" })).toBeDefined();
     expect(screen.getByRole("article", { name: "Bet slip" })).toBeDefined();
-    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
-    expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
   });
 
-  it("renders coin toss as the Carbon copy room, with no shared shell", async () => {
+  it("renders coin toss as the Carbon copy room", async () => {
     state.release = MOCK_RELEASE;
 
     renderRoom("coin-toss");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Coin toss" })).toBeDefined();
     expect(screen.getByRole("article", { name: "Bet slip" })).toBeDefined();
-    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
-    expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
   });
 
-  it("renders baccarat as the Carbon copy room, with no shared shell", async () => {
+  it("renders baccarat as the Carbon copy room", async () => {
     state.release = MOCK_RELEASE;
 
     renderRoom("baccarat");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Baccarat" })).toBeDefined();
     expect(screen.getByRole("article", { name: "Bet slip" })).toBeDefined();
-    expect(screen.queryByText("Preview SSOT Module")).toBeNull();
-    expect(screen.queryByLabelText("Wallet Balance")).toBeNull();
+  });
+
+  it("renders sic bo as the Carbon copy room", async () => {
+    state.release = MOCK_RELEASE;
+
+    renderRoom("sic-bo");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Sic bo" })).toBeDefined();
+    expect(screen.getByRole("article", { name: "Bet slip" })).toBeDefined();
   });
 
   it("shows placeholder when slug is not present in release", () => {
@@ -600,6 +429,6 @@ describe("GamePageClient", () => {
     expect(screen.getByRole("link", { name: "View your bets" }).getAttribute("href")).toBe(
       "/portfolio/activity"
     );
-    await waitFor(() => expect(screen.queryByLabelText("Wallet Balance")).toBeNull());
+    expect(screen.queryByRole("article", { name: "Bet slip" })).toBeNull();
   });
 });

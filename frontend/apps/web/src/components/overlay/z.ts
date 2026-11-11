@@ -15,7 +15,6 @@ export const stickyActionHeightVar = "--agf-sticky-action-height";
  *   popover       desktop anchored menus
  *   drawer        mobile nav drawer
  *   sheet         mobile bottom sheets
- *   onboarding    first-run coachmark tour
  *   modal         result / confirmation modals
  *   modalPopover  a popover opened from inside a modal (e.g. share-from-result)
  *   toast         transient notifications
@@ -28,7 +27,6 @@ export const overlayZ = {
   popover: "z-[60]",
   drawer: "z-[70]",
   sheet: "z-[80]",
-  onboarding: "z-[85]",
   modal: "z-[90]",
   modalPopover: "z-[95]",
   toast: "z-[100]",

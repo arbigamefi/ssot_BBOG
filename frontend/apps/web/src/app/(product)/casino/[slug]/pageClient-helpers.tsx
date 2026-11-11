@@ -1,20 +1,6 @@
 "use client";
 
-import * as React from "react";
-import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
-
 import type { GameMeta } from "../../../../features/casino/room/model";
-
-function AuditLedgerLoading() {
-  const t = useTranslations();
-
-  return (
-    <div className="rounded-lg border border-border bg-surface-1 p-6 text-sm font-bold uppercase tracking-[0.18em] text-fg-subtle">
-      {t("casino.room.audit.loading")}
-    </div>
-  );
-}
 
 export function getLocalizedGameName(t: (key: string) => string, game: GameMeta) {
   switch (game.slug) {
@@ -38,12 +24,3 @@ export function getLocalizedGameName(t: (key: string) => string, game: GameMeta)
       return game.label;
   }
 }
-
-export const GameRoomAuditLedger = dynamic(
-  () =>
-    import("../../../../features/casino/room/audit-ledger").then((mod) => mod.GameRoomAuditLedger),
-  {
-    loading: () => <AuditLedgerLoading />,
-    ssr: false
-  }
-);

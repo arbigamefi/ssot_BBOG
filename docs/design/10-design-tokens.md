@@ -71,23 +71,23 @@ above the action that fixes it (`02-voice-and-copy.md` §4).
 A game table (`01-brand.md` §2) has its own materials. They are used only on a table, never on a
 page surface or on paper.
 
-| Utility / token      | Token                                 | Value                           | Role                                                       |
-| -------------------- | ------------------------------------- | ------------------------------- | ---------------------------------------------------------- |
-| `felt`               | `--felt`                              | `#2A2F82`                       | Felt under the lamp                                        |
-| `felt-edge`          | `--felt-edge`                         | `#161950`                       | Felt away from the lamp                                    |
-| `rail`               | `--rail`                              | `#0C0E30`                       | The padded rail                                            |
-| (in `table-felt`)    | `--rail-hi`, `--rail-lo`              | `#262A66`, `#06071F`            | The rail's top edge and underside                          |
-| (in `table-groove`)  | `--groove-hi`, `--groove-lo`          | `#1E2268`, `#0F1244`            | The lane's lit and shaded sides                            |
-| `print`              | paper at 92%                          |                                 | Figures and print on the felt                              |
-| `print-soft`         | paper at 60%                          |                                 | Labels, the scale, the rule, spot edges                    |
-| `print-faint`        | paper at 24%                          |                                 | Minor ticks and empty chip rings only, no text             |
-| (in `table-ball`)    | `--ivory-hi`, `--ivory`, `--ivory-lo` | `#FFFDF7`, `#E9E2D0`, `#B3A88E` | The ball's highlight, body and shade                       |
-| `lamp`               | `--lamp` at 17%                       | `#FFEECE`                       | The lamp's pool of light; the warm glow of a win           |
-| `chip`, `chip-inlay` | ink, paper                            |                                 | A chip's segments and inlay                                |
-| (shadows only)       | `--table-shade`, `--table-sheen`      | black, white                    | Shadows on the table; light on the rail and lip            |
-| `pocket-red`         | `--pocket-red`                        | `#A8333A`                       | Roulette, slots, keno, plinko, the coin's tails, red suits |
-| `pocket-black`       | `--pocket-black`                      | `#0D0F2E`                       | Roulette's black pockets; the slots' navy ink              |
-| `pocket-green`       | `--pocket-green`                      | `#1E6A4F`                       | Roulette's zero                                            |
+| Utility / token      | Token                                 | Value                           | Role                                                                                     |
+| -------------------- | ------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------- |
+| `felt`               | `--felt`                              | `#2A2F82`                       | Felt under the lamp                                                                      |
+| `felt-edge`          | `--felt-edge`                         | `#161950`                       | Felt away from the lamp                                                                  |
+| `rail`               | `--rail`                              | `#0C0E30`                       | The padded rail                                                                          |
+| (in `table-felt`)    | `--rail-hi`, `--rail-lo`              | `#262A66`, `#06071F`            | The rail's top edge and underside                                                        |
+| (in `table-groove`)  | `--groove-hi`, `--groove-lo`          | `#1E2268`, `#0F1244`            | The lane's lit and shaded sides                                                          |
+| `print`              | paper at 92%                          |                                 | Figures and print on the felt                                                            |
+| `print-soft`         | paper at 60%                          |                                 | Labels, the scale, the rule, spot edges                                                  |
+| `print-faint`        | paper at 24%                          |                                 | Minor ticks and empty chip rings only, no text                                           |
+| (in `table-ball`)    | `--ivory-hi`, `--ivory`, `--ivory-lo` | `#FFFDF7`, `#E9E2D0`, `#B3A88E` | The ball's highlight, body and shade                                                     |
+| `lamp`               | `--lamp` at 17%                       | `#FFEECE`                       | The lamp's pool of light; the warm glow of a win                                         |
+| `chip`, `chip-inlay` | ink, paper                            |                                 | A chip's segments and inlay                                                              |
+| (shadows only)       | `--table-shade`, `--table-sheen`      | black, white                    | Shadows on the table; light on the rail and lip                                          |
+| `pocket-red`         | `--pocket-red`                        | `#A8333A`                       | Roulette, slots, keno, plinko, the coin's tails, red suits, the dice's one and four pips |
+| `pocket-black`       | `--pocket-black`                      | `#0D0F2E`                       | Roulette's black pockets; the slots' navy ink                                            |
+| `pocket-green`       | `--pocket-green`                      | `#1E6A4F`                       | Roulette's zero                                                                          |
 
 Print on the felt (checked by `tokens/carbon-copy.test.ts`): `print` 7:1 or more on felt and
 felt-edge, `print-soft` 4.5:1 or more; `print-faint` is under 3:1 and never sets text. Paper on
@@ -128,7 +128,13 @@ total and card spots as `data-c` parts; `data-win` lights it, `data-lose` dims i
 swept with `data-gone`), `card-mark` (a card as printed ink, for the receipt), `table-bet` (a bet
 spot: your chip on its corner with `aria-pressed`, the winning side with `data-up`, a red chip
 with `data-won`, the paid chips half over it on `data-pay`) and `table-road` (the bead road, a
-bead's side in `data-side`, the newest with `data-new`). `table-tile` is a result in a table's history, brighter with
+bead's side in `data-side`, the newest with `data-new`), and for sic bo `table-dish` (the
+stage: the dish, the dice and their shadows and the glass dome as `data-c` parts, the dome lifted
+with `data-open`; it holds the dish's and the dice's sizes), `sicbo-die` (a die printed flat, its
+face in `data-n`), `table-layout` (the layout, its four rows as `data-row`), `table-area` (an
+area of the layout: your chip with `aria-pressed`, a true area with `data-hit`, a red chip with
+`data-won`, the paid chips on `data-pay`) and `table-dice-history` (the last rolls, a paid one
+with `data-paid`). `table-tile` is a result in a table's history, brighter with
 `data-paid`. Product UI uses these and the tokens, never hex.
 
 ## 4. Typography

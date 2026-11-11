@@ -6,8 +6,6 @@ import { useRelease } from "../../ssot/release/ReleaseProvider";
 // Type-only import: erased at compile time, so the server-side viem/bet-index
 // deps in casino-analytics never reach the client bundle.
 import type {
-  CasinoLeaderboardResponse,
-  CasinoLeaderboardSort,
   CasinoStatsResponse,
   CasinoTimeseriesResponse
 } from "../../server/betting/casino-analytics";
@@ -41,62 +39,6 @@ export function useCasinoStats({
       return (await response.json()) as CasinoStatsResponse;
     },
     // Analytics is best-effort and changes slowly; poll gently.
-    refetchInterval: 30_000,
-    staleTime: 20_000
-  });
-}
-
-/**
- * Per-game (or global) turnover leaderboard from the durable bet index.
- * Pass `gameId` to scope to a single game; omit for the whole casino. Same
- * best-effort / graceful-degradation contract as useCasinoStats.
- */
-export function useCasinoLeaderboard({
-  asset,
-  by = "turnover",
-  gameId,
-  limit = 10,
-  windowDays,
-  player,
-  enabled = true
-}: {
-  asset?: string;
-  by?: CasinoLeaderboardSort;
-  gameId?: string;
-  limit?: number;
-  windowDays?: number;
-  /** Connected wallet — asks the server for this player's "your rank" position. */
-  player?: string;
-  enabled?: boolean;
-} = {}) {
-  const { chainId } = useRelease();
-
-  return useQuery<CasinoLeaderboardResponse>({
-    enabled,
-    queryKey: [
-      "ssot",
-      "casino",
-      "leaderboard",
-      { asset, by, chainId, gameId, limit, windowDays, player }
-    ],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        by,
-        chainId: String(chainId),
-        limit: String(limit)
-      });
-      if (asset) params.set("asset", asset);
-      if (gameId) params.set("gameId", gameId);
-      if (windowDays) params.set("window", String(windowDays));
-      if (player) params.set("player", player);
-      const response = await fetch(`/api/casino/leaderboard?${params.toString()}`, {
-        headers: { accept: "application/json" }
-      });
-      if (!response.ok) {
-        throw new Error("casino leaderboard request failed");
-      }
-      return (await response.json()) as CasinoLeaderboardResponse;
-    },
     refetchInterval: 30_000,
     staleTime: 20_000
   });

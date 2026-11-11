@@ -1,4 +1,4 @@
-import type { PlaceBetButtonPhase } from "../room/place-bet-button";
+import type { PlaceBetButtonPhase } from "../room/place-bet-phase";
 
 // A game table's state, as data: how a net win is paid on the felt and what the printer's
 // status light says (docs/design/02-voice-and-copy.md §11, 04-page-blueprints.md §4).

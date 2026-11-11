@@ -2,12 +2,8 @@
 
 import * as React from "react";
 
-/** How long each game's stage animates a result before the reveal counts as done without its callback. */
-const REVEAL_DURATION_MS: Record<string, number> = {
-  "sic-bo": 2_100
-};
-
 /**
+ * How long each game's table shows a result before the reveal counts as done without its callback.
  * The dice ball is on the first roll 4 s after the number arrives and on each later one 2.42 s
  * after the last (dice-room/ball-motion.ts); the roulette ball is in its first pocket 4.83 s after
  * the number and in each later one 4.38 s after the last (roulette-room/wheel-motion.ts); the slot
@@ -18,7 +14,9 @@ const REVEAL_DURATION_MS: Record<string, number> = {
  * (plinko-room/drop-motion.ts); the coin lies flat on its first flip 2.4 s after the number and on
  * each later one 1.45 s after the last (coin-room/flip-motion.ts); baccarat's first hand is marked
  * 5.13 s after the number at the latest, and each later one 3.82 s after the last
- * (baccarat-room/deal-motion.ts). All hold frames or not; the fallback leaves each some room.
+ * (baccarat-room/deal-motion.ts); sic bo's first roll counts 2.25 s after the number at the latest,
+ * and each later one 2.5 s after the last (sicbo-room/roll-motion.ts). All hold frames or not; the
+ * fallback leaves each some room.
  */
 function revealDurationMs(gameSlug: string, rounds: number) {
   const later = Math.max(1, rounds) - 1;
@@ -29,7 +27,8 @@ function revealDurationMs(gameSlug: string, rounds: number) {
   if (gameSlug === "plinko") return 4_200 + later * 600;
   if (gameSlug === "coin-toss") return 2_900 + later * 1_500;
   if (gameSlug === "baccarat") return 5_500 + later * 3_900;
-  return REVEAL_DURATION_MS[gameSlug] ?? 0;
+  if (gameSlug === "sic-bo") return 2_900 + later * 2_600;
+  return 0;
 }
 
 export type StageReveal = { betId: bigint; phase: "revealing" | "revealed" };

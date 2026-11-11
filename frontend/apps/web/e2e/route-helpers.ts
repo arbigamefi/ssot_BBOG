@@ -38,8 +38,6 @@ export async function clearComplianceGate(page: Page) {
       JSON.stringify({ version: "2026-05-28", acceptedAt: Date.now() })
     );
     window.localStorage.setItem("arbigamefi.compliance.cookies.v1", JSON.stringify("rejected"));
-    // Route checks exercise the content beneath the separate first-visit overlays.
-    window.localStorage.setItem("arbigamefi.onboarding.v1", "done");
   });
 }
 

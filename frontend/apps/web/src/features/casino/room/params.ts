@@ -138,11 +138,6 @@ export function rouletteWinChance(spots: readonly string[]): number {
   return rouletteCoveredNumbers(spots).length * (100 / 37);
 }
 
-export function rouletteReserveMultiplier(spots: readonly string[]): number {
-  const covered = rouletteCoveredNumbers(spots).length;
-  return covered > 0 ? 37 / covered : 0;
-}
-
 export function buildRouletteBitmask(spots: readonly string[]): bigint {
   let bitmask = 0n;
   for (const number of rouletteCoveredNumbers(spots)) {

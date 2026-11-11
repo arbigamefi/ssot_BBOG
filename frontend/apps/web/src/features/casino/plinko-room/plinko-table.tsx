@@ -6,7 +6,7 @@ import type { PlinkoRisk } from "@ssot/ssot/encoding";
 import { fractionDigits, splitAmount } from "../../home/receipts";
 import { PrintedFigure } from "../../home/printed-figure";
 import type { CasinoOutcome } from "../room/outcome";
-import type { PlaceBetButtonPhase } from "../room/place-bet-button";
+import type { PlaceBetButtonPhase } from "../room/place-bet-phase";
 import { PaidChips, reducedMotion, SoundButton, useTableSound } from "../table-room/table-controls";
 import { awaitsNumber, celebrate, type Celebration } from "../table-room/table-model";
 import { createDropMotion, CUPS, type DropMotion } from "./drop-motion";
