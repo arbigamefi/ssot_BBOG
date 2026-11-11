@@ -1110,14 +1110,6 @@
           "selected": "{side} selecionado",
           "waitingVrf": "Aguardando sorteio..."
         },
-        "plinko": {
-          "board": "Tabuleiro Plinko",
-          "dropZone": "Defina o risco e solte",
-          "waitingVrf": "Aguardando sorteio...",
-          "revealing": "Caindo pelo tabuleiro...",
-          "slot": "Casa {slot}",
-          "risk": "Risco: {risk}"
-        },
         "baccarat": {
           "ready": "Aposte no jogador, banca ou empate",
           "dealing": "Aguardando sorteio...",
@@ -1135,7 +1127,6 @@
       },
       "history": {
         "recent": {
-          "buckets": "BALDES RECENTES",
           "hands": "MÃOS RECENTES",
           "dice": "DADOS RECENTES",
           "flips": "LANÇAMENTOS RECENTES"
@@ -1294,15 +1285,6 @@
           "heads": "Cara",
           "tails": "Coroa"
         },
-        "plinko": {
-          "riskProfile": "Perfil de risco",
-          "low": "Baixo",
-          "medium": "Médio",
-          "high": "Alto",
-          "lowDetail": "Tabuleiro mais suave",
-          "mediumDetail": "Risco equilibrado",
-          "highDetail": "Baldes extremos"
-        },
         "baccarat": {
           "betOn": "Apostar em",
           "player": "Jogador",
@@ -1388,10 +1370,6 @@
           "vrfFee": "Taxa de número aleatório",
           "coinChoice": "Lado escolhido",
           "coinDrawn": "Lado sorteado",
-          "plinkoRisk": "Perfil de risco",
-          "plinkoSlot": "Casa",
-          "plinkoPath": "Caminho",
-          "plinkoMultiplier": "Multiplicador da casa",
           "baccaratChoice": "Lado escolhido",
           "baccaratWinner": "Lado vencedor",
           "baccaratPlayerTotal": "Total do jogador",
@@ -1696,7 +1674,7 @@
           ]
         },
         "plinko": {
-          "tagline": "Solte uma bola por um campo de 9 linhas de pinos. Baldes externos pagam mais; o perfil de risco molda a curva.",
+          "tagline": "Solte uma bola por um campo de 8 linhas de pinos. Baldes externos pagam mais; o perfil de risco molda a curva.",
           "bets": [
             {
               "key": "low",
@@ -2411,6 +2389,51 @@
         "between": ", ",
         "drew": "Saíram {balls}. {hits} de {picked} acertos.",
         "drewRounds": "A última rodada tirou {balls}. Acertos por rodada: {list}."
+      }
+    },
+    "plinko": {
+      "head": {
+        "crumb": "Todos os jogos",
+        "title": "Plinko",
+        "lede": "O Chainlink VRF decide cada quique: oito esquerdas ou direitas justas. A bola paga o que diz o seu copo; quanto mais para fora, mais."
+      },
+      "table": {
+        "title": "A mesa",
+        "chance": "Chance de ganhar",
+        "outer": "Copos externos",
+        "middle": "Copo do meio",
+        "risk": "Risco",
+        "riskName": {
+          "low": "Baixo",
+          "medium": "Médio",
+          "high": "Alto"
+        },
+        "riskLabel": "Risco {name}",
+        "cups": "Quanto paga cada copo e com que frequência a bola cai nele",
+        "percent": "{value}%",
+        "history": "Últimos resultados",
+        "noHistory": "Nenhuma queda ainda",
+        "rule": "Cada quique é uma esquerda ou direita justa do Chainlink VRF. O risco muda quanto os copos pagam, nunca para onde a bola vai: em todos os níveis os seis copos externos ganham. Os pagamentos incluem a sua aposta e são por bola, menos {rate} de vantagem da casa.",
+        "status": {
+          "ready": "Escolha um risco e faça a aposta no boletim.",
+          "waiting": "Aguardando o número aleatório. A bola balança no berço até ele chegar.",
+          "falling": "O número aleatório chegou. A bola cai pelo caminho que ele escolheu."
+        },
+        "ball": "Bola {k} de {n}",
+        "tile": "{m}×",
+        "tileLabel": "Copo de {m}×"
+      },
+      "slip": {
+        "game": "Plinko, risco {risk, select, low {baixo} medium {médio} other {alto}}",
+        "outer": "Copos externos pagam"
+      },
+      "receipt": {
+        "between": ", ",
+        "step": ", ",
+        "left": "esquerda",
+        "right": "direita",
+        "fell": "Quicou {path} e caiu no copo de {m}×.",
+        "fellMany": "A última bola quicou {path} e caiu no copo de {m}×. Copos por bola: {list}."
       }
     }
   },

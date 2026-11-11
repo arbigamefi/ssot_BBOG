@@ -67,8 +67,8 @@ Must show:
 
 Purpose: the betting room. It has two layers (`01-brand.md` §2): **the table is immersion, the
 paper is trust.** The dice room is the reference; other games keep its structure and draw their
-own table. Dice, roulette, slots and keno are rebuilt; the other games still use the shared room
-shell until their tables are drawn.
+own table. Dice, roulette, slots, keno and plinko are rebuilt; the other games still use the
+shared room shell until their tables are drawn.
 
 ### Layout
 
@@ -175,6 +175,36 @@ shell until their tables are drawn.
   slip's head and the receipt; screen readers hear "Drew 1, 4, 7, 9, 12. 2 of 3 hit." The slip's
   quote gives what all hit pays for the stake.
 - Only a net win is paid in chips, onto the column that was hit. A pay below the stake gets
+  nothing, like a loss.
+
+### The table (plinko)
+
+- The same felt, rail and lamp. The hero is a pin board set into the felt like the slots window: a
+  recessed well with eight rows of ivory pins, the outer pins making the triangle and the last
+  row's pins standing on the walls of nine cups. A chrome cradle at the top holds the lacquer-red
+  ball over a gate. On a wide felt the board takes the left column (1.9 to 1) and spans two rows;
+  at 620px it moves under the figures (at most 440px wide), on a phone it takes the full width.
+- Under the well, a column under each cup, the pays are printed on the felt: what the cup pays per
+  ball (stake included, house edge taken, rounded down to three figures: 24.12 prints as 24.1) and
+  how often a ball lands there (0.4%, 3.1%, 10.9%, 21.9%, 27.3%). A pay below the stake is printed
+  soft, so a partial refund never reads as a win.
+- Beside it: Win chance (28.9% at every risk with a 2% edge: the outer six cups win), Outer cups
+  and Middle cup in Doto, then the risk as three tabs (Low, Medium, High; the chosen one is a
+  paper tab, and they lock while a bet is out), the net amount of a win and the status line
+  (hidden on a phone), and the sound switch beside the last 10 results ("8.10×"). On a phone the
+  figures sit in one row and the risk tabs beside their label. The felt rule says risk changes
+  what the cups pay, never where the ball goes.
+- **The ball follows the bet's chain state** (`12-motion.md` §5): it rocks in its cradle until the
+  number arrives, then falls along the eight bounces the number chose, lighting each pin it hits
+  and leaving a dotted trace, and bounces to rest in its cup. With several balls they drop about
+  0.4s apart; one ball rests in each cup and a tag over it counts the rest ("×3"), and the status
+  reads "Ball k of n". On a phone the felt scrolls to the top after the bet, so the board and the
+  pays sit above the docked slip.
+- Results are the path as eight printed ticks (\ for a left, / for a right) with the cup's pay, in
+  the status line, the slip's head and the receipt; screen readers hear "Bounced left, right, …
+  into the 8.10× cup." The slip's quote gives what an outer cup pays for the stake.
+- Every cup a ball landed in lights. Only a net win glows and is paid in chips, onto the label of
+  the best cup the balls reached, under the ball and never over it. A pay below the stake gets
   nothing, like a loss.
 
 ### The paper

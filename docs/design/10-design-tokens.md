@@ -85,15 +85,15 @@ page surface or on paper.
 | `lamp`               | `--lamp` at 17%                       | `#FFEECE`                       | The lamp's pool of light; the warm glow of a win |
 | `chip`, `chip-inlay` | ink, paper                            |                                 | A chip's segments and inlay                      |
 | (shadows only)       | `--table-shade`, `--table-sheen`      | black, white                    | Shadows on the table; light on the rail and lip  |
-| `pocket-red`         | `--pocket-red`                        | `#A8333A`                       | Roulette's red pockets; slots' red; keno's hits  |
+| `pocket-red`         | `--pocket-red`                        | `#A8333A`                       | Roulette's red; slots' red; keno's hits; plinko  |
 | `pocket-black`       | `--pocket-black`                      | `#0D0F2E`                       | Roulette's black pockets; the slots' navy ink    |
 | `pocket-green`       | `--pocket-green`                      | `#1E6A4F`                       | Roulette's zero                                  |
 
 Print on the felt (checked by `tokens/carbon-copy.test.ts`): `print` 7:1 or more on felt and
 felt-edge, `print-soft` 4.5:1 or more; `print-faint` is under 3:1 and never sets text. Paper on
 each pocket colour is 4.5:1 or more. The pocket colours are the game's own (red, black, zero),
-not win or lose colours, and appear only on the roulette, slots and keno tables and in their
-results.
+not win or lose colours, and appear only on the roulette, slots, keno and plinko tables and in
+their results.
 
 The materials are `@utility` rules in `globals.css`: `table-felt` (felt, rail, its sizes),
 `table-lamp`, `table-groove`, `table-zone`, `table-ball`, `table-ball-mark`, `table-readout`,
@@ -108,9 +108,15 @@ symbol in the two inks), `slot-trio` (a result as a three-symbol strip, red-edge
 `table-blower` (the SVG blower, styled through `data-b` and `data-s` attributes; the air moves
 with `data-mixing`), `table-pick` (a board spot, its chip with `aria-pressed`, a dashed ring with
 `data-drawn`, a red chip with `data-hit`), `keno-ball` (a drawn number as a small ball, red with
-`data-hit`, flat with `data-on="paper"`), `keno-tile` (a result in the history) and
-`table-paystrip` (the pay strip; a pay below the stake is `data-under` and printed in paper at
-60%, never `print-faint`, which sets no text). Product UI uses these and the tokens, never hex.
+`data-hit`, flat with `data-on="paper"`) and `table-paystrip` (the pay strip; a pay below the
+stake is `data-under` and printed in paper at 60%, never `print-faint`, which sets no text), and
+for plinko `table-well` (the recessed well), `table-pegs` (the SVG pin board, styled through
+`data-b` and `data-s` attributes: a pin lights with `data-hit`, the gate opens with `data-open`,
+a cup lights with `data-now` and glows with `data-win`, an earlier trace fades with `data-old`),
+`table-cups` (the cups' pays and odds; a pay below the stake is `data-under`), `table-tabs` (a
+choice of three printed on the felt, the chosen one a paper tab with `aria-pressed`) and
+`plinko-path` (a path as ticks, a right with `data-right`). `table-tile` is a result in a table's
+history, brighter with `data-paid`. Product UI uses these and the tokens, never hex.
 
 ## 4. Typography
 

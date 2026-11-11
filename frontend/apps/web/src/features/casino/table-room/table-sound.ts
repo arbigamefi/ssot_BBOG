@@ -26,8 +26,13 @@ export type TableSound = {
   air: (level: number) => void;
   /** Keno: a ball knocks the glass or another ball, by how hard. */
   knock: (strength: number) => void;
-  /** Keno: a drawn ball drops into the rack, a little brighter when it is one of yours. */
+  /**
+   * A ball drops into keno's rack or a plinko cup, a little brighter when it is one of yours or
+   * its cup pays more than the stake.
+   */
   drop: (hit: boolean) => void;
+  /** Plinko: the ball hits a pin, a little higher each row. */
+  pin: (row: number) => void;
   close: () => void;
 };
 
@@ -179,6 +184,11 @@ export function createTableSound(): TableSound | null {
     },
     knock(strength) {
       burst(ready(), 2600 + Math.random() * 1600, 3, Math.min(0.06, strength * 0.00008), 0.025);
+    },
+    pin(row) {
+      const at = ready();
+      tone(at, 1700 + row * 90, 0.04, 0.07, "triangle");
+      burst(at, 4200, 2, 0.025, 0.02);
     },
     drop(hit) {
       const at = ready();

@@ -40,17 +40,17 @@ Per-roll gross payout:
 The paytables are symmetric and normalized to approximately fair gross EV before `GameHub` fee-on-payout.
 Integer flooring leaves a tiny house-favorable remainder.
 
-| Bucket | Weight | Low | Medium | High |
-|---:|---:|---:|---:|---:|
-| 0 | 1 | `1.5264x` | `8.2714x` | `24.6153x` |
-| 1 | 8 | `1.3083x` | `3.4464x` | `6.1538x` |
-| 2 | 28 | `1.0902x` | `1.6542x` | `1.3186x` |
-| 3 | 56 | `0.9812x` | `0.6892x` | `0.3076x` |
-| 4 | 70 | `0.8722x` | `0.2067x` | `0x` |
-| 5 | 56 | `0.9812x` | `0.6892x` | `0.3076x` |
-| 6 | 28 | `1.0902x` | `1.6542x` | `1.3186x` |
-| 7 | 8 | `1.3083x` | `3.4464x` | `6.1538x` |
-| 8 | 1 | `1.5264x` | `8.2714x` | `24.6153x` |
+| Bucket | Weight |       Low |    Medium |       High |
+| -----: | -----: | --------: | --------: | ---------: |
+|      0 |      1 | `1.5264x` | `8.2714x` | `24.6153x` |
+|      1 |      8 | `1.3083x` | `3.4464x` |  `6.1538x` |
+|      2 |     28 | `1.0902x` | `1.6542x` |  `1.3186x` |
+|      3 |     56 | `0.9812x` | `0.6892x` |  `0.3076x` |
+|      4 |     70 | `0.8722x` | `0.2067x` |       `0x` |
+|      5 |     56 | `0.9812x` | `0.6892x` |  `0.3076x` |
+|      6 |     28 | `1.0902x` | `1.6542x` |  `1.3186x` |
+|      7 |      8 | `1.3083x` | `3.4464x` |  `6.1538x` |
+|      8 |      1 | `1.5264x` | `8.2714x` | `24.6153x` |
 
 The exact weighted shortfall from fair gross EV is:
 
@@ -65,3 +65,14 @@ The exact weighted shortfall from fair gross EV is:
 `reserved = amountPerRoll * betCount * maxFactor / 10000`
 
 This covers the worst case where every roll lands in an edge bucket for the selected risk profile.
+
+## Frontend
+
+The room is a Carbon copy table (`frontend/apps/web/src/features/casino/plinko-room/`;
+`docs/design/04-page-blueprints.md` §4, `12-motion.md` §5). Its pays come from the factor table
+above (`PLINKO_FACTOR_TABLE` in `room/payouts.ts`): one ball pays `floor(stake * factor / 10000)`
+gross, less the release's house edge (`plinko-model.ts`). The cups print the pay cut down to three
+figures, the figures and the slip to two decimals; the receipt shows the exact settled amounts.
+Win chance counts the cups that pay more than the stake: the outer six at every risk, 28.9% with a
+2% edge. Only a net win is celebrated. The ball falls along the path the settled outcome reports
+for it, one ball after another.

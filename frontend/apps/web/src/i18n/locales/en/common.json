@@ -471,15 +471,6 @@
           "heads": "Heads",
           "tails": "Tails"
         },
-        "plinko": {
-          "riskProfile": "Risk Profile",
-          "low": "Low",
-          "medium": "Medium",
-          "high": "High",
-          "lowDetail": "Smoother board",
-          "mediumDetail": "Balanced edge",
-          "highDetail": "Extreme buckets"
-        },
         "baccarat": {
           "betOn": "Bet on",
           "player": "Player",
@@ -510,14 +501,6 @@
           "selected": "{side} selected",
           "waitingVrf": "Waiting for draw..."
         },
-        "plinko": {
-          "board": "Plinko board",
-          "dropZone": "Set risk and drop",
-          "waitingVrf": "Waiting for draw...",
-          "revealing": "Dropping through the board...",
-          "slot": "Slot {slot}",
-          "risk": "Risk: {risk}"
-        },
         "baccarat": {
           "ready": "Bet player, banker, or tie",
           "dealing": "Waiting for draw...",
@@ -535,7 +518,6 @@
       },
       "history": {
         "recent": {
-          "buckets": "RECENT BUCKETS",
           "hands": "RECENT HANDS",
           "dice": "RECENT DICE",
           "flips": "RECENT FLIPS"
@@ -611,10 +593,6 @@
           "vrfFee": "Random-number fee",
           "coinChoice": "Chosen side",
           "coinDrawn": "Side drawn",
-          "plinkoRisk": "Risk profile",
-          "plinkoSlot": "Slot",
-          "plinkoPath": "Path",
-          "plinkoMultiplier": "Slot multiplier",
           "baccaratChoice": "Chosen side",
           "baccaratWinner": "Winning side",
           "baccaratPlayerTotal": "Player total",
@@ -805,7 +783,7 @@
           ]
         },
         "plinko": {
-          "tagline": "Drop a ball through a 9-row peg field. Outer buckets pay more; risk profile shapes the curve.",
+          "tagline": "Drop a ball through a 8-row peg field. Outer buckets pay more; risk profile shapes the curve.",
           "bets": [
             {
               "key": "low",
@@ -1660,6 +1638,51 @@
         "between": ", ",
         "drew": "Drew {balls}. {hits} of {picked} hit.",
         "drewRounds": "The last round drew {balls}. Hits by round: {list}."
+      }
+    },
+    "plinko": {
+      "head": {
+        "crumb": "All games",
+        "title": "Plinko",
+        "lede": "Chainlink VRF decides every bounce: eight fair lefts or rights. The ball pays what its cup says; the further out, the more."
+      },
+      "table": {
+        "title": "The table",
+        "chance": "Win chance",
+        "outer": "Outer cups",
+        "middle": "Middle cup",
+        "risk": "Risk",
+        "riskName": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        },
+        "riskLabel": "{name} risk",
+        "cups": "What each cup pays, and how often a ball lands there",
+        "percent": "{value}%",
+        "history": "Last results",
+        "noHistory": "No drops yet",
+        "rule": "Every bounce is a fair left or right from Chainlink VRF. Risk changes what the cups pay, never where the ball goes: at every level the outer six cups win. Pays include your stake and are per ball, less a {rate} house edge.",
+        "status": {
+          "ready": "Choose a risk, then place your bet on the slip.",
+          "waiting": "Waiting for the random number. The ball rocks in its cradle until it arrives.",
+          "falling": "The random number is in. The ball falls along the path it chose."
+        },
+        "ball": "Ball {k} of {n}",
+        "tile": "{m}×",
+        "tileLabel": "{m}× cup"
+      },
+      "slip": {
+        "game": "Plinko, {risk, select, low {low} medium {medium} other {high}} risk",
+        "outer": "Outer cups pay"
+      },
+      "receipt": {
+        "between": ", ",
+        "step": ", ",
+        "left": "left",
+        "right": "right",
+        "fell": "Bounced {path} into the {m}× cup.",
+        "fellMany": "The last ball bounced {path} into the {m}× cup. Cups by ball: {list}."
       }
     }
   },

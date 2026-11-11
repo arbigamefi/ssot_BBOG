@@ -11,7 +11,7 @@ import {
   type RecentBetSummary
 } from "./history-widget";
 import type { CasinoOutcome } from "./outcome";
-import type { BaccaratSide, CoinSide, PlinkoRisk, SicBoKind } from "./params";
+import type { BaccaratSide, CoinSide, SicBoKind } from "./params";
 import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
 
 export type { GameHistoryEntry, RecentBetSummary } from "./history-widget";
@@ -33,14 +33,6 @@ function StageLoading() {
 
 const CoinTossStage = dynamic(
   () => import("../modules/coin-toss/stage").then((mod) => mod.CoinTossStage),
-  {
-    loading: StageLoading,
-    ssr: false
-  }
-);
-
-const PlinkoStage = dynamic(
-  () => import("../modules/plinko/stage").then((mod) => mod.PlinkoStage),
   {
     loading: StageLoading,
     ssr: false
@@ -71,11 +63,9 @@ export function GameRoomRightPane({
   showResult,
   resultNum,
   houseEdgeBps,
-  plinkoRisk,
   baccaratSide,
   sicBoKind,
   sicBoValue,
-  plinkoBuckets,
   casinoOutcome,
   resultProof,
   chainId,
@@ -85,8 +75,6 @@ export function GameRoomRightPane({
   onResultPlayAgain,
   onCoinRevealComplete,
   onCoinSideChange,
-  onPlinkoRiskChange,
-  onPlinkoRevealComplete,
   onSicBoRevealComplete,
   onBaccaratRevealComplete,
   onBaccaratSideChange,
@@ -102,11 +90,9 @@ export function GameRoomRightPane({
   showResult: boolean;
   resultNum: number | null;
   houseEdgeBps: number;
-  plinkoRisk: PlinkoRisk;
   baccaratSide: BaccaratSide;
   sicBoKind: SicBoKind;
   sicBoValue: number;
-  plinkoBuckets: readonly number[];
   casinoOutcome?: CasinoOutcome | null;
   resultProof: CasinoRoundResult | null;
   chainId?: number;
@@ -116,8 +102,6 @@ export function GameRoomRightPane({
   onResultPlayAgain?: () => void;
   onCoinRevealComplete?: () => void;
   onCoinSideChange: (side: CoinSide) => void;
-  onPlinkoRiskChange: (risk: PlinkoRisk) => void;
-  onPlinkoRevealComplete?: () => void;
   onSicBoRevealComplete?: () => void;
   onBaccaratRevealComplete?: () => void;
   onBaccaratSideChange: (side: BaccaratSide) => void;
@@ -128,11 +112,7 @@ export function GameRoomRightPane({
       ? "lg:min-h-[38rem]"
       : gameSlug === "baccarat"
         ? "lg:min-h-[34rem]"
-        : gameSlug === "coin-toss"
-          ? "lg:min-h-[34rem]"
-          : gameSlug === "plinko"
-            ? "lg:min-h-[38rem]"
-            : "lg:min-h-[34rem]";
+        : "lg:min-h-[34rem]";
   return (
     <div
       className={cn(
@@ -156,21 +136,6 @@ export function GameRoomRightPane({
           coinSide={coinSide}
           onSideChange={onCoinSideChange}
           onRevealComplete={onCoinRevealComplete}
-        />
-      )}
-
-      {gameSlug === "plinko" && (
-        <PlinkoStage
-          isPending={isPending}
-          controlsLocked={controlsLocked}
-          isRevealing={Boolean(isRevealing)}
-          showResult={showResult}
-          risk={plinkoRisk}
-          houseEdgeBps={houseEdgeBps}
-          buckets={plinkoBuckets}
-          onRiskChange={onPlinkoRiskChange}
-          randomHash={resultProof?.randomHash}
-          onRevealComplete={onPlinkoRevealComplete}
         />
       )}
 
