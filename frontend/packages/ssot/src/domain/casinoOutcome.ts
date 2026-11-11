@@ -101,8 +101,12 @@ export type CasinoOutcome =
       kind: "baccarat";
       side: BaccaratSide;
       rolls: Array<{
+        /** Each card's points: ace 1, 2 to 9 at face value, 10 and pictures 0. */
         playerCards: number[];
         bankerCards: number[];
+        /** Each card's rank as drawn, rank % 13: 0 ace, 1 to 8 for 2 to 9, 9 ten, 10 jack, 11 queen, 12 king. */
+        playerRanks: number[];
+        bankerRanks: number[];
         playerTotal: number;
         bankerTotal: number;
         outcome: BaccaratSide;
@@ -321,6 +325,8 @@ export function deriveCasinoOutcome({
     const rolls: Array<{
       playerCards: number[];
       bankerCards: number[];
+      playerRanks: number[];
+      bankerRanks: number[];
       playerTotal: number;
       bankerTotal: number;
       outcome: BaccaratSide;
@@ -396,29 +402,24 @@ function slotsMultiplier(symbols: readonly [number, number, number]): 0 | 2 | 16
 }
 
 function baccaratRoll(betId: bigint, rollIndex: number, seed: bigint) {
-  const playerCards = [
-    baccaratCardValue(betId, rollIndex, 0, seed),
-    baccaratCardValue(betId, rollIndex, 2, seed)
-  ];
-  const bankerCards = [
-    baccaratCardValue(betId, rollIndex, 1, seed),
-    baccaratCardValue(betId, rollIndex, 3, seed)
-  ];
-  let playerTotal = baccaratTotal(playerCards);
-  let bankerTotal = baccaratTotal(bankerCards);
+  const rank = (cardIndex: number) => baccaratCardRank(betId, rollIndex, cardIndex, seed);
+  const playerRanks = [rank(0), rank(2)];
+  const bankerRanks = [rank(1), rank(3)];
+  let playerTotal = baccaratTotal(playerRanks.map(baccaratPoints));
+  let bankerTotal = baccaratTotal(bankerRanks.map(baccaratPoints));
 
   if (playerTotal < 8 && bankerTotal < 8) {
     const playerDraws = playerTotal <= 5;
     let playerThird = 0;
     if (playerDraws) {
-      playerThird = baccaratCardValue(betId, rollIndex, 4, seed);
-      playerCards.push(playerThird);
-      playerTotal = baccaratTotal(playerCards);
+      playerRanks.push(rank(4));
+      playerThird = baccaratPoints(playerRanks[2]!);
+      playerTotal = baccaratTotal(playerRanks.map(baccaratPoints));
     }
 
     if (bankerDraws(bankerTotal, playerDraws, playerThird)) {
-      bankerCards.push(baccaratCardValue(betId, rollIndex, 5, seed));
-      bankerTotal = baccaratTotal(bankerCards);
+      bankerRanks.push(rank(5));
+      bankerTotal = baccaratTotal(bankerRanks.map(baccaratPoints));
     }
   }
 
@@ -426,16 +427,21 @@ function baccaratRoll(betId: bigint, rollIndex: number, seed: bigint) {
     playerTotal > bankerTotal ? "player" : bankerTotal > playerTotal ? "banker" : "tie";
 
   return {
-    playerCards,
-    bankerCards,
+    playerCards: playerRanks.map(baccaratPoints),
+    bankerCards: bankerRanks.map(baccaratPoints),
+    playerRanks,
+    bankerRanks,
     playerTotal,
     bankerTotal,
     outcome
   };
 }
 
-function baccaratCardValue(betId: bigint, rollIndex: number, cardIndex: number, seed: bigint) {
-  const rank = Number(rngRoll2(betId, rollIndex, cardIndex, seed) % 13n);
+function baccaratCardRank(betId: bigint, rollIndex: number, cardIndex: number, seed: bigint) {
+  return Number(rngRoll2(betId, rollIndex, cardIndex, seed) % 13n);
+}
+
+function baccaratPoints(rank: number) {
   return rank <= 8 ? rank + 1 : 0;
 }
 

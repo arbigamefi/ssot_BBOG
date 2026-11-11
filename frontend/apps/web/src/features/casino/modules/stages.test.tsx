@@ -2,9 +2,8 @@ import * as React from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { BaccaratStage } from "./baccarat/stage";
 import { SicBoStage } from "./sic-bo/stage";
-import { applyHouseEdgeToMultiplier, baccaratMultiplier, sicBoMultiplier } from "../room/payouts";
+import { applyHouseEdgeToMultiplier, sicBoMultiplier } from "../room/payouts";
 
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
@@ -13,9 +12,6 @@ vi.mock("@ssot/ui", () => ({
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, number | string>) =>
     ({
-      "casino.room.selection.baccarat.player": "Player",
-      "casino.room.selection.baccarat.banker": "Banker",
-      "casino.room.selection.baccarat.tie": "Tie",
       "casino.room.selection.sicBo.kinds.small": "Small",
       "casino.room.selection.sicBo.kinds.big": "Big",
       "casino.room.selection.sicBo.kinds.anyTriple": "Any triple",
@@ -23,10 +19,6 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.sicBo.kinds.total": "Exact total",
       "casino.room.selection.sicBo.kinds.specificDouble": "Specific double",
       "casino.room.selection.sicBo.kinds.singleFace": "Single face",
-      "casino.room.stage.baccarat.ready": "Bet player, banker, or tie",
-      "casino.room.stage.baccarat.dealing": "Waiting for VRF Oracle...",
-      "casino.room.stage.baccarat.result": `${values?.side} wins`,
-      "casino.room.stage.baccarat.selected": `Selected: ${values?.side}`,
       "casino.room.stage.sicBo.ready": "Choose a Sic Bo table bet",
       "casino.room.stage.sicBo.rolling": "Waiting for VRF Oracle...",
       "casino.room.stage.sicBo.opened": `Dice opened: ${values?.dice}`,
@@ -42,125 +34,6 @@ vi.mock("next-intl", () => ({
 
 describe("game room stages", () => {
   afterEach(() => cleanup());
-
-  it("renders Baccarat stage with opened cards and totals", () => {
-    const onSideChange = vi.fn();
-    render(
-      <BaccaratStage
-        isPending={false}
-        showResult
-        selectedSide="player"
-        houseEdgeBps={200}
-        onSideChange={onSideChange}
-        outcome={{
-          kind: "baccarat",
-          side: "player",
-          payoutGross: 2_241_400n,
-          payoutNet: 2_196_572n,
-          refundAmount: 0n,
-          feeOnPayout: 44_828n,
-          playerOwed: 2_196_572n,
-          netResult: 1_196_572n,
-          rolls: [
-            {
-              playerCards: [5, 4],
-              bankerCards: [8, 0],
-              playerTotal: 9,
-              bankerTotal: 8,
-              outcome: "player",
-              factorBps: 22414,
-              won: true
-            }
-          ]
-        }}
-      />
-    );
-
-    expect(screen.getByText("Player wins")).toBeDefined();
-    expect(screen.getByText("Selected: Player")).toBeDefined();
-    expect(
-      screen.getByText(
-        `${applyHouseEdgeToMultiplier(baccaratMultiplier("player"), 200).toFixed(3)}x`
-      )
-    ).toBeDefined();
-    expect(screen.getByText("9")).toBeDefined();
-    expect(screen.getAllByText("8").length).toBeGreaterThan(0);
-
-    fireEvent.click(screen.getByRole("button", { name: /Banker/i }));
-    expect(onSideChange).toHaveBeenCalledWith("banker");
-  });
-
-  it("runs Baccarat reveal before completing the deal", () => {
-    const onRevealComplete = vi.fn();
-    vi.useFakeTimers();
-    try {
-      const baccaratOutcome = {
-        kind: "baccarat" as const,
-        side: "player" as const,
-        payoutGross: 2_241_400n,
-        payoutNet: 2_196_572n,
-        refundAmount: 0n,
-        feeOnPayout: 44_828n,
-        playerOwed: 2_196_572n,
-        netResult: 1_196_572n,
-        rolls: [
-          {
-            playerCards: [5, 4],
-            bankerCards: [8, 0],
-            playerTotal: 9,
-            bankerTotal: 8,
-            outcome: "player" as const,
-            factorBps: 22414,
-            won: true
-          }
-        ]
-      };
-      const { rerender } = render(
-        <BaccaratStage
-          isPending={false}
-          isRevealing
-          showResult
-          selectedSide="player"
-          onSideChange={vi.fn()}
-          onRevealComplete={onRevealComplete}
-          outcome={baccaratOutcome}
-        />
-      );
-
-      expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
-      expect(screen.queryByText("Player wins")).toBeNull();
-      expect(
-        document.querySelector('[data-baccarat-hand="player"]')?.getAttribute("data-winner")
-      ).toBe("false");
-
-      act(() => {
-        vi.advanceTimersByTime(3_000);
-      });
-      expect(onRevealComplete).toHaveBeenCalledTimes(1);
-      expect(screen.queryByText("Player wins")).toBeNull();
-      expect(
-        document.querySelector('[data-baccarat-hand="player"]')?.getAttribute("data-winner")
-      ).toBe("false");
-
-      rerender(
-        <BaccaratStage
-          isPending={false}
-          isRevealing={false}
-          showResult
-          selectedSide="player"
-          onSideChange={vi.fn()}
-          onRevealComplete={onRevealComplete}
-          outcome={baccaratOutcome}
-        />
-      );
-      expect(
-        document.querySelector('[data-baccarat-hand="player"]')?.getAttribute("data-winner")
-      ).toBe("true");
-      expect(screen.getByText("Player wins")).toBeDefined();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
 
   it("renders Sic Bo stage with opened dice and total", () => {
     const onBetChange = vi.fn();

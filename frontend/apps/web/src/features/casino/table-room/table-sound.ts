@@ -37,6 +37,10 @@ export type TableSound = {
   flick: () => void;
   /** Coin toss: the coin meets the felt and rattles flat, a little brighter on your call. */
   coin: (match: boolean) => void;
+  /** Baccarat: a card slides out of the shoe across the felt. */
+  slide: () => void;
+  /** Baccarat: a card is turned over, a short snap. */
+  snap: () => void;
   close: () => void;
 };
 
@@ -210,6 +214,12 @@ export function createTableSound(): TableSound | null {
       burst(at, 1800, 1.2, 0.09, 0.05);
       for (let i = 1; i < 6; i++) burst(at + 0.05 * i * (1 - i * 0.07), 2600, 3, 0.04 / i, 0.025);
       if (match) tone(at + 0.12, 1320, 0.05, 0.3, "triangle");
+    },
+    slide() {
+      burst(ready(), 2400, 0.8, 0.05, 0.12);
+    },
+    snap() {
+      burst(ready(), 3200, 2.5, 0.07, 0.035);
     },
     close() {
       void ctx.close();

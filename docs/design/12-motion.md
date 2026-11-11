@@ -183,6 +183,25 @@ own):
   chips slide in beside it as on the dice table.
 - **Reduced motion:** the coin is never tossed; it is shown flat on the last side.
 
+The baccarat cards follow them too (`baccarat-room/deal-motion.ts`, a controller with no DOM,
+tested on its own):
+
+- **Waiting for randomness:** placing the bet deals four blank cards face down out of the shoe, P,
+  B, P, B, 0.17s apart, each sliding 0.38s from the shoe's mouth to its spot. They stay down: what
+  they are is only decided when the number arrives.
+- **The number arrives:** the four cards take their faces and turn over in dealing order (0.25s,
+  then 0.56s apart; each turn takes 0.34s), each side's total counting up. A third card comes out
+  of the shoe 0.52s later only when the rule says so and turns 0.42s after; the winner is marked
+  0.52s after the last card. For more hands the cards are swept 0.65s after the mark, and the next
+  hand is dealt 0.2s later, 0.09s a card, and turns faster (0.42s, then 0.26s apart; a third card
+  0.3s and 0.3s).
+- **Deadline:** baccarat's first hand is marked 5.13s after the number at the latest and each
+  later one 3.82s after the last; if the tab goes out of sight, the rest is laid out at once. The
+  room's own fallback reveal waits 5.5s, plus 3.9s for each later hand.
+- **The result:** the winning hand and its spot light; a net win turns your chip red and its chips
+  slide in, stacked half over it.
+- **Reduced motion:** nothing slides or turns; the last hand is shown face up.
+
 ## 6. Do Not Do
 
 - No `transition-all`.

@@ -1105,12 +1105,6 @@
       },
       "stage": {
         "loading": "Carregando mesa",
-        "baccarat": {
-          "ready": "Aposte no jogador, banca ou empate",
-          "dealing": "Aguardando sorteio...",
-          "result": "{side} vence",
-          "selected": "Selecionado: {side}"
-        },
         "sicBo": {
           "ready": "Escolha uma aposta de mesa do Sic Bo",
           "rolling": "Aguardando sorteio...",
@@ -1122,7 +1116,6 @@
       },
       "history": {
         "recent": {
-          "hands": "MÃOS RECENTES",
           "dice": "DADOS RECENTES",
           "flips": "LANÇAMENTOS RECENTES"
         },
@@ -1275,12 +1268,6 @@
         }
       },
       "selection": {
-        "baccarat": {
-          "betOn": "Apostar em",
-          "player": "Jogador",
-          "banker": "Banca",
-          "tie": "Empate"
-        },
         "sicBo": {
           "betType": "Tipo de aposta",
           "face": "Face",
@@ -1358,12 +1345,6 @@
           "settlementTx": "Tx de liquidação",
           "resolvedTime": "Horário resolvido",
           "vrfFee": "Taxa de número aleatório",
-          "baccaratChoice": "Lado escolhido",
-          "baccaratWinner": "Lado vencedor",
-          "baccaratPlayerTotal": "Total do jogador",
-          "baccaratBankerTotal": "Total da banca",
-          "baccaratPlayerCards": "Cartas do jogador",
-          "baccaratBankerCards": "Cartas da banca",
           "sicBoBet": "Aposta no Sic Bo",
           "sicBoDice": "Dados abertos",
           "sicBoTotal": "Total",
@@ -2460,6 +2441,55 @@
       "receipt": {
         "landed": "Deu {face}. Você escolheu {call}.",
         "landedMany": "A última jogada deu {face}. Você acertou {hits} de {n} jogadas."
+      }
+    },
+    "baccarat": {
+      "head": {
+        "crumb": "Todos os jogos",
+        "title": "Bacará",
+        "lede": "Aposte no Jogador, na Banca ou no empate. O Chainlink VRF tira cada carta; vence a mão mais perto de nove."
+      },
+      "table": {
+        "title": "A mesa",
+        "chance": "Chance de ganhar",
+        "pays": "Uma vitória paga",
+        "bets": "Sua aposta",
+        "side": {
+          "player": "Jogador",
+          "banker": "Banca",
+          "tie": "Empate"
+        },
+        "hand": {
+          "player": "Jogador",
+          "banker": "Banca"
+        },
+        "bead": {
+          "player": "J",
+          "banker": "B",
+          "tie": "E"
+        },
+        "spot": "Paga {m}×",
+        "spotLabel": "{side}, paga {m} vezes a aposta, vence {chance}% das mãos",
+        "history": "Últimos resultados",
+        "rule": "Cada carta é um sorteio novo do Chainlink VRF; os naipes são só para mostrar. Ás vale 1, dez e figuras valem 0, e só conta o último dígito do total. Um empate perde as apostas no Jogador e na Banca. Os pagamentos já descontam a vantagem da casa de {rate}.",
+        "status": {
+          "ready": "Coloque sua ficha no Jogador, na Banca ou no Empate e faça a aposta no boletim.",
+          "waiting": "As cartas são dadas viradas para baixo. Elas viram quando o número aleatório chegar.",
+          "turning": "O número aleatório chegou. As cartas viram.",
+          "natural": "{side} tem um natural {total}.",
+          "naturals": "Os dois têm um natural: Jogador {player}, Banca {banker}.",
+          "draws": "{side} tira uma terceira carta.",
+          "hand": "Mão {k} de {n}"
+        },
+        "result": "{winner, select, tie {Empate, {player} a {banker}.} player {Jogador vence, {player} a {banker}.} other {Banca vence, {banker} a {player}.}}"
+      },
+      "slip": {
+        "game": "Bacará, {side, select, player {Jogador} banker {Banca} other {Empate}}"
+      },
+      "receipt": {
+        "came": "{result} Você apostou em {side}.",
+        "cameMany": "Última mão: {result} {hits} de {n} mãos venceram.",
+        "last": "Última mão"
       }
     }
   },

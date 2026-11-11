@@ -12,7 +12,6 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
     ({
       "casino.room.stage.loading": "Loading stage",
-      "casino.room.history.recent.hands": "RECENT HANDS",
       "casino.room.history.recent.dice": "RECENT DICE",
       "casino.room.history.recent.flips": "RECENT FLIPS",
       "casino.room.history.states.settled": "SETTLED",
@@ -60,12 +59,6 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.resolvedTime": "Resolved time",
       "casino.room.result.facts.vrfFee": "RNG fees (VRF)",
       "casino.room.result.facts.pending": "Pending",
-      "casino.room.result.facts.baccaratChoice": "Chosen side",
-      "casino.room.result.facts.baccaratWinner": "Winning side",
-      "casino.room.result.facts.baccaratPlayerTotal": "Player total",
-      "casino.room.result.facts.baccaratBankerTotal": "Banker total",
-      "casino.room.result.facts.baccaratPlayerCards": "Player cards",
-      "casino.room.result.facts.baccaratBankerCards": "Banker cards",
       "casino.room.result.facts.sicBoBet": "Sic Bo bet",
       "casino.room.result.facts.sicBoDice": "Dice opened",
       "casino.room.result.facts.sicBoTotal": "Total",
@@ -73,9 +66,6 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.sicBoMultiplier": "Roll multiplier",
       "casino.room.selection.sicBo.yes": "Yes",
       "casino.room.selection.sicBo.no": "No",
-      "casino.room.selection.baccarat.player": "Player",
-      "casino.room.selection.baccarat.banker": "Banker",
-      "casino.room.selection.baccarat.tie": "Tie",
       "casino.room.selection.sicBo.kinds.small": "Small",
       "casino.room.selection.sicBo.kinds.big": "Big",
       "casino.room.selection.sicBo.kinds.anyTriple": "Any triple",
@@ -83,10 +73,6 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.sicBo.kinds.total": "Exact total",
       "casino.room.selection.sicBo.kinds.specificDouble": "Specific double",
       "casino.room.selection.sicBo.kinds.singleFace": "Single face",
-      "casino.room.stage.baccarat.ready": "Bet player, banker, or tie",
-      "casino.room.stage.baccarat.dealing": "Waiting for draw...",
-      "casino.room.stage.baccarat.result": "Player wins",
-      "casino.room.stage.baccarat.selected": "Selected: Player",
       "casino.room.stage.sicBo.ready": "Choose a Sic Bo table bet",
       "casino.room.stage.sicBo.rolling": "Waiting for draw...",
       "casino.room.stage.sicBo.opened": "Dice opened: 2 / 3 / 4",
@@ -117,7 +103,6 @@ const baseProps = {
   multiplier: 1.98,
   houseEdgeBps: 200,
   winChance: 50,
-  baccaratSide: "player" as const,
   sicBoKind: "small" as const,
   sicBoValue: 0,
   resultProof: null,
@@ -125,7 +110,6 @@ const baseProps = {
   assetSymbol: "USDC",
   assetDecimals: 6,
   onResultClose: vi.fn(),
-  onBaccaratSideChange: vi.fn(),
   onSicBoChange: vi.fn()
 };
 
@@ -155,9 +139,9 @@ describe("GameRoomRightPane", () => {
   });
 
   it("renders the empty live tracker", () => {
-    render(<GameRoomRightPane {...baseProps} gameSlug="baccarat" />);
+    render(<GameRoomRightPane {...baseProps} gameSlug="sic-bo" />);
 
-    expect(screen.getByText("RECENT HANDS")).toBeDefined();
+    expect(screen.getByText("RECENT DICE")).toBeDefined();
     expect(screen.getByText("Waiting for first play...")).toBeDefined();
   });
 
@@ -165,7 +149,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="baccarat"
+        gameSlug="sic-bo"
         showResult
         resultProof={{
           kind: "settled",
@@ -186,16 +170,16 @@ describe("GameRoomRightPane", () => {
           }
         }}
         casinoOutcome={{
-          kind: "baccarat",
-          side: "player",
+          kind: "sic-bo",
+          betKind: "small",
+          betValue: 0,
           rolls: [
             {
-              playerCards: [5, 4],
-              bankerCards: [8, 0],
-              playerTotal: 9,
-              bankerTotal: 8,
-              outcome: "player",
-              factorBps: 20000,
+              dice: [1, 2, 3],
+              total: 6,
+              triple: false,
+              faceCount: 0,
+              factorBps: 20571,
               won: true
             }
           ],
@@ -211,7 +195,7 @@ describe("GameRoomRightPane", () => {
       />
     );
 
-    expect(screen.getByText("RECENT HANDS")).toBeDefined();
+    expect(screen.getByText("RECENT DICE")).toBeDefined();
     expect(screen.getByText("SETTLED")).toBeDefined();
     expect((await screen.findAllByText("Won bet")).length).toBeGreaterThan(0);
     expect(screen.getByText("Bet details")).toBeDefined();
@@ -227,7 +211,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="baccarat"
+        gameSlug="sic-bo"
         showResult
         resultProof={{
           kind: "settled",
@@ -263,7 +247,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="baccarat"
+        gameSlug="sic-bo"
         showResult
         resultProof={{
           kind: "indexing",
@@ -285,7 +269,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="baccarat"
+        gameSlug="sic-bo"
         showResult
         resultProof={{
           kind: "indexing",
@@ -298,16 +282,16 @@ describe("GameRoomRightPane", () => {
           resolvedAt: 1_778_888_888
         }}
         casinoOutcome={{
-          kind: "baccarat",
-          side: "player",
+          kind: "sic-bo",
+          betKind: "small",
+          betValue: 0,
           rolls: [
             {
-              playerCards: [5, 4],
-              bankerCards: [8, 0],
-              playerTotal: 9,
-              bankerTotal: 8,
-              outcome: "player",
-              factorBps: 22414,
+              dice: [1, 2, 3],
+              total: 6,
+              triple: false,
+              faceCount: 0,
+              factorBps: 20571,
               won: true
             }
           ],
@@ -324,63 +308,6 @@ describe("GameRoomRightPane", () => {
     expect(screen.queryByText("Bet details")).toBeNull();
     expect(screen.queryByText("Expected payout")).toBeNull();
     expect(screen.queryByText("Settlement pending")).toBeNull();
-  });
-
-  it("shows baccarat opened cards, totals, and winning side in the result overlay", async () => {
-    render(
-      <GameRoomRightPane
-        {...baseProps}
-        gameSlug="baccarat"
-        showResult
-        resultProof={{
-          kind: "settled",
-          betId: 78n,
-          requestId: 89n,
-          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
-          stake: 10_000_000n,
-          vrfFeeCharged: 100_000_000_000_000n,
-          resolvedAt: 1_778_888_888,
-          settlement: {
-            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            payoutGross: 22_414_000n,
-            payoutNet: 21_965_720n,
-            refundAmount: 0n,
-            feeOnPayout: 448_280n,
-            protocolFeeAccrual: 224_140n
-          }
-        }}
-        casinoOutcome={{
-          kind: "baccarat",
-          side: "player",
-          rolls: [
-            {
-              playerCards: [5, 4],
-              bankerCards: [8, 0],
-              playerTotal: 9,
-              bankerTotal: 8,
-              outcome: "player",
-              factorBps: 22414,
-              won: true
-            }
-          ],
-          payoutGross: 22_414_000n,
-          payoutNet: 21_965_720n,
-          refundAmount: 0n,
-          feeOnPayout: 448_280n,
-          playerOwed: 21_965_720n,
-          netResult: 11_965_720n
-        }}
-      />
-    );
-
-    expect(screen.getByText("RECENT HANDS")).toBeDefined();
-    expect(await screen.findByText("Winning side")).toBeDefined();
-    expect(screen.getAllByText("Player").length).toBeGreaterThan(0);
-    expect(screen.getByText("Player cards")).toBeDefined();
-    expect(screen.getByText("5, 4")).toBeDefined();
-    expect(screen.getByText("Banker cards")).toBeDefined();
-    expect(screen.getByText("8, 0")).toBeDefined();
   });
 
   it("shows sic bo dice, total, and bet detail in the result overlay", async () => {
@@ -435,10 +362,11 @@ describe("GameRoomRightPane", () => {
 
     expect(screen.getByText("RECENT DICE")).toBeDefined();
     expect(await screen.findByText("Sic Bo bet")).toBeDefined();
-    expect(screen.getByText("Exact total 9")).toBeDefined();
+    // The sic bo stage prints it too.
+    expect(screen.getAllByText("Exact total 9").length).toBeGreaterThan(0);
     expect(screen.getByText("Dice opened")).toBeDefined();
     expect(screen.getByText("2 / 3 / 4")).toBeDefined();
-    expect(screen.getByText("Total")).toBeDefined();
+    expect(screen.getAllByText("Total").length).toBeGreaterThan(0);
     expect(screen.getByText("Roll multiplier")).toBeDefined();
     expect(screen.getAllByText("8.46x").length).toBeGreaterThan(0);
     expect(screen.queryByText("8.64x")).toBeNull();
@@ -447,7 +375,7 @@ describe("GameRoomRightPane", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
-        gameSlug="baccarat"
+        gameSlug="sic-bo"
         showResult
         resultProof={{
           kind: "settled",
@@ -477,7 +405,7 @@ describe("casino result payment evidence", () => {
       render(
         <GameRoomRightPane
           {...baseProps}
-          gameSlug="baccarat"
+          gameSlug="sic-bo"
           showResult
           resultProof={{
             kind: "settled",

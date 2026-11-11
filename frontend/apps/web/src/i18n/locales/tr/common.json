@@ -1105,12 +1105,6 @@
       },
       "stage": {
         "loading": "Masa yükleniyor",
-        "baccarat": {
-          "ready": "Oyuncu, banko veya beraberliğe bahis yap",
-          "dealing": "Çekiliş bekleniyor...",
-          "result": "{side} kazanır",
-          "selected": "Seçilen: {side}"
-        },
         "sicBo": {
           "ready": "Bir Sic Bo masa bahsi seç",
           "rolling": "Çekiliş bekleniyor...",
@@ -1122,7 +1116,6 @@
       },
       "history": {
         "recent": {
-          "hands": "SON ELLER",
           "dice": "SON ZARLAR",
           "flips": "SON ATIŞLAR"
         },
@@ -1275,12 +1268,6 @@
         }
       },
       "selection": {
-        "baccarat": {
-          "betOn": "Bahis",
-          "player": "Oyuncu",
-          "banker": "Banko",
-          "tie": "Beraberlik"
-        },
         "sicBo": {
           "betType": "Bahis türü",
           "face": "Yüz",
@@ -1358,12 +1345,6 @@
           "settlementTx": "Ödeme işlemi",
           "resolvedTime": "Çözülme zamanı",
           "vrfFee": "Rastgele sayı ücreti",
-          "baccaratChoice": "Seçilen taraf",
-          "baccaratWinner": "Kazanan taraf",
-          "baccaratPlayerTotal": "Oyuncu toplamı",
-          "baccaratBankerTotal": "Banko toplamı",
-          "baccaratPlayerCards": "Oyuncu kartları",
-          "baccaratBankerCards": "Banko kartları",
           "sicBoBet": "Sic Bo bahsi",
           "sicBoDice": "Açılan zarlar",
           "sicBoTotal": "Toplam",
@@ -2460,6 +2441,55 @@
       "receipt": {
         "landed": "{face} geldi. Seçiminiz: {call}.",
         "landedMany": "Son atış: {face}. {n} atışın {hits} tanesi tuttu."
+      }
+    },
+    "baccarat": {
+      "head": {
+        "crumb": "Tüm oyunlar",
+        "title": "Bakara",
+        "lede": "Oyuncuya, Bankoya ya da beraberliğe oynayın. Her kartı Chainlink VRF çeker; dokuza en yakın el kazanır."
+      },
+      "table": {
+        "title": "Masa",
+        "chance": "Kazanma şansı",
+        "pays": "Kazanç öder",
+        "bets": "Bahsiniz",
+        "side": {
+          "player": "Oyuncu",
+          "banker": "Banko",
+          "tie": "Beraberlik"
+        },
+        "hand": {
+          "player": "Oyuncu",
+          "banker": "Banko"
+        },
+        "bead": {
+          "player": "O",
+          "banker": "B",
+          "tie": "="
+        },
+        "spot": "{m}× öder",
+        "spotLabel": "{side}, bahsin {m} katını öder, ellerin %{chance} kadarını kazanır",
+        "history": "Son sonuçlar",
+        "rule": "Her kart Chainlink VRF'nin ayrı bir çekilişidir; kart renkleri yalnızca görünüş içindir. As 1, onlu ve resimli kartlar 0 sayılır ve toplamın yalnızca son hanesi geçer. Beraberlikte Oyuncu ve Banko bahisleri kaybeder. Ödemelere {rate} kasa avantajı dahildir.",
+        "status": {
+          "ready": "Fişinizi Oyuncu, Banko ya da Beraberlik üzerine koyun, sonra bahis fişinden bahsinizi yapın.",
+          "waiting": "Kartlar kapalı dağıtıldı. Rastgele sayı gelince açılacaklar.",
+          "turning": "Rastgele sayı geldi. Kartlar açılıyor.",
+          "natural": "{side}: doğal {total}.",
+          "naturals": "İkisi de doğal: Oyuncu {player}, Banko {banker}.",
+          "draws": "{side} üçüncü kartı çekiyor.",
+          "hand": "El {k} / {n}"
+        },
+        "result": "{winner, select, tie {Beraberlik, {player}-{banker}.} player {Oyuncu kazandı, {player}-{banker}.} other {Banko kazandı, {banker}-{player}.}}"
+      },
+      "slip": {
+        "game": "Bakara, {side, select, player {Oyuncu} banker {Banko} other {Beraberlik}}"
+      },
+      "receipt": {
+        "came": "{result} Seçiminiz: {side}.",
+        "cameMany": "Son el: {result} {n} elin {hits} tanesi kazandı.",
+        "last": "Son el"
       }
     }
   },
