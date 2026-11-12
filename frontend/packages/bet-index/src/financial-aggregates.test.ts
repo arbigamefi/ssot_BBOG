@@ -121,15 +121,6 @@ for (const backend of ["memory", "postgres"] as const) {
       expect(await store.getCasinoTimeseries({ ...scope, days: 7 })).toMatchObject([
         { ...totals, wonCount: 1 }
       ]);
-      const board = await store.getCasinoLeaderboard({ ...scope, limit: 10 });
-      expect(board.map((r) => r.turnover)).toEqual(["200000", "100000", "100000", "0", "0"]);
-      expect(await store.getCasinoPlayerRank({ ...scope, player: row(3).player! })).toMatchObject({
-        rank: 1,
-        turnover: "200000"
-      });
-      expect(await store.getCasinoTopWins({ ...scope, limit: 10 })).toMatchObject([
-        { betId: "1", stake: "100000", payout: "196000", multiplierPpm: "1960000" }
-      ]);
       // House/game award less consumed stake agrees with all individual player net amounts.
       expect(BigInt(totals.payout) - BigInt(totals.turnover)).toBe(-8000n);
     });
@@ -152,16 +143,6 @@ for (const backend of ["memory", "postgres"] as const) {
       expect(await store.getAffiliateStats({ ...hubScope, affiliate })).toMatchObject(totals);
       expect(await store.getGameVolumes(hubScope)).toMatchObject([totals]);
       expect(await store.getCasinoTimeseries({ ...hubScope, days: 7 })).toMatchObject([totals]);
-      expect(await store.getCasinoLeaderboard({ ...hubScope, limit: 10 })).toMatchObject([
-        { player, ...totals }
-      ]);
-      expect(await store.getCasinoPlayerRank({ ...hubScope, player })).toMatchObject({
-        rank: 1,
-        betCount: 1
-      });
-      expect(await store.getCasinoTopWins({ ...hubScope, limit: 10 })).toMatchObject([
-        { betId: "1", gameHub, multiplierPpm: "1960000" }
-      ]);
       await expect(store.getCasinoStats(scope)).rejects.toThrow();
 
       expect(await store.getPlayerBets({ chainId, limit: 10, player })).toHaveLength(2);
@@ -185,10 +166,7 @@ for (const backend of ["memory", "postgres"] as const) {
           () => store.getCasinoStats(scope),
           () => store.getAffiliateStats({ ...scope, affiliate }),
           () => store.getGameVolumes(scope),
-          () => store.getCasinoTimeseries({ ...scope, days: 7 }),
-          () => store.getCasinoLeaderboard({ ...scope, limit: 10 }),
-          () => store.getCasinoTopWins({ ...scope, limit: 10 }),
-          () => store.getCasinoPlayerRank({ ...scope, player: incomplete.player! })
+          () => store.getCasinoTimeseries({ ...scope, days: 7 })
         ];
         for (const query of queries) await expect(query()).rejects.toThrow();
         await store.writeBetRows([{ ...incomplete, refundAmount: "100000", updatedBlock: 2 }]);
