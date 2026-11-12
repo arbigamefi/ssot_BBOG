@@ -7,7 +7,7 @@ import { splitAmount, fractionDigits } from "../../home/receipts";
 import { PrintedFigure } from "../../home/printed-figure";
 import type { CasinoOutcome } from "../room/outcome";
 import { diceTargetBounds, type DiceDirection } from "../room/payouts";
-import type { PlaceBetButtonPhase } from "../room/place-bet-button";
+import type { PlaceBetButtonPhase } from "../room/place-bet-phase";
 import { at, createBallMotion, numberAt, type BallMotion } from "./ball-motion";
 import { formatRolls } from "../table-room/room-receipt";
 import { PaidChips, reducedMotion, SoundButton, useTableSound } from "../table-room/table-controls";

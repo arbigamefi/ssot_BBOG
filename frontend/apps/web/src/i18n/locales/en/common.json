@@ -167,16 +167,6 @@
   },
   "casino": {
     "room": {
-      "shell": {
-        "liveModule": "Live game",
-        "houseEdge": "House edge",
-        "maxPayout": "Max payout",
-        "maxBet": "Max bet",
-        "selectBetFirst": "Select first",
-        "noCapacity": "No capacity",
-        "previewModule": "Preview",
-        "testnetModule": "Testnet"
-      },
       "empty": {
         "moduleNotFound": "Game not found",
         "gameNotFound": "Game not found."
@@ -192,117 +182,7 @@
         "sicBo": "Sic Bo"
       },
       "audit": {
-        "loading": "Loading audit stream",
-        "headers": {
-          "timestampAuth": "Timestamp / Auth",
-          "submodule": "Game",
-          "wagerParameters": "Wager Parameters",
-          "settlementState": "Settlement State",
-          "audit": "Audit"
-        },
-        "selection": "{game} Selection",
-        "amountAndId": "{amount} {asset} - ID: {id}",
-        "openAudit": "Open audit for bet {betId}",
-        "empty": {
-          "title": "Immutable Audit Stream",
-          "description": "Standby for on-chain transaction emit..."
-        },
-        "tabs": {
-          "live": "Live bets",
-          "mine": "My bets",
-          "top": "Top wins",
-          "info": "Game info",
-          "leaderboard": "Leaderboard",
-          "analytics": "Analytics"
-        },
-        "columns": {
-          "time": "Time",
-          "player": "Player",
-          "stake": "Stake",
-          "multiplier": "Multiplier",
-          "payout": "Payout",
-          "state": "State",
-          "bet": "Bet",
-          "coverage": "Win chance / condition",
-          "winChance": "Win chance",
-          "bets": "Bets",
-          "volume": "Volume"
-        },
-        "emptyStates": {
-          "live": "No bets yet — be the first to play.",
-          "mine": "You haven't played this game yet.",
-          "top": "No winning bets ranked yet on this chain.",
-          "connectWallet": "Connect your wallet to see your history."
-        },
-        "viewBet": "View bet {betId}",
-        "houseEdgeLabel": "House edge",
-        "maxMultiplier": "{multiplier} max",
-        "howToPlayLabel": "How it works",
-        "betTypesLabel": "Bet types",
-        "justNow": "just now",
-        "minutesAgo": "{n}m ago",
-        "hoursAgo": "{n}h ago",
-        "daysAgo": "{n}d ago",
-        "filters": {
-          "all": "All",
-          "pending": "Pending",
-          "won": "Won",
-          "lost": "Lost",
-          "refunded": "Refunded",
-          "voided": "Voided"
-        },
-        "stateLabel": {
-          "won": "Won",
-          "lost": "Lost",
-          "pending": "Pending",
-          "settled": "Settled",
-          "cancelled": "Refunded",
-          "voided": "Voided"
-        },
-        "openOnExplorer": "Open transaction on block explorer",
-        "openOnExplorerWithChain": "Open on {chain} block explorer",
-        "newActivityBadge": "{n} new",
-        "onChain": "On {chain}",
-        "leaderboard": {
-          "title": "Leaderboard",
-          "empty": "No ranked players yet on this chain.",
-          "scope": "Ranked by turnover",
-          "scopeTopWin": "Ranked by payout multiple",
-          "views": {
-            "turnover": "By volume",
-            "topWin": "Top wins"
-          },
-          "you": "You",
-          "yourPosition": "Your position"
-        },
-        "analytics": {
-          "empty": "No analytics yet on this chain.",
-          "volume": "Volume",
-          "bets": "Bets",
-          "players": "Players",
-          "settled": "Settled",
-          "rtp": "RTP",
-          "wagered": "Total wagered",
-          "payout": "Total payout",
-          "transactions": "Transactions",
-          "won": "Won",
-          "gainRatio": "Gain ratio",
-          "trend": "7-day volume",
-          "trendWindow": "Daily turnover by chain placement time",
-          "bestEffort": "Indexed · best-effort",
-          "views": {
-            "game": "This game",
-            "all": "All games"
-          },
-          "windowLabel": "Time range",
-          "windows": {
-            "all": "All",
-            "d1": "24h",
-            "d7": "7d",
-            "d30": "30d"
-          }
-        },
-        "infoFormulaNote": "Win chance is the event probability. Multipliers shown are player-facing payouts after the current house edge."
+        "loading": "Loading audit stream"
       },
       "errors": {
         "quoteFailed": "Unable to estimate VRF fee.",
@@ -320,261 +200,12 @@
         "kenoSelectionInvalid": "Select 1 to 5 Keno numbers between 1 and 15.",
         "mainnetRiskInDisabled": "Mainnet betting is not yet available",
         "invalidCasinoPool": "Selected asset pool is not available. Choose another asset.",
-        "noActiveCasinoPool": "No casino games are live on this chain right now.",
-        "unexpected": "An unexpected error occurred."
+        "noActiveCasinoPool": "No casino games are live on this chain right now."
       },
       "warnings": {
         "vrfTimeout": "Waiting for draw... randomness can take 30-120s on testnets."
       },
-      "roundStatus": {
-        "title": "Round status",
-        "phases": {
-          "loadingQuote": {
-            "label": "Estimating VRF fee",
-            "detail": "Reading the current randomness fee before you place a round.",
-            "status": "Estimating"
-          },
-          "waitingVrf": {
-            "label": "Waiting for draw",
-            "detail": "Your bet is on-chain. Waiting for verifiable randomness to open the result.",
-            "status": "Waiting for draw"
-          },
-          "timeoutSoft": {
-            "label": "Draw is taking longer than usual",
-            "detail": "The round is still safe. Keep this page open while Chainlink fulfills the request.",
-            "status": "Waiting"
-          },
-          "placing": {
-            "label": "Placing bet",
-            "detail": "Approve if needed, then sign PlaceBet. The round starts once the transaction is mined.",
-            "status": "Placing"
-          },
-          "settling": {
-            "label": "Result revealed",
-            "detail": "Numbers are open. Settling your win now.",
-            "status": "Settling"
-          },
-          "manualSettleOffered": {
-            "label": "Settlement slow",
-            "detail": "Settlement is delayed. You can manually settle this result as a fallback.",
-            "status": "Manual settle offered"
-          },
-          "settled": {
-            "label": "Round settled",
-            "detail": "Settlement is confirmed on-chain. Preparing the final result proof.",
-            "status": "Settled"
-          },
-          "refundable": {
-            "label": "Refund path available",
-            "detail": "VRF did not complete before the protocol timeout. You can refund the stake.",
-            "status": "Refundable"
-          },
-          "resultUnbooked": {
-            "status": "Settlement pending"
-          },
-          "failed": {
-            "label": "Round monitor failed",
-            "detail": "Unable to read the latest round state from the RPC provider.",
-            "status": "Failed"
-          },
-          "ready": {
-            "label": "Ready",
-            "detail": "One click will approve if needed, place the bet, and watch settlement.",
-            "status": "Ready"
-          },
-          "voided": {
-            "status": "Stake returned"
-          }
-        },
-        "metrics": {
-          "vrfEstimate": "Randomness fee, up to",
-          "betId": "Bet ID",
-          "vrfRequest": "VRF request"
-        },
-        "actions": {
-          "settleResult": "Settle result",
-          "refundStake": "Refund stake"
-        },
-        "steps": {
-          "place": "Place",
-          "random": "Random",
-          "settle": "Settle",
-          "result": "Result"
-        },
-        "pendingSettlement": {
-          "body": "The draw result arrived, but this bet has not settled yet. If settlement keeps failing, the bet can be voided on its page and your stake returned.",
-          "notice": "Bet #{betId} has its draw result but has not settled yet. You can keep playing; if its settlement keeps failing, it can be voided on its page and the stake returned to you.",
-          "link": "Open bet details"
-        }
-      },
-      "betPanel": {
-        "walletBalance": "Wallet Balance",
-        "asset": "Bet asset",
-        "limits": {
-          "maxBet": "Max bet",
-          "poolPayout": "Max payout"
-        },
-        "syncing": "Syncing...",
-        "notConnected": "Not connected",
-        "walletGate": {
-          "title": "Connect wallet to place a round",
-          "detail": "Pick the room settings now. The bet is signed only after your wallet is connected."
-        },
-        "amount": {
-          "label": "Bet Amount",
-          "aria": "Bet amount",
-          "min": "Min",
-          "max": "Max"
-        },
-        "rolls": {
-          "label": "Rolls",
-          "total": "Total: {amount} {symbol}",
-          "aria": "Roll count",
-          "limit": "Up to {count} rounds per position for this game",
-          "loadingLimit": "Reading this game’s round limit"
-        },
-        "advanced": {
-          "label": "Advanced",
-          "stopGain": "Stop Gain ({symbol})",
-          "stopLoss": "Stop Loss ({symbol})",
-          "offPlaceholder": "0 = off",
-          "help": "Optional auto-stop rules for multi-roll rounds. Set 0 to disable a rule.",
-          "stopGainHelp": "Stops after total profit reaches this amount.",
-          "stopLossHelp": "Stops after total loss reaches this amount.",
-          "gainStop": "Gain stop at +{amount} {symbol}",
-          "lossStop": "Loss stop at {amount} {symbol}"
-        },
-        "summary": {
-          "multiplier": "Multiplier",
-          "winChance": "Win Chance",
-          "expectedPayout": "Potential Payout"
-        },
-        "placeBet": {
-          "connectWallet": "CONNECT WALLET",
-          "failedRetry": "TRANSACTION FAILED - RETRY",
-          "roundInProgress": "ROUND IN PROGRESS",
-          "betMined": "BET MINED...",
-          "signing": "SIGNING / PLACING...",
-          "reduceAmount": "REDUCE AMOUNT",
-          "increaseAmount": "Increase bet amount",
-          "selectToBet": "SELECT A BET",
-          "approveThenPlace": "APPROVE, THEN PLACE BET",
-          "preparing": "PREPARING ROUND...",
-          "placeBet": "PLACE BET",
-          "revealing": "Revealing..."
-        },
-        "maxSummary": "{perRound} per round · {total} total"
-      },
-      "selection": {
-        "sicBo": {
-          "betType": "Bet type",
-          "face": "Face",
-          "total": "Total",
-          "kinds": {
-            "small": "Small",
-            "big": "Big",
-            "anyTriple": "Any triple",
-            "specificTriple": "Specific triple",
-            "total": "Exact total",
-            "specificDouble": "Specific double",
-            "singleFace": "Single face"
-          },
-          "yes": "Yes",
-          "no": "No"
-        }
-      },
-      "stage": {
-        "loading": "Loading stage",
-        "sicBo": {
-          "ready": "Choose a Sic Bo table bet",
-          "rolling": "Waiting for draw...",
-          "opened": "Dice opened: {dice}",
-          "total": "Total",
-          "triple": "Triple",
-          "result": "Result"
-        }
-      },
-      "history": {
-        "recent": {
-          "dice": "RECENT DICE",
-          "flips": "RECENT FLIPS"
-        },
-        "states": {
-          "settled": "SETTLED",
-          "refunded": "REFUNDED",
-          "vrfReady": "VRF READY",
-          "placed": "PLACED",
-          "voided": "VOIDED"
-        },
-        "empty": "Waiting for first play..."
-      },
       "result": {
-        "title": "Bet details",
-        "outcomes": {
-          "refunded": {
-            "label": "Refund settled",
-            "detail": "The refund path settled after the VRF timeout window. See the transfer status below."
-          },
-          "win": {
-            "label": "Won bet",
-            "detail": "The round settled on-chain. See the transfer status below."
-          },
-          "winPending": {
-            "label": "Won bet",
-            "detail": "The VRF result is revealed. Payout settlement is still pending."
-          },
-          "returned": {
-            "label": "Settlement equals stake",
-            "detail": "The settled payout equals the stake."
-          },
-          "returnedPending": {
-            "label": "Expected settlement equals stake",
-            "detail": "The VRF result is revealed. Settlement confirmation is still pending."
-          },
-          "loss": {
-            "label": "Lost bet",
-            "detail": "The round settled on-chain with no net payout."
-          },
-          "lossPending": {
-            "label": "Lost bet",
-            "detail": "The VRF result is revealed. Final settlement is still pending."
-          },
-          "revealed": {
-            "label": "Result revealed",
-            "detail": "Opened numbers are available from VRF. Settlement is still pending."
-          },
-          "voided": {
-            "label": "Stake returned",
-            "detail": "The result was received but could not be settled, so your stake was returned to you as a claimable balance. The VRF fee is not refunded."
-          }
-        },
-        "sections": {
-          "gameResult": "Game result",
-          "fairnessData": "Fairness data"
-        },
-        "facts": {
-          "status": "Status",
-          "player": "Player",
-          "multiplier": "Multiplier",
-          "betAmount": "Bet amount",
-          "payout": "Settlement amount",
-          "expectedPayout": "Potential payout",
-          "pending": "Pending",
-          "betId": "Bet ID",
-          "refund": "Refund",
-          "requestId": "Request ID",
-          "netResult": "Net result",
-          "randomHash": "Random hash",
-          "settlementTx": "Settlement tx",
-          "resolvedTime": "Resolved time",
-          "vrfFee": "Random-number fee",
-          "sicBoBet": "Sic Bo bet",
-          "sicBoDice": "Dice opened",
-          "sicBoTotal": "Total",
-          "sicBoTriple": "Triple",
-          "sicBoMultiplier": "Roll multiplier",
-          "returnedStake": "Returned stake"
-        },
         "actions": {
           "close": "Close",
           "playAgain": "Play again",
@@ -655,199 +286,6 @@
           "houseEdgeValue": "{amount} · {rate} of the win",
           "refund": "Unused stake returned",
           "paid": "Paid to wallet"
-        }
-      },
-      "gameInfo": {
-        "roulette": {
-          "tagline": "European roulette — 37 pockets, every spin signed on-chain by Chainlink VRF.",
-          "bets": [
-            {
-              "key": "straight",
-              "label": "Straight up",
-              "coverage": "1 number",
-              "multiplier": "36×"
-            },
-            {
-              "key": "redBlack",
-              "label": "Red / Black",
-              "coverage": "18 numbers",
-              "multiplier": "2×"
-            },
-            {
-              "key": "evenOdd",
-              "label": "Even / Odd",
-              "coverage": "18 numbers",
-              "multiplier": "2×"
-            },
-            {
-              "key": "lowHigh",
-              "label": "1–18 / 19–36",
-              "coverage": "18 numbers",
-              "multiplier": "2×"
-            },
-            {
-              "key": "dozen",
-              "label": "Dozen (1st/2nd/3rd 12)",
-              "coverage": "12 numbers",
-              "multiplier": "3×"
-            },
-            {
-              "key": "column",
-              "label": "Column (2:1)",
-              "coverage": "12 numbers",
-              "multiplier": "3×"
-            }
-          ]
-        },
-        "coin-toss": {
-          "tagline": "True 50/50. Pick a side; one Chainlink VRF draw decides it.",
-          "bets": [
-            {
-              "key": "heads",
-              "label": "Heads",
-              "coverage": "1 of 2 outcomes",
-              "multiplier": "1.96×"
-            },
-            {
-              "key": "tails",
-              "label": "Tails",
-              "coverage": "1 of 2 outcomes",
-              "multiplier": "1.96×"
-            }
-          ]
-        },
-        "keno": {
-          "tagline": "Pick 1–5 spots from a 15-number board. The contract draws 5 winners; match more, win more.",
-          "bets": [
-            {
-              "key": "p1",
-              "label": "Pick 1 spot",
-              "coverage": "Match 1 of 5",
-              "multiplier": "2.97×"
-            },
-            {
-              "key": "p2",
-              "label": "Pick 2 spots",
-              "coverage": "Match both",
-              "multiplier": "8.91× max"
-            },
-            {
-              "key": "p3",
-              "label": "Pick 3 spots",
-              "coverage": "Match all 3",
-              "multiplier": "26.7× max"
-            },
-            {
-              "key": "p4",
-              "label": "Pick 4 spots",
-              "coverage": "Match all 4",
-              "multiplier": "91× max"
-            },
-            {
-              "key": "p5",
-              "label": "Pick 5 spots",
-              "coverage": "Match all 5",
-              "multiplier": "500.5× max"
-            }
-          ]
-        },
-        "plinko": {
-          "tagline": "Drop a ball through a 8-row peg field. Outer buckets pay more; risk profile shapes the curve.",
-          "bets": [
-            {
-              "key": "low",
-              "label": "Low risk",
-              "coverage": "Flatter curve",
-              "multiplier": "1.53× max"
-            },
-            {
-              "key": "medium",
-              "label": "Medium risk",
-              "coverage": "Balanced curve",
-              "multiplier": "8.27× max"
-            },
-            {
-              "key": "high",
-              "label": "High risk",
-              "coverage": "Tail-heavy",
-              "multiplier": "24.6× max"
-            }
-          ]
-        },
-        "slots": {
-          "tagline": "3-reel classic. Triple-match the top symbol for 64×.",
-          "bets": [
-            {
-              "key": "classic",
-              "label": "Classic profile",
-              "coverage": "5×5×5 reel weights",
-              "multiplier": "64× max"
-            }
-          ]
-        },
-        "baccarat": {
-          "tagline": "Bet on Player, Banker, or Tie. Standard commission-free payout structure.",
-          "bets": [
-            {
-              "key": "player",
-              "label": "Player",
-              "coverage": "≈ 44.6%",
-              "multiplier": "2.24×"
-            },
-            {
-              "key": "banker",
-              "label": "Banker",
-              "coverage": "≈ 45.8%",
-              "multiplier": "2.18×"
-            },
-            {
-              "key": "tie",
-              "label": "Tie",
-              "coverage": "≈ 9.5%",
-              "multiplier": "10.48×"
-            }
-          ]
-        },
-        "sic-bo": {
-          "tagline": "Three dice. Pick small/big, a triple, a double, a single face, or a total.",
-          "bets": [
-            {
-              "key": "smallBig",
-              "label": "Small (4–10) / Big (11–17)",
-              "coverage": "48.6%",
-              "multiplier": "2.06×"
-            },
-            {
-              "key": "anyTriple",
-              "label": "Any triple",
-              "coverage": "2.78%",
-              "multiplier": "36×"
-            },
-            {
-              "key": "specificTriple",
-              "label": "Specific triple",
-              "coverage": "0.46%",
-              "multiplier": "216×"
-            },
-            {
-              "key": "specificDouble",
-              "label": "Specific double",
-              "coverage": "7.41%",
-              "multiplier": "13.5×"
-            },
-            {
-              "key": "singleFace",
-              "label": "Single face (1–6)",
-              "coverage": "≈ 42%",
-              "multiplier": "up to 6×"
-            },
-            {
-              "key": "total",
-              "label": "Sum total (4–17)",
-              "coverage": "varies",
-              "multiplier": "varies"
-            }
-          ]
         }
       },
       "feedback": {
@@ -1739,6 +1177,52 @@
         "came": "{result} You backed {side}.",
         "cameMany": "Last hand: {result} {hits} of {n} hands won.",
         "last": "Last hand"
+      }
+    },
+    "sicBo": {
+      "head": {
+        "crumb": "All games",
+        "title": "Sic bo",
+        "lede": "Three dice under a glass dome. Pick one area of the layout; Chainlink VRF throws the dice, and every area they make true lights up."
+      },
+      "table": {
+        "title": "The table",
+        "yourBet": "Your bet",
+        "chance": "Win chance",
+        "pays": "A win pays",
+        "eachDie": "{m}× a die",
+        "layout": "The layout: pick one area",
+        "area": "{kind, select, small {Small} big {Big} anyTriple {Any triple} specificTriple {Triple {value}s} specificDouble {Double {value}s} total {Total {value}} singleFace {Single {value}} other {}}",
+        "range": {
+          "small": "4 to 10",
+          "big": "11 to 17",
+          "anyTriple": "Any three alike"
+        },
+        "areaLabel": "{area}, pays {m} times the stake, wins {chance}% of rolls",
+        "singleLabel": "{area}, pays {m} times the stake for each die that shows it, wins {chance}% of rolls",
+        "dice": "{a}, {b}, {c}",
+        "total": "Total {total}",
+        "roll": "Roll {k} of {n}",
+        "history": "Last results",
+        "noHistory": "No rolls yet",
+        "tile": "Rolled {dice}",
+        "tilePaid": "Rolled {dice}, paid",
+        "status": {
+          "ready": "Put your chip on one area of the layout, then place the bet on the slip.",
+          "waiting": "The dome is shaking. The dice settle when the random number arrives.",
+          "falling": "The random number is in. The dice settle and the dome lifts."
+        },
+        "rule": "Three fair dice from Chainlink VRF. Small and Big lose on any triple. A single face pays for every die that shows it: {one}× for one, {two}× for two, {three}× for three. Pays include a {rate} house edge."
+      },
+      "slip": {
+        "game": "Sic bo, {area}",
+        "dice": "{count, plural, =1 {One die} =2 {Two dice} other {Three dice}}"
+      },
+      "receipt": {
+        "rolled": "Rolled {dice}, total {total}. You bet {bet}.",
+        "rolledMany": "Last roll {dice}, total {total}. {hits} of {n} rolls paid.",
+        "came": "Total {total}. You bet {bet}.",
+        "cameMany": "Last roll, total {total}. {hits} of {n} rolls paid."
       }
     }
   },
@@ -3399,40 +2883,6 @@
         "a": "Open Responsible Gambling from the footer to set a session reminder, record daily deposit and loss limits, or self-exclude for a fixed period. These settings are saved in this browser only. Daily limits are not yet checked when you bet or deposit, and self-exclusion does not apply to other browsers, devices or apps. You must be of legal age in your jurisdiction to play."
       }
     ]
-  },
-  "onboarding": {
-    "aria": "Getting started tour",
-    "stepLabel": "Step {current} of {total}",
-    "skip": "Skip",
-    "back": "Back",
-    "next": "Next",
-    "done": "Got it",
-    "steps": {
-      "welcome": {
-        "title": "Welcome to ArbiGameFi",
-        "body": "A quick 30-second tour of how a round works. You can skip anytime."
-      },
-      "wallet": {
-        "title": "Connect your wallet",
-        "body": "Start here. Connect a wallet and pick your network — no signup, no custody."
-      },
-      "stage": {
-        "title": "Pick your bet",
-        "body": "This is the game. Choose your numbers, side, or risk right on the board."
-      },
-      "amount": {
-        "title": "Set your amount",
-        "body": "Enter how much to wager. Your win chance and potential payout update live."
-      },
-      "place": {
-        "title": "Place the bet",
-        "body": "Confirm in your wallet. The round settles automatically once Chainlink VRF returns."
-      },
-      "fairness": {
-        "title": "Verify every result",
-        "body": "After each round you can copy a proof-of-fairness receipt and check it on-chain. That's the whole point."
-      }
-    }
   },
   "statusPage": {
     "metadata": {

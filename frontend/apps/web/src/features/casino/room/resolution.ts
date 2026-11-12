@@ -14,11 +14,6 @@ import {
   type IndexedBetSummary
 } from "./reconciliation";
 
-export type GameHistoryEntry = {
-  val: number;
-  win: boolean;
-};
-
 type CasinoRoundResultBase = {
   betId: bigint;
   requestId: bigint;
@@ -147,14 +142,6 @@ function buildReturnedStakeRoundResult({
     resolvedAt: bet.resolvedAt,
     refund
   };
-}
-
-export function appendGameHistoryEntry(
-  history: readonly GameHistoryEntry[],
-  entry: GameHistoryEntry,
-  limit = 5
-) {
-  return [entry, ...history].slice(0, limit);
 }
 
 export function isTerminalDomainBet(

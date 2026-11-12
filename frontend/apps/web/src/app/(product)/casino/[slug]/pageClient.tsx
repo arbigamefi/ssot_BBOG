@@ -8,11 +8,10 @@ import { ProductStateCard } from "../../../../components/ProductStateCard";
 import { PageTransition } from "../../../../components/PageTransition";
 
 import { GameClosedState } from "../../../../features/casino/room/game-closed";
-import { useGameRoom } from "../../../../features/casino/room/use-game-room";
+import { useGameRoom, type GameRoom } from "../../../../features/casino/room/use-game-room";
 import { getLocalizedGameName } from "./pageClient-helpers";
 
-// Each room loads with its own game only, so one game's table never weighs on another's page. The
-// games that have not moved to Carbon copy share the old room shell.
+// Each room loads with its own game only, so one game's table never weighs on another's page.
 const DiceRoom = dynamic(() =>
   import("../../../../features/casino/dice-room/dice-room").then((mod) => mod.DiceRoom)
 );
@@ -34,9 +33,21 @@ const CoinRoom = dynamic(() =>
 const BaccaratRoom = dynamic(() =>
   import("../../../../features/casino/baccarat-room/baccarat-room").then((mod) => mod.BaccaratRoom)
 );
-const SharedGameRoom = dynamic(() =>
-  import("./shared-game-room").then((mod) => mod.SharedGameRoom)
+const SicBoRoom = dynamic(() =>
+  import("../../../../features/casino/sicbo-room/sicbo-room").then((mod) => mod.SicBoRoom)
 );
+
+/** Every game's room, all in Carbon copy. */
+const ROOMS: Record<string, React.ComponentType<{ room: GameRoom }>> = {
+  dice: DiceRoom,
+  roulette: RouletteRoom,
+  slots: SlotsRoom,
+  keno: KenoRoom,
+  plinko: PlinkoRoom,
+  "coin-toss": CoinRoom,
+  baccarat: BaccaratRoom,
+  "sic-bo": SicBoRoom
+};
 
 export { getCasinoRoomPendingStates } from "../../../../features/casino/room/use-game-room";
 
@@ -60,30 +71,17 @@ export function GamePageClient({ slug }: { slug: string }) {
       </PageTransition>
     );
 
-  // Dice, roulette, slots, keno, plinko, coin toss and baccarat are rebuilt in Carbon copy; sic bo
-  // keeps the shared shell until it moves.
-  const CarbonRoom =
-    game.slug === "dice"
-      ? DiceRoom
-      : game.slug === "roulette"
-        ? RouletteRoom
-        : game.slug === "slots"
-          ? SlotsRoom
-          : game.slug === "keno"
-            ? KenoRoom
-            : game.slug === "plinko"
-              ? PlinkoRoom
-              : game.slug === "coin-toss"
-                ? CoinRoom
-                : game.slug === "baccarat"
-                  ? BaccaratRoom
-                  : null;
-  if (CarbonRoom)
+  const Room = ROOMS[game.slug];
+  if (!Room)
     return (
-      <PageTransition pageKey={`game-${slug}`}>
-        <CarbonRoom room={room} />
-      </PageTransition>
+      <ProductStateCard
+        title={t("casino.room.empty.moduleNotFound")}
+        description={t("casino.room.empty.gameNotFound")}
+      />
     );
-
-  return <SharedGameRoom slug={slug} room={room} />;
+  return (
+    <PageTransition pageKey={`game-${slug}`}>
+      <Room room={room} />
+    </PageTransition>
+  );
 }

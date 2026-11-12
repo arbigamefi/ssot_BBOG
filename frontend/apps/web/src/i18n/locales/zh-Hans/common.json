@@ -167,16 +167,6 @@
   },
   "casino": {
     "room": {
-      "shell": {
-        "liveModule": "在线游戏",
-        "houseEdge": "庄家优势",
-        "maxPayout": "最高赔付",
-        "maxBet": "最大下注",
-        "selectBetFirst": "选择后计算",
-        "noCapacity": "暂无额度",
-        "previewModule": "预览",
-        "testnetModule": "测试网"
-      },
       "empty": {
         "moduleNotFound": "没找到这个游戏",
         "gameNotFound": "未找到该游戏。"
@@ -192,117 +182,7 @@
         "sicBo": "骰宝"
       },
       "audit": {
-        "loading": "正在加载审计流",
-        "headers": {
-          "timestampAuth": "时间 / 身份",
-          "submodule": "游戏",
-          "wagerParameters": "投注参数",
-          "settlementState": "结算状态",
-          "audit": "审计"
-        },
-        "selection": "{game} 选择",
-        "amountAndId": "{amount} {asset} - ID: {id}",
-        "openAudit": "打开投注 {betId} 的审计记录",
-        "empty": {
-          "title": "不可篡改审计流",
-          "description": "等待链上交易事件写入..."
-        },
-        "tabs": {
-          "live": "实时下注",
-          "mine": "我的记录",
-          "top": "高倍中奖",
-          "info": "玩法说明",
-          "leaderboard": "排行榜",
-          "analytics": "数据分析"
-        },
-        "columns": {
-          "time": "时间",
-          "player": "玩家",
-          "stake": "本金",
-          "multiplier": "倍率",
-          "payout": "派彩",
-          "state": "状态",
-          "bet": "下注",
-          "coverage": "胜率 / 条件",
-          "winChance": "胜率",
-          "bets": "下注数",
-          "volume": "投注额"
-        },
-        "emptyStates": {
-          "live": "暂无下注 —— 来当第一个玩家。",
-          "mine": "你还没玩过这个游戏。",
-          "top": "当前链上还没有进入排名的中奖记录。",
-          "connectWallet": "连接钱包后即可查看你的下注记录。"
-        },
-        "viewBet": "查看下注 {betId}",
-        "houseEdgeLabel": "庄家优势",
-        "maxMultiplier": "最高 {multiplier}",
-        "howToPlayLabel": "玩法",
-        "betTypesLabel": "下注类型",
-        "justNow": "刚刚",
-        "minutesAgo": "{n} 分钟前",
-        "hoursAgo": "{n} 小时前",
-        "daysAgo": "{n} 天前",
-        "filters": {
-          "all": "全部",
-          "pending": "未结",
-          "won": "已赢",
-          "lost": "已输",
-          "refunded": "已退款",
-          "voided": "已作废"
-        },
-        "stateLabel": {
-          "won": "已赢",
-          "lost": "已输",
-          "pending": "未结",
-          "settled": "已结算",
-          "cancelled": "已退款",
-          "voided": "已作废"
-        },
-        "openOnExplorer": "在区块浏览器中打开交易",
-        "openOnExplorerWithChain": "在 {chain} 区块浏览器中打开",
-        "newActivityBadge": "{n} 条新",
-        "onChain": "在 {chain}",
-        "leaderboard": {
-          "title": "排行榜",
-          "empty": "当前链上还没有排名玩家。",
-          "scope": "按投注额排名",
-          "scopeTopWin": "按派彩倍数排名",
-          "views": {
-            "turnover": "按投注额",
-            "topWin": "高倍中奖"
-          },
-          "you": "你",
-          "yourPosition": "你的排名"
-        },
-        "analytics": {
-          "empty": "当前链上还没有分析数据。",
-          "volume": "投注额",
-          "bets": "下注数",
-          "players": "玩家数",
-          "settled": "已结算",
-          "rtp": "返还率 (RTP)",
-          "wagered": "总投注额",
-          "payout": "总派彩",
-          "transactions": "交易数",
-          "won": "中奖数",
-          "gainRatio": "中奖率",
-          "trend": "7 日投注额",
-          "trendWindow": "按链上下注时间统计的每日流水",
-          "bestEffort": "索引数据 · 仅供参考",
-          "views": {
-            "game": "本游戏",
-            "all": "全部游戏"
-          },
-          "windowLabel": "时间范围",
-          "windows": {
-            "all": "全部",
-            "d1": "24小时",
-            "d7": "7天",
-            "d30": "30天"
-          }
-        },
-        "infoFormulaNote": "胜率是事件发生概率；赔率为扣除当前庄家优势后的玩家赔付倍率。"
+        "loading": "正在加载审计流"
       },
       "errors": {
         "quoteFailed": "无法估算 VRF 费用。",
@@ -320,261 +200,12 @@
         "kenoSelectionInvalid": "Keno 只能选择 1 到 5 个号码，号码范围为 1 到 15。",
         "mainnetRiskInDisabled": "主网投注暂未开放",
         "invalidCasinoPool": "所选资产资金池不可用，请切换资产。",
-        "noActiveCasinoPool": "当前链上没有可玩的游戏。",
-        "unexpected": "发生了非预期错误。"
+        "noActiveCasinoPool": "当前链上没有可玩的游戏。"
       },
       "warnings": {
         "vrfTimeout": "正在等待开奖。测试网随机数可能需要 30-120 秒完成。"
       },
-      "roundStatus": {
-        "title": "回合状态",
-        "phases": {
-          "loadingQuote": {
-            "label": "估算 VRF 费用",
-            "detail": "下注前正在读取当前随机数费用。",
-            "status": "估算中"
-          },
-          "waitingVrf": {
-            "label": "等待开奖",
-            "detail": "下注已上链，正在等待可验证随机数开出结果。",
-            "status": "等待开奖"
-          },
-          "timeoutSoft": {
-            "label": "开奖等待时间较长",
-            "detail": "本回合仍然安全。请保持页面打开，等待 Chainlink 完成请求。",
-            "status": "等待中"
-          },
-          "placing": {
-            "label": "正在下注",
-            "detail": "如有需要先授权，然后签名 PlaceBet。交易上链后回合开始。",
-            "status": "下注中"
-          },
-          "settling": {
-            "label": "结果已揭晓",
-            "detail": "开奖号已出,正在结算你的中奖。",
-            "status": "结算中"
-          },
-          "manualSettleOffered": {
-            "label": "结算慢",
-            "detail": "结算延迟。你可以作为兜底手动结算本回合。",
-            "status": "可手动结算"
-          },
-          "settled": {
-            "label": "回合已结算",
-            "detail": "链上结算已确认，正在准备最终结果证明。",
-            "status": "已结算"
-          },
-          "refundable": {
-            "label": "可退款",
-            "detail": "VRF 未在协议超时时间前完成。你可以退回本金。",
-            "status": "可退款"
-          },
-          "resultUnbooked": {
-            "status": "待结算"
-          },
-          "failed": {
-            "label": "回合监控失败",
-            "detail": "无法从 RPC provider 读取最新回合状态。",
-            "status": "失败"
-          },
-          "ready": {
-            "label": "准备就绪",
-            "detail": "点击一次即可在需要时完成授权、下注，并自动跟踪结算。",
-            "status": "就绪"
-          },
-          "voided": {
-            "status": "本金已退回"
-          }
-        },
-        "metrics": {
-          "vrfEstimate": "随机数费用（最多）",
-          "betId": "投注 ID",
-          "vrfRequest": "VRF 请求"
-        },
-        "actions": {
-          "settleResult": "结算结果",
-          "refundStake": "退回本金"
-        },
-        "steps": {
-          "place": "下注",
-          "random": "随机数",
-          "settle": "结算",
-          "result": "结果"
-        },
-        "pendingSettlement": {
-          "body": "开奖结果已到达，但这笔投注尚未结算。如果结算一直失败，可以在投注详情页将其作废并退回本金。",
-          "notice": "第 #{betId} 号投注已有开奖结果，但尚未结算。你可以继续下注；如果它的结算一直失败，可以在它的详情页将其作废并退回本金。",
-          "link": "查看投注详情"
-        }
-      },
-      "betPanel": {
-        "walletBalance": "钱包余额",
-        "asset": "下注资产",
-        "limits": {
-          "maxBet": "最大下注",
-          "poolPayout": "最高赔付"
-        },
-        "syncing": "同步中...",
-        "notConnected": "未连接",
-        "walletGate": {
-          "title": "连接钱包后即可下注",
-          "detail": "你可以先调整房间参数。连接钱包后，只在真正下注时签名。"
-        },
-        "amount": {
-          "label": "下注金额",
-          "aria": "下注金额",
-          "min": "最小",
-          "max": "最大"
-        },
-        "rolls": {
-          "label": "回合数",
-          "total": "合计: {amount} {symbol}",
-          "aria": "回合数量",
-          "limit": "本游戏每仓最多 {count} 轮",
-          "loadingLimit": "正在读取本游戏轮数上限"
-        },
-        "advanced": {
-          "label": "高级设置",
-          "stopGain": "止盈 ({symbol})",
-          "stopLoss": "止损 ({symbol})",
-          "offPlaceholder": "0 = 关闭",
-          "help": "多回合下注的可选自动停止规则。填 0 表示不启用。",
-          "stopGainHelp": "总盈利达到该金额后停止。",
-          "stopLossHelp": "总亏损达到该金额后停止。",
-          "gainStop": "盈利达到 +{amount} {symbol} 时停止",
-          "lossStop": "亏损达到 {amount} {symbol} 时停止"
-        },
-        "summary": {
-          "multiplier": "倍率",
-          "winChance": "胜率",
-          "expectedPayout": "潜在赔付"
-        },
-        "placeBet": {
-          "connectWallet": "连接钱包",
-          "failedRetry": "交易失败 - 重试",
-          "roundInProgress": "回合进行中",
-          "betMined": "投注已上链...",
-          "signing": "签名 / 下注中...",
-          "reduceAmount": "降低金额",
-          "increaseAmount": "请增加下注金额",
-          "selectToBet": "请选择下注项",
-          "approveThenPlace": "先授权，再下注",
-          "preparing": "准备回合...",
-          "placeBet": "下注",
-          "revealing": "开奖中..."
-        },
-        "maxSummary": "每轮 {perRound} · 整仓 {total}"
-      },
-      "selection": {
-        "sicBo": {
-          "betType": "投注类型",
-          "face": "点数",
-          "total": "总点数",
-          "kinds": {
-            "small": "小",
-            "big": "大",
-            "anyTriple": "任意围骰",
-            "specificTriple": "指定围骰",
-            "total": "指定总点",
-            "specificDouble": "指定对子",
-            "singleFace": "单骰点数"
-          },
-          "yes": "是",
-          "no": "否"
-        }
-      },
-      "stage": {
-        "loading": "正在加载舞台",
-        "sicBo": {
-          "ready": "选择一个骰宝投注项",
-          "rolling": "等待开奖...",
-          "opened": "开出骰子: {dice}",
-          "total": "总点",
-          "triple": "围骰",
-          "result": "结果"
-        }
-      },
-      "history": {
-        "recent": {
-          "dice": "最近骰子",
-          "flips": "最近抛掷"
-        },
-        "states": {
-          "settled": "已结算",
-          "refunded": "已退款",
-          "vrfReady": "VRF 就绪",
-          "placed": "已下注",
-          "voided": "已作废"
-        },
-        "empty": "等待第一局..."
-      },
       "result": {
-        "title": "投注详情",
-        "outcomes": {
-          "refunded": {
-            "label": "退款已结算",
-            "detail": "VRF 超时窗口后，退款路径已完成结算。转账状态见下方。"
-          },
-          "win": {
-            "label": "本局中奖",
-            "detail": "本局已在链上完成结算。转账状态见下方。"
-          },
-          "winPending": {
-            "label": "本局中奖",
-            "detail": "VRF 结果已揭晓，赔付结算仍在确认中。"
-          },
-          "returned": {
-            "label": "结算金额等于本金",
-            "detail": "本次结算赔付等于本金。"
-          },
-          "returnedPending": {
-            "label": "预期结算金额等于本金",
-            "detail": "VRF 结果已揭晓，结算确认仍在等待中。"
-          },
-          "loss": {
-            "label": "本局未中奖",
-            "detail": "本局已在链上完成结算，没有净赔付。"
-          },
-          "lossPending": {
-            "label": "本局未中奖",
-            "detail": "VRF 结果已揭晓，最终结算仍在确认中。"
-          },
-          "revealed": {
-            "label": "结果已揭晓",
-            "detail": "开奖号码已由 VRF 给出，资金结算仍在等待中。"
-          },
-          "voided": {
-            "label": "本金已退回",
-            "detail": "已收到开奖结果，但无法完成结算，因此你的本金已作为可领取余额退回给你。VRF 费用不退还。"
-          }
-        },
-        "sections": {
-          "gameResult": "游戏结果",
-          "fairnessData": "公平性数据"
-        },
-        "facts": {
-          "status": "状态",
-          "player": "玩家",
-          "multiplier": "倍率",
-          "betAmount": "投注金额",
-          "payout": "结算金额",
-          "expectedPayout": "潜在赔付",
-          "pending": "等待中",
-          "betId": "投注 ID",
-          "refund": "退款",
-          "requestId": "请求 ID",
-          "netResult": "净结果",
-          "randomHash": "随机哈希",
-          "settlementTx": "结算交易",
-          "resolvedTime": "结算时间",
-          "vrfFee": "随机数费用",
-          "sicBoBet": "骰宝投注",
-          "sicBoDice": "开出骰子",
-          "sicBoTotal": "总点数",
-          "sicBoTriple": "围骰",
-          "sicBoMultiplier": "本局倍率",
-          "returnedStake": "退回本金"
-        },
         "actions": {
           "close": "关闭",
           "playAgain": "再玩一次",
@@ -655,199 +286,6 @@
           "houseEdgeValue": "{amount} · 赢得金额的 {rate}",
           "refund": "退回未用的下注额",
           "paid": "打到钱包"
-        }
-      },
-      "gameInfo": {
-        "roulette": {
-          "tagline": "欧式轮盘 —— 37 个号码格,每一次旋转都由 Chainlink VRF 上链签名。",
-          "bets": [
-            {
-              "key": "straight",
-              "label": "单号 (直注)",
-              "coverage": "1 个号码",
-              "multiplier": "36×"
-            },
-            {
-              "key": "redBlack",
-              "label": "红 / 黑",
-              "coverage": "18 个号码",
-              "multiplier": "2×"
-            },
-            {
-              "key": "evenOdd",
-              "label": "单 / 双",
-              "coverage": "18 个号码",
-              "multiplier": "2×"
-            },
-            {
-              "key": "lowHigh",
-              "label": "1–18 / 19–36",
-              "coverage": "18 个号码",
-              "multiplier": "2×"
-            },
-            {
-              "key": "dozen",
-              "label": "打 (1/2/3st 12)",
-              "coverage": "12 个号码",
-              "multiplier": "3×"
-            },
-            {
-              "key": "column",
-              "label": "列 (2:1)",
-              "coverage": "12 个号码",
-              "multiplier": "3×"
-            }
-          ]
-        },
-        "coin-toss": {
-          "tagline": "纯粹的 50/50。选一面,Chainlink VRF 抽一次定输赢。",
-          "bets": [
-            {
-              "key": "heads",
-              "label": "正面",
-              "coverage": "2 个结果之一",
-              "multiplier": "1.96×"
-            },
-            {
-              "key": "tails",
-              "label": "反面",
-              "coverage": "2 个结果之一",
-              "multiplier": "1.96×"
-            }
-          ]
-        },
-        "keno": {
-          "tagline": "从 1–15 中挑 1–5 个号码,合约开 5 个;命中越多,赢得越多。",
-          "bets": [
-            {
-              "key": "p1",
-              "label": "选 1 个号",
-              "coverage": "命中 1/5",
-              "multiplier": "2.97×"
-            },
-            {
-              "key": "p2",
-              "label": "选 2 个号",
-              "coverage": "全中",
-              "multiplier": "最高 8.91×"
-            },
-            {
-              "key": "p3",
-              "label": "选 3 个号",
-              "coverage": "全中",
-              "multiplier": "最高 26.7×"
-            },
-            {
-              "key": "p4",
-              "label": "选 4 个号",
-              "coverage": "全中",
-              "multiplier": "最高 91×"
-            },
-            {
-              "key": "p5",
-              "label": "选 5 个号",
-              "coverage": "全中",
-              "multiplier": "最高 500.5×"
-            }
-          ]
-        },
-        "plinko": {
-          "tagline": "球穿过 8 行钉阵落入桶位。外侧桶赔率更高;风险档决定分布曲线。",
-          "bets": [
-            {
-              "key": "low",
-              "label": "低风险",
-              "coverage": "曲线平缓",
-              "multiplier": "最高 1.53×"
-            },
-            {
-              "key": "medium",
-              "label": "中风险",
-              "coverage": "均衡",
-              "multiplier": "最高 8.27×"
-            },
-            {
-              "key": "high",
-              "label": "高风险",
-              "coverage": "重尾分布",
-              "multiplier": "最高 24.6×"
-            }
-          ]
-        },
-        "slots": {
-          "tagline": "三轴经典老虎机。顶部符号三连得 64×。",
-          "bets": [
-            {
-              "key": "classic",
-              "label": "经典模式",
-              "coverage": "5×5×5 轴权重",
-              "multiplier": "最高 64×"
-            }
-          ]
-        },
-        "baccarat": {
-          "tagline": "押闲家、庄家或和局。免佣金标准赔付。",
-          "bets": [
-            {
-              "key": "player",
-              "label": "闲家",
-              "coverage": "≈ 44.6%",
-              "multiplier": "2.24×"
-            },
-            {
-              "key": "banker",
-              "label": "庄家",
-              "coverage": "≈ 45.8%",
-              "multiplier": "2.18×"
-            },
-            {
-              "key": "tie",
-              "label": "和局",
-              "coverage": "≈ 9.5%",
-              "multiplier": "10.48×"
-            }
-          ]
-        },
-        "sic-bo": {
-          "tagline": "三粒骰子。可押小/大、围骰、对子、单面或总点数。",
-          "bets": [
-            {
-              "key": "smallBig",
-              "label": "小 (4–10) / 大 (11–17)",
-              "coverage": "48.6%",
-              "multiplier": "2.06×"
-            },
-            {
-              "key": "anyTriple",
-              "label": "任意围骰",
-              "coverage": "2.78%",
-              "multiplier": "36×"
-            },
-            {
-              "key": "specificTriple",
-              "label": "指定围骰",
-              "coverage": "0.46%",
-              "multiplier": "216×"
-            },
-            {
-              "key": "specificDouble",
-              "label": "指定对子",
-              "coverage": "7.41%",
-              "multiplier": "13.5×"
-            },
-            {
-              "key": "singleFace",
-              "label": "单面 (1–6)",
-              "coverage": "≈ 42%",
-              "multiplier": "最高 6×"
-            },
-            {
-              "key": "total",
-              "label": "总点数 (4–17)",
-              "coverage": "因点数而异",
-              "multiplier": "因点数而异"
-            }
-          ]
         }
       },
       "feedback": {
@@ -1739,6 +1177,52 @@
         "came": "{result}你押的是{side}。",
         "cameMany": "最后一局：{result}{n} 局里赢 {hits} 局。",
         "last": "最后一局"
+      }
+    },
+    "sicBo": {
+      "head": {
+        "crumb": "全部游戏",
+        "title": "骰宝",
+        "lede": "三颗骰子扣在玻璃罩里。在桌面上选一个位置下注；Chainlink VRF 掷骰，所有被骰子说中的位置都会亮起。"
+      },
+      "table": {
+        "title": "牌桌",
+        "yourBet": "你押的",
+        "chance": "中奖概率",
+        "pays": "赢了赔付",
+        "eachDie": "每颗 {m}×",
+        "layout": "桌面：选一个位置",
+        "area": "{kind, select, small {小} big {大} anyTriple {全围} specificTriple {围骰 {value}} specificDouble {对子 {value}} total {点数 {value}} singleFace {单骰 {value}} other {}}",
+        "range": {
+          "small": "4 至 10 点",
+          "big": "11 至 17 点",
+          "anyTriple": "任意三颗相同"
+        },
+        "areaLabel": "{area}，赔下注额的 {m} 倍，中奖概率 {chance}%",
+        "singleLabel": "{area}，每出现一颗赔下注额的 {m} 倍，中奖概率 {chance}%",
+        "dice": "{a}、{b}、{c}",
+        "total": "{total} 点",
+        "roll": "第 {k} 次，共 {n} 次",
+        "history": "最近结果",
+        "noHistory": "还没有掷过",
+        "tile": "开出 {dice}",
+        "tilePaid": "开出 {dice}，中了",
+        "status": {
+          "ready": "把筹码放在桌面的一个位置上，再在下注单上下注。",
+          "waiting": "骰盅在摇。随机数一到，骰子就停下。",
+          "falling": "随机数到了，骰子停下，揭开骰盅。"
+        },
+        "rule": "三颗公平的骰子，来自 Chainlink VRF。开出围骰时，押大、押小都输。单骰按出现的颗数赔：一颗 {one}×，两颗 {two}×，三颗 {three}×。赔付已扣 {rate} 庄家优势。"
+      },
+      "slip": {
+        "game": "骰宝，{area}",
+        "dice": "{count, plural, =1 {一颗} =2 {两颗} other {三颗}}"
+      },
+      "receipt": {
+        "rolled": "开出 {dice}，共 {total} 点。你押的是{bet}。",
+        "rolledMany": "最后一次开出 {dice}，共 {total} 点。{n} 次里中 {hits} 次。",
+        "came": "共 {total} 点。你押的是{bet}。",
+        "cameMany": "最后一次 {total} 点。{n} 次里中 {hits} 次。"
       }
     }
   },
@@ -3399,40 +2883,6 @@
         "a": "从页脚打开「责任游戏」，可设置会话提醒、记录每日存款和亏损上限，或自我排除一段固定时间。这些设置只保存在当前浏览器中：下注和存入时目前不会检查每日上限，自我排除也不适用于其他浏览器、设备或应用。你必须达到所在地区的法定年龄才能游玩。"
       }
     ]
-  },
-  "onboarding": {
-    "aria": "新手引导",
-    "stepLabel": "第 {current} / {total} 步",
-    "skip": "跳过",
-    "back": "上一步",
-    "next": "下一步",
-    "done": "明白了",
-    "steps": {
-      "welcome": {
-        "title": "欢迎来到 ArbiGameFi",
-        "body": "30 秒快速了解一局怎么玩。随时可跳过。"
-      },
-      "wallet": {
-        "title": "连接钱包",
-        "body": "从这里开始。连接钱包并选择网络 —— 不用注册、不用托管。"
-      },
-      "stage": {
-        "title": "选择下注",
-        "body": "这是游戏区。直接在面板上选号码、选边或选风险。"
-      },
-      "amount": {
-        "title": "设置金额",
-        "body": "输入下注金额。胜率和潜在派彩会实时更新。"
-      },
-      "place": {
-        "title": "下注",
-        "body": "在钱包中确认。Chainlink VRF 返回随机数后自动结算。"
-      },
-      "fairness": {
-        "title": "验证每个结果",
-        "body": "每局结束后可复制公平性证明并在链上核验。这正是我们的核心。"
-      }
-    }
   },
   "statusPage": {
     "metadata": {

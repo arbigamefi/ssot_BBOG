@@ -24,13 +24,12 @@ import {
   type SicBoKind
 } from "./params";
 import { clampDiceTarget, type DiceDirection } from "./payouts";
-import { derivePlaceBetButtonPhase } from "./place-bet-button";
+import { derivePlaceBetButtonPhase } from "./place-bet-phase";
 import { deriveGameRoomLimits, deriveGameRoomPricing } from "./presentation";
 import {
   buildCasinoRoundResult,
   useGameResolutionEffect,
-  type CasinoRoundResult,
-  type GameHistoryEntry
+  type CasinoRoundResult
 } from "./resolution";
 import { useCasinoRound } from "./use-casino-round";
 import { useStageReveal } from "./use-stage-reveal";
@@ -119,11 +118,9 @@ export function useGameRoom(slug: string) {
   const [sicBoKind, setSicBoKind] = React.useState<SicBoKind>("small");
   const [sicBoValue, setSicBoValue] = React.useState<number>(0);
 
-  const [gameHistory] = React.useState<GameHistoryEntry[]>([]);
   const [betCount, setBetCount] = React.useState<number>(1);
   const [stopGain, setStopGain] = React.useState<number>(0);
   const [stopLoss, setStopLoss] = React.useState<number>(0);
-  const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const [walletBalanceRefreshKey, refreshWalletBalance] = React.useReducer((value) => value + 1, 0);
 
   const walletBalance = useGameWalletBalance({
@@ -374,8 +371,6 @@ export function useGameRoom(slug: string) {
     setStopGain,
     stopLoss,
     setStopLoss,
-    advancedOpen,
-    setAdvancedOpen,
     diceTarget,
     diceDirection,
     changeDiceTarget,
@@ -407,7 +402,6 @@ export function useGameRoom(slug: string) {
     terminalBet,
     resultProof,
     casinoOutcome,
-    gameHistory,
     handleResultClose,
     handleResultPlayAgain
   };

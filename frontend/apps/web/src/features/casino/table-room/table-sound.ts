@@ -41,6 +41,10 @@ export type TableSound = {
   slide: () => void;
   /** Baccarat: a card is turned over, a short snap. */
   snap: () => void;
+  /** Sic bo: dice knock the glass dome as it is shaken, a few hard clicks. */
+  rattle: () => void;
+  /** Sic bo: the dice come to rest on the dish. */
+  settle: () => void;
   close: () => void;
 };
 
@@ -220,6 +224,16 @@ export function createTableSound(): TableSound | null {
     },
     snap() {
       burst(ready(), 3200, 2.5, 0.07, 0.035);
+    },
+    rattle() {
+      const at = ready();
+      for (let i = 0; i < 3; i++)
+        burst(at + Math.random() * 0.09, 2800 + Math.random() * 1600, 4, 0.035, 0.025);
+    },
+    settle() {
+      const at = ready();
+      for (let i = 0; i < 4; i++)
+        burst(at + i * 0.07 * (1 - i * 0.12), 2100, 3, 0.06 / (i + 1), 0.03);
     },
     close() {
       void ctx.close();

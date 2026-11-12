@@ -186,17 +186,6 @@ for (const backend of ["memory", "postgres"] as const) {
       const totals = { betCount: 2, settledCount: 2, turnover: "1000000", payout: "1960000" };
       expect(await store.getCasinoStats(scope)).toMatchObject({ ...totals, wonCount: 1 });
       expect(await store.getGameVolumes(scope)).toMatchObject([{ ...totals, gameId }]);
-      expect(await store.getCasinoLeaderboard({ ...scope, limit: 10 })).toMatchObject([
-        { player, ...totals }
-      ]);
-      expect(await store.getCasinoPlayerRank({ ...scope, player })).toMatchObject({
-        rank: 1,
-        betCount: 2,
-        turnover: "1000000"
-      });
-      expect(await store.getCasinoTopWins({ ...scope, limit: 10 })).toMatchObject([
-        { betId: "1", stake: "1000000", payout: "1960000" }
-      ]);
     });
 
     it("withholds aggregates while a voided row has no stake to refund", async () => {

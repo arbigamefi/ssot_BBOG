@@ -202,6 +202,23 @@ tested on its own):
   slide in, stacked half over it.
 - **Reduced motion:** nothing slides or turns; the last hand is shown face up.
 
+The sic bo dice follow them too (`sicbo-room/roll-motion.ts`, a controller with no DOM, tested on
+its own):
+
+- **Waiting for randomness:** placing the bet brings the dome down over the dice and shakes it;
+  the dice tumble, lift and bounce off the glass, never through it, with a soft rattle. What they
+  show is only decided when the number arrives.
+- **The number arrives:** the shaking stops and the dice spin down onto their faces in 0.9s, in a
+  loose triangle; the dome lifts up and to the right and the roll counts 0.45s later. For more
+  rolls the dome comes back down 0.8s after, shakes for 0.55s, and the dice settle again in 0.7s.
+- **Deadline:** the first roll counts 2.25s after the number at the latest and each later one
+  2.5s after the last; if the tab goes out of sight, the rest is laid out at once. The room's own
+  fallback reveal waits 2.9s, plus 2.6s for each later roll.
+- **The result:** every true area lights; a net win turns your chip red and its chips stack on
+  it.
+- **Reduced motion:** the dome is never shaken; it goes down for the wait and lifts on the last
+  roll.
+
 ## 6. Do Not Do
 
 - No `transition-all`.

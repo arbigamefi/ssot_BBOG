@@ -139,10 +139,10 @@ Liquidity, Portfolio, the receipt page, the entry card and the other game rooms.
 not moved keeps the old dark tokens, and nothing new is built on them. The old tokens are
 deleted with the last page.
 
-Moved so far: the home page (`app/(marketing)`, `features/home`) and the dice room
-(`features/casino/dice-room`), whose table is the reference for the other games' tables. The
-other game rooms keep the shared room shell; every room reads the same controller
-(`features/casino/room/use-game-room.ts`), so a room moves by rendering its own table and slip. The site header and footer still use the old tokens and move with the
+Moved so far: the home page (`app/(marketing)`, `features/home`) and every game room
+(`features/casino/*-room`); the dice room's table is the reference for the others. Every room
+reads the same controller (`features/casino/room/use-game-room.ts`) and renders its own table and
+slip. The site header and footer still use the old tokens and move with the
 navigation change (`03-information-architecture.md`).
 
 ## 12. Verification

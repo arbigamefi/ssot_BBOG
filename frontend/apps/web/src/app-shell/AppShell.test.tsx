@@ -55,10 +55,6 @@ vi.mock("./compliance", () => ({
   useCompliance: () => ({ openRgDialog: vi.fn() })
 }));
 
-vi.mock("./onboarding/OnboardingTour", () => ({
-  OnboardingTour: () => null
-}));
-
 vi.mock("./pwa/InstallPrompt", () => ({
   InstallPrompt: () => null
 }));

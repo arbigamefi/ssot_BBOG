@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { AppHeader, type AppRoute } from "../components/AppHeader";
 import { SiteFooter } from "../components/SiteFooter";
-import { DISABLE_AGE_GATE_IN_DEV, DISABLE_ONBOARDING_IN_DEV } from "../config/dev-flags";
+import { DISABLE_AGE_GATE_IN_DEV } from "../config/dev-flags";
 import { isCasinoModuleSlug } from "../features/casino/modules";
 import {
   AgeTermsGate,
@@ -18,7 +18,6 @@ import {
   ResponsibleGamblingDialog,
   SelfExclusionGate
 } from "./compliance";
-import { OnboardingTour } from "./onboarding/OnboardingTour";
 import { MobileWalletEntryProvider } from "./MobileWalletEntryProvider";
 import { CasinoAvailabilityNotice } from "./CasinoAvailabilityNotice";
 import { InstallPrompt } from "./pwa/InstallPrompt";
@@ -104,7 +103,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <CookieConsentBanner />
       <ResponsibleGamblingDialog />
       <RealityCheckTimer />
-      {DISABLE_ONBOARDING_IN_DEV ? null : <OnboardingTour />}
       <InstallPrompt />
     </MobileWalletEntryProvider>
   );

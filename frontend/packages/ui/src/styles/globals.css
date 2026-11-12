@@ -2732,6 +2732,503 @@
   }
 }
 
+/* Sic bo's dish, seen from above (sicbo-room/sicbo-table.tsx): a dark dish ringed by the rail with
+   three ivory dice on it, under a glass dome with a highlight, a bright rim and a knob on top. The
+   room turns the dice and shakes the bowl (data-c="bowl") with transforms; the dome lifts up and
+   to the right with data-open. Lengths in the dice's transforms are die widths. Holds the dish's
+   and the dice's size, since a container query cannot restyle its own container. */
+@utility table-dish {
+  --bowl: 212px;
+  --die: 40px;
+  position: relative;
+  width: var(--bowl);
+  height: var(--bowl);
+  & [data-c="bowl"] {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+  }
+  & [data-c="dish"] {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at 50% 42%,
+      hsl(var(--groove-hi)),
+      hsl(var(--groove-lo)) 72%
+    );
+    box-shadow:
+      inset 0 10px 22px hsl(var(--table-shade) / 0.75),
+      inset 0 -2px 0 hsl(var(--table-sheen) / 0.06),
+      0 0 0 5px hsl(var(--rail)),
+      0 0 0 6px hsl(var(--paper) / 0.16),
+      0 10px 24px 4px hsl(var(--table-shade) / 0.45);
+  }
+  & [data-c="dish"]::after {
+    content: "";
+    position: absolute;
+    inset: 16px;
+    border: 1px dashed hsl(var(--paper) / 0.24);
+    border-radius: 50%;
+  }
+  & [data-c="dice"] {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+  }
+  & [data-c="die"],
+  & [data-c="shadow"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--die);
+    height: var(--die);
+    margin: calc(var(--die) / -2) 0 0 calc(var(--die) / -2);
+    will-change: transform;
+  }
+  & [data-c="shadow"] {
+    border-radius: 30%;
+    background: hsl(var(--table-shade) / 0.5);
+    filter: blur(4px);
+  }
+  & [data-c="die"] {
+    transform-style: preserve-3d;
+  }
+  & [data-c="core"] {
+    position: absolute;
+    inset: 3%;
+    background: hsl(var(--ivory-lo));
+  }
+  & [data-f] {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    padding: 14%;
+    border-radius: 16%;
+    background: radial-gradient(
+      120% 120% at 30% 25%,
+      hsl(var(--ivory-hi)),
+      hsl(var(--ivory)) 65%,
+      hsl(var(--ivory-lo))
+    );
+    box-shadow: inset 0 0 0 1px hsl(var(--table-shade) / 0.12);
+    backface-visibility: hidden;
+  }
+  & [data-f="1"] {
+    transform: translateZ(calc(var(--die) / 2));
+  }
+  & [data-f="6"] {
+    transform: rotateY(180deg) translateZ(calc(var(--die) / 2));
+  }
+  & [data-f="3"] {
+    transform: rotateY(90deg) translateZ(calc(var(--die) / 2));
+  }
+  & [data-f="4"] {
+    transform: rotateY(-90deg) translateZ(calc(var(--die) / 2));
+  }
+  & [data-f="2"] {
+    transform: rotateX(90deg) translateZ(calc(var(--die) / 2));
+  }
+  & [data-f="5"] {
+    transform: rotateX(-90deg) translateZ(calc(var(--die) / 2));
+  }
+  & [data-pip] {
+    place-self: center;
+    width: 72%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: hsl(var(--carbon));
+    box-shadow: inset 0 1px 1px hsl(var(--table-shade) / 0.4);
+  }
+  & [data-f="1"] [data-pip],
+  & [data-f="4"] [data-pip] {
+    background: hsl(var(--pocket-red));
+  }
+  & [data-f="1"] [data-pip] {
+    width: 118%;
+  }
+  & [data-c="dome"] {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background:
+      radial-gradient(42% 30% at 34% 26%, hsl(var(--table-sheen) / 0.42), transparent 70%),
+      radial-gradient(
+        circle at 50% 50%,
+        transparent 58%,
+        hsl(var(--table-sheen) / 0.07) 70%,
+        hsl(var(--table-sheen) / 0.2) 97%,
+        transparent 100%
+      ),
+      hsl(var(--paper) / 0.1);
+    box-shadow:
+      inset 0 0 0 1.5px hsl(var(--table-sheen) / 0.3),
+      inset 0 -8px 18px hsl(var(--table-sheen) / 0.06);
+    pointer-events: none;
+    transition:
+      transform 0.45s cubic-bezier(0.3, 0.7, 0.3, 1),
+      opacity 0.45s ease;
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+  /* The knob on top */
+  & [data-c="dome"]::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 34px;
+    height: 34px;
+    margin: -17px 0 0 -17px;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at 38% 34%,
+      hsl(var(--table-sheen) / 0.55),
+      hsl(var(--table-sheen) / 0.12) 60%,
+      hsl(var(--table-sheen) / 0.04)
+    );
+    box-shadow: 0 0 0 1px hsl(var(--table-sheen) / 0.28);
+  }
+  & [data-c="dome"][data-open] {
+    opacity: 0;
+    transform: translate(18%, -64%) scale(1.06);
+  }
+  @container felt (max-width: 460px) {
+    --bowl: 148px;
+    --die: 30px;
+    & [data-c="dish"]::after {
+      inset: 10px;
+    }
+    & [data-c="dome"]::after {
+      width: 24px;
+      height: 24px;
+      margin: -12px 0 0 -12px;
+    }
+  }
+}
+
+/* A die printed flat (sicbo-room/sicbo-die.tsx): ivory, navy pips with the one and the four
+   lacquer red. On the layout, the last results, the status line and the receipt. */
+@utility sicbo-die {
+  display: inline-grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding: 2px;
+  border-radius: 3px;
+  background: hsl(var(--ivory));
+  box-shadow: 0 1px 2px hsl(var(--table-shade) / 0.45);
+  vertical-align: middle;
+  & [data-pip] {
+    place-self: center;
+    width: 78%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: hsl(var(--carbon));
+  }
+  &[data-n="1"] [data-pip],
+  &[data-n="4"] [data-pip] {
+    background: hsl(var(--pocket-red));
+  }
+  &[data-n="1"] [data-pip] {
+    width: 110%;
+  }
+}
+
+/* The layout, printed on the felt as at a real table: Small, Any triple and Big; the six doubles
+   and six triples; the totals 4 to 17; the single faces. Rows are data-row a to d. */
+@utility table-layout {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  & > [data-row] {
+    display: grid;
+    gap: 6px;
+  }
+  & > [data-row="a"] {
+    grid-template-columns: 1fr 1.15fr 1fr;
+  }
+  & > [data-row="b"] {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+  & > [data-row="c"] {
+    grid-template-columns: repeat(14, minmax(0, 1fr));
+  }
+  & > [data-row="d"] {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  /* A gap between the doubles and the triples */
+  & [data-kind="specificTriple"][data-value="1"] {
+    margin-left: 8px;
+  }
+  @container felt (max-width: 620px) {
+    & > [data-row="b"] {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    & > [data-row="c"] {
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+    & [data-kind="specificTriple"][data-value="1"] {
+      margin-left: 0;
+    }
+  }
+  @container felt (max-width: 460px) {
+    gap: 6px;
+    margin-top: 12px;
+    & > [data-row] {
+      gap: 4px;
+    }
+  }
+}
+
+/* One area of the layout: what it is and what it pays, printed. Your chip sits on its top-right
+   corner (aria-pressed). Every area the dice make true lights (data-hit); a net win turns your
+   chip red (data-won), and the chips paid on data-pay stack on it, the same size as your own. */
+@utility table-area {
+  --own: 26px;
+  position: relative;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 2px;
+  border: 1.5px solid hsl(var(--paper) / 0.24);
+  border-radius: 10px;
+  background: transparent;
+  color: hsl(var(--paper) / 0.92);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+  &:hover:not(:disabled) {
+    border-color: hsl(var(--paper) / 0.6);
+    background: hsl(var(--paper) / 0.06);
+  }
+  &:focus-visible {
+    z-index: 1;
+    outline: 2px solid hsl(var(--paper));
+    outline-offset: 2px;
+  }
+  &:disabled {
+    cursor: default;
+  }
+  &[aria-pressed="true"] {
+    border-color: hsl(var(--paper) / 0.92);
+    background: hsl(var(--paper) / 0.07);
+  }
+  &:disabled[aria-pressed="false"] {
+    opacity: 0.55;
+  }
+  &[data-hit] {
+    border-color: hsl(var(--paper));
+    background: hsl(var(--lamp) / 0.1);
+    box-shadow:
+      0 0 0 1px hsl(var(--paper)),
+      0 0 14px hsl(var(--lamp) / 0.28);
+    opacity: 1;
+  }
+  &[data-won] {
+    @media (prefers-reduced-motion: no-preference) {
+      animation: print-glow 1.6s ease-out both;
+    }
+  }
+  & [data-name] {
+    font: 800 19px/1.05 var(--font-text);
+  }
+  & [data-sub] {
+    color: hsl(var(--paper) / 0.6);
+    font: 400 12px/1.2 var(--font-text);
+  }
+  & [data-p] {
+    color: hsl(var(--paper) / 0.6);
+    font: 600 11px/1 var(--font-text);
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+  &[data-hit] [data-sub],
+  &[data-hit] [data-p] {
+    color: hsl(var(--paper) / 0.92);
+  }
+  & [data-dd] {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+    max-width: 38px;
+  }
+  & [data-dd] .sicbo-die {
+    width: 14px;
+    height: 14px;
+    padding: 2px;
+  }
+  & [data-tn] {
+    font: 800 20px/1 var(--font-print);
+  }
+  &[data-kind="small"],
+  &[data-kind="big"],
+  &[data-kind="anyTriple"] {
+    min-height: 64px;
+    & [data-p] {
+      font-size: 13px;
+    }
+  }
+  &[data-kind="specificDouble"],
+  &[data-kind="specificTriple"] {
+    min-height: 56px;
+  }
+  &[data-kind="total"] {
+    min-height: 52px;
+  }
+  &[data-kind="singleFace"] {
+    grid-auto-flow: column;
+    gap: 8px;
+    min-height: 46px;
+    & > .sicbo-die {
+      width: 24px;
+      height: 24px;
+      padding: 3.5px;
+      border-radius: 5px;
+    }
+  }
+  & [data-chip] {
+    position: absolute;
+    top: -9px;
+    right: -6px;
+    z-index: 2;
+    width: var(--own);
+    height: var(--own);
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, hsl(var(--paper)) 0 31%, transparent 33%),
+      repeating-conic-gradient(hsl(var(--ink)) 0 15deg, hsl(var(--paper)) 15deg 30deg);
+    box-shadow:
+      inset 0 0 0 2px hsl(var(--paper)),
+      0 2px 4px hsl(var(--table-shade) / 0.5);
+    opacity: 0;
+    transform: scale(0.6);
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s ease;
+  }
+  &[aria-pressed="true"] [data-chip] {
+    opacity: 1;
+    transform: none;
+  }
+  &[data-won] [data-chip] {
+    background:
+      radial-gradient(circle, hsl(var(--paper)) 0 31%, transparent 33%),
+      repeating-conic-gradient(hsl(var(--pocket-red)) 0 15deg, hsl(var(--paper)) 15deg 30deg);
+  }
+  & [data-pay] {
+    position: absolute;
+    top: 2px;
+    left: calc(var(--own) * -0.3);
+    width: var(--own);
+    height: var(--own);
+  }
+  @container felt (max-width: 460px) {
+    --own: 20px;
+    gap: 2px;
+    padding: 4px 1px;
+    border-radius: 8px;
+    & [data-name] {
+      font-size: 16px;
+    }
+    & [data-sub] {
+      font-size: 10.5px;
+    }
+    & [data-p] {
+      font-size: 9.5px;
+    }
+    &[data-kind="small"],
+    &[data-kind="big"],
+    &[data-kind="anyTriple"] {
+      min-height: 50px;
+      & [data-p] {
+        font-size: 11px;
+      }
+    }
+    &[data-kind="specificDouble"],
+    &[data-kind="specificTriple"] {
+      min-height: 44px;
+    }
+    & [data-dd] .sicbo-die {
+      width: 12px;
+      height: 12px;
+      padding: 1.5px;
+    }
+    &[data-kind="total"] {
+      min-height: 40px;
+    }
+    & [data-tn] {
+      font-size: 17px;
+    }
+    &[data-kind="singleFace"] {
+      grid-auto-flow: row;
+      gap: 3px;
+      min-height: 44px;
+      & > .sicbo-die {
+        width: 20px;
+        height: 20px;
+        padding: 3px;
+      }
+    }
+    & [data-chip] {
+      top: -7px;
+      right: -5px;
+    }
+  }
+}
+
+/* Sic bo's last results: a roll as three small dice, ringed when it paid (data-paid). */
+@utility table-dice-history {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  & > li {
+    display: flex;
+    flex: none;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px hsl(var(--paper) / 0.24);
+  }
+  & > li[data-paid] {
+    box-shadow: inset 0 0 0 1.5px hsl(var(--paper));
+  }
+  & > li[data-none] {
+    padding: 0;
+    box-shadow: none;
+    color: hsl(var(--paper) / 0.6);
+    font: 400 var(--text-note) / 1.4 var(--font-text);
+    white-space: nowrap;
+  }
+  & .sicbo-die {
+    width: 14px;
+    height: 14px;
+    padding: 2px;
+  }
+  @container felt (max-width: 460px) {
+    & > li:nth-child(n + 3) {
+      display: none;
+    }
+  }
+}
+
 /* The net amount of a win, lit on the felt; brighter for 10x or more. */
 @utility table-pay-glow {
   text-shadow: 0 0 14px hsl(var(--lamp) / 0.45);
